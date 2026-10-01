@@ -1,8 +1,8 @@
 import 'package:bonfire/bonfire.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:bonfire/util/collision_game_component.dart';
 import 'dart:math';
-import 'custom_texture_map.dart';
 import 'ai_fragment.dart';
 import 'npc_character.dart';
 import 'player_bullet.dart';
@@ -16,10 +16,8 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision {
   static final ValueNotifier<bool> damageFlash = ValueNotifier(false);
   static final ValueNotifier<Vector2?> pendingShot = ValueNotifier(null);
 
-  CustomTextureMap? textureMap;
   bool isBlocked = false;
-  Vector2 lastValidPosition = Vector2.zero();
-  int _frameCount = 0;
+  double _blockedTimer = 0;
   bool _eWasPressed = false;
   double _footstepTimer = 0;
   bool _joystickMoving = false;
@@ -31,13 +29,7 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision {
     speed: sizePlayer * 2.5,
     life: 100,
   ) {
-    lastValidPosition = position;
     priority = 1000;
-  }
-
-  void setTextureMap(CustomTextureMap map) {
-    textureMap = map;
-    SfxManager().init();
   }
 
   Sprite? _sprite;
@@ -65,6 +57,7 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision {
 
   @override
   Future<void> onLoad() async {
+    SfxManager().init();
     _sprite = await Sprite.load('sprites/player.png');
     add(RectangleHitbox(
       size: Vector2(sizePlayer * 0.5, sizePlayer / 3),
@@ -81,22 +74,17 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision {
     return super.onBlockMovement(intersectionPoints, other);
   }
 
-  // Movement now comes from Bonfire (joystick + Keyboard controller set
-  // velocity, Bonfire applies velocity * dt), so BlockMovementCollision can
-  // resolve Tiled walls with sliding. While a map still uses the texture
-  // mask, undo a step that lands on a blocked pixel.
+  // Walls are Tiled tile collisions; BlockMovementCollision pushes us out and
+  // removes only the velocity component into the wall, so we slide along it.
+  // Flag "blocked" (red glow, no footsteps) only while pressing into a wall.
   @override
-  void onApplyDisplacement(double dt) {
-    final before = position.clone();
-    super.onApplyDisplacement(dt);
-    final map = textureMap;
-    if (map == null || before == position) return;
-    if (map.isWalkable(position)) {
-      lastValidPosition = position.clone();
-      isBlocked = false;
-    } else {
-      position = before;
-      isBlocked = true;
+  void onBlockedMovement(PositionComponent other, CollisionData collisionData) {
+    super.onBlockedMovement(other, collisionData);
+    // After super, velocity is what's left once the into-wall part is
+    // removed: near zero means we're pushing straight into the wall.
+    if ((other is TileWithCollision || other is CollisionMapComponent) &&
+        velocity.length < speed * 0.2) {
+      _blockedTimer = 0.1;
     }
   }
 
@@ -104,30 +92,11 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision {
   void update(double dt) {
     super.update(dt);
     positionNotifier.value = position.clone();
-    _validatePosition();
+    _blockedTimer = max(0, _blockedTimer - dt);
+    isBlocked = _blockedTimer > 0;
     _checkInteraction();
     _updateFootsteps(dt);
     _handleShooting(dt);
-    _frameCount++;
-  }
-
-  void _validatePosition() {
-    if (textureMap == null || _frameCount % 30 != 0) return;
-    if (!textureMap!.isWalkable(position)) {
-      if (textureMap!.isWalkable(lastValidPosition)) {
-        position = lastValidPosition;
-      } else {
-        final found = _findNearbyValidPosition(position);
-        if (found != null) {
-          position = found;
-          lastValidPosition = found;
-        }
-      }
-      isBlocked = true;
-    } else {
-      lastValidPosition = position;
-      isBlocked = false;
-    }
   }
 
   void _updateFootsteps(double dt) {
@@ -183,16 +152,6 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision {
     ));
     SfxManager().playShoot();
     _shootCooldown = 0.22;
-  }
-
-  Vector2? _findNearbyValidPosition(Vector2 center) {
-    for (double r = 8.0; r <= 50.0; r += 8.0) {
-      for (double a = 0; a < 2 * pi; a += 0.8) {
-        final p = Vector2(center.x + r * cos(a), center.y + r * sin(a));
-        if (textureMap!.isWalkable(p)) return p;
-      }
-    }
-    return null;
   }
 
   // Joystick and keyboard (Bonfire's Keyboard controller) both arrive here.
