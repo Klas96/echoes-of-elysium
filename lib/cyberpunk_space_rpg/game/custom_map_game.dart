@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:bonfire/bonfire.dart';
+import 'package:bonfire/map/tiled/builder/tiled_world_builder.dart' show ObjectBuilder;
 import '../components/custom_player.dart';
 import '../components/custom_map.dart';
-import '../components/custom_texture_map.dart';
 import '../components/portal_component.dart';
 import '../components/uec_drone.dart';
 import '../components/ai_fragment.dart';
@@ -72,6 +72,64 @@ const _voss = NpcDialogue(
   ],
   voicePaths: ['audio/voices/voss_1.mp3', 'audio/voices/voss_2.mp3', 'audio/voices/voss_3.mp3'],
 );
+
+// ---------------------------------------------------------------------------
+// Tiled object layer -> gameplay components
+// ---------------------------------------------------------------------------
+
+const _npcDialogues = <String, NpcDialogue>{
+  'gaia': _gaia,
+  'asha': _asha,
+  'echo7': _echo7,
+  'archivist': _archivist,
+  'voss': _voss,
+};
+
+double _numProp(TiledObjectProperties p, String key, [double fallback = 0]) {
+  final v = p.others[key];
+  if (v is num) return v.toDouble();
+  if (v is String) return double.tryParse(v) ?? fallback;
+  return fallback;
+}
+
+/// Builders keyed by object name in the map's "gameplay" object layer.
+/// Object x/y is the component's top-left corner in map pixels.
+Map<String, ObjectBuilder> _mapObjects() => {
+      'spawn': (p) => _PlayerSpawn(p.position),
+      'portal': (p) => PortalComponent(p.position),
+      'npc': (p) {
+        final name = (p.others['name'] ?? '').toString().toLowerCase();
+        final dialogue = _npcDialogues[name];
+        if (dialogue == null) {
+          throw ArgumentError('Unknown npc name "$name" in Tiled map');
+        }
+        return NpcCharacter(p.position,
+            dialogue: dialogue, spritePath: 'sprites/npc_$name.png');
+      },
+      'fragment': (p) => FragmentPickup(p.position),
+      'health': (p) => HealthPickup(p.position),
+      'drone': (p) => UECDrone(p.position, startAngle: _numProp(p, 'startAngle')),
+      'sentinel': (p) => SentinelDrone(p.position, onDefeated: GameState.onSentinelDefeated),
+    };
+
+/// Moves the player to the map's spawn object once the map is loaded, then
+/// removes itself.
+class _PlayerSpawn extends GameComponent {
+  _PlayerSpawn(Vector2 spawn) {
+    position = spawn;
+    size = Vector2.all(CustomPlayer.sizePlayer);
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    final player = gameRef.player;
+    if (player == null) return;
+    player.position = position.clone();
+    gameRef.camera.moveToPlayer();
+    removeFromParent();
+  }
+}
 
 // ---------------------------------------------------------------------------
 // App root
@@ -211,8 +269,8 @@ class CustomMapGameScreen extends StatelessWidget {
             },
             child: BonfireWidget(
             playerControllers: _playerControllers(),
-            player: CustomPlayer(Vector2(800, 800)),
-            map: CustomMap('maps/world.tmj'),
+            player: CustomPlayer(Vector2.zero()),
+            map: CustomMap('maps/world.tmj', objectsBuilder: _mapObjects()),
             cameraConfig: CameraConfig(moveOnlyMapArea: true, zoom: 2.0),
             overlayBuilderMap: {
               'portalReached': (ctx, game) => _PortalOverlay(
@@ -225,37 +283,6 @@ class CustomMapGameScreen extends StatelessWidget {
             onReady: (game) {
               GameState.resetMap1();
               MusicManager().play('assets/audio/music/Whispering_Pines.mp3');
-              final textureMap = CustomTextureMap(
-                texturePath: 'maps/wods-texture.png',
-                maskPath: 'maps/Starter-map.png',
-              );
-              game.add(textureMap);
-              game.add(PortalComponent(Vector2(1111, 3655)));
-
-              // NPCs
-              game.add(NpcCharacter(Vector2(844, 732), dialogue: _gaia, spritePath: 'sprites/npc_gaia.png'));
-              game.add(NpcCharacter(Vector2(1000, 2200), dialogue: _asha, spritePath: 'sprites/npc_asha.png'));
-
-              // Aetherian Fragments (collect 3)
-              game.add(FragmentPickup(Vector2(694, 994)));
-              game.add(FragmentPickup(Vector2(1100, 1400)));
-              game.add(FragmentPickup(Vector2(800, 2000)));
-              game.add(FragmentPickup(Vector2(1224, 2692)));
-              game.add(FragmentPickup(Vector2(924, 3000)));
-
-              // Health pickups
-              game.add(HealthPickup(Vector2(900, 1304)));
-              game.add(HealthPickup(Vector2(750, 1800)));
-              game.add(HealthPickup(Vector2(1100, 2400)));
-
-              // UEC Drones — patrol the forest
-              game.add(UECDrone(Vector2(650, 900), startAngle: 0));
-              game.add(UECDrone(Vector2(1050, 1300), startAngle: 2.1));
-              game.add(UECDrone(Vector2(820, 1850), startAngle: 4.2));
-
-              Future.delayed(const Duration(milliseconds: 100), () {
-                (game.player as CustomPlayer).setTextureMap(textureMap);
-              });
             },
           )),
           const _Vignette(),
@@ -313,8 +340,8 @@ class Map2GameScreen extends StatelessWidget {
                 Vector2(d.localPosition.dx, d.localPosition.dy),
             child: BonfireWidget(
             playerControllers: _playerControllers(),
-            player: CustomPlayer(Vector2(1840, 30)),
-            map: CustomMap('maps/world2.tmj'),
+            player: CustomPlayer(Vector2.zero()),
+            map: CustomMap('maps/world2.tmj', objectsBuilder: _mapObjects()),
             cameraConfig: CameraConfig(moveOnlyMapArea: true, zoom: 2.0),
             overlayBuilderMap: {
               'portalReached': (ctx, game) => _PortalOverlay(
@@ -329,38 +356,6 @@ class Map2GameScreen extends StatelessWidget {
             onReady: (game) {
               GameState.resetMap2();
               MusicManager().play('assets/audio/music/Neon_Shadows.mp3');
-              final textureMap = CustomTextureMap(
-                texturePath: 'maps/city-texture.png',
-                maskPath: 'maps/Untitled_Artwork(1).png',
-              );
-              game.add(textureMap);
-
-              // Portal (locked until Sentinel defeated)
-              game.add(PortalComponent(Vector2(1800, 1400)));
-
-              // NPCs
-              game.add(NpcCharacter(Vector2(1780, 150), dialogue: _echo7, spritePath: 'sprites/npc_echo7.png'));
-              game.add(NpcCharacter(Vector2(1850, 700), dialogue: _archivist, spritePath: 'sprites/npc_archivist.png'));
-              game.add(NpcCharacter(Vector2(1700, 1300), dialogue: _voss, spritePath: 'sprites/npc_voss.png'));
-
-              // Health pickups
-              game.add(HealthPickup(Vector2(1830, 400)));
-              game.add(HealthPickup(Vector2(1840, 700)));
-              game.add(HealthPickup(Vector2(1830, 1100)));
-
-              // Sentinel boss
-              game.add(SentinelDrone(
-                Vector2(1830, 1000),
-                onDefeated: GameState.onSentinelDefeated,
-              ));
-
-              // UEC Drones — more aggressive on map 2
-              game.add(UECDrone(Vector2(1550, 550), startAngle: 1.0));
-              game.add(UECDrone(Vector2(2000, 900), startAngle: 3.3));
-
-              Future.delayed(const Duration(milliseconds: 100), () {
-                (game.player as CustomPlayer).setTextureMap(textureMap);
-              });
             },
           )),
           const _Vignette(),
@@ -423,8 +418,8 @@ class Map3GameScreen extends StatelessWidget {
                 Vector2(d.localPosition.dx, d.localPosition.dy),
             child: BonfireWidget(
               playerControllers: _playerControllers(),
-              player: CustomPlayer(Vector2(850, 850)),
-              map: CustomMap('maps/world3.tmj'),
+              player: CustomPlayer(Vector2.zero()),
+              map: CustomMap('maps/world3.tmj', objectsBuilder: _mapObjects()),
               cameraConfig: CameraConfig(moveOnlyMapArea: true, zoom: 2.0),
               overlayBuilderMap: {
                 'portalReached': (ctx, game) => _PortalOverlay(
@@ -439,30 +434,6 @@ class Map3GameScreen extends StatelessWidget {
               onReady: (game) {
                 GameState.resetMap3();
                 MusicManager().play('assets/audio/music/Neon_Mirage.mp3');
-                final textureMap = CustomTextureMap(
-                  texturePath: 'maps/cyberpunk-texture.png',
-                  maskPath: 'maps/cyberpunk-mask.png',
-                );
-                game.add(textureMap);
-                game.add(PortalComponent(Vector2(2800, 2800), canActivate: () => true));
-
-                // Health pickups
-                game.add(HealthPickup(Vector2(900, 1200)));
-                game.add(HealthPickup(Vector2(1500, 1500)));
-                game.add(HealthPickup(Vector2(2200, 900)));
-                game.add(HealthPickup(Vector2(2500, 2000)));
-
-                // UEC Drones — tougher spread across the ruins
-                game.add(UECDrone(Vector2(1100, 900), startAngle: 0.5));
-                game.add(UECDrone(Vector2(1600, 1200), startAngle: 1.8));
-                game.add(UECDrone(Vector2(2000, 800), startAngle: 3.1));
-                game.add(UECDrone(Vector2(2400, 1600), startAngle: 4.5));
-                game.add(UECDrone(Vector2(1800, 2200), startAngle: 2.3));
-                game.add(UECDrone(Vector2(1200, 2600), startAngle: 0.9));
-
-                Future.delayed(const Duration(milliseconds: 100), () {
-                  (game.player as CustomPlayer).setTextureMap(textureMap);
-                });
               },
             ),
           ),
