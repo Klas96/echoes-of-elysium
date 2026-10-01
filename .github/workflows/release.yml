@@ -1,7 +1,9 @@
 name: Release
 
 # Tag push (vX.Y.Z)  -> build signed APK + web, create GitHub Release,
-#                       publish the APK to the F-Droid repo (Klas96/fdroid).
+#                       publish the APK to the F-Droid repo (Klas96/fdroid),
+#                       and deploy the web build to klasholmgren.se
+#                       (Klas96/portfolio-website, games/echoes-of-elysium/).
 # workflow_dispatch   -> dry run by default: build + signature check + artifacts,
 #                       and an F-Droid rehearsal (fdroid update) WITHOUT commit/push.
 #                       No GitHub Release, no tag, nothing published.
@@ -336,3 +338,86 @@ jobs:
       - name: Dry run note
         if: env.DRY_RUN == 'true'
         run: echo "Dry run - F-Droid changes were NOT committed or pushed." >> "$GITHUB_STEP_SUMMARY"
+
+  website:
+    needs: [build, github-release]
+    # Only after a real (non-dry-run) tag release.
+    if: ${{ !cancelled() && needs.build.outputs.dry_run != 'true' && needs.github-release.result == 'success' && startsWith(github.ref, 'refs/tags/v') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: website-deploy
+      cancel-in-progress: false
+    env:
+      VERSION_NAME: ${{ needs.build.outputs.version_name }}
+      VERSION_CODE: ${{ needs.build.outputs.version_code }}
+      BASE_HREF: /games/echoes-of-elysium/
+      SITE_PATH: games/echoes-of-elysium
+    steps:
+      - name: Checkout game repo
+        uses: actions/checkout@v5
+        with:
+          path: game
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Build web for klasholmgren.se
+        working-directory: game
+        run: |
+          set -euo pipefail
+          flutter pub get
+          flutter build web --release --base-href "$BASE_HREF" \
+            --build-name="$VERSION_NAME" --build-number="$VERSION_CODE"
+          rm -f build/web/.last_build_id
+          # Workaround: the web SfxManager loads 'assets/audio/...' while Flutter web
+          # serves assets under 'assets/assets/...'. Mirror sfx + voices so they
+          # don't 404. Drop this once sfx_manager_web.dart uses 'assets/assets/$path'.
+          if grep -Fqs "'assets/\$" lib/cyberpunk_space_rpg/audio/sfx_manager_web.dart \
+             && [ ! -e build/web/assets/audio ]; then
+            mkdir -p build/web/assets/audio
+            for d in sfx voices; do
+              [ -d "build/web/assets/assets/audio/$d" ] && cp -r "build/web/assets/assets/audio/$d" build/web/assets/audio/
+            done
+            echo "Applied web SFX path workaround"
+          fi
+          echo "Web build size: $(du -sh build/web | cut -f1)"
+
+      - name: Checkout Klas96/portfolio-website (deploy key)
+        uses: actions/checkout@v5
+        with:
+          repository: Klas96/portfolio-website
+          ref: main
+          path: site
+          ssh-key: ${{ secrets.WEBSITE_DEPLOY_KEY }}
+
+      - name: Copy build into the site
+        run: |
+          set -euo pipefail
+          mkdir -p "site/$SITE_PATH"
+          rsync -a --delete game/build/web/ "site/$SITE_PATH/"
+          git -C site status --short | tail -20
+
+      - name: Commit and push to Klas96/portfolio-website
+        working-directory: site
+        run: |
+          set -euo pipefail
+          git config user.name "echoes-of-elysium CI"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A -- "$SITE_PATH"
+          if git diff --cached --quiet; then
+            echo "No changes to the web build - nothing to push."; exit 0
+          fi
+          git commit -m "Echoes of Elysium web ${VERSION_NAME} [automated]"
+          for i in 1 2 3; do
+            git push origin HEAD:main && break
+            if [ "$i" = 3 ]; then exit 1; fi
+            git pull --rebase origin main
+          done
+          {
+            echo "### Website"
+            echo "Deployed web ${VERSION_NAME} to https://klasholmgren.se${BASE_HREF} ($(du -sh "$SITE_PATH" | cut -f1))"
+          } >> "$GITHUB_STEP_SUMMARY"
