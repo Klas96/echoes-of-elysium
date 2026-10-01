@@ -36,7 +36,7 @@ class SentinelDrone extends GameDecoration {
   Future<void> onLoad() async {
     _sprite = await Sprite.load('sprites/sentinel_boss.png');
     instance = this;
-    add(CircleHitbox(radius: 24));
+    add(CircleHitbox(radius: 24, isSolid: true, collisionType: CollisionType.passive));
     return super.onLoad();
   }
 
@@ -66,7 +66,8 @@ class SentinelDrone extends GameDecoration {
 
     final player = gameRef.player;
     if (player == null) return;
-    final toPlayer = player.position - position;
+    // Centre to centre, so ranges don't drift with the size difference.
+    final toPlayer = (player.position + player.size / 2) - (position + size / 2);
     final dist = toPlayer.length;
     final rage = _health < maxHealth * 0.3;
 

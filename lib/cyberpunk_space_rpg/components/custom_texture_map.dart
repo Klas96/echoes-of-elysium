@@ -160,10 +160,6 @@ class CustomTextureMap extends Component {
       
       // If any point is blocked, the entire position is not walkable
       if (isWhite) {
-        // Only print debug info occasionally to reduce performance impact
-        if (px % 50 == 0 && py % 50 == 0) {
-          print('Blocked at ($px, $py): RGB($r, $g, $b) - WHITE');
-        }
         return false;
       }
     }
