@@ -5,6 +5,9 @@ class SfxManager {
   factory SfxManager() => _instance;
   SfxManager._();
 
+  // Flutter web serves an asset with key 'assets/x' at URL 'assets/assets/x'.
+  static String _url(String path) => 'assets/assets/$path';
+
   html.AudioElement? _footstep;
   html.AudioElement? _damage;
   html.AudioElement? _portal;
@@ -20,7 +23,7 @@ class SfxManager {
 
   html.AudioElement _preload(String path) {
     final el = html.AudioElement()
-      ..src = 'assets/$path'
+      ..src = _url(path)
       ..volume = 1.0
       ..preload = 'auto';
     el.load();
@@ -42,7 +45,7 @@ class SfxManager {
   void playVoice(String assetPath) {
     try {
       _currentVoice?.pause();
-      _currentVoice = html.AudioElement('assets/$assetPath')..volume = 1.0;
+      _currentVoice = html.AudioElement(_url(assetPath))..volume = 1.0;
       _currentVoice!.play();
     } catch (_) {}
   }
