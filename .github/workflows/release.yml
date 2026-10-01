@@ -40,7 +40,7 @@ jobs:
       apk_name: ${{ steps.apk.outputs.apk_name }}
       web_zip: ${{ steps.web.outputs.web_zip }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Determine version / mode
         id: version
@@ -78,7 +78,7 @@ jobs:
             echo "version_code=$code"
           } >> "$GITHUB_OUTPUT"
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -97,7 +97,7 @@ jobs:
           if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
             echo "::error::Secret ANDROID_KEYSTORE_BASE64 is not set"; exit 1
           fi
-          ks="$RUNNER_TEMP/upload-keystore.jks"
+          ks="$RUNNER_TEMP/android-release.jks"
           echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$ks"
           chmod 600 "$ks"
           echo "ANDROID_KEYSTORE_PATH=$ks" >> "$GITHUB_ENV"
@@ -125,14 +125,15 @@ jobs:
           bt="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
           apk=build/app/outputs/flutter-apk/app-release.apk
           "$bt/apksigner" verify --verbose --print-certs "$apk" | tee "$RUNNER_TEMP/certs.txt"
-          got=$(sed -n -E 's/^Signer #1 certificate SHA-256 digest: ([0-9a-f]+)$/\1/p' "$RUNNER_TEMP/certs.txt")
+          # apksigner prints "Signer #1 certificate ..." or, with --verbose, "V2 Signer: certificate ..."
+          got=$(sed -n -E 's/^.*Signer( #1)?:? certificate SHA-256 digest: ([0-9a-f]+)$/\2/p' "$RUNNER_TEMP/certs.txt" | head -1)
           want=$(keytool -list -v -keystore "$ANDROID_KEYSTORE_PATH" -alias "$ANDROID_KEY_ALIAS" \
                    -storepass "$ANDROID_KEYSTORE_PASSWORD" \
                  | sed -n -E 's/^[[:space:]]*SHA256: ([0-9A-F:]+)$/\1/p' | tr -d ':' | tr 'A-F' 'a-f')
           if [ -z "$got" ] || [ "$got" != "$want" ]; then
-            echo "::error::APK is not signed with the upload key (got '$got')"; exit 1
+            echo "::error::APK is not signed with the release signing key (got '$got')"; exit 1
           fi
-          echo "APK signed with upload key, cert SHA-256 $got"
+          echo "APK signed with the release signing key, cert SHA-256 $got"
           badging=$("$bt/aapt2" dump badging "$apk" | head -1)
           echo "$badging"
           app_id=$(echo "$badging" | sed -n -E "s/.*package: name='([^']+)'.*/\1/p")
@@ -170,7 +171,7 @@ jobs:
 
       - name: Remove keystore
         if: always()
-        run: rm -f "$RUNNER_TEMP/upload-keystore.jks"
+        run: rm -f "$RUNNER_TEMP/android-release.jks"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -214,13 +215,13 @@ jobs:
       DRY_RUN: ${{ needs.build.outputs.dry_run }}
     steps:
       - name: Checkout game repo (F-Droid metadata template only)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           path: game
           sparse-checkout: fdroid
 
       - name: Checkout Klas96/fdroid (deploy key)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: Klas96/fdroid
           ref: master
@@ -232,7 +233,7 @@ jobs:
           name: release-${{ needs.build.outputs.version_name }}
           path: dist
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
