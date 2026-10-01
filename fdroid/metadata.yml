@@ -1,5 +1,5 @@
 # F-Droid metadata for Echoes of Elysium.
-# The release workflow copies this to metadata/<applicationId>.yml in
+# The release workflow copies this to metadata/se.klasholmgren.echoesofelysium.yml in
 # Klas96/fdroid the first time the app is published (it never overwrites an
 # existing file there, so later edits should be made in Klas96/fdroid).
 Categories:

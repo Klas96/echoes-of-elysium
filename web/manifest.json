@@ -1,11 +1,11 @@
 {
-    "name": "cyberpunk_space_rpg",
-    "short_name": "cyberpunk_space_rpg",
+    "name": "Echoes of Elysium",
+    "short_name": "Echoes of Elysium",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Echoes of Elysium - a cyberpunk space RPG.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
