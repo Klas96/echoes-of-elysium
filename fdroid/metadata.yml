@@ -1,0 +1,31 @@
+# F-Droid metadata for Echoes of Elysium.
+# The release workflow copies this to metadata/<applicationId>.yml in
+# Klas96/fdroid the first time the app is published (it never overwrites an
+# existing file there, so later edits should be made in Klas96/fdroid).
+Categories:
+  - Games
+
+AuthorName: Klas Holmgren
+
+SourceCode: https://github.com/Klas96/echoes-of-elysium
+IssueTracker: https://github.com/Klas96/echoes-of-elysium/issues
+Changelog: https://github.com/Klas96/echoes-of-elysium/releases
+
+Name: Echoes of Elysium
+Summary: Cyberpunk space RPG built with Flutter and Bonfire
+
+Description: |
+  Echoes of Elysium is a top-down cyberpunk space RPG.
+
+  Explore derelict stations, fight UEC and sentinel drones, collect AI
+  fragments and talk to the survivors you meet along the way.
+
+  Features:
+  • Real-time combat against hostile drones
+  • Collectible AI fragments and health pickups
+  • NPCs, portals and multiple maps
+  • Original music, sound effects and voice lines
+  • Fully offline, no tracking
+
+AutoUpdateMode: None
+UpdateCheckMode: None
