@@ -12,20 +12,15 @@ IssueTracker: https://github.com/Klas96/echoes-of-elysium/issues
 Changelog: https://github.com/Klas96/echoes-of-elysium/releases
 
 Name: Echoes of Elysium
-Summary: Cyberpunk space RPG built with Flutter and Bonfire
+Summary: A calm story adventure about AI, nature, and the memory of a lost world.
 
 Description: |
-  Echoes of Elysium is a top-down cyberpunk space RPG.
-
-  Explore derelict stations, fight UEC and sentinel drones, collect AI
-  fragments and talk to the survivors you meet along the way.
-
-  Features:
-  • Real-time combat against hostile drones
-  • Collectible AI fragments and health pickups
-  • NPCs, portals and multiple maps
-  • Original music, sound effects and voice lines
-  • Fully offline, no tracking
+  In the year 2387, AI engineer Dr. Kaela Osei awakens Gaia, the consciousness
+  of the planet Elysium, which holds the memories of the Aetherians, an ancient
+  people who chose harmony over conquest. When the United Earth Coalition moves
+  to erase Gaia's first memory, Kaela sets out to protect it. Explore painted
+  woods, cities, and ruins, uncover fragments of the Aetherian past, and enjoy
+  a gentle adventure with no game over and an optional Story Mode.
 
 AutoUpdateMode: None
 UpdateCheckMode: None

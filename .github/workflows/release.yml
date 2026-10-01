@@ -8,8 +8,6 @@ name: Release
 on:
   push:
     tags: ['v*']
-    # TEMPORARY (verification only, removed before merge): dry run on branch push
-    branches: [ci/release-pipeline]
   workflow_dispatch:
     inputs:
       dry_run:
@@ -45,7 +43,7 @@ jobs:
       - name: Determine version / mode
         id: version
         env:
-          DRY_INPUT: ${{ (github.event_name == 'workflow_dispatch' && inputs.dry_run) || (github.event_name == 'push' && github.ref == 'refs/heads/ci/release-pipeline') }}
+          DRY_INPUT: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
         run: |
           set -euo pipefail
           pub=$(sed -n -E 's/^version:[[:space:]]*([^[:space:]]+).*/\1/p' pubspec.yaml)
@@ -214,11 +212,13 @@ jobs:
       VERSION_CODE: ${{ needs.build.outputs.version_code }}
       DRY_RUN: ${{ needs.build.outputs.dry_run }}
     steps:
-      - name: Checkout game repo (F-Droid metadata template only)
+      - name: Checkout game repo (F-Droid metadata template + fastlane graphics)
         uses: actions/checkout@v5
         with:
           path: game
-          sparse-checkout: fdroid
+          sparse-checkout: |
+            fdroid
+            fastlane
 
       - name: Checkout Klas96/fdroid (deploy key)
         uses: actions/checkout@v5
@@ -272,6 +272,22 @@ jobs:
           if [ ! -e "metadata/${APP_ID}.yml" ]; then
             echo "Adding metadata/${APP_ID}.yml from game repo template"
             cp ../game/fdroid/metadata.yml "metadata/${APP_ID}.yml"
+          fi
+
+          # Store graphics (if present in the game repo) as per-app localized
+          # metadata; fdroid update copies them into repo/<appId>/en-US/.
+          src=../game/fastlane/metadata/android/en-US/images
+          dst="metadata/${APP_ID}/en-US"
+          for g in icon.png featureGraphic.png; do
+            if [ -f "$src/$g" ]; then
+              mkdir -p "$dst"; cp "$src/$g" "$dst/$g"; echo "Graphic: $g"
+            fi
+          done
+          if compgen -G "$src/phoneScreenshots/*.png" > /dev/null; then
+            mkdir -p "$dst/phoneScreenshots"
+            rm -f "$dst/phoneScreenshots/"*.png
+            cp "$src/phoneScreenshots/"*.png "$dst/phoneScreenshots/"
+            echo "Screenshots: $(ls "$dst/phoneScreenshots" | wc -l)"
           fi
 
       - name: fdroid update
