@@ -21,11 +21,13 @@ only .json/.tsj), and writes:
 Layers per map: "ground" (blob/wang terrain incl. walls), "props" (decor,
 some collide via per-tile collision rects) and an object layer "gameplay"
 with objects named spawn, portal, npc (property name), fragment, health,
-drone (property startAngle), sentinel. Object x/y = component top-left in
+drone (property startAngle), sentinel, checkpoint (property label). Object x/y = component top-left in
 world px, width/height = component size (same coords the code used before).
 
 The script checks that every gameplay object sits on fully walkable tiles and
 that all of them are reachable from the spawn; it fails loudly otherwise.
+Checkpoints (respawn points; one at the spawn plus one per area entrance) must
+also stay clear of every enemy's reach, so respawning never lands in a fight.
 """
 import json, math, os, shutil, sys
 import xml.etree.ElementTree as ET
@@ -270,15 +272,29 @@ class Level:
             if o["name"] in ("drone", "sentinel"): continue   # they fly; just need floor
             if not all(seen[y, x] for (x, y) in cells(o)):
                 raise SystemExit(f"{o['name']} {o['props']} not reachable from spawn")
-        # UECDrone detection radius is 220 px (centre to centre) and it patrols
-        # a 70 px circle around its origin; keep enemies outside that reach so
-        # the player isn't attacked while standing at the spawn.
+        # UECDrone detection radius is 160 px (220 before the calm pass; centre
+        # to centre) and it patrols a 70 px circle around its origin; keep
+        # enemies outside that reach so the player isn't attacked at the spawn.
         scx, scy = spawn[0]["x"] + spawn[0]["w"] / 2, spawn[0]["y"] + spawn[0]["h"] / 2
         for o in self.objects:
             if o["name"] in ("drone", "sentinel"):
                 d = ((o["x"] + o["w"] / 2 - scx) ** 2 + (o["y"] + o["h"] / 2 - scy) ** 2) ** 0.5
                 if d < 320:
                     raise SystemExit(f"{o['name']} {o['props']} is {d:.0f}px from spawn (< 320)")
+        # Checkpoints: the player respawns here, so no enemy may reach them.
+        # UECDrone: 160 px detection + 70 px patrol circle (+30 margin);
+        # SentinelDrone: 260 px detection (+40 margin).
+        cps = [o for o in self.objects if o["name"] == "checkpoint"]
+        if not cps or not any(c["x"] == spawn[0]["x"] and c["y"] == spawn[0]["y"] for c in cps):
+            raise SystemExit("need a checkpoint at the spawn")
+        for c in cps:
+            ccx, ccy = c["x"] + c["w"] / 2, c["y"] + c["h"] / 2
+            for o in self.objects:
+                lim = CP_CLEAR.get(o["name"])
+                if lim is None: continue
+                d = ((o["x"] + o["w"] / 2 - ccx) ** 2 + (o["y"] + o["h"] / 2 - ccy) ** 2) ** 0.5
+                if d < lim:
+                    raise SystemExit(f"checkpoint {c['props']} is {d:.0f}px from {o['name']} (< {lim})")
         return ok, seen
 
     def write(self, fname, image_rel):
@@ -320,7 +336,8 @@ class Level:
         from PIL import ImageDraw
         d = ImageDraw.Draw(im)
         col = dict(spawn=(0, 255, 0), portal=(0, 255, 255), npc=(255, 255, 0), fragment=(200, 80, 255),
-                   health=(0, 255, 120), drone=(255, 60, 60), sentinel=(255, 120, 0))
+                   health=(0, 255, 120), drone=(255, 60, 60), sentinel=(255, 120, 0),
+                   checkpoint=(120, 255, 220))
         for o in self.objects:
             d.rectangle([o["x"], o["y"], o["x"] + o["w"], o["y"] + o["h"]], outline=col[o["name"]], width=2)
         os.makedirs(PREVIEW, exist_ok=True)
@@ -330,7 +347,9 @@ class Level:
               f"{n_col} blocking tiles, reachable floor {int(seen.sum())}")
 
 # --------------------------------------------------------------- sizes used by the code
-SZ = dict(spawn=32, portal=56, npc=30, fragment=18, health=16, drone=24, sentinel=48)
+SZ = dict(spawn=32, portal=56, npc=30, fragment=18, health=16, drone=24, sentinel=48, checkpoint=32)
+# min centre distance from a checkpoint to each enemy kind (see validate)
+CP_CLEAR = dict(drone=260, sentinel=300)
 
 def place(lv, kind, tx, ty, **props):
     """place an object whose CENTRE is at tile coords (tx, ty) (floats)"""
@@ -390,8 +409,17 @@ def map1():
     place(lv, "npc", *P["asha"], name="asha")
     for k in ("f1", "f2", "f3", "f4", "f5"): place(lv, "fragment", *P[k])
     for k in ("h1", "h2", "h3"): place(lv, "health", *P[k])
-    for k, a in (("d1", 0.0), ("d2", 2.1), ("d3", 4.2)): place(lv, "drone", *P[k], startAngle=a)
+    # calm pass: d3 (between the second health pickup and Asha) is gone; its
+    # clearing stays so the terrain is unchanged.
+    for k, a in (("d1", 0.0), ("d2", 2.1)): place(lv, "drone", *P[k], startAngle=a)
     place(lv, "portal", *P["portal"])
+    # checkpoints (respawn points): spawn + area entrances, beside the points
+    # so they sit in already-clear spots
+    place(lv, "checkpoint", *P["spawn"], label="Crash Site")
+    place(lv, "checkpoint", P["h2"][0] + 1.0, P["h2"][1] + 1.2, label="Mossy Hollow")
+    place(lv, "checkpoint", P["asha"][0] + 1.5, P["asha"][1] + 1.0, label="Asha's Trail")
+    place(lv, "checkpoint", P["f5"][0] + 1.2, P["f5"][1] + 1.2, label="Old Grove")
+    place(lv, "checkpoint", P["portal"][0] - 2.5, P["portal"][1] - 2.0, label="Aetherian Gate")
     lv.write("world.tmj", "tilesets/woods.png")
     return ts
 
@@ -458,6 +486,9 @@ def map2():
     place(lv, "drone", *P["d1"], startAngle=1.0)
     place(lv, "drone", *P["d2"], startAngle=3.3)
     place(lv, "portal", *P["portal"])
+    place(lv, "checkpoint", *P["spawn"], label="Upper Street")
+    place(lv, "checkpoint", P["h1"][0] - 1.5, P["h1"][1] + 1.0, label="Avenue")
+    place(lv, "checkpoint", P["voss"][0] + 2.0, P["voss"][1] + 2.5, label="Portal Square")
     lv.write("world2.tmj", "tilesets/city.png")
     return ts
 
@@ -497,9 +528,15 @@ def map3():
     lv.scatter(["steam_vent", "loose_cables"], 14)
     place(lv, "spawn", *P["spawn"])
     for k in ("h1", "h2", "h3", "h4"): place(lv, "health", *P[k])
-    for k, a in (("d1", 0.5), ("d2", 1.8), ("d3", 3.1), ("d4", 4.5), ("d5", 2.3), ("d6", 0.9)):
+    # calm pass: 6 -> 4 drones (d2 next to the central clearing and d6 in the
+    # south-west dead end are gone; their clearings stay)
+    for k, a in (("d1", 0.5), ("d3", 3.1), ("d4", 4.5), ("d5", 2.3)):
         place(lv, "drone", *P[k], startAngle=a)
     place(lv, "portal", *P["portal"])
+    place(lv, "checkpoint", *P["spawn"], label="Ruined Landing")
+    place(lv, "checkpoint", P["h2"][0] - 1.2, P["h2"][1] + 1.2, label="Central Clearing")
+    place(lv, "checkpoint", P["h4"][0] + 1.2, P["h4"][1] + 1.2, label="East Ruins")
+    place(lv, "checkpoint", P["portal"][0] - 2.5, P["portal"][1] - 2.5, label="Extraction Approach")
     lv.write("world3.tmj", "tilesets/cyberpunk.png")
     return ts
 

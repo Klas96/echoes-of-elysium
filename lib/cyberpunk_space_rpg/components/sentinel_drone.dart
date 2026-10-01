@@ -3,21 +3,23 @@ import 'package:bonfire/bonfire.dart';
 import 'package:flutter/material.dart';
 import 'custom_player.dart';
 import 'explosion_effect.dart';
-import '../audio/music_manager.dart';
+import '../game/settings.dart';
 
 enum _SState { idle, chase, attack, rage }
 
 class SentinelDrone extends GameDecoration {
   static SentinelDrone? instance;
   static const int maxHealth = 300;
-  static const double _detectR = 320;
+  // Calm tuning (brief v2): a forgiving guardian, not a threat.
+  // Was 320 / 60 / 105 / 1.1 / 0.55 / 18 / 28.
+  static const double _detectR = 260;
   static const double _attackR = 50;
-  static const double _speed = 60;
-  static const double _rageSpeed = 105;
-  static const double _cooldown = 1.1;
-  static const double _rageCooldown = 0.55;
-  static const int _damage = 18;
-  static const int _rageDamage = 28;
+  static const double _speed = 45;
+  static const double _rageSpeed = 70;
+  static const double _cooldown = 1.4;
+  static const double _rageCooldown = 0.9;
+  static const int _damage = 10;
+  static const int _rageDamage = 14;
 
   int _health = maxHealth;
   bool get isDead => _health <= 0;
@@ -68,7 +70,9 @@ class SentinelDrone extends GameDecoration {
     if (player == null) return;
     // Centre to centre, so ranges don't drift with the size difference.
     final toPlayer = (player.position + player.size / 2) - (position + size / 2);
-    final dist = toPlayer.length;
+    // Story Mode: the Sentinel stays put and never attacks (it can still be
+    // shot down to open the way).
+    final dist = GameSettings.storyMode.value ? double.infinity : toPlayer.length;
     final rage = _health < maxHealth * 0.3;
 
     if (dist < _attackR) {
@@ -86,10 +90,7 @@ class SentinelDrone extends GameDecoration {
     }
     if (dist < _attackR * 1.5 && _attackTimer <= 0) {
       final dmg = rage ? _rageDamage : _damage;
-      CustomPlayer.healthNotifier.value =
-          (CustomPlayer.healthNotifier.value - dmg).clamp(0, CustomPlayer.maxHealth);
-      CustomPlayer.damageFlash.value = true;
-      SfxManager().playDamage();
+      CustomPlayer.applyDamage(dmg);
       _attackTimer = rage ? _rageCooldown : _cooldown;
     }
   }

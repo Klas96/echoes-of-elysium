@@ -11,8 +11,10 @@ import '../components/npc_character.dart';
 import '../components/fragment_pickup.dart';
 import '../components/health_pickup.dart';
 import '../components/sentinel_drone.dart';
+import '../components/checkpoint.dart';
 import '../audio/music_manager.dart';
 import 'game_state.dart';
+import 'settings.dart';
 
 // ---------------------------------------------------------------------------
 // NPC dialogue data
@@ -110,6 +112,7 @@ Map<String, ObjectBuilder> _mapObjects() => {
       'health': (p) => HealthPickup(p.position),
       'drone': (p) => UECDrone(p.position, startAngle: _numProp(p, 'startAngle')),
       'sentinel': (p) => SentinelDrone(p.position, onDefeated: GameState.onSentinelDefeated),
+      'checkpoint': (p) => Checkpoint(p.position, label: (p.others['label'] ?? '').toString()),
     };
 
 /// Moves the player to the map's spawn object once the map is loaded, then
@@ -126,6 +129,8 @@ class _PlayerSpawn extends GameComponent {
     final player = gameRef.player;
     if (player == null) return;
     player.position = position.clone();
+    // Until a checkpoint is touched, Gaia pulls Kaela back to the spawn.
+    if (player is CustomPlayer) player.respawnPoint ??= position.clone();
     gameRef.camera.moveToPlayer();
     removeFromParent();
   }
@@ -203,7 +208,9 @@ class IntroScreen extends StatelessWidget {
                     MaterialPageRoute(builder: (_) => const CustomMapGameScreen())),
               ),
               const SizedBox(height: 20),
-              const Text('WASD / Arrow keys · E to interact · ` to debug',
+              const _StoryModeToggle(),
+              const SizedBox(height: 16),
+              const Text('WASD / Arrow keys · E to interact · Esc to pause · ` to debug',
                   style: TextStyle(color: Colors.white24, fontSize: 11, letterSpacing: 1.2)),
             ],
           ),
@@ -224,7 +231,37 @@ KeyEventResult _handleDebugKey(FocusNode _, KeyEvent event) {
     _debugMode.value = !_debugMode.value;
     return KeyEventResult.handled;
   }
+  if (event is KeyDownEvent &&
+      (event.logicalKey == LogicalKeyboardKey.escape ||
+          event.logicalKey == LogicalKeyboardKey.keyP)) {
+    _setPaused(!_paused.value);
+    return KeyEventResult.handled;
+  }
   return KeyEventResult.ignored;
+}
+
+// ---------------------------------------------------------------------------
+// Pause (Esc / P or the PAUSE button): freezes the game, offers Story Mode.
+// ---------------------------------------------------------------------------
+
+final _paused = ValueNotifier<bool>(false);
+BonfireGameInterface? _activeGame;
+
+void _setPaused(bool on) {
+  _paused.value = on;
+  final g = _activeGame;
+  if (g == null) return;
+  if (on) {
+    g.pauseEngine();
+  } else {
+    g.resumeEngine();
+  }
+}
+
+/// Called from each map's onReady.
+void _onMapReady(BonfireGameInterface game) {
+  _activeGame = game;
+  _paused.value = false;
 }
 
 // Joystick + keyboard (WASD and arrows) both feed Bonfire's movement, which
@@ -281,16 +318,13 @@ class CustomMapGameScreen extends StatelessWidget {
                   ),
             },
             onReady: (game) {
+              _onMapReady(game);
               GameState.resetMap1();
               MusicManager().play('assets/audio/music/Whispering_Pines.mp3');
             },
           )),
           const _Vignette(),
-          _GameHUD(
-            onDeath: () => Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (_) => const _GameOverScreen()),
-            ),
-          ),
+          const _GameHUD(),
           const _NpcDialogueLayer(),
           // NPC interact prompt
           ValueListenableBuilder<bool>(
@@ -312,6 +346,7 @@ class CustomMapGameScreen extends StatelessWidget {
                   )
                 : const SizedBox.shrink(),
           ),
+          const _CalmLayer(),
           _DebugOverlay(),
         ]),
       ),
@@ -354,16 +389,13 @@ class Map2GameScreen extends StatelessWidget {
                   ),
             },
             onReady: (game) {
+              _onMapReady(game);
               GameState.resetMap2();
               MusicManager().play('assets/audio/music/Neon_Shadows.mp3');
             },
           )),
           const _Vignette(),
-          _GameHUD(
-            onDeath: () => Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (_) => const _GameOverScreen()),
-            ),
-          ),
+          const _GameHUD(),
           // AI Fragment dialogue overlay
           ValueListenableBuilder<String?>(
             valueListenable: AIFragment.activeDialogue,
@@ -390,6 +422,7 @@ class Map2GameScreen extends StatelessWidget {
                   )
                 : const SizedBox.shrink(),
           ),
+          const _CalmLayer(),
           _DebugOverlay(),
         ]),
       ),
@@ -432,17 +465,14 @@ class Map3GameScreen extends StatelessWidget {
                     ),
               },
               onReady: (game) {
+                _onMapReady(game);
                 GameState.resetMap3();
                 MusicManager().play('assets/audio/music/Neon_Mirage.mp3');
               },
             ),
           ),
           const _Vignette(),
-          _GameHUD(
-            onDeath: () => Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (_) => const _GameOverScreen()),
-            ),
-          ),
+          const _GameHUD(),
           const _NpcDialogueLayer(),
           ValueListenableBuilder<bool>(
             valueListenable: NpcCharacter.showPrompt,
@@ -463,6 +493,7 @@ class Map3GameScreen extends StatelessWidget {
                   )
                 : const SizedBox.shrink(),
           ),
+          const _CalmLayer(),
           _DebugOverlay(),
         ]),
       ),
@@ -571,57 +602,11 @@ class _NpcDialogueLayerState extends State<_NpcDialogueLayer> {
 }
 
 // ---------------------------------------------------------------------------
-// Game Over screen
-// ---------------------------------------------------------------------------
-
-class _GameOverScreen extends StatelessWidget {
-  const _GameOverScreen();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('SIGNAL LOST',
-                style: TextStyle(
-                    color: Color(0xFFFF3333),
-                    fontSize: 36,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 6)),
-            const SizedBox(height: 12),
-            const Text('Kaela has been neutralised by UEC forces.',
-                style: TextStyle(color: Colors.white54, fontSize: 14)),
-            const SizedBox(height: 40),
-            _CyberButton(
-              label: 'TRY AGAIN',
-              color: const Color(0xFFFF4444),
-              onTap: () => Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(builder: (_) => const CustomMapGameScreen())),
-            ),
-            const SizedBox(height: 16),
-            _CyberButton(
-              label: 'MAIN MENU',
-              color: Colors.white38,
-              onTap: () => Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(builder: (_) => const IntroScreen())),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Shared UI widgets
 // ---------------------------------------------------------------------------
 
 class _GameHUD extends StatefulWidget {
-  final VoidCallback onDeath;
-  const _GameHUD({required this.onDeath});
+  const _GameHUD();
 
   @override
   State<_GameHUD> createState() => _GameHUDState();
@@ -631,21 +616,13 @@ class _GameHUDState extends State<_GameHUD> {
   @override
   void initState() {
     super.initState();
-    CustomPlayer.healthNotifier.addListener(_onHealthChange);
     CustomPlayer.damageFlash.addListener(_onFlash);
   }
 
   @override
   void dispose() {
-    CustomPlayer.healthNotifier.removeListener(_onHealthChange);
     CustomPlayer.damageFlash.removeListener(_onFlash);
     super.dispose();
-  }
-
-  void _onHealthChange() {
-    if (CustomPlayer.healthNotifier.value <= 0) {
-      Future.microtask(widget.onDeath);
-    }
   }
 
   void _onFlash() {
@@ -660,10 +637,10 @@ class _GameHUDState extends State<_GameHUD> {
   @override
   Widget build(BuildContext context) {
     return Stack(children: [
-      // Damage flash overlay
+      // Damage flash overlay (kept soft: calm direction)
       if (CustomPlayer.damageFlash.value)
         IgnorePointer(
-          child: Container(color: Colors.red.withOpacity(0.25)),
+          child: Container(color: const Color(0xFFFF6666).withValues(alpha: 0.12)),
         ),
       // Health bar
       Positioned(
@@ -1041,5 +1018,193 @@ class _CyberButton extends StatelessWidget {
               letterSpacing: 2,
               fontSize: 13)),
     );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Calm gameplay UI: respawn fade, checkpoint toast, pause + Story Mode
+// ---------------------------------------------------------------------------
+
+class _StoryModeToggle extends StatelessWidget {
+  const _StoryModeToggle();
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<bool>(
+      valueListenable: GameSettings.storyMode,
+      builder: (_, on, __) => InkWell(
+        onTap: () => GameSettings.setStoryMode(!on),
+        borderRadius: BorderRadius.circular(6),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Switch(
+              value: on,
+              onChanged: GameSettings.setStoryMode,
+              activeColor: const Color(0xFF66FFAA),
+            ),
+            const SizedBox(width: 6),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('STORY MODE  ${on ? 'ON' : 'OFF'}',
+                    style: TextStyle(
+                        color: on ? const Color(0xFF66FFAA) : Colors.white54,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 2)),
+                const SizedBox(height: 2),
+                const Text('Enemies stay calm and can\'t hurt you. Just enjoy the story.',
+                    style: TextStyle(color: Colors.white38, fontSize: 11)),
+              ],
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+class _CalmLayer extends StatelessWidget {
+  const _CalmLayer();
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(children: [
+      // Pause button + Story Mode tag, under the health bar
+      Positioned(
+        top: 62,
+        left: 12,
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          GestureDetector(
+            onTap: () => _setPaused(true),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.6),
+                border: Border.all(color: Colors.white24),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: const Text('II  PAUSE',
+                  style: TextStyle(
+                      color: Colors.white54,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.5)),
+            ),
+          ),
+          const SizedBox(width: 8),
+          ValueListenableBuilder<bool>(
+            valueListenable: GameSettings.storyMode,
+            builder: (_, on, __) => on
+                ? const Text('STORY MODE',
+                    style: TextStyle(
+                        color: Color(0xFF66FFAA), fontSize: 10, letterSpacing: 1.5))
+                : const SizedBox.shrink(),
+          ),
+        ]),
+      ),
+      // Checkpoint toast
+      ValueListenableBuilder<String?>(
+        valueListenable: Checkpoint.toast,
+        builder: (_, text, __) => Positioned(
+          top: 56,
+          left: 0,
+          right: 0,
+          child: IgnorePointer(
+            child: Center(
+              child: AnimatedOpacity(
+                opacity: text == null ? 0 : 1,
+                duration: const Duration(milliseconds: 500),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.55),
+                    border: Border.all(color: const Color(0xFF66FFAA).withValues(alpha: 0.6)),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Text(text ?? '',
+                      style: const TextStyle(
+                          color: Color(0xFF66FFAA), fontSize: 12, letterSpacing: 1.5)),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+      // "Gaia pulls you back" respawn fade (replaces the old game over)
+      ValueListenableBuilder<bool>(
+        valueListenable: CustomPlayer.respawnFade,
+        builder: (_, fading, __) => IgnorePointer(
+          ignoring: !fading,
+          child: AnimatedOpacity(
+            opacity: fading ? 1 : 0,
+            duration: Duration(
+                milliseconds: ((fading
+                            ? CustomPlayer.fadeOutSeconds
+                            : CustomPlayer.fadeInSeconds) *
+                        1000)
+                    .round()),
+            curve: Curves.easeInOut,
+            child: Container(
+              color: const Color(0xFF020A08),
+              alignment: Alignment.center,
+              child: const Column(mainAxisSize: MainAxisSize.min, children: [
+                Text('Gaia pulls you back…',
+                    style: TextStyle(
+                        color: Color(0xFF66FFAA),
+                        fontSize: 22,
+                        fontStyle: FontStyle.italic,
+                        letterSpacing: 2)),
+                SizedBox(height: 10),
+                Text('signal lost · returning to the last checkpoint',
+                    style: TextStyle(color: Colors.white30, fontSize: 11, letterSpacing: 1.5)),
+              ]),
+            ),
+          ),
+        ),
+      ),
+      // Pause menu
+      ValueListenableBuilder<bool>(
+        valueListenable: _paused,
+        builder: (ctx, paused, __) => paused
+            ? Container(
+                color: Colors.black.withValues(alpha: 0.7),
+                alignment: Alignment.center,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 26),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF06060F).withValues(alpha: 0.96),
+                    border: Border.all(color: const Color(0xFF00FFCC).withValues(alpha: 0.6)),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    const Text('PAUSED',
+                        style: TextStyle(
+                            color: Color(0xFF00FFCC),
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 5)),
+                    const SizedBox(height: 18),
+                    const _StoryModeToggle(),
+                    const SizedBox(height: 18),
+                    _CyberButton(label: 'RESUME', onTap: () => _setPaused(false)),
+                    const SizedBox(height: 12),
+                    _CyberButton(
+                      label: 'MAIN MENU',
+                      color: Colors.white38,
+                      onTap: () {
+                        _setPaused(false);
+                        Navigator.of(ctx).pushReplacement(
+                            MaterialPageRoute(builder: (_) => const IntroScreen()));
+                      },
+                    ),
+                  ]),
+                ),
+              )
+            : const SizedBox.shrink(),
+      ),
+    ]);
   }
 }
