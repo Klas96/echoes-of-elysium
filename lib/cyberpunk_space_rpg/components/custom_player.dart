@@ -6,6 +6,7 @@ import 'dart:math';
 import 'ai_fragment.dart';
 import 'npc_character.dart';
 import 'player_bullet.dart';
+import 'walk_sheet.dart';
 import '../audio/music_manager.dart';
 import '../game/settings.dart';
 
@@ -119,11 +120,10 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision {
     size: Vector2.all(sizePlayer),
     speed: sizePlayer * 2.5,
     life: 100,
+    initDirection: Direction.down,
   ) {
     priority = 1000;
   }
-
-  Sprite? _sprite;
 
   @override
   void render(Canvas canvas) {
@@ -141,9 +141,8 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision {
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
     );
 
-    if (_sprite != null) {
-      _sprite!.render(canvas, size: size);
-    }
+    // Kaela walk/idle animation (DirectionAnimation, driven by movement)
+    super.render(canvas);
   }
 
   @override
@@ -151,7 +150,8 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision {
     current = this;
     respawnFade.value = false;
     SfxManager().init();
-    _sprite = await Sprite.load('sprites/player.png');
+    paint.filterQuality = FilterQuality.none;
+    animation = await WalkSheet.load('sprites/kaela_walk.png');
     add(RectangleHitbox(
       size: Vector2(sizePlayer * 0.5, sizePlayer / 3),
       position: Vector2(sizePlayer * 0.25, sizePlayer * 0.65),
@@ -165,6 +165,18 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision {
   bool onBlockMovement(Set<Vector2> intersectionPoints, GameComponent other) {
     if (other is PlayerBullet || other is AIFragment) return false;
     return super.onBlockMovement(intersectionPoints, other);
+  }
+
+  // Setting `position` (spawn / teleport) goes through translate(), which
+  // Bonfire also uses to update lastDirection from the jump. Keep the facing
+  // so Kaela doesn't turn towards wherever she was teleported.
+  @override
+  void translate(Vector2 displacement) {
+    final facing = lastDirection;
+    final facingH = lastDirectionHorizontal;
+    super.translate(displacement);
+    lastDirection = facing;
+    lastDirectionHorizontal = facingH;
   }
 
   // Walls are Tiled tile collisions; BlockMovementCollision pushes us out and

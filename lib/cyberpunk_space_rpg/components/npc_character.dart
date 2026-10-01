@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:bonfire/bonfire.dart';
 import 'package:flutter/material.dart';
+import 'walk_sheet.dart';
 
 class NpcDialogue {
   final String name;
@@ -16,24 +17,50 @@ class NpcDialogue {
   });
 }
 
-class NpcCharacter extends GameDecoration {
+/// Animated NPC. Uses the walk sheet 'sprites/<name>_walk.png' (derived from
+/// [spritePath] 'sprites/npc_<name>.png'); falls back to the static sprite
+/// if there is no sheet. Idles facing down and turns to face the player when
+/// they are within talk range.
+class NpcCharacter extends SimpleNpc {
   static NpcCharacter? nearbyNpc;
   static final ValueNotifier<NpcDialogue?> activeDialogue = ValueNotifier(null);
   static final ValueNotifier<bool> showPrompt = ValueNotifier(false);
 
+  static const double npcSize = 32;
+
   final NpcDialogue dialogue;
   final String spritePath;
   double _pulse = 0;
-  Sprite? _sprite;
   static const double _interactRadius = 72;
 
+  // The Tiled objects are 30x30; keep the same centre at 32x32.
   NpcCharacter(Vector2 position, {required this.dialogue, required this.spritePath})
-      : super(position: position, size: Vector2.all(30));
+      : super(
+          position: position - Vector2.all(1),
+          size: Vector2.all(npcSize),
+          initDirection: Direction.down,
+        );
+
+  String get walkSheetPath =>
+      spritePath.replaceFirstMapped(RegExp(r'npc_(\w+)\.png$'), (m) => '${m[1]}_walk.png');
 
   @override
   Future<void> onLoad() async {
-    _sprite = await Sprite.load(spritePath);
+    paint.filterQuality = FilterQuality.none;
+    try {
+      animation = await WalkSheet.load(walkSheetPath);
+    } catch (_) {
+      final still = SpriteAnimation.spriteList([await Sprite.load(spritePath)], stepTime: 1);
+      animation = SimpleDirectionAnimation(idleRight: still, runRight: still);
+    }
     return super.onLoad();
+  }
+
+  void _face(Direction d) {
+    if (lastDirection == d) return;
+    lastDirection = d;
+    if (d == Direction.left || d == Direction.right) lastDirectionHorizontal = d;
+    idle();
   }
 
   void interact() {
@@ -47,8 +74,10 @@ class NpcCharacter extends GameDecoration {
 
     final player = gameRef.player;
     if (player == null) return;
-    final dist = ((player.position + player.size / 2) - (position + size / 2)).length;
-    final near = dist < _interactRadius;
+    final playerCenter = player.position + player.size / 2;
+    final center = position + size / 2;
+    final near = (playerCenter - center).length < _interactRadius;
+    _face(near ? WalkSheet.facing(center, playerCenter) : Direction.down);
 
     if (near) {
       nearbyNpc = this;
@@ -76,10 +105,8 @@ class NpcCharacter extends GameDecoration {
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
     );
 
-    // Sprite
-    if (_sprite != null) {
-      _sprite!.render(canvas, size: size);
-    }
+    // Animated sprite (DirectionAnimation)
+    super.render(canvas);
 
     // Floating chat bubble indicator
     final by = cy - r - 10 + p * 2.5;
