@@ -8,8 +8,6 @@ name: Release
 on:
   push:
     tags: ['v*']
-    # TEMPORARY (verification only, removed before merge): dry run on branch push
-    branches: [ci/release-pipeline]
   workflow_dispatch:
     inputs:
       dry_run:
@@ -45,7 +43,7 @@ jobs:
       - name: Determine version / mode
         id: version
         env:
-          DRY_INPUT: ${{ (github.event_name == 'workflow_dispatch' && inputs.dry_run) || (github.event_name == 'push' && github.ref == 'refs/heads/ci/release-pipeline') }}
+          DRY_INPUT: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
         run: |
           set -euo pipefail
           pub=$(sed -n -E 's/^version:[[:space:]]*([^[:space:]]+).*/\1/p' pubspec.yaml)
