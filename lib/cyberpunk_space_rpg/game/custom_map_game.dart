@@ -169,6 +169,22 @@ KeyEventResult _handleDebugKey(FocusNode _, KeyEvent event) {
   return KeyEventResult.ignored;
 }
 
+// Joystick + keyboard (WASD and arrows) both feed Bonfire's movement, which
+// applies speed * dt. Only the movement keys are accepted so other keys
+// (` for debug, E to interact) still reach the rest of the app.
+List<PlayerController> _playerControllers() => [
+      Joystick(directional: JoystickDirectional()),
+      Keyboard(
+        config: KeyboardConfig(
+          directionalKeys: [
+            KeyboardDirectionalKeys.arrows(),
+            KeyboardDirectionalKeys.wasd(),
+          ],
+          acceptedKeys: [], // filled with the directional keys by KeyboardConfig
+        ),
+      ),
+    ];
+
 // ---------------------------------------------------------------------------
 // Map 1 — Elysium Forest
 // ---------------------------------------------------------------------------
@@ -194,7 +210,7 @@ class CustomMapGameScreen extends StatelessWidget {
                   Vector2(d.localPosition.dx, d.localPosition.dy);
             },
             child: BonfireWidget(
-            playerControllers: [Joystick(directional: JoystickDirectional())],
+            playerControllers: _playerControllers(),
             player: CustomPlayer(Vector2(800, 800)),
             map: CustomMap('maps/world.tmj'),
             cameraConfig: CameraConfig(moveOnlyMapArea: true, zoom: 2.0),
@@ -296,7 +312,7 @@ class Map2GameScreen extends StatelessWidget {
             onTapDown: (d) => CustomPlayer.pendingShot.value =
                 Vector2(d.localPosition.dx, d.localPosition.dy),
             child: BonfireWidget(
-            playerControllers: [Joystick(directional: JoystickDirectional())],
+            playerControllers: _playerControllers(),
             player: CustomPlayer(Vector2(1840, 30)),
             map: CustomMap('maps/world2.tmj'),
             cameraConfig: CameraConfig(moveOnlyMapArea: true, zoom: 2.0),
@@ -406,7 +422,7 @@ class Map3GameScreen extends StatelessWidget {
             onTapDown: (d) => CustomPlayer.pendingShot.value =
                 Vector2(d.localPosition.dx, d.localPosition.dy),
             child: BonfireWidget(
-              playerControllers: [Joystick(directional: JoystickDirectional())],
+              playerControllers: _playerControllers(),
               player: CustomPlayer(Vector2(850, 850)),
               map: CustomMap('maps/world3.tmj'),
               cameraConfig: CameraConfig(moveOnlyMapArea: true, zoom: 2.0),

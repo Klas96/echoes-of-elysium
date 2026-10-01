@@ -1,5 +1,7 @@
+import 'dart:math';
 import 'package:bonfire/bonfire.dart';
 import 'package:flutter/material.dart';
+import 'package:bonfire/util/collision_game_component.dart';
 import 'uec_drone.dart';
 import 'sentinel_drone.dart';
 
@@ -7,27 +9,32 @@ class PlayerBullet extends GameDecoration {
   static const double _speed = 380;
   static const double _maxDistance = 520;
   static const int _damage = 30;
+  static const double bulletSize = 16;
 
   final Vector2 _velocity;
   final double _angle;
   double _traveled = 0;
+  bool _hit = false;
   Sprite? _sprite;
 
   PlayerBullet(Vector2 position, Vector2 direction)
       : _velocity = direction * _speed,
         _angle = direction.screenAngle(),
-        super(position: position, size: Vector2.all(16));
+        super(position: position, size: Vector2.all(bulletSize));
 
   @override
   Future<void> onLoad() async {
     _sprite = await Sprite.load('sprites/bullet.png');
+    add(CircleHitbox(radius: 4, position: size / 2, anchor: Anchor.center));
     return super.onLoad();
   }
 
   @override
   void update(double dt) {
     super.update(dt);
-    final step = _velocity * dt;
+    if (_hit) return;
+    // Clamp dt so a frame spike can't make the bullet skip over a drone.
+    final step = _velocity * min(dt, 1 / 30);
     position += step;
     _traveled += step.length;
 
@@ -35,24 +42,28 @@ class PlayerBullet extends GameDecoration {
       removeFromParent();
       return;
     }
+  }
 
-    final center = position + size / 2;
-    for (final drone in List.of(UECDrone.active)) {
-      if (drone.isDead) continue;
-      if ((center - (drone.position + drone.size / 2)).length < 18) {
-        drone.takeDamage(_damage);
+  @override
+  void onCollisionStart(Set<Vector2> intersectionPoints, PositionComponent other) {
+    if (!_hit) {
+      if (other is UECDrone && !other.isDead) {
+        _hit = true;
+        other.takeDamage(_damage);
         removeFromParent();
-        return;
+      } else if (other is SentinelDrone && !other.isDead) {
+        _hit = true;
+        other.takeDamage(_damage);
+        removeFromParent();
+      } else if (other is TileWithCollision ||
+          other is CollisionMapComponent ||
+          other is GameDecorationWithCollision) {
+        // Tiled walls (collision tiles / collision objects)
+        _hit = true;
+        removeFromParent();
       }
     }
-    final sentinel = SentinelDrone.instance;
-    if (sentinel != null && !sentinel.isDead) {
-      if ((center - (sentinel.position + sentinel.size / 2)).length < 30) {
-        sentinel.takeDamage(_damage);
-        removeFromParent();
-        return;
-      }
-    }
+    super.onCollisionStart(intersectionPoints, other);
   }
 
   @override

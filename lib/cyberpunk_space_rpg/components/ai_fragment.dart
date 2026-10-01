@@ -54,7 +54,8 @@ class AIFragment extends GameDecoration {
 
     final player = gameRef.player;
     if (player != null) {
-      final dist = (player.position - position).length;
+      // Centre to centre, like the NPC and pickup checks.
+      final dist = ((player.position + player.size / 2) - (position + size / 2)).length;
       if (dist < interactRadius) {
         nearbyFragment = this;
         showPrompt.value = true;

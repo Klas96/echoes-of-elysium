@@ -73,46 +73,42 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision {
     return super.onLoad();
   }
 
+  // Bonfire's collision shouldn't push us around for our own bullets or the
+  // AI fragment (it's something you interact with, not an obstacle).
+  @override
+  bool onBlockMovement(Set<Vector2> intersectionPoints, GameComponent other) {
+    if (other is PlayerBullet || other is AIFragment) return false;
+    return super.onBlockMovement(intersectionPoints, other);
+  }
+
+  // Movement now comes from Bonfire (joystick + Keyboard controller set
+  // velocity, Bonfire applies velocity * dt), so BlockMovementCollision can
+  // resolve Tiled walls with sliding. While a map still uses the texture
+  // mask, undo a step that lands on a blocked pixel.
+  @override
+  void onApplyDisplacement(double dt) {
+    final before = position.clone();
+    super.onApplyDisplacement(dt);
+    final map = textureMap;
+    if (map == null || before == position) return;
+    if (map.isWalkable(position)) {
+      lastValidPosition = position.clone();
+      isBlocked = false;
+    } else {
+      position = before;
+      isBlocked = true;
+    }
+  }
+
   @override
   void update(double dt) {
     super.update(dt);
     positionNotifier.value = position.clone();
-    _applyKeyboardMovement(dt);
     _validatePosition();
     _checkInteraction();
     _updateFootsteps(dt);
     _handleShooting(dt);
     _frameCount++;
-  }
-
-  void _applyKeyboardMovement(double dt) {
-    final keys = HardwareKeyboard.instance.logicalKeysPressed;
-    double dx = 0, dy = 0;
-    if (keys.contains(LogicalKeyboardKey.keyW) || keys.contains(LogicalKeyboardKey.arrowUp)) dy -= 1;
-    if (keys.contains(LogicalKeyboardKey.keyS) || keys.contains(LogicalKeyboardKey.arrowDown)) dy += 1;
-    if (keys.contains(LogicalKeyboardKey.keyA) || keys.contains(LogicalKeyboardKey.arrowLeft)) dx -= 1;
-    if (keys.contains(LogicalKeyboardKey.keyD) || keys.contains(LogicalKeyboardKey.arrowRight)) dx += 1;
-    if (dx == 0 && dy == 0) return;
-    final dir = Vector2(dx, dy)..normalize();
-    _applyMovement(dir, dt);
-  }
-
-  void _applyMovement(Vector2 direction, double dt) {
-    if (textureMap == null) return;
-    final step = direction * speed * dt;
-    final next = position + step;
-    if (textureMap!.isWalkable(next)) {
-      position = next;
-      lastValidPosition = position;
-      isBlocked = false;
-    } else {
-      isBlocked = true;
-      final half = position + step * 0.5;
-      if (textureMap!.isWalkable(half)) {
-        position = half;
-        lastValidPosition = position;
-      }
-    }
   }
 
   void _validatePosition() {
@@ -181,7 +177,10 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision {
     final dir = worldPos - (position + size / 2);
     if (dir.length < 1) return;
 
-    gameRef.add(PlayerBullet(position + size / 2 - Vector2(5, 5), dir.normalized()));
+    gameRef.add(PlayerBullet(
+      position + size / 2 - Vector2.all(PlayerBullet.bulletSize / 2),
+      dir.normalized(),
+    ));
     SfxManager().playShoot();
     _shootCooldown = 0.22;
   }
@@ -196,22 +195,13 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision {
     return null;
   }
 
+  // Joystick and keyboard (Bonfire's Keyboard controller) both arrive here.
+  // super (MovementByJoystick) turns the event into a velocity that Bonfire
+  // applies with the real dt each frame, so speed no longer depends on how
+  // often the joystick fires.
   @override
   void onJoystickChangeDirectional(JoystickDirectionalEvent event) {
     _joystickMoving = event.directional != JoystickMoveDirectional.IDLE;
-    if (event.directional == JoystickMoveDirectional.IDLE) return;
-    Vector2 dir = Vector2.zero();
-    switch (event.directional) {
-      case JoystickMoveDirectional.MOVE_UP:         dir = Vector2(0, -1); break;
-      case JoystickMoveDirectional.MOVE_DOWN:       dir = Vector2(0, 1); break;
-      case JoystickMoveDirectional.MOVE_LEFT:       dir = Vector2(-1, 0); break;
-      case JoystickMoveDirectional.MOVE_RIGHT:      dir = Vector2(1, 0); break;
-      case JoystickMoveDirectional.MOVE_UP_LEFT:    dir = Vector2(-1, -1)..normalize(); break;
-      case JoystickMoveDirectional.MOVE_UP_RIGHT:   dir = Vector2(1, -1)..normalize(); break;
-      case JoystickMoveDirectional.MOVE_DOWN_LEFT:  dir = Vector2(-1, 1)..normalize(); break;
-      case JoystickMoveDirectional.MOVE_DOWN_RIGHT: dir = Vector2(1, 1)..normalize(); break;
-      default: break;
-    }
-    _applyMovement(dir, 0.016);
+    super.onJoystickChangeDirectional(event);
   }
 }

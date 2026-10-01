@@ -30,7 +30,6 @@ class SfxManager {
 
   void _play(html.AudioElement? el, String label) {
     if (el == null) { print('SFX not ready: $label'); return; }
-    print('SFX playing: $label');
     el.currentTime = 0;
     el.play().catchError((e) => print('SFX play error [$label]: $e'));
   }
