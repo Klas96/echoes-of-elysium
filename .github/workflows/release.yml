@@ -1,0 +1,322 @@
+name: Release
+
+# Tag push (vX.Y.Z)  -> build signed APK + web, create GitHub Release,
+#                       publish the APK to the F-Droid repo (Klas96/fdroid).
+# workflow_dispatch   -> dry run by default: build + signature check + artifacts,
+#                       and an F-Droid rehearsal (fdroid update) WITHOUT commit/push.
+#                       No GitHub Release, no tag, nothing published.
+on:
+  push:
+    tags: ['v*']
+    # TEMPORARY (verification only, removed before merge): dry run on branch push
+    branches: [ci/release-pipeline]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (build + verify only; no GitHub Release, no F-Droid push)'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  # Matches .metadata (revision fcf2c11572) and pubspec.lock (dart >=3.8.0).
+  FLUTTER_VERSION: '3.32.5'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    outputs:
+      dry_run: ${{ steps.version.outputs.dry_run }}
+      version_name: ${{ steps.version.outputs.version_name }}
+      version_code: ${{ steps.version.outputs.version_code }}
+      app_id: ${{ steps.apk.outputs.app_id }}
+      apk_name: ${{ steps.apk.outputs.apk_name }}
+      web_zip: ${{ steps.web.outputs.web_zip }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Determine version / mode
+        id: version
+        env:
+          DRY_INPUT: ${{ (github.event_name == 'workflow_dispatch' && inputs.dry_run) || (github.event_name == 'push' && github.ref == 'refs/heads/ci/release-pipeline') }}
+        run: |
+          set -euo pipefail
+          pub=$(sed -n -E 's/^version:[[:space:]]*([^[:space:]]+).*/\1/p' pubspec.yaml)
+          pub_name=${pub%%+*}
+          pub_code=${pub#*+}; [ "$pub_code" = "$pub" ] && pub_code=1
+          dry=false
+          if [ "$DRY_INPUT" = "true" ]; then dry=true; fi
+
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            name=${GITHUB_REF_NAME#v}
+            if [[ ! "$name" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+              echo "::error::Tag $GITHUB_REF_NAME must look like vMAJOR.MINOR.PATCH"; exit 1
+            fi
+            maj=${BASH_REMATCH[1]}; min=${BASH_REMATCH[2]}; pat=${BASH_REMATCH[3]}
+            if [ "$min" -gt 99 ] || [ "$pat" -gt 99 ]; then
+              echo "::error::MINOR and PATCH must be <= 99 (versionCode = MAJOR*10000 + MINOR*100 + PATCH)"; exit 1
+            fi
+            code=$((10#$maj * 10000 + 10#$min * 100 + 10#$pat))
+          else
+            if [ "$dry" != "true" ]; then
+              echo "::error::A non-dry-run release must run on a vX.Y.Z tag (push the tag instead)."; exit 1
+            fi
+            name=$pub_name
+            code=$pub_code
+          fi
+          echo "Mode: dry_run=$dry  versionName=$name  versionCode=$code"
+          {
+            echo "dry_run=$dry"
+            echo "version_name=$name"
+            echo "version_code=$code"
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Decode upload keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "::error::Secret ANDROID_KEYSTORE_BASE64 is not set"; exit 1
+          fi
+          ks="$RUNNER_TEMP/android-release.jks"
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$ks"
+          chmod 600 "$ks"
+          echo "ANDROID_KEYSTORE_PATH=$ks" >> "$GITHUB_ENV"
+
+      - name: flutter pub get
+        run: flutter pub get
+
+      - name: Build release APK (universal)
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          flutter build apk --release \
+            --build-name='${{ steps.version.outputs.version_name }}' \
+            --build-number='${{ steps.version.outputs.version_code }}'
+
+      - name: Verify APK signature and read package info
+        id: apk
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          bt="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
+          apk=build/app/outputs/flutter-apk/app-release.apk
+          "$bt/apksigner" verify --verbose --print-certs "$apk" | tee "$RUNNER_TEMP/certs.txt"
+          # apksigner prints "Signer #1 certificate ..." or, with --verbose, "V2 Signer: certificate ..."
+          got=$(sed -n -E 's/^.*Signer( #1)?:? certificate SHA-256 digest: ([0-9a-f]+)$/\2/p' "$RUNNER_TEMP/certs.txt" | head -1)
+          want=$(keytool -list -v -keystore "$ANDROID_KEYSTORE_PATH" -alias "$ANDROID_KEY_ALIAS" \
+                   -storepass "$ANDROID_KEYSTORE_PASSWORD" \
+                 | sed -n -E 's/^[[:space:]]*SHA256: ([0-9A-F:]+)$/\1/p' | tr -d ':' | tr 'A-F' 'a-f')
+          if [ -z "$got" ] || [ "$got" != "$want" ]; then
+            echo "::error::APK is not signed with the release signing key (got '$got')"; exit 1
+          fi
+          echo "APK signed with the release signing key, cert SHA-256 $got"
+          badging=$("$bt/aapt2" dump badging "$apk" | head -1)
+          echo "$badging"
+          app_id=$(echo "$badging" | sed -n -E "s/.*package: name='([^']+)'.*/\1/p")
+          vcode=$(echo "$badging" | sed -n -E "s/.*versionCode='([^']+)'.*/\1/p")
+          vname=$(echo "$badging" | sed -n -E "s/.*versionName='([^']+)'.*/\1/p")
+          if [ "$vcode" != '${{ steps.version.outputs.version_code }}' ] || [ "$vname" != '${{ steps.version.outputs.version_name }}' ]; then
+            echo "::error::APK version $vname ($vcode) does not match expected"; exit 1
+          fi
+          name="echoes-of-elysium-${vname}.apk"
+          mkdir -p dist
+          cp "$apk" "dist/$name"
+          (cd dist && sha256sum "$name" > "$name.sha256")
+          ls -l dist
+          {
+            echo "app_id=$app_id"
+            echo "apk_name=$name"
+          } >> "$GITHUB_OUTPUT"
+          {
+            echo "### Android APK"
+            echo "- applicationId: \`$app_id\`"
+            echo "- version: $vname ($vcode)"
+            echo "- signer cert SHA-256: \`$got\`"
+            echo "- size: $(du -h "dist/$name" | cut -f1)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Build web
+        id: web
+        run: |
+          set -euo pipefail
+          flutter build web --release
+          zip_name="echoes-of-elysium-${{ steps.version.outputs.version_name }}-web.zip"
+          (cd build/web && zip -qr "$GITHUB_WORKSPACE/dist/$zip_name" .)
+          echo "web_zip=$zip_name" >> "$GITHUB_OUTPUT"
+          ls -l dist
+
+      - name: Remove keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/android-release.jks"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ steps.version.outputs.version_name }}
+          path: dist/
+          retention-days: 14
+          if-no-files-found: error
+
+  github-release:
+    needs: build
+    if: needs.build.outputs.dry_run != 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-${{ needs.build.outputs.version_name }}
+          path: dist
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --verify-tag \
+            --title "Echoes of Elysium ${{ needs.build.outputs.version_name }}" \
+            --generate-notes
+
+  fdroid:
+    needs: [build, github-release]
+    # Real publish after the GitHub Release; in dry run a rehearsal without push.
+    if: ${{ !cancelled() && needs.build.result == 'success' && (needs.build.outputs.dry_run == 'true' || needs.github-release.result == 'success') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      APP_ID: ${{ needs.build.outputs.app_id }}
+      VERSION_NAME: ${{ needs.build.outputs.version_name }}
+      VERSION_CODE: ${{ needs.build.outputs.version_code }}
+      DRY_RUN: ${{ needs.build.outputs.dry_run }}
+    steps:
+      - name: Checkout game repo (F-Droid metadata template only)
+        uses: actions/checkout@v5
+        with:
+          path: game
+          sparse-checkout: fdroid
+
+      - name: Checkout Klas96/fdroid (deploy key)
+        uses: actions/checkout@v5
+        with:
+          repository: Klas96/fdroid
+          ref: master
+          path: fdroid
+          ssh-key: ${{ secrets.FDROID_DEPLOY_KEY }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-${{ needs.build.outputs.version_name }}
+          path: dist
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install fdroidserver
+        run: pip install 'fdroidserver==2.4.5'
+
+      - name: Prepare repo (keystore, config, APK, metadata)
+        working-directory: fdroid
+        env:
+          FDROID_KEYSTORE_BASE64: ${{ secrets.FDROID_KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+          if [ -z "$FDROID_KEYSTORE_BASE64" ]; then
+            echo "::error::Secret FDROID_KEYSTORE_BASE64 is not set"; exit 1
+          fi
+          echo "$FDROID_KEYSTORE_BASE64" | base64 -d > keystore.p12
+          chmod 600 keystore.p12
+          # Never use passwords from config.yml in CI; read them from env instead.
+          # (Idempotent once config.yml itself uses {env: FDROID_KEYSTORE_PASS}.)
+          sed -i -E \
+            -e 's/^keystorepass:.*/keystorepass: {env: FDROID_KEYSTORE_PASS}/' \
+            -e 's/^keypass:.*/keypass: {env: FDROID_KEYSTORE_PASS}/' config.yml
+          chmod 600 config.yml
+
+          target="repo/${APP_ID}_${VERSION_CODE}.apk"
+          if [ -e "$target" ]; then
+            echo "::error::$target already exists in the F-Droid repo (bump the version)"; exit 1
+          fi
+          cp "../dist/${{ needs.build.outputs.apk_name }}" "$target"
+
+          if [ ! -e "metadata/${APP_ID}.yml" ]; then
+            echo "Adding metadata/${APP_ID}.yml from game repo template"
+            cp ../game/fdroid/metadata.yml "metadata/${APP_ID}.yml"
+          fi
+
+      - name: fdroid update
+        working-directory: fdroid
+        env:
+          FDROID_KEYSTORE_PASS: ${{ secrets.FDROID_KEYSTORE_PASS }}
+        run: fdroid update
+
+      - name: Clean up secrets, restore config.yml
+        if: always()
+        working-directory: fdroid
+        run: |
+          rm -f keystore.p12
+          git checkout -- config.yml || true
+
+      - name: Show changes
+        working-directory: fdroid
+        run: |
+          git status --short
+          python3 - <<'PY'
+          import json, os
+          d = json.load(open('repo/index-v1.json'))
+          app = os.environ['APP_ID']
+          pk = d['packages'].get(app, [])
+          print('index-v1 packages for', app, [(p['versionName'], p['versionCode']) for p in pk])
+          assert any(str(p['versionCode']) == os.environ['VERSION_CODE'] for p in pk), 'APK missing from index'
+          PY
+
+      - name: Commit and push to Klas96/fdroid
+        if: env.DRY_RUN != 'true'
+        working-directory: fdroid
+        run: |
+          set -euo pipefail
+          git config user.name "echoes-of-elysium CI"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          paths="repo metadata"
+          for d in tmp archive; do [ -e "$d" ] && paths="$paths $d"; done
+          git add -A -- $paths
+          git commit -m "Add Echoes of Elysium ${VERSION_NAME} (${VERSION_CODE}) [automated]"
+          for i in 1 2 3; do
+            git push origin HEAD:master && exit 0
+            git pull --rebase origin master
+          done
+          exit 1
+
+      - name: Dry run note
+        if: env.DRY_RUN == 'true'
+        run: echo "Dry run - F-Droid changes were NOT committed or pushed." >> "$GITHUB_STEP_SUMMARY"
