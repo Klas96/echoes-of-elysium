@@ -173,48 +173,103 @@ class IntroScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(40),
-          child: Column(
+      body: SafeArea(
+        child: LayoutBuilder(builder: (context, box) {
+          // Phones in landscape are only ~400 logical px tall: shrink and
+          // put the brief beside the title/buttons so it all fits; always
+          // scrollable as a fallback.
+          final compact = box.maxHeight < 600;
+          final wide = box.maxWidth >= 700;
+          final pad = compact ? 16.0 : 40.0;
+
+          final title = Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('ECHOES OF ELYSIUM',
+              Text('ECHOES OF ELYSIUM',
+                  textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: Color(0xFF00FFCC),
-                    fontSize: 32,
+                    color: const Color(0xFF00FFCC),
+                    fontSize: compact ? 24 : 32,
                     fontWeight: FontWeight.bold,
-                    letterSpacing: 6,
+                    letterSpacing: compact ? 4 : 6,
                   )),
               const SizedBox(height: 8),
               const Text('A story of AI, nature, and the echoes of a lost world',
+                  textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.white38, fontSize: 13, letterSpacing: 1)),
-              const SizedBox(height: 36),
-              Container(
-                constraints: const BoxConstraints(maxWidth: 560),
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  border: Border.all(color: const Color(0xFF00FFCC).withOpacity(0.3)),
-                  borderRadius: BorderRadius.circular(8),
-                  color: Colors.white.withOpacity(0.03),
-                ),
-                child: const Text(_brief,
-                    style: TextStyle(color: Colors.white70, fontSize: 14, height: 1.7)),
-              ),
-              const SizedBox(height: 36),
+            ],
+          );
+
+          final brief = Container(
+            constraints: const BoxConstraints(maxWidth: 560),
+            padding: EdgeInsets.all(compact ? 16 : 24),
+            decoration: BoxDecoration(
+              border: Border.all(color: const Color(0xFF00FFCC).withOpacity(0.3)),
+              borderRadius: BorderRadius.circular(8),
+              color: Colors.white.withOpacity(0.03),
+            ),
+            child: Text(_brief,
+                style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: compact ? 13 : 14,
+                    height: compact ? 1.5 : 1.7)),
+          );
+
+          final actions = Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
               _CyberButton(
                 label: 'BEGIN MISSION',
                 onTap: () => Navigator.of(context).pushReplacement(
                     MaterialPageRoute(builder: (_) => const CustomMapGameScreen())),
               ),
-              const SizedBox(height: 20),
+              SizedBox(height: compact ? 12 : 20),
               const _StoryModeToggle(),
-              const SizedBox(height: 16),
+              SizedBox(height: compact ? 10 : 16),
               const Text('WASD / Arrow keys · E to interact · Esc to pause · ` to debug',
+                  textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.white24, fontSize: 11, letterSpacing: 1.2)),
             ],
-          ),
-        ),
+          );
+
+          final Widget content = (compact && wide)
+              ? Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [title, const SizedBox(height: 24), actions],
+                      ),
+                    ),
+                    const SizedBox(width: 24),
+                    Expanded(child: brief),
+                  ],
+                )
+              : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    title,
+                    SizedBox(height: compact ? 20 : 36),
+                    brief,
+                    SizedBox(height: compact ? 20 : 36),
+                    actions,
+                  ],
+                );
+
+          return SingleChildScrollView(
+            padding: EdgeInsets.all(pad),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: box.maxHeight - pad * 2),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1000),
+                  child: content,
+                ),
+              ),
+            ),
+          );
+        }),
       ),
     );
   }
@@ -1044,7 +1099,7 @@ class _StoryModeToggle extends StatelessWidget {
               activeColor: const Color(0xFF66FFAA),
             ),
             const SizedBox(width: 6),
-            Column(
+            Flexible(child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -1058,7 +1113,7 @@ class _StoryModeToggle extends StatelessWidget {
                 const Text('Enemies stay calm and can\'t hurt you. Just enjoy the story.',
                     style: TextStyle(color: Colors.white38, fontSize: 11)),
               ],
-            ),
+            )),
           ]),
         ),
       ),
