@@ -7,6 +7,7 @@ import 'ai_fragment.dart';
 import 'npc_character.dart';
 import 'player_bullet.dart';
 import '../audio/music_manager.dart';
+import '../game/settings.dart';
 
 class CustomPlayer extends SimplePlayer with BlockMovementCollision {
   static const double sizePlayer = 32;
@@ -15,6 +16,96 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision {
   static final ValueNotifier<int> healthNotifier = ValueNotifier(maxHealth);
   static final ValueNotifier<bool> damageFlash = ValueNotifier(false);
   static final ValueNotifier<Vector2?> pendingShot = ValueNotifier(null);
+
+  // --- Calm gameplay: no game over, gentle regen -------------------------
+  /// Seconds without taking damage before health starts coming back.
+  static const double regenDelay = 4.0;
+  /// HP per second while regenerating (0 -> 100 in 20 s).
+  static const double regenPerSecond = 5.0;
+  /// Respawn fade: fade to black, hold (teleport happens here), fade back.
+  static const double fadeOutSeconds = 0.8;
+  static const double fadeHoldSeconds = 0.9;
+  static const double fadeInSeconds = 0.8;
+  /// Extra no-damage time after the fade so Kaela can get her bearings.
+  static const double respawnGraceSeconds = 1.5;
+
+  /// True while the "Gaia pulls you back" fade should be shown.
+  static final ValueNotifier<bool> respawnFade = ValueNotifier(false);
+  /// The player on the current map (null between maps).
+  static CustomPlayer? current;
+
+  /// Top-left position to respawn at: the last checkpoint touched, or the
+  /// map's spawn until one is reached.
+  Vector2? respawnPoint;
+  double _sinceDamage = regenDelay;
+  double _regenAcc = 0;
+  double _respawnT = -1; // >= 0 while the respawn sequence runs
+  double _grace = 0;
+  bool _teleported = false;
+  bool get isRespawning => _respawnT >= 0;
+  bool get isInvulnerable => isRespawning || _grace > 0;
+
+  /// All enemy damage goes through here. Story Mode, the respawn fade and
+  /// the short grace period after it ignore damage. At 0 HP Kaela is pulled
+  /// back to the last checkpoint instead of a game over.
+  static void applyDamage(int amount) {
+    if (GameSettings.storyMode.value) return;
+    final p = current;
+    if (p != null && p.isInvulnerable) return;
+    final hp = (healthNotifier.value - amount).clamp(0, maxHealth);
+    healthNotifier.value = hp;
+    damageFlash.value = true;
+    SfxManager().playDamage();
+    if (p == null) return;
+    p._sinceDamage = 0;
+    p._regenAcc = 0;
+    if (hp <= 0) p._startRespawn();
+  }
+
+  void _startRespawn() {
+    _respawnT = 0;
+    _teleported = false;
+    pendingShot.value = null;
+    setupMovementByJoystick(enabled: false);
+    stopMove(forceIdle: true);
+    respawnFade.value = true;
+  }
+
+  void _updateRespawn(double dt) {
+    _respawnT += dt;
+    stopMove(forceIdle: true);
+    if (!_teleported && _respawnT >= fadeOutSeconds) {
+      _teleported = true;
+      final p = respawnPoint;
+      if (p != null) position = p.clone();
+      healthNotifier.value = maxHealth;
+      _sinceDamage = regenDelay;
+      gameRef.camera.moveToPlayer();
+    }
+    if (_respawnT >= fadeOutSeconds + fadeHoldSeconds && respawnFade.value) {
+      respawnFade.value = false;
+    }
+    if (_respawnT >= fadeOutSeconds + fadeHoldSeconds + fadeInSeconds) {
+      _respawnT = -1;
+      _grace = respawnGraceSeconds;
+      setupMovementByJoystick(enabled: true);
+    }
+  }
+
+  void _updateRegen(double dt) {
+    _sinceDamage += dt;
+    final hp = healthNotifier.value;
+    if (hp <= 0 || hp >= maxHealth || _sinceDamage < regenDelay) {
+      _regenAcc = 0;
+      return;
+    }
+    _regenAcc += regenPerSecond * dt;
+    final whole = _regenAcc.floor();
+    if (whole > 0) {
+      _regenAcc -= whole;
+      healthNotifier.value = min(maxHealth, hp + whole);
+    }
+  }
 
   bool isBlocked = false;
   double _blockedTimer = 0;
@@ -57,6 +148,8 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision {
 
   @override
   Future<void> onLoad() async {
+    current = this;
+    respawnFade.value = false;
     SfxManager().init();
     _sprite = await Sprite.load('sprites/player.png');
     add(RectangleHitbox(
@@ -89,11 +182,25 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision {
   }
 
   @override
+  void onRemove() {
+    if (current == this) current = null;
+    respawnFade.value = false;
+    super.onRemove();
+  }
+
+  @override
   void update(double dt) {
     super.update(dt);
     positionNotifier.value = position.clone();
     _blockedTimer = max(0, _blockedTimer - dt);
     isBlocked = _blockedTimer > 0;
+    _grace = max(0, _grace - dt);
+    if (isRespawning) {
+      _updateRespawn(dt);
+      pendingShot.value = null;
+      return;
+    }
+    _updateRegen(dt);
     _checkInteraction();
     _updateFootsteps(dt);
     _handleShooting(dt);

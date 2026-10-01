@@ -3,18 +3,20 @@ import 'package:bonfire/bonfire.dart';
 import 'package:flutter/material.dart';
 import 'custom_player.dart';
 import 'explosion_effect.dart';
-import '../audio/music_manager.dart';
+import '../game/settings.dart';
 
 enum _DroneState { patrol, chase, attack }
 
 class UECDrone extends GameDecoration {
   static final List<UECDrone> active = [];
 
-  static const double _detectionRadius = 220;
+  // Calm tuning (brief v2): slower scout, 8 contact damage, shorter notice
+  // range and a gentler attack rhythm. Was 220 / 55 / 12 / 1.2.
+  static const double _detectionRadius = 160;
   static const double _attackRadius = 36;
-  static const double _speed = 55;
-  static const int _damage = 12;
-  static const double _attackCooldown = 1.2;
+  static const double _speed = 40;
+  static const int _damage = 8;
+  static const double _attackCooldown = 1.5;
 
   final Vector2 _origin;
   _DroneState _state = _DroneState.patrol;
@@ -65,7 +67,8 @@ class UECDrone extends GameDecoration {
 
     // Centre to centre, so ranges don't drift with the size difference.
     final toPlayer = (player.position + player.size / 2) - (position + size / 2);
-    final dist = toPlayer.length;
+    // Story Mode: drones are passive and just keep patrolling.
+    final dist = GameSettings.storyMode.value ? double.infinity : toPlayer.length;
 
     if (dist < _attackRadius) {
       _state = _DroneState.attack;
@@ -87,10 +90,7 @@ class UECDrone extends GameDecoration {
         break;
       case _DroneState.attack:
         if (_attackTimer <= 0) {
-          CustomPlayer.healthNotifier.value =
-              (CustomPlayer.healthNotifier.value - _damage).clamp(0, CustomPlayer.maxHealth);
-          CustomPlayer.damageFlash.value = true;
-          SfxManager().playDamage();
+          CustomPlayer.applyDamage(_damage);
           _attackTimer = _attackCooldown;
         }
         break;
