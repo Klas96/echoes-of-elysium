@@ -1,0 +1,26 @@
+{
+  "name": "apartment_block",
+  "image": "apartment_block.png",
+  "size_px": [
+    160,
+    160
+  ],
+  "size_tiles": [
+    5,
+    5
+  ],
+  "collision": [
+    {
+      "x": 8,
+      "y": 78,
+      "w": 144,
+      "h": 64
+    }
+  ],
+  "door": {
+    "x": 80,
+    "y": 142
+  },
+  "anchor": "bottom-left",
+  "biome": "city"
+}

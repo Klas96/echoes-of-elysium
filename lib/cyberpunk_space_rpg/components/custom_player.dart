@@ -7,6 +7,7 @@ import 'ai_fragment.dart';
 import 'npc_character.dart';
 import 'player_bullet.dart';
 import 'walk_sheet.dart';
+import 'building.dart';
 import '../audio/music_manager.dart';
 import '../game/settings.dart';
 
@@ -187,7 +188,7 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision {
     super.onBlockedMovement(other, collisionData);
     // After super, velocity is what's left once the into-wall part is
     // removed: near zero means we're pushing straight into the wall.
-    if ((other is TileWithCollision || other is CollisionMapComponent) &&
+    if ((other is TileWithCollision || other is CollisionMapComponent || other is Building) &&
         velocity.length < speed * 0.2) {
       _blockedTimer = 0.1;
     }

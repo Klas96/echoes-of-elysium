@@ -12,6 +12,7 @@ import '../components/fragment_pickup.dart';
 import '../components/health_pickup.dart';
 import '../components/sentinel_drone.dart';
 import '../components/checkpoint.dart';
+import '../components/building.dart';
 import '../audio/music_manager.dart';
 import 'game_state.dart';
 import 'settings.dart';
@@ -95,7 +96,8 @@ double _numProp(TiledObjectProperties p, String key, [double fallback = 0]) {
 }
 
 /// Builders keyed by object name in the map's "gameplay" object layer.
-/// Object x/y is the component's top-left corner in map pixels.
+/// Object x/y is the component's top-left corner in map pixels (except for
+/// buildings, which are bottom-left anchored tile objects).
 Map<String, ObjectBuilder> _mapObjects() => {
       'spawn': (p) => _PlayerSpawn(p.position),
       'portal': (p) => PortalComponent(p.position),
@@ -113,6 +115,16 @@ Map<String, ObjectBuilder> _mapObjects() => {
       'drone': (p) => UECDrone(p.position, startAngle: _numProp(p, 'startAngle')),
       'sentinel': (p) => SentinelDrone(p.position, onDefeated: GameState.onSentinelDefeated),
       'checkpoint': (p) => Checkpoint(p.position, label: (p.others['label'] ?? '').toString()),
+      // Tile objects: Tiled anchors them bottom-left, so x/y is the sprite's
+      // bottom-left corner.
+      'building': (p) {
+        final id = (p.others['building'] ?? '').toString();
+        final def = buildingDefs[id];
+        if (def == null) {
+          throw ArgumentError('Unknown building "$id" in Tiled map');
+        }
+        return Building(p.position - Vector2(0, def.h), id: id, def: def);
+      },
     };
 
 /// Moves the player to the map's spawn object once the map is loaded, then

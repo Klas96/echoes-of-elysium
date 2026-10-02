@@ -1,0 +1,26 @@
+{
+  "name": "noodle_shop",
+  "image": "noodle_shop.png",
+  "size_px": [
+    128,
+    128
+  ],
+  "size_tiles": [
+    4,
+    4
+  ],
+  "collision": [
+    {
+      "x": 12,
+      "y": 60,
+      "w": 104,
+      "h": 64
+    }
+  ],
+  "door": {
+    "x": 61,
+    "y": 124
+  },
+  "anchor": "bottom-left",
+  "biome": "city"
+}

@@ -1,0 +1,26 @@
+{
+  "name": "archive_library",
+  "image": "archive_library.png",
+  "size_px": [
+    160,
+    160
+  ],
+  "size_tiles": [
+    5,
+    5
+  ],
+  "collision": [
+    {
+      "x": 8,
+      "y": 82,
+      "w": 142,
+      "h": 64
+    }
+  ],
+  "door": {
+    "x": 80,
+    "y": 146
+  },
+  "anchor": "bottom-left",
+  "biome": "city"
+}

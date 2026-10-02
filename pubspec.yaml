@@ -29,6 +29,7 @@ flutter:
   assets:
     - assets/images/maps/
     - assets/images/maps/tilesets/
+    - assets/images/maps/buildings/
     - assets/images/sprites/
     - assets/audio/music/
     - assets/audio/sfx/

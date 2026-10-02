@@ -1,0 +1,26 @@
+{
+  "name": "ruin_shrine",
+  "image": "ruin_shrine.png",
+  "size_px": [
+    128,
+    160
+  ],
+  "size_tiles": [
+    4,
+    5
+  ],
+  "collision": [
+    {
+      "x": 16,
+      "y": 88,
+      "w": 96,
+      "h": 64
+    }
+  ],
+  "door": {
+    "x": 64,
+    "y": 152
+  },
+  "anchor": "bottom-left",
+  "biome": "core"
+}
