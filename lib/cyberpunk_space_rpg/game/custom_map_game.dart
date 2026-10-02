@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/services.dart';
 import 'package:bonfire/bonfire.dart';
 import 'package:bonfire/map/tiled/builder/tiled_world_builder.dart' show ObjectBuilder;
@@ -238,7 +239,9 @@ class IntroScreen extends StatelessWidget {
               SizedBox(height: compact ? 12 : 20),
               const _StoryModeToggle(),
               SizedBox(height: compact ? 10 : 16),
-              const Text('WASD / Arrow keys · E to interact · Esc to pause · ` to debug',
+              Text(_isTouch
+                      ? 'Joystick to move · tap TALK to interact · tap to shoot'
+                      : 'WASD / Arrow keys · E to interact · Esc to pause · ` to debug',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.white24, fontSize: 11, letterSpacing: 1.2)),
             ],
@@ -394,25 +397,7 @@ class CustomMapGameScreen extends StatelessWidget {
           const _GameHUD(),
           const _NpcDialogueLayer(),
           // NPC interact prompt
-          ValueListenableBuilder<bool>(
-            valueListenable: NpcCharacter.showPrompt,
-            builder: (_, show, __) => show
-                ? Positioned(
-                    bottom: 80, left: 0, right: 0,
-                    child: Center(child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.7),
-                        border: Border.all(color: const Color(0xFF00FFCC)),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: const Text('E  TALK',
-                        style: TextStyle(color: Color(0xFF00FFCC), fontSize: 12,
-                            letterSpacing: 2, fontWeight: FontWeight.bold)),
-                    )),
-                  )
-                : const SizedBox.shrink(),
-          ),
+          const _InteractPrompt(),
           const _CalmLayer(),
           _DebugOverlay(),
         ]),
@@ -470,25 +455,7 @@ class Map2GameScreen extends StatelessWidget {
                 text != null ? _DialogueOverlay(text: text) : const SizedBox.shrink(),
           ),
           const _NpcDialogueLayer(),
-          ValueListenableBuilder<bool>(
-            valueListenable: NpcCharacter.showPrompt,
-            builder: (_, show, __) => show
-                ? Positioned(
-                    bottom: 80, left: 0, right: 0,
-                    child: Center(child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.7),
-                        border: Border.all(color: const Color(0xFF00FFCC)),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: const Text('E  TALK',
-                        style: TextStyle(color: Color(0xFF00FFCC), fontSize: 12,
-                            letterSpacing: 2, fontWeight: FontWeight.bold)),
-                    )),
-                  )
-                : const SizedBox.shrink(),
-          ),
+          const _InteractPrompt(),
           const _CalmLayer(),
           _DebugOverlay(),
         ]),
@@ -541,25 +508,7 @@ class Map3GameScreen extends StatelessWidget {
           const _Vignette(),
           const _GameHUD(),
           const _NpcDialogueLayer(),
-          ValueListenableBuilder<bool>(
-            valueListenable: NpcCharacter.showPrompt,
-            builder: (_, show, __) => show
-                ? Positioned(
-                    bottom: 80, left: 0, right: 0,
-                    child: Center(child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.7),
-                        border: Border.all(color: const Color(0xFF00FFCC)),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: const Text('E  TALK',
-                        style: TextStyle(color: Color(0xFF00FFCC), fontSize: 12,
-                            letterSpacing: 2, fontWeight: FontWeight.bold)),
-                    )),
-                  )
-                : const SizedBox.shrink(),
-          ),
+          const _InteractPrompt(),
           const _CalmLayer(),
           _DebugOverlay(),
         ]),
@@ -1273,5 +1222,62 @@ class _CalmLayer extends StatelessWidget {
             : const SizedBox.shrink(),
       ),
     ]);
+  }
+}
+
+
+// ---------------------------------------------------------------------------
+// Interact prompt: shown near an NPC or AI fragment. Tappable (phones have no
+// E key); on desktop E still works through CustomPlayer.
+// ---------------------------------------------------------------------------
+
+bool get _isTouch =>
+    defaultTargetPlatform == TargetPlatform.android ||
+    defaultTargetPlatform == TargetPlatform.iOS;
+
+class _InteractPrompt extends StatelessWidget {
+  const _InteractPrompt();
+
+  void _interact() {
+    AIFragment.nearbyFragment?.interact();
+    NpcCharacter.nearbyNpc?.interact();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: Listenable.merge([NpcCharacter.showPrompt, AIFragment.showPrompt]),
+      builder: (_, __) {
+        final npc = NpcCharacter.showPrompt.value;
+        final frag = AIFragment.showPrompt.value;
+        if (!npc && !frag) return const SizedBox.shrink();
+        final action = npc ? 'TALK' : 'INTERACT';
+        final label = _isTouch ? action : 'E  $action';
+        return Positioned(
+          bottom: 80, left: 0, right: 0,
+          child: Center(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: _interact,
+              child: Container(
+                padding: EdgeInsets.symmetric(
+                    horizontal: _isTouch ? 28 : 14, vertical: _isTouch ? 14 : 6),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.7),
+                  border: Border.all(color: const Color(0xFF00FFCC)),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(label,
+                    style: TextStyle(
+                        color: const Color(0xFF00FFCC),
+                        fontSize: _isTouch ? 16 : 12,
+                        letterSpacing: 2,
+                        fontWeight: FontWeight.bold)),
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 }
