@@ -1246,11 +1246,18 @@ class _InteractPrompt extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: Listenable.merge([NpcCharacter.showPrompt, AIFragment.showPrompt]),
+      animation: Listenable.merge([
+        NpcCharacter.showPrompt,
+        AIFragment.showPrompt,
+        NpcCharacter.activeDialogue,
+        AIFragment.activeDialogue,
+      ]),
       builder: (_, __) {
         final npc = NpcCharacter.showPrompt.value;
         final frag = AIFragment.showPrompt.value;
-        if (!npc && !frag) return const SizedBox.shrink();
+        final talking = NpcCharacter.activeDialogue.value != null ||
+            AIFragment.activeDialogue.value != null;
+        if (talking || (!npc && !frag)) return const SizedBox.shrink();
         final action = npc ? 'TALK' : 'INTERACT';
         final label = _isTouch ? action : 'E  $action';
         return Positioned(
