@@ -24,10 +24,21 @@ with objects named spawn, portal, npc (property name), fragment, health,
 drone (property startAngle), sentinel, checkpoint (property label). Object x/y = component top-left in
 world px, width/height = component size (same coords the code used before).
 
+Buildings (tools/buildings/buildings.tsj, art in assets/images/maps/buildings/)
+are Tiled tile objects named "building" with a string property building=<id>.
+The buildings tileset (collection of images) is embedded after the terrain
+tileset. Tile objects are anchored bottom-left, so their x/y is the sprite's
+bottom-left corner (the game subtracts the height). Each building sits in a
+"lot" carved out of the walls after the terrain/props pass; only the cells
+around a lot are re-tiled (separate RNG), so the rest of the map is unchanged.
+
 The script checks that every gameplay object sits on fully walkable tiles and
 that all of them are reachable from the spawn; it fails loudly otherwise.
 Checkpoints (respawn points; one at the spawn plus one per area entrance) must
 also stay clear of every enemy's reach, so respawning never lands in a fight.
+Buildings must stand on clear floor, must not overlap gameplay objects or each
+other, their door must be reachable, and their collision box must not cut off
+any floor that was reachable without them.
 """
 import json, math, os, shutil, sys
 import xml.etree.ElementTree as ET
@@ -48,6 +59,37 @@ _default_out = os.path.join(ROOT, "assets", "images", "maps")
 OUT = _args[0] if _args else (_default_out if os.path.isdir(_default_out) else os.path.join(ROOT, "build-maps"))
 T = 32
 COLS = 16
+BLDIR = os.path.join(HERE, "buildings")
+BLIMG = os.path.join(ROOT, "assets", "images", "maps", "buildings")
+
+# --------------------------------------------------------------- buildings
+class Buildings:
+    """tools/buildings/buildings.tsj: Tiled collection-of-images tileset, one
+    tile per building with its collision rect (px from the sprite top-left)
+    and door point as tile properties."""
+    def __init__(self):
+        with open(os.path.join(BLDIR, "buildings.tsj")) as f:
+            self.tsj = json.load(f)
+        self.defs = {}
+        for i, t in enumerate(self.tsj["tiles"]):
+            assert t["id"] == i, "buildings.tsj ids must be contiguous from 0 (Bonfire indexes by list position)"
+            props = {p["name"]: p["value"] for p in t.get("properties", [])}
+            cols = [o for o in t["objectgroup"]["objects"] if o.get("type") == "collision"]
+            assert len(cols) == 1
+            c = cols[0]
+            assert c["height"] >= 2 * T and c["width"] >= 2 * T, "building collision must be >= 2 tiles"
+            assert t["imagewidth"] % T == 0 and t["imageheight"] % T == 0
+            self.defs[props["building"]] = dict(id=i, w=t["imagewidth"], h=t["imageheight"], image=t["image"],
+                                                col=(c["x"], c["y"], c["width"], c["height"]),
+                                                door=(props["door_x"], props["door_y"]))
+
+    def to_json(self, firstgid):
+        d = {k: v for k, v in self.tsj.items() if k not in ("type", "version", "tiledversion")}
+        d["firstgid"] = firstgid
+        d["tiles"] = [dict(t, image="buildings/" + t["image"]) for t in self.tsj["tiles"]]
+        return d
+
+BUILDINGS = Buildings()
 
 # --------------------------------------------------------------- tileset io
 class Tileset:
@@ -205,6 +247,9 @@ class Level:
         self.props = np.full((H, W), -1, int)
         self.objects = []           # dicts
         self.keepout = np.zeros((H, W), bool)   # no colliding props here (paths, clearings)
+        self.instances = []         # (prop name, x, y) stamped on the props layer
+        self.buildings = []         # dicts: name, tx, ty (sprite top-left in tiles)
+        self.seed = seed
 
     def obj(self, kind, x, y, w, h, **props):
         self.objects.append(dict(name=kind, x=float(x), y=float(y), w=float(w), h=float(h), props=props))
@@ -212,6 +257,7 @@ class Level:
     def stamp(self, name, x, y, layer=None):
         w, h, grid = self.ts.props[name]
         L = self.props if layer is None else layer
+        if layer is None: self.instances.append((name, x, y))
         for j in range(h):
             for i in range(w):
                 if grid[j][i] >= 0: L[y + j, x + i] = grid[j][i]
@@ -240,6 +286,61 @@ class Level:
                 self.stamp(name, x, y); placed += 1
         return placed
 
+    def building(self, name, tx, ty):
+        """place building <name> with its sprite's top-left at tile (tx, ty)"""
+        assert name in BUILDINGS.defs, name
+        self.buildings.append(dict(name=name, tx=tx, ty=ty))
+
+    def carve_lots(self, wall, lots, reground):
+        """Open building lots (x0, y0, x1, y1 inclusive tile rects) in the
+        walls after the terrain and props are done. Only cells next to a
+        changed wall cell are re-tiled, with their own RNG, and props that
+        touch a lot or a building sprite are removed, so the rest of the map
+        (and the main RNG stream) stays exactly as before. reground(x, y,
+        wall, rng) returns the ground tile for a re-tiled cell, or None to
+        keep it. Returns the new wall mask."""
+        new = wall.copy()
+        for (x0, y0, x1, y1) in lots:
+            assert x0 >= 2 and y0 >= 2 and x1 < self.W - 2 and y1 < self.H - 2, "lot touches the map border"
+            new[y0:y1 + 1, x0:x1 + 1] = False
+        new = clean_walls(new)
+        changed = new != wall
+        region = changed.copy()
+        region[1:, :] |= changed[:-1, :]; region[:-1, :] |= changed[1:, :]
+        r2 = region.copy()
+        r2[:, 1:] |= region[:, :-1]; r2[:, :-1] |= region[:, 1:]
+        rng = np.random.default_rng(self.seed + 1000)
+        for y in range(self.H):
+            for x in range(self.W):
+                if r2[y, x]:
+                    g = reground(x, y, new, rng)
+                    if g is not None: self.ground[y, x] = g
+        clear = np.zeros_like(wall)
+        for (x0, y0, x1, y1) in lots: clear[y0:y1 + 1, x0:x1 + 1] = True
+        for b in self.buildings:
+            d = BUILDINGS.defs[b["name"]]
+            clear[b["ty"]:b["ty"] + d["h"] // T, b["tx"]:b["tx"] + d["w"] // T] = True
+        keep = []
+        for (name, x, y) in self.instances:
+            w, h, grid = self.ts.props[name]
+            cells = [(x + i, y + j) for j in range(h) for i in range(w) if grid[j][i] >= 0]
+            # gone: props in a lot / under a building, and roof props whose
+            # wall cell opened up or got re-tiled as an edge
+            if any(clear[cy, cx] or (r2[cy, cx] and wall[cy, cx]) for (cx, cy) in cells):
+                for (cx, cy) in cells: self.props[cy, cx] = -1
+            else:
+                keep.append((name, x, y))
+        self.instances = keep
+        self.floor = ~new
+        return new
+
+    def building_rects(self, b):
+        """(sprite rect, collision rect, door point) in world px"""
+        d = BUILDINGS.defs[b["name"]]
+        X, Y = b["tx"] * T, b["ty"] * T
+        cx, cy, cw, ch = d["col"]
+        return (X, Y, d["w"], d["h"]), (X + cx, Y + cy, cw, ch), (X + d["door"][0], Y + d["door"][1])
+
     def walkable(self):
         ok = np.ones((self.H, self.W), bool)
         for y in range(self.H):
@@ -256,18 +357,60 @@ class Level:
             x0, y0 = int(o["x"] // T), int(o["y"] // T)
             x1, y1 = int((o["x"] + o["w"] - 0.01) // T), int((o["y"] + o["h"] - 0.01) // T)
             return [(x, y) for y in range(y0, y1 + 1) for x in range(x0, x1 + 1)]
+        def px_cells(x, y, w, h):     # tiles a px rect overlaps (any area)
+            return [(cx, cy) for cy in range(int(y // T), int((y + h - 0.01) // T) + 1)
+                    for cx in range(int(x // T), int((x + w - 0.01) // T) + 1)]
+        def overlap(a, b):
+            return a[0] < b[0] + b[2] and b[0] < a[0] + a[2] and a[1] < b[1] + b[3] and b[1] < a[1] + a[3]
         for o in self.objects:
             for (x, y) in cells(o):
                 if not ok[y, x]:
                     raise SystemExit(f"{o['name']} {o['props']} at tile {x},{y} is not on walkable floor")
         sx, sy = cells(spawn[0])[0]
-        seen = np.zeros_like(ok); q = deque([(sx, sy)]); seen[sy, sx] = True
-        while q:
-            x, y = q.popleft()
-            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-                nx, ny = x + dx, y + dy
-                if 0 <= nx < self.W and 0 <= ny < self.H and ok[ny, nx] and not seen[ny, nx]:
-                    seen[ny, nx] = True; q.append((nx, ny))
+        def flood(mask):
+            seen = np.zeros_like(mask); q = deque([(sx, sy)]); seen[sy, sx] = True
+            while q:
+                x, y = q.popleft()
+                for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                    nx, ny = x + dx, y + dy
+                    if 0 <= nx < self.W and 0 <= ny < self.H and mask[ny, nx] and not seen[ny, nx]:
+                        seen[ny, nx] = True; q.append((nx, ny))
+            return seen
+        # buildings: clear floor under the whole sprite, no overlaps with
+        # objects or other buildings, collision box blocks its tiles
+        bblock = np.zeros_like(ok)
+        sprites = []
+        for b in self.buildings:
+            spr, col, door = self.building_rects(b)
+            for (x, y) in px_cells(*spr):
+                if not ok[y, x] or self.props[y, x] >= 0:
+                    raise SystemExit(f"building {b['name']} sprite covers wall/prop at tile {x},{y}")
+            for o in self.objects:
+                if overlap(spr, (o["x"], o["y"], o["w"], o["h"])):
+                    raise SystemExit(f"building {b['name']} overlaps {o['name']} {o['props']}")
+            for (n2, s2) in sprites:
+                if overlap(spr, s2): raise SystemExit(f"building {b['name']} overlaps building {n2}")
+            sprites.append((b["name"], spr))
+            for (x, y) in px_cells(*col): bblock[y, x] = True
+            # enemies patrol a 70 px circle; keep them well away from walls
+            for o in self.objects:
+                if o["name"] in ("drone", "sentinel"):
+                    ox, oy = o["x"] + o["w"] / 2, o["y"] + o["h"] / 2
+                    dx = max(col[0] - ox, 0, ox - col[0] - col[2]); dy = max(col[1] - oy, 0, oy - col[1] - col[3])
+                    if (dx * dx + dy * dy) ** 0.5 < 128:
+                        raise SystemExit(f"building {b['name']} is too close to {o['name']} {o['props']}")
+        before = flood(ok)
+        ok = ok & ~bblock
+        seen = flood(ok)
+        lost = before & ~bblock & ~seen
+        if lost.any():
+            ys, xs = np.nonzero(lost)
+            raise SystemExit(f"building collision cuts off {len(xs)} floor tiles, e.g. {xs[0]},{ys[0]}")
+        for b in self.buildings:
+            spr, col, door = self.building_rects(b)
+            dx, dy = int(door[0] // T), int((col[1] + col[3] - 0.01) // T) + 1   # first tile in front of the door
+            if not seen[dy, dx]:
+                raise SystemExit(f"building {b['name']} door (tile {dx},{dy}) is not reachable")
         for o in self.objects:
             if o["name"] in ("drone", "sentinel"): continue   # they fly; just need floor
             if not all(seen[y, x] for (x, y) in cells(o)):
@@ -313,12 +456,20 @@ class Level:
                                                          "int" if isinstance(v, int) else "string"), "value": v}
                                    for k, v in o["props"].items()]
             objs.append(d)
+        bfirst = ts.tilecount + 1
+        for b in self.buildings:
+            bd = BUILDINGS.defs[b["name"]]
+            # tile object: x/y is the bottom-left of the sprite
+            objs.append({"id": len(objs) + 1, "name": "building", "type": "", "gid": bfirst + bd["id"],
+                         "rotation": 0, "visible": True, "x": float(b["tx"] * T), "y": float((b["ty"] * T) + bd["h"]),
+                         "width": float(bd["w"]), "height": float(bd["h"]),
+                         "properties": [{"name": "building", "type": "string", "value": b["name"]}]})
         tmj = {"compressionlevel": -1, "type": "map", "version": "1.10", "tiledversion": "1.10.2",
                "orientation": "orthogonal", "renderorder": "right-down", "infinite": False,
                "width": self.W, "height": self.H, "tilewidth": T, "tileheight": T,
                "nextlayerid": 4, "nextobjectid": len(objs) + 1,
                "properties": [{"name": "generator", "type": "string", "value": "tools/make_tiled_maps.py"}],
-               "tilesets": [ts.to_json(1, image_rel)],
+               "tilesets": [ts.to_json(1, image_rel), BUILDINGS.to_json(ts.tilecount + 1)],
                "layers": [lay(1, "ground", self.ground), lay(2, "props", self.props),
                           {"id": 3, "name": "gameplay", "type": "objectgroup", "draworder": "topdown",
                            "x": 0, "y": 0, "opacity": 1, "visible": True, "objects": objs}]}
@@ -338,11 +489,19 @@ class Level:
         col = dict(spawn=(0, 255, 0), portal=(0, 255, 255), npc=(255, 255, 0), fragment=(200, 80, 255),
                    health=(0, 255, 120), drone=(255, 60, 60), sentinel=(255, 120, 0),
                    checkpoint=(120, 255, 220))
+        for b in sorted(self.buildings, key=lambda b: b["ty"]):
+            spr, bc, door = self.building_rects(b)
+            bim = Image.open(os.path.join(BLIMG, BUILDINGS.defs[b["name"]]["image"])).convert("RGBA")
+            im.alpha_composite(bim, (int(spr[0]), int(spr[1])))
+            d.rectangle([bc[0], bc[1], bc[0] + bc[2], bc[1] + bc[3]], outline=(255, 60, 160), width=2)
+            d.ellipse([door[0] - 3, door[1] - 3, door[0] + 3, door[1] + 3], fill=(255, 230, 0))
         for o in self.objects:
             d.rectangle([o["x"], o["y"], o["x"] + o["w"], o["y"] + o["h"]], outline=col[o["name"]], width=2)
         os.makedirs(PREVIEW, exist_ok=True)
         im.convert("RGB").resize((self.W * 16, self.H * 16)).save(os.path.join(PREVIEW, "preview_" + fname.replace(".tmj", ".png")))
         n_col = int((~ok).sum())
+        if os.environ.get("PREVIEW_FULL"):
+            im.convert("RGB").save(os.path.join(PREVIEW, "full_" + fname.replace(".tmj", ".png")))
         print(f"{fname}: {self.W}x{self.H} tiles ({self.W*T}x{self.H*T}px), {len(objs)} objects, "
               f"{n_col} blocking tiles, reachable floor {int(seen.sum())}")
 
@@ -403,6 +562,10 @@ def map1():
                 "bush_glow", "rock_small", "rock_moss", "log", "stump"], 26)
     lv.scatter(["mushrooms", "flowers", "lantern"], 22)
     lv.stamp("campfire", 7, 4) if lv.prop_fits("campfire", 7, 4) else None
+    # ranger cabin in a small clearing east of the crash site, off the trail
+    lv.building("ranger_cabin", 16, 2)
+    lv.carve_lots(wall, [(15, 2, 21, 7)],
+                  lambda x, y, w, rng: None if (water[y, x] or path[y, x]) else blob(ts, "grass-forest", w, x, y, rng))
     # gameplay objects
     place(lv, "spawn", *P["spawn"])
     place(lv, "npc", *P["gaia"], name="gaia")
@@ -477,6 +640,16 @@ def map2():
     interior = np.zeros_like(wall)
     interior[1:-1, 1:-1] = (wall[1:-1, 1:-1] & wall[:-2, 1:-1] & wall[2:, 1:-1] & wall[1:-1, :-2] & wall[1:-1, 2:])
     lv.scatter(["rooftop_ac", "rooftop_vent", "solar_panel"], 30, need_floor=False, only=interior)
+    # buildings in courtyards off the avenue: two shops flanking the top
+    # street, the archive library across from the Archivist, the apartments
+    # on the plaza's west side and the greenhouse by Voss's alcove
+    for name, tx, ty in (("noodle_shop", 6, 6), ("tea_house", 24, 6), ("archive_library", 24, 14),
+                         ("apartment_block", 2, 26), ("greenhouse", 3, 35)):
+        lv.building(name, tx, ty)
+    def reground2(x, y, w, rng):
+        if w[y, x]: return blob(ts, "sidewalk-building", w, x, y, rng)
+        return blob(ts, "road-sidewalk", ~road, x, y, rng, exclude={4, 5, 6, 7, 8})
+    lv.carve_lots(wall, [(5, 5, 10, 11), (23, 5, 28, 11), (23, 14, 29, 20), (2, 25, 6, 32), (2, 35, 7, 41)], reground2)
     place(lv, "spawn", *P["spawn"])
     place(lv, "npc", *P["echo7"], name="echo7")
     place(lv, "npc", *P["arch"], name="archivist")
@@ -526,6 +699,10 @@ def map3():
                 "dumpster", "crate", "broken_pillar", "barricade", "neon_streetlight", "drone_wreck",
                 "vending_broken", "terminal"], 30)
     lv.scatter(["steam_vent", "loose_cables"], 14)
+    # Aetherian shrine (stand-in for the Core) in the quiet south-west dead end
+    lv.building("ruin_shrine", 10, 31)
+    lv.carve_lots(wall, [(9, 30, 14, 37)],
+                  lambda x, y, w, rng: None if (metal[y, x] or sludge[y, x]) else blob(ts, "asphalt-ruin", w, x, y, rng))
     place(lv, "spawn", *P["spawn"])
     for k in ("h1", "h2", "h3", "h4"): place(lv, "health", *P[k])
     # calm pass: 6 -> 4 drones (d2 next to the central clearing and d6 in the

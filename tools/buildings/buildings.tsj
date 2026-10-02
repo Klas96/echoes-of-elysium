@@ -1,0 +1,384 @@
+{
+ "type": "tileset",
+ "version": "1.10",
+ "tiledversion": "1.10.2",
+ "name": "buildings",
+ "columns": 0,
+ "margin": 0,
+ "spacing": 0,
+ "tilecount": 7,
+ "tilewidth": 160,
+ "tileheight": 160,
+ "grid": {
+  "orientation": "orthogonal",
+  "width": 1,
+  "height": 1
+ },
+ "objectalignment": "bottomleft",
+ "tiles": [
+  {
+   "id": 0,
+   "image": "noodle_shop.png",
+   "imagewidth": 128,
+   "imageheight": 128,
+   "type": "building",
+   "properties": [
+    {
+     "name": "building",
+     "type": "string",
+     "value": "noodle_shop"
+    },
+    {
+     "name": "biome",
+     "type": "string",
+     "value": "city"
+    },
+    {
+     "name": "door_x",
+     "type": "int",
+     "value": 61
+    },
+    {
+     "name": "door_y",
+     "type": "int",
+     "value": 124
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "collision",
+      "type": "collision",
+      "x": 12,
+      "y": 60,
+      "width": 104,
+      "height": 64,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 1,
+   "image": "tea_house.png",
+   "imagewidth": 128,
+   "imageheight": 128,
+   "type": "building",
+   "properties": [
+    {
+     "name": "building",
+     "type": "string",
+     "value": "tea_house"
+    },
+    {
+     "name": "biome",
+     "type": "string",
+     "value": "city"
+    },
+    {
+     "name": "door_x",
+     "type": "int",
+     "value": 64
+    },
+    {
+     "name": "door_y",
+     "type": "int",
+     "value": 124
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "collision",
+      "type": "collision",
+      "x": 10,
+      "y": 60,
+      "width": 108,
+      "height": 64,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 2,
+   "image": "greenhouse.png",
+   "imagewidth": 128,
+   "imageheight": 128,
+   "type": "building",
+   "properties": [
+    {
+     "name": "building",
+     "type": "string",
+     "value": "greenhouse"
+    },
+    {
+     "name": "biome",
+     "type": "string",
+     "value": "city"
+    },
+    {
+     "name": "door_x",
+     "type": "int",
+     "value": 63
+    },
+    {
+     "name": "door_y",
+     "type": "int",
+     "value": 124
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "collision",
+      "type": "collision",
+      "x": 12,
+      "y": 60,
+      "width": 104,
+      "height": 64,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 3,
+   "image": "apartment_block.png",
+   "imagewidth": 160,
+   "imageheight": 160,
+   "type": "building",
+   "properties": [
+    {
+     "name": "building",
+     "type": "string",
+     "value": "apartment_block"
+    },
+    {
+     "name": "biome",
+     "type": "string",
+     "value": "city"
+    },
+    {
+     "name": "door_x",
+     "type": "int",
+     "value": 80
+    },
+    {
+     "name": "door_y",
+     "type": "int",
+     "value": 142
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "collision",
+      "type": "collision",
+      "x": 8,
+      "y": 78,
+      "width": 144,
+      "height": 64,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 4,
+   "image": "archive_library.png",
+   "imagewidth": 160,
+   "imageheight": 160,
+   "type": "building",
+   "properties": [
+    {
+     "name": "building",
+     "type": "string",
+     "value": "archive_library"
+    },
+    {
+     "name": "biome",
+     "type": "string",
+     "value": "city"
+    },
+    {
+     "name": "door_x",
+     "type": "int",
+     "value": 80
+    },
+    {
+     "name": "door_y",
+     "type": "int",
+     "value": 146
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "collision",
+      "type": "collision",
+      "x": 8,
+      "y": 82,
+      "width": 142,
+      "height": 64,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 5,
+   "image": "ranger_cabin.png",
+   "imagewidth": 128,
+   "imageheight": 128,
+   "type": "building",
+   "properties": [
+    {
+     "name": "building",
+     "type": "string",
+     "value": "ranger_cabin"
+    },
+    {
+     "name": "biome",
+     "type": "string",
+     "value": "woods"
+    },
+    {
+     "name": "door_x",
+     "type": "int",
+     "value": 63
+    },
+    {
+     "name": "door_y",
+     "type": "int",
+     "value": 118
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "collision",
+      "type": "collision",
+      "x": 6,
+      "y": 54,
+      "width": 108,
+      "height": 64,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 6,
+   "image": "ruin_shrine.png",
+   "imagewidth": 128,
+   "imageheight": 160,
+   "type": "building",
+   "properties": [
+    {
+     "name": "building",
+     "type": "string",
+     "value": "ruin_shrine"
+    },
+    {
+     "name": "biome",
+     "type": "string",
+     "value": "core"
+    },
+    {
+     "name": "door_x",
+     "type": "int",
+     "value": 64
+    },
+    {
+     "name": "door_y",
+     "type": "int",
+     "value": 152
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "collision",
+      "type": "collision",
+      "x": 16,
+      "y": 88,
+      "width": 96,
+      "height": 64,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  }
+ ]
+}

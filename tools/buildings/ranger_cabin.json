@@ -1,0 +1,26 @@
+{
+  "name": "ranger_cabin",
+  "image": "ranger_cabin.png",
+  "size_px": [
+    128,
+    128
+  ],
+  "size_tiles": [
+    4,
+    4
+  ],
+  "collision": [
+    {
+      "x": 6,
+      "y": 54,
+      "w": 108,
+      "h": 64
+    }
+  ],
+  "door": {
+    "x": 63,
+    "y": 118
+  },
+  "anchor": "bottom-left",
+  "biome": "woods"
+}
