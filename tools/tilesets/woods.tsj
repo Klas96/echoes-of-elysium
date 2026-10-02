@@ -1,0 +1,9568 @@
+{
+ "columns": 16,
+ "image": "woods.png",
+ "imageheight": 544,
+ "imagewidth": 512,
+ "margin": 0,
+ "name": "woods",
+ "spacing": 0,
+ "tilecount": 272,
+ "tiledversion": "1.10.2",
+ "tileheight": 32,
+ "tilewidth": 32,
+ "type": "tileset",
+ "version": "1.10",
+ "tiles": [
+  {
+   "id": 0,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "grass"
+    }
+   ]
+  },
+  {
+   "id": 1,
+   "probability": 0.15,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "grass"
+    }
+   ]
+  },
+  {
+   "id": 2,
+   "probability": 0.15,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "grass"
+    }
+   ]
+  },
+  {
+   "id": 3,
+   "probability": 0.15,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "grass"
+    }
+   ]
+  },
+  {
+   "id": 4,
+   "probability": 0.15,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "grass"
+    }
+   ]
+  },
+  {
+   "id": 5,
+   "probability": 0.15,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "grass"
+    }
+   ]
+  },
+  {
+   "id": 6,
+   "probability": 0.15,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "grass"
+    }
+   ]
+  },
+  {
+   "id": 7,
+   "probability": 0.15,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "grass"
+    }
+   ]
+  },
+  {
+   "id": 8,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "dirt"
+    }
+   ]
+  },
+  {
+   "id": 9,
+   "probability": 0.15,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "dirt"
+    }
+   ]
+  },
+  {
+   "id": 10,
+   "probability": 0.15,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "dirt"
+    }
+   ]
+  },
+  {
+   "id": 11,
+   "probability": 0.15,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "dirt"
+    }
+   ]
+  },
+  {
+   "id": 12,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "water"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 13,
+   "probability": 0.15,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "water"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 14,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "forest"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 15,
+   "probability": 0.15,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "forest"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 16,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-path"
+    }
+   ]
+  },
+  {
+   "id": 17,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-path"
+    }
+   ]
+  },
+  {
+   "id": 18,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-path"
+    }
+   ]
+  },
+  {
+   "id": 19,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-path"
+    }
+   ]
+  },
+  {
+   "id": 20,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-path"
+    }
+   ]
+  },
+  {
+   "id": 21,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-path"
+    }
+   ]
+  },
+  {
+   "id": 22,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-path"
+    }
+   ]
+  },
+  {
+   "id": 23,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-path"
+    }
+   ]
+  },
+  {
+   "id": 24,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-path"
+    }
+   ]
+  },
+  {
+   "id": 25,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-path"
+    }
+   ]
+  },
+  {
+   "id": 26,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-path"
+    }
+   ]
+  },
+  {
+   "id": 27,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-path"
+    }
+   ]
+  },
+  {
+   "id": 28,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-path"
+    }
+   ]
+  },
+  {
+   "id": 29,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-path"
+    }
+   ]
+  },
+  {
+   "id": 30,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-path"
+    }
+   ]
+  },
+  {
+   "id": 31,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-path"
+    }
+   ]
+  },
+  {
+   "id": 32,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-path"
+    }
+   ]
+  },
+  {
+   "id": 33,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-path"
+    }
+   ]
+  },
+  {
+   "id": 34,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-path"
+    }
+   ]
+  },
+  {
+   "id": 35,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-path"
+    }
+   ]
+  },
+  {
+   "id": 36,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-path"
+    }
+   ]
+  },
+  {
+   "id": 37,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-path"
+    }
+   ]
+  },
+  {
+   "id": 38,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-path"
+    }
+   ]
+  },
+  {
+   "id": 39,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-path"
+    }
+   ]
+  },
+  {
+   "id": 40,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-path"
+    }
+   ]
+  },
+  {
+   "id": 41,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-path"
+    }
+   ]
+  },
+  {
+   "id": 42,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-path"
+    }
+   ]
+  },
+  {
+   "id": 43,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-path"
+    }
+   ]
+  },
+  {
+   "id": 44,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-path"
+    }
+   ]
+  },
+  {
+   "id": 45,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-path"
+    }
+   ]
+  },
+  {
+   "id": 46,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-path"
+    }
+   ]
+  },
+  {
+   "id": 47,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-path"
+    }
+   ]
+  },
+  {
+   "id": 48,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-path"
+    }
+   ]
+  },
+  {
+   "id": 49,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-path"
+    }
+   ]
+  },
+  {
+   "id": 50,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-path"
+    }
+   ]
+  },
+  {
+   "id": 51,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-path"
+    }
+   ]
+  },
+  {
+   "id": 52,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-path"
+    }
+   ]
+  },
+  {
+   "id": 53,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-path"
+    }
+   ]
+  },
+  {
+   "id": 54,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-path"
+    }
+   ]
+  },
+  {
+   "id": 55,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-path"
+    }
+   ]
+  },
+  {
+   "id": 56,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-path"
+    }
+   ]
+  },
+  {
+   "id": 57,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-path"
+    }
+   ]
+  },
+  {
+   "id": 58,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-path"
+    }
+   ]
+  },
+  {
+   "id": 59,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-path"
+    }
+   ]
+  },
+  {
+   "id": 60,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-path"
+    }
+   ]
+  },
+  {
+   "id": 61,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-path"
+    }
+   ]
+  },
+  {
+   "id": 62,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-path"
+    }
+   ]
+  },
+  {
+   "id": 64,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-water"
+    }
+   ]
+  },
+  {
+   "id": 65,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-water"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 16,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 66,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-water"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 16,
+      "width": 32,
+      "height": 16,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 67,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-water"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 16,
+      "y": 0,
+      "width": 16,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 68,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-water"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 16,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 69,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-water"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 16,
+      "width": 32,
+      "height": 16,
+      "rotation": 0,
+      "visible": true
+     },
+     {
+      "id": 2,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 16,
+      "height": 16,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 70,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-water"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 71,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-water"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 16,
+      "width": 32,
+      "height": 16,
+      "rotation": 0,
+      "visible": true
+     },
+     {
+      "id": 2,
+      "name": "",
+      "type": "collision",
+      "x": 16,
+      "y": 0,
+      "width": 16,
+      "height": 16,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 72,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-water"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 16,
+      "rotation": 0,
+      "visible": true
+     },
+     {
+      "id": 2,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 16,
+      "width": 16,
+      "height": 16,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 73,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-water"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 74,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-water"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 16,
+      "rotation": 0,
+      "visible": true
+     },
+     {
+      "id": 2,
+      "name": "",
+      "type": "collision",
+      "x": 16,
+      "y": 16,
+      "width": 16,
+      "height": 16,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 75,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-water"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 16,
+      "width": 32,
+      "height": 16,
+      "rotation": 0,
+      "visible": true
+     },
+     {
+      "id": 2,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 16,
+      "height": 16,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 76,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-water"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 77,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-water"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 16,
+      "width": 32,
+      "height": 16,
+      "rotation": 0,
+      "visible": true
+     },
+     {
+      "id": 2,
+      "name": "",
+      "type": "collision",
+      "x": 16,
+      "y": 0,
+      "width": 16,
+      "height": 16,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 78,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-water"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 16,
+      "rotation": 0,
+      "visible": true
+     },
+     {
+      "id": 2,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 16,
+      "width": 16,
+      "height": 16,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 79,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-water"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 80,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-water"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 81,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-water"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 82,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-water"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 16,
+      "rotation": 0,
+      "visible": true
+     },
+     {
+      "id": 2,
+      "name": "",
+      "type": "collision",
+      "x": 16,
+      "y": 16,
+      "width": 16,
+      "height": 16,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 83,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-water"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 84,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-water"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 85,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-water"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 86,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-water"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 87,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-water"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 88,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-water"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 89,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-water"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 90,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-water"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 91,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-water"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 92,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-water"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 93,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-water"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 94,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-water"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 95,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-water"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 96,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-water"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 97,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-water"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 98,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-water"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 99,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-water"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 100,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-water"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 101,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-water"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 102,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-water"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 103,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-water"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 104,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-water"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 105,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-water"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 106,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-water"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 107,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-water"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 108,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-water"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 109,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-water"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 110,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-water"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 112,
+   "properties": [
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-forest"
+    }
+   ]
+  },
+  {
+   "id": 113,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-forest"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 16,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 114,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-forest"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 16,
+      "width": 32,
+      "height": 16,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 115,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-forest"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 16,
+      "y": 0,
+      "width": 16,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 116,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-forest"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 16,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 117,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-forest"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 16,
+      "width": 32,
+      "height": 16,
+      "rotation": 0,
+      "visible": true
+     },
+     {
+      "id": 2,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 16,
+      "height": 16,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 118,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-forest"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 119,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-forest"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 16,
+      "width": 32,
+      "height": 16,
+      "rotation": 0,
+      "visible": true
+     },
+     {
+      "id": 2,
+      "name": "",
+      "type": "collision",
+      "x": 16,
+      "y": 0,
+      "width": 16,
+      "height": 16,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 120,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-forest"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 16,
+      "rotation": 0,
+      "visible": true
+     },
+     {
+      "id": 2,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 16,
+      "width": 16,
+      "height": 16,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 121,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-forest"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 122,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-forest"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 16,
+      "rotation": 0,
+      "visible": true
+     },
+     {
+      "id": 2,
+      "name": "",
+      "type": "collision",
+      "x": 16,
+      "y": 16,
+      "width": 16,
+      "height": 16,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 123,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-forest"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 16,
+      "width": 32,
+      "height": 16,
+      "rotation": 0,
+      "visible": true
+     },
+     {
+      "id": 2,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 16,
+      "height": 16,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 124,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-forest"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 125,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-forest"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 16,
+      "width": 32,
+      "height": 16,
+      "rotation": 0,
+      "visible": true
+     },
+     {
+      "id": 2,
+      "name": "",
+      "type": "collision",
+      "x": 16,
+      "y": 0,
+      "width": 16,
+      "height": 16,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 126,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-forest"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 16,
+      "rotation": 0,
+      "visible": true
+     },
+     {
+      "id": 2,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 16,
+      "width": 16,
+      "height": 16,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 127,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-forest"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 128,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-forest"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 129,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-forest"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 130,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-forest"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 16,
+      "rotation": 0,
+      "visible": true
+     },
+     {
+      "id": 2,
+      "name": "",
+      "type": "collision",
+      "x": 16,
+      "y": 16,
+      "width": 16,
+      "height": 16,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 131,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-forest"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 132,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-forest"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 133,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-forest"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 134,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-forest"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 135,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-forest"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 136,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-forest"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 137,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-forest"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 138,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-forest"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 139,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-forest"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 140,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-forest"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 141,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-forest"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 142,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-forest"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 143,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-forest"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 144,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-forest"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 145,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-forest"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 146,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-forest"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 147,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-forest"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 148,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-forest"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 149,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-forest"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 150,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-forest"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 151,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-forest"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 152,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-forest"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 153,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-forest"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 154,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-forest"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 155,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-forest"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 156,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-forest"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 157,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-forest"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 158,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "blob",
+     "type": "string",
+     "value": "grass-forest"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 160,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "tree_green"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 4,
+      "y": 2,
+      "width": 28,
+      "height": 30,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 161,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "tree_green"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 2,
+      "width": 31,
+      "height": 30,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 162,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "tree_teal"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 5,
+      "y": 2,
+      "width": 27,
+      "height": 30,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 163,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "tree_teal"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 2,
+      "width": 32,
+      "height": 30,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 164,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "tree_blue"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 7,
+      "y": 5,
+      "width": 25,
+      "height": 27,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 165,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "tree_blue"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 3,
+      "width": 31,
+      "height": 29,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 166,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "tree_purple"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 3,
+      "y": 3,
+      "width": 29,
+      "height": 29,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 167,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "tree_purple"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 4,
+      "width": 28,
+      "height": 28,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 168,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "tree_big"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 13,
+      "y": 5,
+      "width": 19,
+      "height": 27,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 169,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "tree_big"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 1,
+      "width": 32,
+      "height": 31,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 170,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "tree_big"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 8,
+      "width": 27,
+      "height": 24,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 171,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "tree_pine"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 4,
+      "y": 3,
+      "width": 28,
+      "height": 29,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 172,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "tree_pine"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 4,
+      "width": 29,
+      "height": 28,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 173,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "bush_green"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 3,
+      "y": 4,
+      "width": 29,
+      "height": 28,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 174,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "bush_glow"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 3,
+      "y": 4,
+      "width": 29,
+      "height": 28,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 175,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "rock_small"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 3,
+      "y": 8,
+      "width": 29,
+      "height": 24,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 176,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "tree_green"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 5,
+      "y": 0,
+      "width": 27,
+      "height": 29,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 177,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "tree_green"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 31,
+      "height": 29,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 178,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "tree_teal"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 5,
+      "y": 0,
+      "width": 27,
+      "height": 28,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 179,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "tree_teal"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 180,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "tree_blue"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 3,
+      "y": 0,
+      "width": 29,
+      "height": 31,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 181,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "tree_blue"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 182,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "tree_purple"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 1,
+      "y": 0,
+      "width": 31,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 183,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "tree_purple"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 184,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "tree_big"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 185,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "tree_big"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 186,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "tree_big"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 30,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 187,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "tree_pine"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 3,
+      "y": 0,
+      "width": 29,
+      "height": 29,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 188,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "tree_pine"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 189,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "rock_moss"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 5,
+      "y": 5,
+      "width": 27,
+      "height": 27,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 190,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "boulder"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 9,
+      "y": 5,
+      "width": 23,
+      "height": 27,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 191,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "boulder"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 5,
+      "width": 30,
+      "height": 27,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 192,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "log"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 2,
+      "y": 8,
+      "width": 30,
+      "height": 20,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 193,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "log"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 8,
+      "width": 32,
+      "height": 20,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 194,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "stump"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 4,
+      "y": 6,
+      "width": 26,
+      "height": 25,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 195,
+   "properties": [
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "mushrooms"
+    }
+   ]
+  },
+  {
+   "id": 196,
+   "properties": [
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "flowers"
+    }
+   ]
+  },
+  {
+   "id": 197,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "campfire"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 2,
+      "y": 3,
+      "width": 30,
+      "height": 29,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 198,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "tent"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 16,
+      "y": 4,
+      "width": 16,
+      "height": 28,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 199,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "tent"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 3,
+      "width": 17,
+      "height": 29,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 200,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "tree_big"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 9,
+      "y": 0,
+      "width": 23,
+      "height": 30,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 201,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "tree_big"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 202,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "tree_big"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 31,
+      "height": 26,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 203,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "crate"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 3,
+      "y": 3,
+      "width": 28,
+      "height": 29,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 204,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "lantern"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 10,
+      "y": 3,
+      "width": 12,
+      "height": 27,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 205,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "signpost"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 4,
+      "y": 6,
+      "width": 26,
+      "height": 24,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 206,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "boulder"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 3,
+      "y": 0,
+      "width": 29,
+      "height": 29,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 207,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "boulder"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 26,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 208,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "standing_stone"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 4,
+      "y": 4,
+      "width": 26,
+      "height": 27,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 209,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "monolith"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 6,
+      "y": 3,
+      "width": 22,
+      "height": 29,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 210,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "ship_debris"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 3,
+      "y": 3,
+      "width": 29,
+      "height": 29,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 211,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "radio_dish"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 5,
+      "y": 5,
+      "width": 27,
+      "height": 27,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 212,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "radio_dish"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 4,
+      "width": 31,
+      "height": 28,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 213,
+   "properties": [
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "dock_planks_h"
+    }
+   ]
+  },
+  {
+   "id": 214,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "tent"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 3,
+      "y": 0,
+      "width": 29,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 215,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "tent"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 216,
+   "properties": [
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "crashed_ship"
+    }
+   ]
+  },
+  {
+   "id": 217,
+   "properties": [
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "crashed_ship"
+    }
+   ]
+  },
+  {
+   "id": 218,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "crashed_ship"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 20,
+      "y": 22,
+      "width": 12,
+      "height": 10,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 219,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "crashed_ship"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 20,
+      "width": 9,
+      "height": 12,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 220,
+   "properties": [
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "dock_planks_v"
+    }
+   ]
+  },
+  {
+   "id": 221,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "fence_h"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 9,
+      "width": 32,
+      "height": 16,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 222,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "fence_v"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 11,
+      "y": 0,
+      "width": 11,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 225,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "monolith"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 6,
+      "y": 0,
+      "width": 22,
+      "height": 31,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 227,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "radio_dish"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 5,
+      "y": 0,
+      "width": 27,
+      "height": 31,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 228,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "radio_dish"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 30,
+      "height": 31,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 229,
+   "properties": [
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "portal_platform"
+    }
+   ]
+  },
+  {
+   "id": 230,
+   "properties": [
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "portal_platform"
+    }
+   ]
+  },
+  {
+   "id": 231,
+   "properties": [
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "portal_platform"
+    }
+   ]
+  },
+  {
+   "id": 232,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "crashed_ship"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 24,
+      "y": 14,
+      "width": 8,
+      "height": 18,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 233,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "crashed_ship"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 12,
+      "width": 32,
+      "height": 20,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 234,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "crashed_ship"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 235,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "crashed_ship"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 6,
+      "height": 11,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 245,
+   "properties": [
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "portal_platform"
+    }
+   ]
+  },
+  {
+   "id": 246,
+   "properties": [
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "portal_platform"
+    }
+   ]
+  },
+  {
+   "id": 247,
+   "properties": [
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "portal_platform"
+    }
+   ]
+  },
+  {
+   "id": 248,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "crashed_ship"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 26,
+      "y": 0,
+      "width": 6,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 249,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "crashed_ship"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 250,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "crashed_ship"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 21,
+      "height": 32,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 251,
+   "properties": [
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "crashed_ship"
+    }
+   ]
+  },
+  {
+   "id": 261,
+   "properties": [
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "portal_platform"
+    }
+   ]
+  },
+  {
+   "id": 262,
+   "properties": [
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "portal_platform"
+    }
+   ]
+  },
+  {
+   "id": 263,
+   "properties": [
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "portal_platform"
+    }
+   ]
+  },
+  {
+   "id": 264,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "crashed_ship"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 27,
+      "y": 0,
+      "width": 5,
+      "height": 6,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 265,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "crashed_ship"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 0,
+      "y": 0,
+      "width": 25,
+      "height": 15,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 266,
+   "properties": [
+    {
+     "name": "collides",
+     "type": "bool",
+     "value": true
+    },
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "crashed_ship"
+    }
+   ],
+   "objectgroup": {
+    "draworder": "index",
+    "id": 2,
+    "name": "",
+    "opacity": 1,
+    "type": "objectgroup",
+    "visible": true,
+    "x": 0,
+    "y": 0,
+    "objects": [
+     {
+      "id": 1,
+      "name": "",
+      "type": "collision",
+      "x": 3,
+      "y": 0,
+      "width": 8,
+      "height": 5,
+      "rotation": 0,
+      "visible": true
+     }
+    ]
+   }
+  },
+  {
+   "id": 267,
+   "properties": [
+    {
+     "name": "prop",
+     "type": "string",
+     "value": "crashed_ship"
+    }
+   ]
+  }
+ ],
+ "wangsets": [
+  {
+   "name": "grass-path",
+   "type": "mixed",
+   "tile": 62,
+   "colors": [
+    {
+     "name": "grass",
+     "color": "#3070ff",
+     "tile": 0,
+     "probability": 1
+    },
+    {
+     "name": "dirt",
+     "color": "#ff3070",
+     "tile": 62,
+     "probability": 1
+    }
+   ],
+   "wangtiles": [
+    {
+     "tileid": 16,
+     "wangid": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 17,
+     "wangid": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 18,
+     "wangid": [
+      1,
+      1,
+      1,
+      1,
+      2,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 19,
+     "wangid": [
+      1,
+      1,
+      2,
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 20,
+     "wangid": [
+      2,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 21,
+     "wangid": [
+      1,
+      1,
+      1,
+      1,
+      2,
+      1,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 22,
+     "wangid": [
+      1,
+      1,
+      2,
+      1,
+      1,
+      1,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 23,
+     "wangid": [
+      1,
+      1,
+      2,
+      1,
+      2,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 24,
+     "wangid": [
+      2,
+      1,
+      1,
+      1,
+      1,
+      1,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 25,
+     "wangid": [
+      2,
+      1,
+      1,
+      1,
+      2,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 26,
+     "wangid": [
+      2,
+      1,
+      2,
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 27,
+     "wangid": [
+      1,
+      1,
+      1,
+      1,
+      2,
+      2,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 28,
+     "wangid": [
+      1,
+      1,
+      2,
+      1,
+      2,
+      1,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 29,
+     "wangid": [
+      1,
+      1,
+      2,
+      2,
+      2,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 30,
+     "wangid": [
+      2,
+      1,
+      1,
+      1,
+      1,
+      1,
+      2,
+      2
+     ]
+    },
+    {
+     "tileid": 31,
+     "wangid": [
+      2,
+      1,
+      1,
+      1,
+      2,
+      1,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 32,
+     "wangid": [
+      2,
+      1,
+      2,
+      1,
+      1,
+      1,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 33,
+     "wangid": [
+      2,
+      1,
+      2,
+      1,
+      2,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 34,
+     "wangid": [
+      2,
+      2,
+      2,
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 35,
+     "wangid": [
+      1,
+      1,
+      2,
+      1,
+      2,
+      2,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 36,
+     "wangid": [
+      1,
+      1,
+      2,
+      2,
+      2,
+      1,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 37,
+     "wangid": [
+      2,
+      1,
+      1,
+      1,
+      2,
+      1,
+      2,
+      2
+     ]
+    },
+    {
+     "tileid": 38,
+     "wangid": [
+      2,
+      1,
+      1,
+      1,
+      2,
+      2,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 39,
+     "wangid": [
+      2,
+      1,
+      2,
+      1,
+      1,
+      1,
+      2,
+      2
+     ]
+    },
+    {
+     "tileid": 40,
+     "wangid": [
+      2,
+      1,
+      2,
+      1,
+      2,
+      1,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 41,
+     "wangid": [
+      2,
+      1,
+      2,
+      2,
+      2,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 42,
+     "wangid": [
+      2,
+      2,
+      2,
+      1,
+      1,
+      1,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 43,
+     "wangid": [
+      2,
+      2,
+      2,
+      1,
+      2,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 44,
+     "wangid": [
+      1,
+      1,
+      2,
+      2,
+      2,
+      2,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 45,
+     "wangid": [
+      2,
+      1,
+      1,
+      1,
+      2,
+      2,
+      2,
+      2
+     ]
+    },
+    {
+     "tileid": 46,
+     "wangid": [
+      2,
+      1,
+      2,
+      1,
+      2,
+      1,
+      2,
+      2
+     ]
+    },
+    {
+     "tileid": 47,
+     "wangid": [
+      2,
+      1,
+      2,
+      1,
+      2,
+      2,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 48,
+     "wangid": [
+      2,
+      1,
+      2,
+      2,
+      2,
+      1,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 49,
+     "wangid": [
+      2,
+      2,
+      2,
+      1,
+      1,
+      1,
+      2,
+      2
+     ]
+    },
+    {
+     "tileid": 50,
+     "wangid": [
+      2,
+      2,
+      2,
+      1,
+      2,
+      1,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 51,
+     "wangid": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 52,
+     "wangid": [
+      2,
+      1,
+      2,
+      1,
+      2,
+      2,
+      2,
+      2
+     ]
+    },
+    {
+     "tileid": 53,
+     "wangid": [
+      2,
+      1,
+      2,
+      2,
+      2,
+      1,
+      2,
+      2
+     ]
+    },
+    {
+     "tileid": 54,
+     "wangid": [
+      2,
+      1,
+      2,
+      2,
+      2,
+      2,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 55,
+     "wangid": [
+      2,
+      2,
+      2,
+      1,
+      2,
+      1,
+      2,
+      2
+     ]
+    },
+    {
+     "tileid": 56,
+     "wangid": [
+      2,
+      2,
+      2,
+      1,
+      2,
+      2,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 57,
+     "wangid": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      1,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 58,
+     "wangid": [
+      2,
+      1,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+     ]
+    },
+    {
+     "tileid": 59,
+     "wangid": [
+      2,
+      2,
+      2,
+      1,
+      2,
+      2,
+      2,
+      2
+     ]
+    },
+    {
+     "tileid": 60,
+     "wangid": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      1,
+      2,
+      2
+     ]
+    },
+    {
+     "tileid": 61,
+     "wangid": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 62,
+     "wangid": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+     ]
+    },
+    {
+     "tileid": 1,
+     "wangid": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 2,
+     "wangid": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 3,
+     "wangid": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 4,
+     "wangid": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 5,
+     "wangid": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 6,
+     "wangid": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 7,
+     "wangid": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 8,
+     "wangid": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+     ]
+    },
+    {
+     "tileid": 9,
+     "wangid": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+     ]
+    },
+    {
+     "tileid": 10,
+     "wangid": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+     ]
+    },
+    {
+     "tileid": 11,
+     "wangid": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+     ]
+    }
+   ]
+  },
+  {
+   "name": "grass-water",
+   "type": "mixed",
+   "tile": 110,
+   "colors": [
+    {
+     "name": "grass",
+     "color": "#3070ff",
+     "tile": 0,
+     "probability": 1
+    },
+    {
+     "name": "water",
+     "color": "#ff3070",
+     "tile": 110,
+     "probability": 1
+    }
+   ],
+   "wangtiles": [
+    {
+     "tileid": 64,
+     "wangid": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 65,
+     "wangid": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 66,
+     "wangid": [
+      1,
+      1,
+      1,
+      1,
+      2,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 67,
+     "wangid": [
+      1,
+      1,
+      2,
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 68,
+     "wangid": [
+      2,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 69,
+     "wangid": [
+      1,
+      1,
+      1,
+      1,
+      2,
+      1,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 70,
+     "wangid": [
+      1,
+      1,
+      2,
+      1,
+      1,
+      1,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 71,
+     "wangid": [
+      1,
+      1,
+      2,
+      1,
+      2,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 72,
+     "wangid": [
+      2,
+      1,
+      1,
+      1,
+      1,
+      1,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 73,
+     "wangid": [
+      2,
+      1,
+      1,
+      1,
+      2,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 74,
+     "wangid": [
+      2,
+      1,
+      2,
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 75,
+     "wangid": [
+      1,
+      1,
+      1,
+      1,
+      2,
+      2,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 76,
+     "wangid": [
+      1,
+      1,
+      2,
+      1,
+      2,
+      1,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 77,
+     "wangid": [
+      1,
+      1,
+      2,
+      2,
+      2,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 78,
+     "wangid": [
+      2,
+      1,
+      1,
+      1,
+      1,
+      1,
+      2,
+      2
+     ]
+    },
+    {
+     "tileid": 79,
+     "wangid": [
+      2,
+      1,
+      1,
+      1,
+      2,
+      1,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 80,
+     "wangid": [
+      2,
+      1,
+      2,
+      1,
+      1,
+      1,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 81,
+     "wangid": [
+      2,
+      1,
+      2,
+      1,
+      2,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 82,
+     "wangid": [
+      2,
+      2,
+      2,
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 83,
+     "wangid": [
+      1,
+      1,
+      2,
+      1,
+      2,
+      2,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 84,
+     "wangid": [
+      1,
+      1,
+      2,
+      2,
+      2,
+      1,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 85,
+     "wangid": [
+      2,
+      1,
+      1,
+      1,
+      2,
+      1,
+      2,
+      2
+     ]
+    },
+    {
+     "tileid": 86,
+     "wangid": [
+      2,
+      1,
+      1,
+      1,
+      2,
+      2,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 87,
+     "wangid": [
+      2,
+      1,
+      2,
+      1,
+      1,
+      1,
+      2,
+      2
+     ]
+    },
+    {
+     "tileid": 88,
+     "wangid": [
+      2,
+      1,
+      2,
+      1,
+      2,
+      1,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 89,
+     "wangid": [
+      2,
+      1,
+      2,
+      2,
+      2,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 90,
+     "wangid": [
+      2,
+      2,
+      2,
+      1,
+      1,
+      1,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 91,
+     "wangid": [
+      2,
+      2,
+      2,
+      1,
+      2,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 92,
+     "wangid": [
+      1,
+      1,
+      2,
+      2,
+      2,
+      2,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 93,
+     "wangid": [
+      2,
+      1,
+      1,
+      1,
+      2,
+      2,
+      2,
+      2
+     ]
+    },
+    {
+     "tileid": 94,
+     "wangid": [
+      2,
+      1,
+      2,
+      1,
+      2,
+      1,
+      2,
+      2
+     ]
+    },
+    {
+     "tileid": 95,
+     "wangid": [
+      2,
+      1,
+      2,
+      1,
+      2,
+      2,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 96,
+     "wangid": [
+      2,
+      1,
+      2,
+      2,
+      2,
+      1,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 97,
+     "wangid": [
+      2,
+      2,
+      2,
+      1,
+      1,
+      1,
+      2,
+      2
+     ]
+    },
+    {
+     "tileid": 98,
+     "wangid": [
+      2,
+      2,
+      2,
+      1,
+      2,
+      1,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 99,
+     "wangid": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 100,
+     "wangid": [
+      2,
+      1,
+      2,
+      1,
+      2,
+      2,
+      2,
+      2
+     ]
+    },
+    {
+     "tileid": 101,
+     "wangid": [
+      2,
+      1,
+      2,
+      2,
+      2,
+      1,
+      2,
+      2
+     ]
+    },
+    {
+     "tileid": 102,
+     "wangid": [
+      2,
+      1,
+      2,
+      2,
+      2,
+      2,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 103,
+     "wangid": [
+      2,
+      2,
+      2,
+      1,
+      2,
+      1,
+      2,
+      2
+     ]
+    },
+    {
+     "tileid": 104,
+     "wangid": [
+      2,
+      2,
+      2,
+      1,
+      2,
+      2,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 105,
+     "wangid": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      1,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 106,
+     "wangid": [
+      2,
+      1,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+     ]
+    },
+    {
+     "tileid": 107,
+     "wangid": [
+      2,
+      2,
+      2,
+      1,
+      2,
+      2,
+      2,
+      2
+     ]
+    },
+    {
+     "tileid": 108,
+     "wangid": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      1,
+      2,
+      2
+     ]
+    },
+    {
+     "tileid": 109,
+     "wangid": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 110,
+     "wangid": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+     ]
+    },
+    {
+     "tileid": 1,
+     "wangid": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 2,
+     "wangid": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 3,
+     "wangid": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 4,
+     "wangid": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 5,
+     "wangid": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 6,
+     "wangid": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 7,
+     "wangid": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 12,
+     "wangid": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+     ]
+    },
+    {
+     "tileid": 13,
+     "wangid": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+     ]
+    }
+   ]
+  },
+  {
+   "name": "grass-forest",
+   "type": "mixed",
+   "tile": 158,
+   "colors": [
+    {
+     "name": "grass",
+     "color": "#3070ff",
+     "tile": 0,
+     "probability": 1
+    },
+    {
+     "name": "forest",
+     "color": "#ff3070",
+     "tile": 158,
+     "probability": 1
+    }
+   ],
+   "wangtiles": [
+    {
+     "tileid": 112,
+     "wangid": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 113,
+     "wangid": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 114,
+     "wangid": [
+      1,
+      1,
+      1,
+      1,
+      2,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 115,
+     "wangid": [
+      1,
+      1,
+      2,
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 116,
+     "wangid": [
+      2,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 117,
+     "wangid": [
+      1,
+      1,
+      1,
+      1,
+      2,
+      1,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 118,
+     "wangid": [
+      1,
+      1,
+      2,
+      1,
+      1,
+      1,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 119,
+     "wangid": [
+      1,
+      1,
+      2,
+      1,
+      2,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 120,
+     "wangid": [
+      2,
+      1,
+      1,
+      1,
+      1,
+      1,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 121,
+     "wangid": [
+      2,
+      1,
+      1,
+      1,
+      2,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 122,
+     "wangid": [
+      2,
+      1,
+      2,
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 123,
+     "wangid": [
+      1,
+      1,
+      1,
+      1,
+      2,
+      2,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 124,
+     "wangid": [
+      1,
+      1,
+      2,
+      1,
+      2,
+      1,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 125,
+     "wangid": [
+      1,
+      1,
+      2,
+      2,
+      2,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 126,
+     "wangid": [
+      2,
+      1,
+      1,
+      1,
+      1,
+      1,
+      2,
+      2
+     ]
+    },
+    {
+     "tileid": 127,
+     "wangid": [
+      2,
+      1,
+      1,
+      1,
+      2,
+      1,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 128,
+     "wangid": [
+      2,
+      1,
+      2,
+      1,
+      1,
+      1,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 129,
+     "wangid": [
+      2,
+      1,
+      2,
+      1,
+      2,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 130,
+     "wangid": [
+      2,
+      2,
+      2,
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 131,
+     "wangid": [
+      1,
+      1,
+      2,
+      1,
+      2,
+      2,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 132,
+     "wangid": [
+      1,
+      1,
+      2,
+      2,
+      2,
+      1,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 133,
+     "wangid": [
+      2,
+      1,
+      1,
+      1,
+      2,
+      1,
+      2,
+      2
+     ]
+    },
+    {
+     "tileid": 134,
+     "wangid": [
+      2,
+      1,
+      1,
+      1,
+      2,
+      2,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 135,
+     "wangid": [
+      2,
+      1,
+      2,
+      1,
+      1,
+      1,
+      2,
+      2
+     ]
+    },
+    {
+     "tileid": 136,
+     "wangid": [
+      2,
+      1,
+      2,
+      1,
+      2,
+      1,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 137,
+     "wangid": [
+      2,
+      1,
+      2,
+      2,
+      2,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 138,
+     "wangid": [
+      2,
+      2,
+      2,
+      1,
+      1,
+      1,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 139,
+     "wangid": [
+      2,
+      2,
+      2,
+      1,
+      2,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 140,
+     "wangid": [
+      1,
+      1,
+      2,
+      2,
+      2,
+      2,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 141,
+     "wangid": [
+      2,
+      1,
+      1,
+      1,
+      2,
+      2,
+      2,
+      2
+     ]
+    },
+    {
+     "tileid": 142,
+     "wangid": [
+      2,
+      1,
+      2,
+      1,
+      2,
+      1,
+      2,
+      2
+     ]
+    },
+    {
+     "tileid": 143,
+     "wangid": [
+      2,
+      1,
+      2,
+      1,
+      2,
+      2,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 144,
+     "wangid": [
+      2,
+      1,
+      2,
+      2,
+      2,
+      1,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 145,
+     "wangid": [
+      2,
+      2,
+      2,
+      1,
+      1,
+      1,
+      2,
+      2
+     ]
+    },
+    {
+     "tileid": 146,
+     "wangid": [
+      2,
+      2,
+      2,
+      1,
+      2,
+      1,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 147,
+     "wangid": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 148,
+     "wangid": [
+      2,
+      1,
+      2,
+      1,
+      2,
+      2,
+      2,
+      2
+     ]
+    },
+    {
+     "tileid": 149,
+     "wangid": [
+      2,
+      1,
+      2,
+      2,
+      2,
+      1,
+      2,
+      2
+     ]
+    },
+    {
+     "tileid": 150,
+     "wangid": [
+      2,
+      1,
+      2,
+      2,
+      2,
+      2,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 151,
+     "wangid": [
+      2,
+      2,
+      2,
+      1,
+      2,
+      1,
+      2,
+      2
+     ]
+    },
+    {
+     "tileid": 152,
+     "wangid": [
+      2,
+      2,
+      2,
+      1,
+      2,
+      2,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 153,
+     "wangid": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      1,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 154,
+     "wangid": [
+      2,
+      1,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+     ]
+    },
+    {
+     "tileid": 155,
+     "wangid": [
+      2,
+      2,
+      2,
+      1,
+      2,
+      2,
+      2,
+      2
+     ]
+    },
+    {
+     "tileid": 156,
+     "wangid": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      1,
+      2,
+      2
+     ]
+    },
+    {
+     "tileid": 157,
+     "wangid": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      1
+     ]
+    },
+    {
+     "tileid": 158,
+     "wangid": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+     ]
+    },
+    {
+     "tileid": 1,
+     "wangid": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 2,
+     "wangid": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 3,
+     "wangid": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 4,
+     "wangid": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 5,
+     "wangid": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 6,
+     "wangid": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 7,
+     "wangid": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    },
+    {
+     "tileid": 14,
+     "wangid": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+     ]
+    },
+    {
+     "tileid": 15,
+     "wangid": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+     ]
+    }
+   ]
+  }
+ ]
+}
