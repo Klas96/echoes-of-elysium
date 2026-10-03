@@ -22,6 +22,7 @@ import '../creatures/day_cycle.dart';
 import '../creatures/interaction.dart';
 import '../creatures/journal_ui.dart';
 import '../creatures/obstacles.dart';
+import '../ui/cutscenes.dart';
 import 'game_state.dart';
 import 'save_service.dart';
 import 'settings.dart';
@@ -458,7 +459,8 @@ void _continueGame(BuildContext context) {
 Future<void> _beginNewGame(BuildContext context) async {
   final nav = Navigator.of(context);
   await SaveService.startNewGame();
-  nav.pushReplacement(MaterialPageRoute(builder: (_) => const CustomMapGameScreen()));
+  nav.pushReplacement(Cutscenes.route(
+      id: Cutscenes.awakening, then: (_) => const CustomMapGameScreen()));
 }
 
 Future<void> _confirmNewGame(BuildContext context) async {
@@ -687,8 +689,10 @@ class CustomMapGameScreen extends StatelessWidget {
                     onEnter: () async {
                       final nav = Navigator.of(ctx);
                       await _leaveMap(nextMapId: 'world2');
-                      nav.pushReplacement(
-                          MaterialPageRoute(builder: (_) => const Map2GameScreen()));
+                      nav.pushReplacement(Cutscenes.route(
+                          id: Cutscenes.coalition,
+                          once: true,
+                          then: (_) => const Map2GameScreen()));
                     },
                   ),
             },
