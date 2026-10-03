@@ -118,7 +118,7 @@
   },
   {
    "id": 10,
-   "probability": 0.15,
+   "probability": 0.24,
    "properties": [
     {
      "name": "ground",
@@ -129,7 +129,7 @@
   },
   {
    "id": 11,
-   "probability": 0.15,
+   "probability": 0.16,
    "properties": [
     {
      "name": "ground",
@@ -367,7 +367,7 @@
   },
   {
    "id": 23,
-   "probability": 0.15,
+   "probability": 0.6,
    "properties": [
     {
      "name": "ground",
@@ -9808,6 +9808,19 @@
       2,
       2,
       2
+     ]
+    },
+    {
+     "tileid": 23,
+     "wangid": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
      ]
     }
    ]

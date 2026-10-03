@@ -109,7 +109,7 @@ Map<String, ObjectBuilder> _mapObjects() => {
           throw ArgumentError('Unknown npc name "$name" in Tiled map');
         }
         return NpcCharacter(p.position,
-            dialogue: dialogue, spritePath: 'sprites/npc_$name.png');
+            dialogue: dialogue, spritePath: 'sprites/npc_$name.png', npcKey: name);
       },
       'fragment': (p) => FragmentPickup(p.position),
       'health': (p) => HealthPickup(p.position),
@@ -966,7 +966,7 @@ class _VictoryScreen extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                       letterSpacing: 5)),
               const SizedBox(height: 12),
-              const Text('Gaia\'s memory is restored. The Aetherians live on.',
+              const Text(GameState.endingText,
                   style: TextStyle(color: Colors.white38, fontSize: 14, letterSpacing: 1)),
               const SizedBox(height: 36),
               Container(

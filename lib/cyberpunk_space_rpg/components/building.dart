@@ -23,7 +23,7 @@ const buildingDefs = <String, BuildingDef>{
       'Tea House · Closed. A kettle hums somewhere inside.'),
   'greenhouse': BuildingDef(128, 128, Rect.fromLTWH(12, 60, 104, 64), Offset(63, 124),
       'Greenhouse · Locked. The plants lean towards the glass.'),
-  'apartment_block': BuildingDef(160, 160, Rect.fromLTWH(8, 78, 144, 64), Offset(80, 142),
+  'apartment_block': BuildingDef(160, 160, Rect.fromLTWH(0, 78, 160, 64), Offset(80, 142),
       'Apartments · The door wants a resident keycard.'),
   'archive_library': BuildingDef(160, 160, Rect.fromLTWH(8, 82, 142, 64), Offset(80, 146),
       'Archive Library · Sealed. The Archivist keeps the key.'),

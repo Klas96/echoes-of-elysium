@@ -51,12 +51,12 @@
    <property name="ground" value="sidewalk" />
   </properties>
  </tile>
- <tile id="10" probability="0.15">
+ <tile id="10" probability="0.24">
   <properties>
    <property name="ground" value="sidewalk" />
   </properties>
  </tile>
- <tile id="11" probability="0.15">
+ <tile id="11" probability="0.16">
   <properties>
    <property name="ground" value="sidewalk" />
   </properties>
@@ -132,7 +132,7 @@
    <property name="ground" value="grass" />
   </properties>
  </tile>
- <tile id="23" probability="0.15">
+ <tile id="23" probability="0.6">
   <properties>
    <property name="ground" value="sidewalk" />
   </properties>
@@ -2194,6 +2194,7 @@
    <wangtile tileid="10" wangid="1,1,1,1,1,1,1,1" />
    <wangtile tileid="11" wangid="1,1,1,1,1,1,1,1" />
    <wangtile tileid="22" wangid="2,2,2,2,2,2,2,2" />
+   <wangtile tileid="23" wangid="1,1,1,1,1,1,1,1" />
   </wangset>
  </wangsets>
 </tileset>

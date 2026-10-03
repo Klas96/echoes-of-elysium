@@ -214,9 +214,9 @@
       "id": 1,
       "name": "collision",
       "type": "collision",
-      "x": 8,
+      "x": 0,
       "y": 78,
-      "width": 144,
+      "width": 160,
       "height": 64,
       "rotation": 0,
       "visible": true

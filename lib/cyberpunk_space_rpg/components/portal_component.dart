@@ -9,6 +9,8 @@ class PortalComponent extends GameDecoration {
   final bool Function() canActivate;
   double _pulse = 0.0;
   bool _triggered = false;
+  bool _near = false;
+  static const double _nearRadius = 320.0;
 
   PortalComponent(Vector2 position, {bool Function()? canActivate})
       : canActivate = canActivate ?? (() => GameState.portalUnlocked.value),
@@ -20,10 +22,14 @@ class PortalComponent extends GameDecoration {
     _pulse += dt * 3.0;
 
     if (_triggered) return;
-    if (!canActivate()) return;
     final player = gameRef.player;
     if (player == null) return;
     final dist = ((player.position + player.size / 2) - (position + size / 2)).length;
+    if (!_near && dist < _nearRadius) {
+      _near = true;
+      GameState.onNearPortal();
+    }
+    if (!canActivate()) return;
     if (dist < _radius) {
       _triggered = true;
       SfxManager().playPortal();

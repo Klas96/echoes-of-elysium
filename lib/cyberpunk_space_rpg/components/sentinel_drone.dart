@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'custom_player.dart';
 import 'explosion_effect.dart';
 import '../game/settings.dart';
+import '../game/game_state.dart';
 
 enum _SState { idle, chase, attack, rage }
 
@@ -50,6 +51,7 @@ class SentinelDrone extends GameDecoration {
 
   void takeDamage(int amount) {
     if (isDead) return;
+    GameState.onSentinelEngaged();
     _health = (_health - amount).clamp(0, maxHealth);
     if (_health <= 0 && !_deathFired) {
       _deathFired = true;
@@ -70,6 +72,8 @@ class SentinelDrone extends GameDecoration {
     if (player == null) return;
     // Centre to centre, so ranges don't drift with the size difference.
     final toPlayer = (player.position + player.size / 2) - (position + size / 2);
+    // Objective: the player went for the Sentinel (also in Story Mode).
+    if (toPlayer.length < _detectR) GameState.onSentinelEngaged();
     // Story Mode: the Sentinel stays put and never attacks (it can still be
     // shot down to open the way).
     final dist = GameSettings.storyMode.value ? double.infinity : toPlayer.length;

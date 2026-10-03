@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:bonfire/bonfire.dart';
 import 'package:flutter/material.dart';
 import 'walk_sheet.dart';
+import '../game/game_state.dart';
 
 class NpcDialogue {
   final String name;
@@ -30,11 +31,13 @@ class NpcCharacter extends SimpleNpc {
 
   final NpcDialogue dialogue;
   final String spritePath;
+  /// Tiled npc name key (gaia, asha, ...), reported to the objectives.
+  final String npcKey;
   double _pulse = 0;
   static const double _interactRadius = 72;
 
   // The Tiled objects are 30x30; keep the same centre at 32x32.
-  NpcCharacter(Vector2 position, {required this.dialogue, required this.spritePath})
+  NpcCharacter(Vector2 position, {required this.dialogue, required this.spritePath, this.npcKey = ''})
       : super(
           position: position - Vector2.all(1),
           size: Vector2.all(npcSize),
@@ -65,6 +68,7 @@ class NpcCharacter extends SimpleNpc {
 
   void interact() {
     activeDialogue.value = dialogue;
+    GameState.onNpcTalk(npcKey);
   }
 
   @override

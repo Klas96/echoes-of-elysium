@@ -1,7 +1,8 @@
 # Tilesets v2
 
 Drop-in replacements for `../tilesets/` (v1). Tile indices, tile counts, 32 px tiles, 16 columns, spacing 0 and margin 0 are unchanged, and so are the collision rects and the wang tile ids/wangids except for the decal fixes below.
-Prop tiles come from generated art in `gen_src/<biome>/prop_*.png` (all 91 props of the four biomes have a source now);
+Prop tiles come from generated art in `gen_src/<biome>/prop_*.png` (all 91 props of the four biomes have a source now: woods 30, city 24, cyberpunk 22, core 15. `gen_src` holds 92 `prop_*.png` files because
+`city/prop_planter_flowers_extra.png` is a spare that no tileset uses);
 a prop without a source keeps its v1 art byte-identical. Prop tile indices, footprints and collision rects are the v1 ones.
 
 ## Files
@@ -23,6 +24,13 @@ a prop without a source keeps its v1 art byte-identical. Prop tile indices, foot
   - city 4-8: lane-h, lane-v, crosswalk-h, crosswalk-v, arrow. Removed from `road-sidewalk`.
   - cyberpunk 6-9: cable-h, cable-v, dash-h, dash-v. Removed from all three asphalt wangsets.
   - city 13-14: plaza inlay and emblem. Still in `plaza-water`, but tile probability lowered from 1.0 to 0.08.
+- City sidewalk mix (`SETPROB` in `tools/v2_export.py`): tile probabilities 23 (plain, faint wear) = 0.60, 10 (grate) = 0.24,
+  11 (drain) = 0.16 (all three were 0.15). Each sidewalk wangset's plain interior tile (78 / 80 / 176) stays at 1.0, so a brushed
+  sidewalk cell comes out plain 80 % / grate 12 % / drain 8 %. `sidewalk-grass` had no plain variant besides 176, so tile 23
+  was added to it as an all-sidewalk wangtile (`ADDWANG`). That is the only wangtile addition; all other wang ids are unchanged.
+- City plaza (tiles 12-14 and the plaza side of `plaza-water`) reads as stone: the gen_src plaza came out saturated navy and
+  looked like water next to the canal, so `v2_city.py` remaps it by luminance onto a slate-stone ramp (`STONE`) with a sparse
+  granite speckle. Indices and sizes are unchanged.
 
 ## Rebuild
 `tools/build_v2.sh` runs `v2_<biome>.py` (art), `v2_export.py` (tsx patch, .tsj, validation),
