@@ -232,7 +232,7 @@ class IntroScreen extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               _CyberButton(
-                label: 'BEGIN MISSION',
+                label: 'BEGIN JOURNEY',
                 onTap: () => Navigator.of(context).pushReplacement(
                     MaterialPageRoute(builder: (_) => const CustomMapGameScreen())),
               ),
@@ -959,7 +959,7 @@ class _VictoryScreen extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('MISSION COMPLETE',
+              const Text('GAIA REMEMBERS',
                   style: TextStyle(
                       color: Color(0xFF00FFCC),
                       fontSize: 32,
@@ -1174,7 +1174,7 @@ class _CalmLayer extends StatelessWidget {
                         fontStyle: FontStyle.italic,
                         letterSpacing: 2)),
                 SizedBox(height: 10),
-                Text('signal lost · returning to the last checkpoint',
+                Text('returning to the last checkpoint',
                     style: TextStyle(color: Colors.white30, fontSize: 11, letterSpacing: 1.5)),
               ]),
             ),
