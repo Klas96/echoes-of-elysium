@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/creatures/bonds.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/creatures/creature_species.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/creatures/day_cycle.dart';
+import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/creatures/obstacles.dart';
+import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/components/custom_player.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/game/save_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -158,7 +160,7 @@ void main() {
       Bonds.befriend('brookling');
       Bonds.setActive('brookling');
       Bonds.markSecret('world:boulder:768_128');
-      Bonds.markSecret('world:hiddenpath:864_928');
+      Bonds.markSecret('world:hiddenpath:928_960');
       Bonds.addGlimmer(25);
       SaveService.data.dayTime = 0.9;
       await SaveService.saveNow();
@@ -171,7 +173,7 @@ void main() {
       expect(Bonds.active, 'brookling');
       expect(Bonds.unlocked(Ability.scent), isTrue);
       expect(Bonds.secretDone('world:boulder:768_128'), isTrue);
-      expect(Bonds.secretDone('world:hiddenpath:864_928'), isTrue);
+      expect(Bonds.secretDone('world:hiddenpath:928_960'), isTrue);
       expect(Bonds.secretDone('world:glyph:0_0'), isFalse);
       expect(Bonds.glimmer, 25);
       expect(SaveService.data.dayTime, 0.9);
@@ -217,6 +219,35 @@ void main() {
       expect(count('hidden') + count('hiddenpath'), greaterThanOrEqualTo(2));
       expect(count('stump'), 1);
       expect(count('pebble'), 1);
+      // Designer's 2x2 stump and bramble art fill their objects exactly
+      for (final o in objects.where((o) => o['name'] == 'stump' || o['name'] == 'hiddenpath')) {
+        expect([o['width'], o['height']], [64, 64], reason: o['name'].toString());
+      }
+    });
+
+    test('Designer stump and bramble art replace the placeholders', () {
+      for (final f in ['sweetroot_stump', 'sweetroot_stump_plain', 'bramble_closed', 'bramble_open', 'bramble_open_motes_anim']) {
+        expect(File('assets/images/obstacles/$f.png').existsSync(), isTrue, reason: f);
+      }
+      expect(File('assets/images/obstacles/stump.png').existsSync(), isFalse);
+      expect(File('assets/images/obstacles/bramble.png').existsSync(), isFalse);
+      for (final side in ['left', 'right']) {
+        for (final part in ['top', 'mid', 'bottom']) {
+          expect(File('assets/images/ui/book_${side}_$part@2x.png').existsSync(), isTrue, reason: '$side $part');
+        }
+      }
+    });
+
+    test('the open bramble leaves a passage Kaela\'s feet fit through', () {
+      final left = HiddenPath.openColliders.first, right = HiddenPath.openColliders.last;
+      expect(left.right, lessThanOrEqualTo(HiddenPath.passage.x));
+      expect(right.left, greaterThanOrEqualTo(HiddenPath.passage.x + HiddenPath.passage.w));
+      // with a few px to spare on each side
+      expect(right.left - left.right, greaterThanOrEqualTo(CustomPlayer.feetWidth + 8));
+      // and the closed bramble spans the gap
+      final c = HiddenPath.closedColliders.single;
+      expect(c.left, lessThan(left.right));
+      expect(c.right, greaterThan(right.left));
     });
   });
 }

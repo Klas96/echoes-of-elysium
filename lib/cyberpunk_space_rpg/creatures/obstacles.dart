@@ -373,16 +373,27 @@ class BuriedItem extends GameComponent with Interactable, PointOfInterest {
   }
 }
 
-/// SCENT: brambles hiding a path. With the vine fox along, walking up to them
-/// makes it nose out the way through (they part for good); until then they
-/// block like any thicket. The Designer shimmer marks the path while SCENT
-/// is active.
-class HiddenPath extends GameComponent with PointOfInterest {
+/// SCENT: Designer's 2x2 bramble (bramble_closed / bramble_open, 64x64,
+/// swapped in place) plugging the trail into the hushdeer's glade. With the
+/// vine fox along, hold E to have it nose a way through; the open bramble
+/// keeps only its side clumps solid, leaving a north-south passage
+/// ([passage], x 16-48 px) that Kaela's feet hitbox fits through.
+class HiddenPath extends GameComponent with Interactable, PointOfInterest {
   final String id;
-  Sprite? _bramble;
+
+  /// Solid rects (x, y, w, h in the 64x64 art) from bramble_closed.json /
+  /// bramble_open.json.
+  static const closedColliders = [Rect.fromLTWH(5, 39, 52, 22)];
+  static const openColliders = [Rect.fromLTWH(1, 39, 15, 22), Rect.fromLTWH(48, 39, 15, 22)];
+
+  /// The walkable middle of the open bramble ('passage' x 16, w 32).
+  static const passage = (x: 16.0, w: 32.0);
+
+  Sprite? _closed;
+  Sprite? _openSprite;
+  SpriteAnimationTicker? _motes;
   SpriteAnimationTicker? _shimmer;
-  Sprite? _shimmerBase;
-  RectangleHitbox? _hit;
+  final _hits = <RectangleHitbox>[];
   double _open;
 
   HiddenPath(Vector2 position, Vector2 size, {required this.id}) : _open = Bonds.secretDone(id) ? 1 : 0 {
@@ -394,14 +405,32 @@ class HiddenPath extends GameComponent with PointOfInterest {
 
   @override
   Future<void> onLoad() async {
-    _bramble = await Sprite.load('obstacles/bramble.png');
-    _shimmerBase = await Sprite.load('obstacles/shimmer.png');
-    final img = await Flame.images.load('obstacles/shimmer_anim.png');
-    _shimmer = SpriteAnimation.fromFrameData(
-            img, SpriteAnimationData.sequenced(amount: 4, stepTime: 1 / 6, textureSize: Vector2.all(64)))
+    _closed = await Sprite.load('obstacles/bramble_closed.png');
+    _openSprite = await Sprite.load('obstacles/bramble_open.png');
+    final motes = await Flame.images.load('obstacles/bramble_open_motes_anim.png');
+    _motes = SpriteAnimation.fromFrameData(
+            motes, SpriteAnimationData.sequenced(amount: 4, stepTime: 1 / 6, textureSize: Vector2.all(64)))
         .createTicker();
-    if (!revealed) add(_hit = RectangleHitbox(size: size.clone(), isSolid: true));
+    final shimmer = await Flame.images.load('obstacles/shimmer_anim.png');
+    _shimmer = SpriteAnimation.fromFrameData(
+            shimmer, SpriteAnimationData.sequenced(amount: 4, stepTime: 1 / 6, textureSize: Vector2.all(64)))
+        .createTicker();
+    _setColliders(revealed ? openColliders : closedColliders);
     return super.onLoad();
+  }
+
+  void _setColliders(List<Rect> rects) {
+    for (final h in _hits) {
+      h.removeFromParent();
+    }
+    _hits.clear();
+    final k = size.x / 64; // art is 64 px; the object is 2x2 tiles
+    for (final r in rects) {
+      final h = RectangleHitbox(
+          position: Vector2(r.left * k, r.top * k), size: Vector2(r.width * k, r.height * k), isSolid: true);
+      _hits.add(h);
+      add(h);
+    }
   }
 
   @override
@@ -409,18 +438,34 @@ class HiddenPath extends GameComponent with PointOfInterest {
   @override
   bool get poiPending => !revealed;
 
+  // Reachable from either side: the middle of the thorny band.
+  @override
+  Vector2 get interactPoint => absolutePosition + Vector2(size.x / 2, size.y * 50 / 64);
+  @override
+  double get interactRadius => 40;
+  @override
+  bool get canFocus => !revealed;
+
+  @override
+  PromptInfo get prompt => Bonds.has(Ability.scent)
+      ? const PromptInfo('SNIFF A WAY THROUGH', hold: 0.6)
+      : const PromptInfo.note('Thick brambles. Something sweet-smelling lies beyond.');
+
+  @override
+  void interact() {
+    if (revealed || !Bonds.has(Ability.scent)) return;
+    Bonds.markSecret(id);
+    _setColliders(openColliders);
+    SfxManager().playChime();
+    GameToast.show('SCENT', body: 'The vine fox noses through the brambles. There\'s a path here!', seconds: 4);
+  }
+
   @override
   void update(double dt) {
     super.update(dt);
     _shimmer?.update(dt);
-    if (!revealed && Bonds.has(Ability.scent) && _playerCenter(gameRef).distanceTo(absoluteCenter) < 80) {
-      Bonds.markSecret(id);
-      _hit?.removeFromParent();
-      _hit = null;
-      SfxManager().playChime();
-      GameToast.show('SCENT', body: 'The vine fox noses through the brambles. There\'s a path here!', seconds: 4);
-    }
-    if (revealed) _open = min(1, _open + dt * 0.8);
+    _motes?.update(dt);
+    if (revealed) _open = min(1, _open + dt * 1.5);
   }
 
   @override
@@ -428,42 +473,61 @@ class HiddenPath extends GameComponent with PointOfInterest {
     final paint = Paint()..filterQuality = FilterQuality.none;
     if (_open < 1) {
       paint.color = Color.fromRGBO(255, 255, 255, 1 - _open);
-      for (var y = 0.0; y < size.y; y += 32) {
-        for (var x = 0.0; x < size.x; x += 32) {
-          _bramble?.render(canvas, position: Vector2(x, y - 4), size: Vector2.all(32), overridePaint: paint);
-          _bramble?.render(canvas, position: Vector2(x + 8, y + 6), size: Vector2.all(30), overridePaint: paint);
-        }
-      }
+      _closed?.render(canvas, size: size, overridePaint: paint);
     }
-    if (Bonds.has(Ability.scent)) {
-      paint.color = const Color(0xFFFFFFFF);
-      _shimmerBase?.render(canvas, size: size, overridePaint: paint);
+    if (_open > 0) {
+      paint.color = Color.fromRGBO(255, 255, 255, _open.toDouble());
+      _openSprite?.render(canvas, size: size, overridePaint: paint);
+      _motes?.getSprite().render(canvas, size: size, overridePaint: paint);
+    } else if (Bonds.has(Ability.scent)) {
+      // the vine fox can smell the old path under the thorns
+      paint.color = const Color(0xCCFFFFFF);
       _shimmer?.getSprite().render(canvas, size: size, overridePaint: paint);
     }
     super.render(canvas);
   }
 }
 
-/// The stump hiding the vine fox's sweetroot.
+/// The vine fox's sweetroot under Designer's 2x2 stump (sweetroot_stump.png,
+/// then sweetroot_stump_plain.png once picked). Only the trunk base collides;
+/// pick it standing just below the trunk.
 class SweetrootStump extends GameComponent with Interactable {
-  Sprite? _sprite;
+  /// From sweetroot_stump.json (64x64 art px).
+  static const collider = Rect.fromLTWH(16, 30, 32, 25);
+  static final pickAt = Vector2(31, 59);
+  static final tuber = Vector2(31, 45);
+
+  Sprite? _full;
+  Sprite? _plain;
   double _t = 0;
 
-  SweetrootStump(Vector2 position) {
+  SweetrootStump(Vector2 position, [Vector2? size]) {
     this.position = position;
-    size = Vector2.all(32);
+    this.size = size ?? Vector2.all(64);
   }
+
+  double get _k => size.x / 64;
 
   bool get _taken => Bonds.hasItem('sweetroot') || Bonds.usedItem('sweetroot');
 
   @override
   Future<void> onLoad() async {
-    _sprite = await Sprite.load('obstacles/stump.png');
+    _full = await Sprite.load('obstacles/sweetroot_stump.png');
+    _plain = await Sprite.load('obstacles/sweetroot_stump_plain.png');
+    add(RectangleHitbox(
+        position: Vector2(collider.left, collider.top) * _k,
+        size: Vector2(collider.width, collider.height) * _k,
+        isSolid: true));
     return super.onLoad();
   }
 
   @override
-  PromptInfo get prompt => _taken ? const PromptInfo.note('An old, hollow stump.') : const PromptInfo('LOOK UNDER');
+  Vector2 get interactPoint => absolutePosition + pickAt * _k;
+  @override
+  double get interactRadius => 26;
+
+  @override
+  PromptInfo get prompt => _taken ? const PromptInfo.note('An old, hollow stump.') : const PromptInfo('PICK SWEETROOT');
 
   @override
   void interact() {
@@ -481,10 +545,12 @@ class SweetrootStump extends GameComponent with Interactable {
 
   @override
   void render(Canvas canvas) {
-    _sprite?.render(canvas, size: size, overridePaint: Paint()..filterQuality = FilterQuality.none);
+    final paint = Paint()..filterQuality = FilterQuality.none;
+    (_taken ? _plain : _full)?.render(canvas, size: size, overridePaint: paint);
     if (!_taken && (_t % 3) < 0.5) {
       final k = sin((_t % 3) / 0.5 * pi);
-      canvas.drawCircle(const Offset(22, 24), 1.5 + k, Paint()..color = Colors.white.withValues(alpha: 0.8 * k));
+      final c = tuber * _k;
+      canvas.drawCircle(Offset(c.x, c.y - 4), 1.5 + k, Paint()..color = Colors.white.withValues(alpha: 0.8 * k));
     }
     super.render(canvas);
   }

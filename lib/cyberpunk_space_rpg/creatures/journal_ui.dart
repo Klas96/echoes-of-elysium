@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 
@@ -6,8 +7,7 @@ import 'creature_species.dart';
 import 'day_cycle.dart';
 import 'interaction.dart';
 
-bool get _isTouch =>
-    defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS;
+bool get _isTouch => defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS;
 
 const _teal = Color(0xFF00FFCC);
 const _ink = Color(0xFF06060F);
@@ -169,7 +169,8 @@ class InteractPromptLayer extends StatelessWidget {
                   ),
                   child: Text(info.note,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.white60, fontSize: 12, fontStyle: FontStyle.italic, height: 1.4)),
+                      style: const TextStyle(
+                          color: Colors.white60, fontSize: 12, fontStyle: FontStyle.italic, height: 1.4)),
                 ),
               ),
             ),
@@ -257,8 +258,7 @@ class ToastLayer extends StatelessWidget {
                           if (m.portrait != null) ...[
                             ClipRRect(
                               borderRadius: BorderRadius.circular(6),
-                              child: Image.asset(m.portrait!,
-                                  width: 56, height: 56, filterQuality: FilterQuality.none),
+                              child: Image.asset(m.portrait!, width: 56, height: 56, filterQuality: FilterQuality.none),
                             ),
                             const SizedBox(width: 12),
                           ],
@@ -332,30 +332,40 @@ class _JournalPanelState extends State<_JournalPanel> {
                   final grid = _grid(3);
                   final detail = _Detail(id: _sel);
                   if (wide) {
-                    // The open book: entries on the left page, details on the right.
-                    return Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                      Expanded(
-                        flex: 5,
-                        child: _UiSlice.bookLeft(
-                          child: Column(children: [
-                            _header(),
-                            Expanded(child: SingleChildScrollView(padding: const EdgeInsets.only(top: 6), child: grid)),
-                          ]),
-                        ),
+                    // The open book: entries on the left page, details on the
+                    // right. Both halves share one scale; at least one middle
+                    // strip so the pages have room.
+                    final k = min(box.maxWidth / (2 * _BookPage.w), box.maxHeight / (_BookPage.caps + _BookPage.strip));
+                    final n = _BookPage.strips(box.maxHeight, k);
+                    return Row(mainAxisSize: MainAxisSize.min, children: [
+                      _BookPage(
+                        right: false,
+                        k: k,
+                        n: n,
+                        child: Column(children: [
+                          _header(),
+                          Expanded(child: SingleChildScrollView(padding: const EdgeInsets.only(top: 6), child: grid)),
+                        ]),
                       ),
-                      Expanded(
-                        flex: 6,
-                        child: _UiSlice.bookRight(
-                          child: Stack(clipBehavior: Clip.none, children: [
-                            SingleChildScrollView(padding: const EdgeInsets.only(right: 40), child: detail),
-                            Positioned(right: -4, top: -12, child: _closeButton()),
-                          ]),
-                        ),
+                      _BookPage(
+                        right: true,
+                        k: k,
+                        n: n,
+                        child: Stack(clipBehavior: Clip.none, children: [
+                          SingleChildScrollView(padding: const EdgeInsets.only(right: 30), child: detail),
+                          Positioned(right: -14, top: -14, child: _closeButton()),
+                        ]),
                       ),
                     ]);
                   }
-                  // Phones in portrait: a single right-hand page (spine on the left).
-                  return _UiSlice.bookRight(
+                  // Phones in portrait: a single right-hand page (spine on the
+                  // left), as tall as whole middle strips allow. A whole-number
+                  // scale keeps the pixels crisp (3x on a 412 px phone).
+                  final k = max(2.0, (box.maxWidth / _BookPage.w).floorToDouble());
+                  return _BookPage(
+                    right: true,
+                    k: k,
+                    n: _BookPage.strips(box.maxHeight, k),
                     child: Column(children: [
                       _header(close: true),
                       Expanded(
@@ -388,21 +398,25 @@ class _JournalPanelState extends State<_JournalPanel> {
       );
 
   Widget _header({bool close = false}) {
-    return Row(children: [
+    const count = TextStyle(color: _inkSoft, fontSize: 12, fontWeight: FontWeight.w600);
+    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Image.asset('assets/images/ui/tab_paw_32@2x.png', width: 30, height: 30, filterQuality: FilterQuality.none),
       const SizedBox(width: 8),
-      const Text('JOURNAL',
-          style: TextStyle(color: _inkDark, fontSize: 17, fontWeight: FontWeight.bold, letterSpacing: 3)),
-      const SizedBox(width: 10),
       Expanded(
-        child: Wrap(spacing: 10, runSpacing: 2, crossAxisAlignment: WrapCrossAlignment.center, children: [
-          Text('Befriended ${Bonds.befriendedCount}/${Bonds.total}',
-              style: const TextStyle(color: _inkSoft, fontSize: 12, fontWeight: FontWeight.w600)),
-          Row(mainAxisSize: MainAxisSize.min, children: [
-            Image.asset('assets/images/ui/crystal_16@2x.png', width: 14, height: 14, filterQuality: FilterQuality.none),
-            const SizedBox(width: 3),
-            Text('${Bonds.glimmer} glimmer',
-                style: const TextStyle(color: _inkSoft, fontSize: 12, fontWeight: FontWeight.w600)),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text('JOURNAL',
+                style: TextStyle(color: _inkDark, fontSize: 17, fontWeight: FontWeight.bold, letterSpacing: 3)),
+          ),
+          Wrap(spacing: 10, runSpacing: 0, crossAxisAlignment: WrapCrossAlignment.center, children: [
+            Text('Befriended ${Bonds.befriendedCount}/${Bonds.total}', style: count),
+            Row(mainAxisSize: MainAxisSize.min, children: [
+              Image.asset('assets/images/ui/crystal_16@2x.png',
+                  width: 14, height: 14, filterQuality: FilterQuality.none),
+              const SizedBox(width: 3),
+              Text('${Bonds.glimmer} glimmer', style: count),
+            ]),
           ]),
         ]),
       ),
@@ -434,6 +448,57 @@ const _inkDark = Color(0xFF3A2414);
 const _inkSoft = Color(0xFF6B4A2E);
 const _inkGreen = Color(0xFF2F6B3A);
 
+/// One half of the open journal from Designer's tall-page pieces
+/// (ui_kit.json book_left_vertical / book_right_vertical): a top cap (36 px),
+/// [n] repeats of a seamless 64 px middle strip and a bottom cap (42 px), all
+/// at one uniform scale [k], so nothing is stretched. 36 + n*64 + 42 gives
+/// exact joins.
+class _BookPage extends StatelessWidget {
+  static const double w = 111, top = 36, strip = 64, bottom = 42, caps = top + bottom;
+
+  final bool right;
+  final double k;
+  final int n;
+  final Widget child;
+  const _BookPage({required this.right, required this.k, required this.n, required this.child});
+
+  /// Middle strips that fit [height] at scale [k] (at least one).
+  static int strips(double height, double k) => max(1, ((height / k - caps) / strip).floor());
+
+  /// Paper area inside each half, in 1x px (measured from the art: the
+  /// right page's paper runs x 5-80, the left page's x 21-104; the bottom
+  /// cap's paper ends 11 px down, above the page curl).
+  EdgeInsets get _content =>
+      right ? EdgeInsets.fromLTRB(9 * k, 9 * k, 33 * k, 33 * k) : EdgeInsets.fromLTRB(24 * k, 9 * k, 9 * k, 33 * k);
+
+  @override
+  Widget build(BuildContext context) {
+    final side = right ? 'right' : 'left';
+    Widget piece(String name, {ImageRepeat repeat = ImageRepeat.noRepeat}) => Image.asset(
+          'assets/images/ui/book_${side}_$name@2x.png',
+          scale: 2 / k,
+          repeat: repeat,
+          fit: BoxFit.none,
+          alignment: Alignment.topCenter,
+          filterQuality: FilterQuality.none,
+        );
+    return SizedBox(
+      width: w * k,
+      height: (caps + strip * n) * k,
+      child: Stack(children: [
+        Positioned.fill(
+          child: Column(children: [
+            SizedBox(height: top * k, width: w * k, child: piece('top')),
+            Expanded(child: SizedBox(width: w * k, child: piece('mid', repeat: ImageRepeat.repeatY))),
+            SizedBox(height: bottom * k, width: w * k, child: piece('bottom')),
+          ]),
+        ),
+        Positioned.fill(child: Padding(padding: _content, child: child)),
+      ]),
+    );
+  }
+}
+
 /// Designer UI kit 9-slice panels (assets/images/ui, from art/ui/ui_kit.json).
 /// The @2x files are drawn at [_f] logical px per 1x source px. Flutter reads
 /// centerSlice in logical image coordinates, so the 1x slice is scaled by [_f].
@@ -442,21 +507,13 @@ class _UiSlice extends StatelessWidget {
   final Rect slice1x; // ui_kit.json flutter_centerSlice (1x)
   final EdgeInsets padding;
   final Widget child;
-  static const double _f = 1.5;
+  final double _f;
 
-  const _UiSlice(this.asset, this.slice1x, this.padding, this.child);
-
-  /// insets L,T,R,B 28,28,30,30; centerSlice 28,28,53,84.
-  factory _UiSlice.bookLeft({required Widget child}) => _UiSlice('assets/images/ui/book_left@2x.png',
-      const Rect.fromLTWH(28, 28, 53, 84), const EdgeInsets.fromLTRB(36, 28, 32, 40), child);
-
-  /// insets L,T,R,B 30,28,28,30; centerSlice 30,28,53,84.
-  factory _UiSlice.bookRight({required Widget child}) => _UiSlice('assets/images/ui/book_right@2x.png',
-      const Rect.fromLTWH(30, 28, 53, 84), const EdgeInsets.fromLTRB(32, 28, 54, 40), child);
+  const _UiSlice(this.asset, this.slice1x, this.padding, this.child, [this._f = 1.5]);
 
   /// insets 12 all round; centerSlice 12,12,109,70.
-  factory _UiSlice.card({required Widget child, EdgeInsets padding = const EdgeInsets.all(12)}) =>
-      _UiSlice('assets/images/ui/entry_card@2x.png', const Rect.fromLTWH(12, 12, 109, 70), padding, child);
+  factory _UiSlice.card({required Widget child, EdgeInsets padding = const EdgeInsets.all(12), double scale = 1.5}) =>
+      _UiSlice('assets/images/ui/entry_card@2x.png', const Rect.fromLTWH(12, 12, 109, 70), padding, child, scale);
 
   @override
   Widget build(BuildContext context) => Container(
@@ -464,8 +521,7 @@ class _UiSlice extends StatelessWidget {
         decoration: BoxDecoration(
           image: DecorationImage(
             image: AssetImage(asset),
-            centerSlice: Rect.fromLTWH(
-                slice1x.left * _f, slice1x.top * _f, slice1x.width * _f, slice1x.height * _f),
+            centerSlice: Rect.fromLTWH(slice1x.left * _f, slice1x.top * _f, slice1x.width * _f, slice1x.height * _f),
             scale: 2 / _f,
             fit: BoxFit.fill,
             filterQuality: FilterQuality.none,
@@ -491,54 +547,60 @@ class _Tile extends StatelessWidget {
     final companion = Bonds.active == id;
     return GestureDetector(
       onTap: onTap,
-      child: Stack(children: [
-        _UiSlice.card(
-          padding: const EdgeInsets.fromLTRB(9, 9, 9, 13),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            AspectRatio(
-              aspectRatio: 1,
-              child: Image.asset(s.portraitAsset(_variant(id)), fit: BoxFit.contain, filterQuality: FilterQuality.none),
-            ),
-            const SizedBox(height: 2),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(known ? s.name : '???',
-                  style: TextStyle(
-                      color: friend ? _inkDark : (known ? _inkSoft : _inkSoft.withValues(alpha: 0.6)),
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold)),
-            ),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(friend ? 'befriended' : (known ? 'seen' : 'not yet seen'),
-                  style: TextStyle(color: friend ? _inkGreen : _inkSoft.withValues(alpha: 0.8), fontSize: 9)),
-            ),
-          ]),
-        ),
-        if (selected)
-          Positioned.fill(
-            child: IgnorePointer(
-              child: Container(
-                margin: const EdgeInsets.all(3),
-                decoration: BoxDecoration(
-                  border: Border.all(color: const Color(0xFF1E8C7A), width: 2),
-                  borderRadius: BorderRadius.circular(6),
+      child: LayoutBuilder(builder: (context, box) {
+        // small cards (portrait phones) use the card art at its native size
+        final small = box.maxWidth < 100;
+        return Stack(children: [
+          _UiSlice.card(
+            scale: small ? 1.0 : 1.5,
+            padding: small ? const EdgeInsets.fromLTRB(6, 6, 6, 9) : const EdgeInsets.fromLTRB(9, 9, 9, 13),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              AspectRatio(
+                aspectRatio: 1,
+                child:
+                    Image.asset(s.portraitAsset(_variant(id)), fit: BoxFit.contain, filterQuality: FilterQuality.none),
+              ),
+              const SizedBox(height: 2),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(known ? s.name : '???',
+                    style: TextStyle(
+                        color: friend ? _inkDark : (known ? _inkSoft : _inkSoft.withValues(alpha: 0.6)),
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold)),
+              ),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(friend ? 'befriended' : (known ? 'seen' : 'not yet seen'),
+                    style: TextStyle(color: friend ? _inkGreen : _inkSoft.withValues(alpha: 0.8), fontSize: 9)),
+              ),
+            ]),
+          ),
+          if (selected)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Container(
+                  margin: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: const Color(0xFF1E8C7A), width: 2),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
                 ),
               ),
             ),
-          ),
-        if (companion)
-          Positioned(
-            right: 6,
-            top: 6,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-              decoration: BoxDecoration(color: const Color(0xFF1E8C7A), borderRadius: BorderRadius.circular(3)),
-              child: const Text('WITH YOU',
-                  style: TextStyle(color: Colors.white, fontSize: 7, fontWeight: FontWeight.bold)),
+          if (companion)
+            Positioned(
+              right: 6,
+              top: 6,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                decoration: BoxDecoration(color: const Color(0xFF1E8C7A), borderRadius: BorderRadius.circular(3)),
+                child: const Text('WITH YOU',
+                    style: TextStyle(color: Colors.white, fontSize: 7, fontWeight: FontWeight.bold)),
+              ),
             ),
-          ),
-      ]),
+        ]);
+      }),
     );
   }
 }
@@ -555,7 +617,8 @@ class _Detail extends StatelessWidget {
     final companion = Bonds.active == id;
     final status = friend ? 'BEFRIENDED' : (known ? 'SEEN' : 'NOT YET SEEN');
     final statusCol = friend ? _inkGreen : (known ? const Color(0xFF9A6A12) : _inkSoft.withValues(alpha: 0.7));
-    TextStyle label() => TextStyle(color: _inkSoft.withValues(alpha: 0.85), fontSize: 10, letterSpacing: 2, fontWeight: FontWeight.bold);
+    TextStyle label() =>
+        TextStyle(color: _inkSoft.withValues(alpha: 0.85), fontSize: 10, letterSpacing: 2, fontWeight: FontWeight.bold);
     const body = TextStyle(color: _inkDark, fontSize: 13, height: 1.4);
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(children: [
@@ -602,10 +665,14 @@ class _Detail extends StatelessWidget {
             ),
             child: Text(companion ? 'SEND HOME' : 'SET AS COMPANION',
                 style: TextStyle(
-                    color: companion ? _inkDark : Colors.white, fontWeight: FontWeight.bold, letterSpacing: 1.5, fontSize: 12)),
+                    color: companion ? _inkDark : Colors.white,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.5,
+                    fontSize: 12)),
           ),
           if (companion)
-            const Text('Walking with you', style: TextStyle(color: _inkGreen, fontSize: 12, fontWeight: FontWeight.w600)),
+            const Text('Walking with you',
+                style: TextStyle(color: _inkGreen, fontSize: 12, fontWeight: FontWeight.w600)),
         ]),
     ]);
   }

@@ -567,7 +567,7 @@ class Level:
 
 # --------------------------------------------------------------- sizes used by the code
 SZ = dict(spawn=32, portal=56, npc=30, fragment=18, health=16, drone=24, sentinel=48, checkpoint=32,
-          creature=32, stump=32, stash=32, glyph=24, hidden=24, pebble=16, moonflower=16)
+          creature=32, stump=64, stash=32, glyph=24, hidden=24, pebble=16, moonflower=16)
 # creatures that fly (no floor needed under their habitat)
 FLYING = {"glowmoth"}
 # objects an ability gate may hide; anything else behind a boulder is an error
@@ -637,7 +637,8 @@ def map1():
     # the map stays as it was.
     wall = lv.carve_lots(wall, [(24, 2, 27, 7), (22, 4, 23, 5),      # beside the ranger cabin
                                 (29, 36, 31, 42), (27, 38, 28, 39),   # east of the fourth fragment
-                                (29, 29, 31, 33), (26, 29, 28, 30),   # hushdeer's hidden glade
+                                (26, 29, 30, 29), (29, 30, 30, 31),   # hushdeer: trail, bramble gap,
+                                (28, 32, 31, 33),                     # and the hidden glade below
                                 (25, 27, 25, 28)],                    # (clears the pines in its way)
                          reground1)
     # gameplay objects
@@ -670,16 +671,19 @@ def woods_creatures_and_secrets(lv):
     creature(lv, "vinefox", 18.5, 40.5, 1.2)        # old grove clearing
     creature(lv, "puffcap", 11.5, 21.5, 0.0)        # hides in its cap in the mossy hollow
     creature(lv, "brookling", 24.5, 21.5, 0.6)      # otter on the pond bank
-    creature(lv, "hushdeer", 30.5, 31.5, 0.8, gated=True)       # hidden glade, night only
+    creature(lv, "hushdeer", 30.0, 33.0, 0.8, gated=True)       # hidden glade, night only
     # the brookling's river pebble, in the shallows at the pond's south bank
     place(lv, "pebble", 24.5, 26.5)
-    # SCENT: brambles hiding the path into the hushdeer's glade
-    lv.obj("hiddenpath", 27 * T, 29 * T, 2 * T, 2 * T)
+    # SCENT: a 2x2 bramble (Designer's bramble_closed/open) plugging the gap
+    # south from the trail into the hushdeer's glade; once open, its middle
+    # (x 16-48 px) is a north-south passage between the side clumps
+    lv.obj("hiddenpath", 29 * T, 30 * T, 2 * T, 2 * T)
     # moonflowers: a trail of hints up to the brambles, more inside the glade
-    for (fx, fy) in ((22.5, 27.5), (25.5, 28.5), (26.5, 30.5), (29.5, 29.5), (31.5, 30.5), (29.5, 33.5), (31.5, 33.5)):
+    for (fx, fy) in ((22.5, 27.5), (25.5, 28.5), (27.5, 29.5), (28.5, 32.5), (31.5, 32.5), (28.5, 33.5), (31.5, 33.5)):
         place(lv, "moonflower", fx, fy)
-    # the vine fox's sweetroot, under a stump tucked in the west hollow
-    place(lv, "stump", 6.5, 28.5)
+    # the vine fox's sweetroot, under a 2x2 stump in the west hollow (trunk
+    # base collides; pick it standing just below the trunk)
+    lv.obj("stump", 11 * T, 25 * T, 2 * T, 2 * T)
     # PUSH: boulders in the nook mouths, pushed one tile east
     boulder(lv, 24, 4, 1, 0)
     place(lv, "stash", 26.5, 6.5, glimmer=25)
