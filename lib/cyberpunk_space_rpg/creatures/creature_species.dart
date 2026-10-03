@@ -47,7 +47,7 @@ class CreatureSpecies {
   final String name;
   final String habitat;
 
-  /// Discovery hint shown in the journal from the start.
+  /// Discovery hint, shown in the journal once the creature has been seen.
   final String hint;
 
   /// Gaia's lore line, shown once befriended.
