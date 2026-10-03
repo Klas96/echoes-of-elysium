@@ -645,7 +645,10 @@ def map1():
     place(lv, "spawn", *P["spawn"])
     place(lv, "npc", *P["gaia"], name="gaia")
     place(lv, "npc", *P["asha"], name="asha")
-    for k in ("f1", "f2", "f3", "f4", "f5"): place(lv, "fragment", *P[k])
+    # memory fragments 1-2 (dialogue-flashbacks-and-finale.md): both open the
+    # portal. One on the eastern side branch, one past Asha. The old f1/f3/f5
+    # clearings stay so the terrain is unchanged.
+    for k in ("f2", "f4"): place(lv, "fragment", *P[k])
     for k in ("h1", "h2", "h3"): place(lv, "health", *P[k])
     # calm pass: d3 (between the second health pickup and Asha) is gone; its
     # clearing stays so the terrain is unchanged.
@@ -783,6 +786,10 @@ def map2():
     place(lv, "sentinel", *P["sentinel"])
     place(lv, "drone", *P["d1"], startAngle=1.0)
     place(lv, "drone", *P["d2"], startAngle=3.3)
+    # memory fragment 3 (optional): at the far end of the west yard side
+    # street, guarded by d1 and a second drone
+    place(lv, "fragment", 3.5, 17.5)
+    place(lv, "drone", 5.0, 15.5, startAngle=0.4)
     place(lv, "portal", *P["portal"])
     place(lv, "checkpoint", *P["spawn"], label="Upper Street")
     place(lv, "checkpoint", P["h1"][0] - 1.5, P["h1"][1] + 1.0, label="Avenue")
@@ -834,6 +841,11 @@ def map3():
     # south-west dead end are gone; their clearings stay)
     for k, a in (("d1", 0.5), ("d3", 3.1), ("d4", 4.5), ("d5", 2.3)):
         place(lv, "drone", *P[k], startAngle=a)
+    # memory fragment 5 (optional): off the main path by the collapsed shrine
+    # tower in the south-west dead end (before the Core), guarded by a pair
+    place(lv, "fragment", 14.5, 34.5)
+    place(lv, "drone", 17.5, 33.0, startAngle=1.2)
+    place(lv, "drone", 18.5, 30.5, startAngle=4.0)
     place(lv, "portal", *P["portal"])
     place(lv, "checkpoint", *P["spawn"], label="Ruined Landing")
     place(lv, "checkpoint", P["h2"][0] - 1.2, P["h2"][1] + 1.2, label="Central Clearing")

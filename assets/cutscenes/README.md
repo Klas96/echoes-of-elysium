@@ -48,8 +48,9 @@ are ignored; a malformed optional field falls back to its default.
 
 - **lines**: shown one at a time over the bottom fifth of the picture
   (portrait phones: in the band under the picture), typewriter at 38 chars/s.
-  `speaker` "N" = narrator. Built-in colours: GAIA green, KAELA cyan, VOSS
-  red, ASHA amber; any other name shows in cyan. `delay` = seconds before the
+  `speaker` "N" = narrator. Built-in colours (matching the in-game dialogue):
+  GAIA green, KAELA cyan, VOSS red, ASHA amber, AETHERIAN / ECHO-7 violet,
+  ARCHIVIST gold; any other name shows in cyan. `delay` = seconds before the
   line appears (0.5), `hold` = seconds after it's fully typed (default from
   length, 1.8-6 s). A plain string is a narrator line. `"lines": []` = a
   silent panel. A panel stays at least `duration`, longer if its lines need it.
@@ -65,6 +66,17 @@ are ignored; a malformed optional field falls back to its default.
   plus "glow"; colours: `#RRGGBB` or green, cyan, teal, blue, purple, red,
   amber, orange, gold, white. New types: add to `CutsceneEffect.types` and
   `_applyEffect` in the player.
+- **Local effects** (any fx type):
+  - `"mask": "coalition_p4_glow.webp"`: the effect only shows through the
+    mask's alpha. Same size as the panel (1280x720), white/any colour where
+    the effect goes, transparent elsewhere, soft edges welcome; it is
+    stretched over the panel and pans with it. Relative to this folder, WebP.
+    Masked effects default to `strength` 0.6 (whole-frame ones 0.22-0.4).
+    Example: `{"type": "pulse", "color": "#00FF88", "mask": "coalition_p4_glow.webp"}`.
+  - `"center": [0.58, 0.63], "radius": 0.22`: a soft round spot instead of
+    a mask image (centre as fractions of the panel, radius as a fraction of
+    its width). The shorthand `"pulse green glow on the seed (x0.58, y0.63)"`
+    does the same.
 - **Title card**: `"then": "title card <TEXT> over the upper sky"` (upper/sky,
   lower, otherwise centre) or explicitly
   `"titleCard": {"text": "ECHOES OF ELYSIUM", "subtitle": "", "position": [0.5, 0.3], "color": "#00FFCC", "fadeIn": 1.4, "hold": 4}`.
