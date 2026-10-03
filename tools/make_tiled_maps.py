@@ -619,13 +619,14 @@ def map2():
                 # 4-8 are hand-placed decals (lanes, crosswalks, arrow) but the
                 # tsx lists them as random all-asphalt variants; skip them here.
                 lv.ground[y, x] = blob(ts, "road-sidewalk", sidewalk, x, y, lv.rng, exclude={4, 5, 6, 7, 8})
-    # plaza tiles in the arena interior (plain variants, by hand)
+    # plaza tiles in the arena interior (plain variants, by hand); the
+    # emblem (13) goes on 1 in 13 cells (~7.7 %), in line with its 0.08 tsx weight
     for y in range(27, 33):
         for x in range(9, 15):
-            if not road[y, x]: lv.ground[y, x] = 12 if (x * 7 + y * 3) % 5 else 13
+            if not road[y, x]: lv.ground[y, x] = 12 if (x * 7 + y * 3) % 13 else 13
     for y in range(27, 33):
         for x in range(20, 27):
-            if not road[y, x] and not wall[y, x]: lv.ground[y, x] = 12 if (x * 7 + y * 3) % 5 else 13
+            if not road[y, x] and not wall[y, x]: lv.ground[y, x] = 12 if (x * 7 + y * 3) % 13 else 13
     lv.keepout = road.copy()
     lv.keepout_hard = np.zeros_like(wall)
     for k, (x, y) in P.items():

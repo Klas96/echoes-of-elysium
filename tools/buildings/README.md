@@ -8,7 +8,7 @@ selective navy outline). Re-run it with `.venv/bin/python tools/process_building
 - `<name>.png`: RGBA sprite. Alpha is binary (0/255), there is no magenta fringe, and transparent pixels are RGB 0.
   Each canvas is a whole number of 32 px tiles. The building's base sits on the bottom row, and any extra
   space is padding at the top. The sprite is centred horizontally, so a few px of transparent margin at the
-  sides is normal.
+  sides is normal. Exception: the apartment block is flush (walls and apron fill all 160 px, see Known quirks).
 - `<name>.json`: sidecar file, shaped like this:
   `{"size_tiles":[w,h], "size_px":[W,H], "collision":[{"x","y","w","h"}], "door":{"x","y"}, "anchor":"bottom-left", "biome", "name", "image"}`
 - `buildings.tsj`: Tiled **collection of images** tileset in JSON. Tile ids 0-6 follow the order below. Each tile carries
@@ -23,7 +23,7 @@ selective navy outline). Re-run it with `.venv/bin/python tools/process_building
 | 0 | `noodle_shop` | city | 128x128 | 4x4 | x12 y60 w104 h64 | (61, 124) |
 | 1 | `tea_house` | city | 128x128 | 4x4 | x10 y60 w108 h64 | (64, 124) |
 | 2 | `greenhouse` | city | 128x128 | 4x4 | x12 y60 w104 h64 | (63, 124) |
-| 3 | `apartment_block` | city | 160x160 | 5x5 | x8 y78 w144 h64 | (80, 142) |
+| 3 | `apartment_block` | city | 160x160 | 5x5 | x0 y78 w160 h64 | (80, 142) |
 | 4 | `archive_library` | city | 160x160 | 5x5 | x8 y82 w142 h64 | (80, 146) |
 | 5 | `ranger_cabin` | woods | 128x128 | 4x4 | x6 y54 w108 h64 | (63, 118) |
 | 6 | `ruin_shrine` | core | 128x160 | 4x5 | x16 y88 w96 h64 | (64, 152) |
@@ -78,7 +78,7 @@ const buildingDefs = <String, BuildingDef>{   // generated from buildings_v2/<na
   'noodle_shop': BuildingDef(128, 128, Rect.fromLTWH(12, 60, 104, 64), Offset(61, 124)),
   'tea_house': BuildingDef(128, 128, Rect.fromLTWH(10, 60, 108, 64), Offset(64, 124)),
   'greenhouse': BuildingDef(128, 128, Rect.fromLTWH(12, 60, 104, 64), Offset(63, 124)),
-  'apartment_block': BuildingDef(160, 160, Rect.fromLTWH(8, 78, 144, 64), Offset(80, 142)),
+  'apartment_block': BuildingDef(160, 160, Rect.fromLTWH(0, 78, 160, 64), Offset(80, 142)),
   'archive_library': BuildingDef(160, 160, Rect.fromLTWH(8, 82, 142, 64), Offset(80, 146)),
   'ranger_cabin': BuildingDef(128, 128, Rect.fromLTWH(6, 54, 108, 64), Offset(63, 118)),
   'ruin_shrine': BuildingDef(128, 160, Rect.fromLTWH(16, 88, 96, 64), Offset(64, 152)),
@@ -112,3 +112,8 @@ from the middle.
 - The ranger cabin and ruin shrine bases are irregular (grass tufts, rubble, crystals). Their bottom row is only
   partly opaque, so the visible base reads a few px above the canvas bottom edge.
 - The enclosed background pockets in the source (between the cabin, its log pile and the mushrooms) are kept transparent.
+- Apartment block is flush to its canvas: its walls and roof used to stop 8 px short of each side (transparent above the
+  cobble apron), which left an 8 px gap against a map edge or a neighbouring building. `flush_sides()` in
+  `tools/process_buildings.py` (`FLUSH` set) widens the two corner pilasters by repeating their interior columns, drops
+  the 2 px roof-eave overhang and pushes the apron out by 1 px, so the walls span x 0-159. The windows and door are unchanged,
+  so the door is still at (80, 142). The collision box is now x0 y78 w160 h64 (it was x8 w144).
