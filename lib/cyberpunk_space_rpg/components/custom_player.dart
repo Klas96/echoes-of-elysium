@@ -13,6 +13,8 @@ import '../game/settings.dart';
 
 class CustomPlayer extends SimplePlayer with BlockMovementCollision {
   static const double sizePlayer = 32;
+  /// Width of the feet hitbox that collides with the world.
+  static const double feetWidth = sizePlayer * 0.5;
   static const int maxHealth = 100;
   static final ValueNotifier<Vector2> positionNotifier = ValueNotifier(Vector2.zero());
   static final ValueNotifier<int> healthNotifier = ValueNotifier(maxHealth);
@@ -158,7 +160,7 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision {
     paint.filterQuality = FilterQuality.none;
     animation = await WalkSheet.load('sprites/kaela_walk.png');
     add(RectangleHitbox(
-      size: Vector2(sizePlayer * 0.5, sizePlayer / 3),
+      size: Vector2(feetWidth, sizePlayer / 3),
       position: Vector2(sizePlayer * 0.25, sizePlayer * 0.65),
     ));
     return super.onLoad();

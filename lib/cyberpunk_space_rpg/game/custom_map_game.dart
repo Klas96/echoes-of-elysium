@@ -164,7 +164,7 @@ Map<String, ObjectBuilder> _mapObjects(String mapId) => {
       'hidden': (p) => BuriedItem(p.position,
           id: _pickupId(mapId, 'hidden', p.position), amount: _numProp(p, 'glimmer', 10).round()),
       'hiddenpath': (p) => HiddenPath(p.position, p.size, id: _pickupId(mapId, 'hiddenpath', p.position)),
-      'stump': (p) => SweetrootStump(p.position),
+      'stump': (p) => SweetrootStump(p.position, p.size),
       'pebble': (p) => RiverPebble(p.position, id: _pickupId(mapId, 'pebble', p.position)),
       'moonflower': (p) => Moonflower(p.position),
       // Tile objects: Tiled anchors them bottom-left, so x/y is the sprite's
