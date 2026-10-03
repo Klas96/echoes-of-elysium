@@ -10,7 +10,10 @@ class HealthPickup extends GameDecoration {
   bool _collected = false;
   Sprite? _sprite;
 
-  HealthPickup(Vector2 position)
+  /// Called once when collected (marks it used up in the save).
+  final VoidCallback? onCollected;
+
+  HealthPickup(Vector2 position, {this.onCollected})
       : super(position: position, size: Vector2.all(16));
 
   @override
@@ -31,6 +34,7 @@ class HealthPickup extends GameDecoration {
       _collected = true;
       CustomPlayer.healthNotifier.value =
           (CustomPlayer.healthNotifier.value + _healAmount).clamp(0, CustomPlayer.maxHealth);
+      onCollected?.call();
       removeFromParent();
     }
   }

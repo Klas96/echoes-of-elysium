@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'save_service.dart';
+
 /// Level state and the HUD objective line.
 ///
 /// Objectives are a gentle guide, never a gate: the talk steps only move the
@@ -26,6 +28,44 @@ class GameState {
   static const _l2Echo = 0, _l2Archivist = 1, _l2Voss = 2, _l2Sentinel = 3, _l2Core = 4;
   // Level 3 steps
   static const _l3Ruins = 0, _l3Light = 1;
+
+  /// Tiled map stem and region id for each level, as stored in the save.
+  static const mapIds = {1: 'world', 2: 'world2', 3: 'world3'};
+  static const regionIds = {1: 'woods', 2: 'city', 3: 'ruins'};
+
+  static int get level => _level;
+  static int get step => _step;
+
+  static int levelForMap(String mapId) =>
+      mapIds.entries.firstWhere((e) => e.value == mapId, orElse: () => mapIds.entries.first).key;
+
+  /// Copies the objective state into the save record.
+  static void writeTo(SaveData d) {
+    if (_level == 0) return;
+    d.mapId = mapIds[_level]!;
+    d.regionId = regionIds[_level]!;
+    d.objectiveStep = _step;
+    d.fragments = fragmentsCollected.value;
+    d.setFlag('portalUnlocked:${mapIds[_level]}', portalUnlocked.value);
+  }
+
+  /// CONTINUE: put a level back the way the save left it.
+  static void restore(int level, SaveData d) {
+    _level = level;
+    _step = d.objectiveStep;
+    switch (level) {
+      case 1:
+        fragmentsCollected.value = d.fragments.clamp(0, fragmentsRequired);
+        portalUnlocked.value = d.flag('portalUnlocked:world') || d.fragments >= fragmentsRequired;
+      case 2:
+        portalUnlocked.value = d.flag('portalUnlocked:world2') || d.flag('sentinelDefeated');
+      default:
+        portalUnlocked.value = true;
+    }
+    _refresh();
+  }
+
+  static void _progress() => SaveService.requestAutosave();
 
   static void resetMap1() {
     _level = 1;
@@ -59,11 +99,16 @@ class GameState {
       _advance(1, _l1Fragments);
     }
     _refresh();
+    _progress();
   }
 
   /// Called when the player opens an NPC's dialogue. [npc] is the Tiled
   /// npc name key (gaia, asha, echo7, archivist, voss).
   static void onNpcTalk(String npc) {
+    if (!SaveService.data.flag('talked:$npc')) {
+      SaveService.data.setFlag('talked:$npc');
+      _progress();
+    }
     switch (npc) {
       case 'gaia':
         _advance(1, _l1Asha);
@@ -82,9 +127,11 @@ class GameState {
   static void onSentinelEngaged() => _advance(2, _l2Sentinel);
 
   static void onSentinelDefeated() {
+    SaveService.data.setFlag('sentinelDefeated');
     portalUnlocked.value = true;
     _advance(2, _l2Core);
     _refresh();
+    _progress();
   }
 
   /// The player is close to the level's portal.
@@ -94,6 +141,7 @@ class GameState {
     if (_level != level || step <= _step) return;
     _step = step;
     _refresh();
+    _progress();
   }
 
   static void _refresh() {
