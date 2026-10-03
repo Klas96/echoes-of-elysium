@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:bonfire/bonfire.dart';
 import 'package:flutter/material.dart';
 import 'custom_player.dart';
+import '../game/save_service.dart';
 
 /// A respawn point placed in Tiled ("checkpoint" objects in the gameplay
 /// layer: one at the spawn plus one per area entrance). Walking over it makes
@@ -44,6 +45,9 @@ class Checkpoint extends GameDecoration {
       player.respawnPoint = position.clone();
       // No toast for the spawn checkpoint the player starts on.
       if (!first) _showToast();
+      // Autosave: the checkpoint becomes the place CONTINUE returns to.
+      SaveService.data.checkpoint = SavePoint(position.x, position.y);
+      SaveService.requestAutosave();
     }
   }
 

@@ -8,7 +8,10 @@ class FragmentPickup extends GameDecoration {
   double _pulse = 0;
   bool _collected = false;
 
-  FragmentPickup(Vector2 position)
+  /// Called once when collected, before the objective updates (and autosaves).
+  final VoidCallback? onCollected;
+
+  FragmentPickup(Vector2 position, {this.onCollected})
       : super(position: position, size: Vector2.all(18));
 
   @override
@@ -21,6 +24,7 @@ class FragmentPickup extends GameDecoration {
     if (player == null) return;
     if (((player.position + player.size / 2) - (position + size / 2)).length < _collectRadius) {
       _collected = true;
+      onCollected?.call();
       GameState.onFragmentCollected();
       removeFromParent();
     }

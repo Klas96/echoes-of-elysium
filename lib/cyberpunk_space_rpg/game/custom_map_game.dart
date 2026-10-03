@@ -16,6 +16,7 @@ import '../components/checkpoint.dart';
 import '../components/building.dart';
 import '../audio/music_manager.dart';
 import 'game_state.dart';
+import 'save_service.dart';
 import 'settings.dart';
 
 // ---------------------------------------------------------------------------
@@ -99,7 +100,11 @@ double _numProp(TiledObjectProperties p, String key, [double fallback = 0]) {
 /// Builders keyed by object name in the map's "gameplay" object layer.
 /// Object x/y is the component's top-left corner in map pixels (except for
 /// buildings, which are bottom-left anchored tile objects).
-Map<String, ObjectBuilder> _mapObjects() => {
+/// Stable id for a one-time pickup, from its map and Tiled position.
+String _pickupId(String mapId, String kind, Vector2 pos) =>
+    '$mapId:$kind:${pos.x.round()}_${pos.y.round()}';
+
+Map<String, ObjectBuilder> _mapObjects(String mapId) => {
       'spawn': (p) => _PlayerSpawn(p.position),
       'portal': (p) => PortalComponent(p.position),
       'npc': (p) {
@@ -111,10 +116,24 @@ Map<String, ObjectBuilder> _mapObjects() => {
         return NpcCharacter(p.position,
             dialogue: dialogue, spritePath: 'sprites/npc_$name.png', npcKey: name);
       },
-      'fragment': (p) => FragmentPickup(p.position),
-      'health': (p) => HealthPickup(p.position),
+      'fragment': (p) {
+        final id = _pickupId(mapId, 'fragment', p.position);
+        if (SaveService.data.collected.contains(id)) return _Gone();
+        return FragmentPickup(p.position,
+            onCollected: () => SaveService.data.collected.add(id));
+      },
+      'health': (p) {
+        final id = _pickupId(mapId, 'health', p.position);
+        if (SaveService.data.collected.contains(id)) return _Gone();
+        return HealthPickup(p.position, onCollected: () {
+          SaveService.data.collected.add(id);
+          SaveService.requestAutosave();
+        });
+      },
       'drone': (p) => UECDrone(p.position, startAngle: _numProp(p, 'startAngle')),
-      'sentinel': (p) => SentinelDrone(p.position, onDefeated: GameState.onSentinelDefeated),
+      'sentinel': (p) => SaveService.data.flag('sentinelDefeated')
+          ? _Gone()
+          : SentinelDrone(p.position, onDefeated: GameState.onSentinelDefeated),
       'checkpoint': (p) => Checkpoint(p.position, label: (p.others['label'] ?? '').toString()),
       // Tile objects: Tiled anchors them bottom-left, so x/y is the sprite's
       // bottom-left corner.
@@ -128,8 +147,22 @@ Map<String, ObjectBuilder> _mapObjects() => {
       },
     };
 
-/// Moves the player to the map's spawn object once the map is loaded, then
-/// removes itself.
+/// Stand-in for a map object that is already used up in the save (collected
+/// pickup, quieted Sentinel): removes itself straight away.
+class _Gone extends GameComponent {
+  @override
+  void onMount() {
+    super.onMount();
+    removeFromParent();
+  }
+}
+
+/// The player that has been moved to its spawn/saved spot on this map. Until
+/// then its position is meaningless and must not be saved.
+CustomPlayer? _placedPlayer;
+
+/// Moves the player to the map's spawn object (or, on CONTINUE, to the saved
+/// position and checkpoint) once the map is loaded, then removes itself.
 class _PlayerSpawn extends GameComponent {
   _PlayerSpawn(Vector2 spawn) {
     position = spawn;
@@ -141,9 +174,21 @@ class _PlayerSpawn extends GameComponent {
     super.update(dt);
     final player = gameRef.player;
     if (player == null) return;
-    player.position = position.clone();
-    // Until a checkpoint is touched, Gaia pulls Kaela back to the spawn.
-    if (player is CustomPlayer) player.respawnPoint ??= position.clone();
+    final save = SaveService.data;
+    if (SaveService.resumePlayer && player is CustomPlayer) {
+      SaveService.resumePlayer = false;
+      final at = save.player ?? save.checkpoint;
+      final cp = save.checkpoint;
+      player.position = at != null ? Vector2(at.x, at.y) : position.clone();
+      player.respawnPoint = cp != null ? Vector2(cp.x, cp.y) : position.clone();
+      CustomPlayer.healthNotifier.value =
+          (save.health ?? CustomPlayer.maxHealth).clamp(1, CustomPlayer.maxHealth);
+    } else {
+      player.position = position.clone();
+      // Until a checkpoint is touched, Gaia pulls Kaela back to the spawn.
+      if (player is CustomPlayer) player.respawnPoint ??= position.clone();
+    }
+    if (player is CustomPlayer) _placedPlayer = player;
     gameRef.camera.moveToPlayer();
     removeFromParent();
   }
@@ -153,8 +198,36 @@ class _PlayerSpawn extends GameComponent {
 // App root
 // ---------------------------------------------------------------------------
 
-class CustomMapGame extends StatelessWidget {
+class CustomMapGame extends StatefulWidget {
   const CustomMapGame({super.key});
+
+  @override
+  State<CustomMapGame> createState() => _CustomMapGameState();
+}
+
+class _CustomMapGameState extends State<CustomMapGame> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Backgrounded (phone home button, app switcher, web tab hidden, window
+    // closing): save where Kaela stands right now.
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.detached) {
+      if (_activeGame != null) SaveService.saveNow();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -231,10 +304,31 @@ class IntroScreen extends StatelessWidget {
           final actions = Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _CyberButton(
-                label: 'BEGIN JOURNEY',
-                onTap: () => Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(builder: (_) => const CustomMapGameScreen())),
+              ValueListenableBuilder<bool>(
+                valueListenable: SaveService.hasSave,
+                builder: (context, saved, _) => saved
+                    ? Column(mainAxisSize: MainAxisSize.min, children: [
+                        _CyberButton(
+                          label: 'CONTINUE',
+                          filled: true,
+                          onTap: () => _continueGame(context),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(_saveSummary(SaveService.data),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                                color: Colors.white38, fontSize: 11, letterSpacing: 1)),
+                        SizedBox(height: compact ? 10 : 14),
+                        _CyberButton(
+                          label: 'BEGIN JOURNEY',
+                          color: Colors.white54,
+                          onTap: () => _confirmNewGame(context),
+                        ),
+                      ])
+                    : _CyberButton(
+                        label: 'BEGIN JOURNEY',
+                        onTap: () => _beginNewGame(context),
+                      ),
               ),
               SizedBox(height: compact ? 12 : 20),
               const _StoryModeToggle(),
@@ -291,6 +385,143 @@ class IntroScreen extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
+// Save / continue
+// ---------------------------------------------------------------------------
+
+const _regionNames = {
+  'woods': 'Whispering Woods',
+  'city': 'The City',
+  'ruins': 'The Ruins',
+};
+
+String _saveSummary(SaveData d) {
+  final region = _regionNames[d.regionId] ?? d.regionId;
+  final mins = (d.playTimeSeconds / 60).floor();
+  final time = mins < 1 ? '' : (mins < 60 ? '  ·  ${mins}m' : '  ·  ${mins ~/ 60}h ${mins % 60}m');
+  return '$region$time';
+}
+
+Widget _screenForMap(String mapId) {
+  switch (mapId) {
+    case 'world2':
+      return const Map2GameScreen();
+    case 'world3':
+      return const Map3GameScreen();
+    default:
+      return const CustomMapGameScreen();
+  }
+}
+
+void _continueGame(BuildContext context) {
+  SaveService.prepareResume();
+  Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => _screenForMap(SaveService.data.mapId)));
+}
+
+Future<void> _beginNewGame(BuildContext context) async {
+  final nav = Navigator.of(context);
+  await SaveService.startNewGame();
+  nav.pushReplacement(MaterialPageRoute(builder: (_) => const CustomMapGameScreen()));
+}
+
+Future<void> _confirmNewGame(BuildContext context) async {
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      backgroundColor: const Color(0xFF06060F),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: BorderSide(color: const Color(0xFF00FFCC).withValues(alpha: 0.6)),
+      ),
+      title: const Text('Begin a new journey?',
+          style: TextStyle(color: Color(0xFF00FFCC), fontSize: 18, letterSpacing: 1)),
+      content: const Text(
+          'Your saved journey will be replaced by a fresh start in the woods.',
+          style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.5)),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(false),
+          child: const Text('KEEP MY SAVE', style: TextStyle(color: Colors.white54)),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(true),
+          child: const Text('START OVER',
+              style: TextStyle(color: Color(0xFF00FFCC), fontWeight: FontWeight.bold)),
+        ),
+      ],
+    ),
+  );
+  if (ok == true && context.mounted) await _beginNewGame(context);
+}
+
+/// Session clock for play time, running while a map is on screen.
+final _playClock = Stopwatch();
+
+/// Copies live game state into the save record before every write.
+void _snapshot(SaveData d) {
+  d.settings['storyMode'] = GameSettings.storyMode.value;
+  d.playTimeSeconds += _playClock.elapsedMilliseconds / 1000;
+  _playClock.reset();
+  if (_activeGame == null) return;
+  GameState.writeTo(d);
+  final p = CustomPlayer.current;
+  if (p != null && identical(p, _placedPlayer)) {
+    final cp = p.respawnPoint;
+    // Mid-respawn the body is about to be moved to the checkpoint.
+    final pos = p.isRespawning && cp != null ? cp : p.position;
+    d.player = SavePoint(pos.x, pos.y);
+    d.checkpoint = cp == null ? null : SavePoint(cp.x, cp.y);
+    d.health = p.isRespawning ? CustomPlayer.maxHealth : CustomPlayer.healthNotifier.value;
+  }
+}
+
+/// Leaving the current map (portal, main menu, ending): save, then stop
+/// treating the old map as live.
+Future<void> _leaveMap({String? nextMapId}) async {
+  await SaveService.saveNow();
+  _activeGame = null;
+  _placedPlayer = null;
+  _playClock.stop();
+  if (nextMapId != null) {
+    // Map transition: the next map starts fresh at its spawn.
+    final d = SaveService.data;
+    d.mapId = nextMapId;
+    d.regionId = GameState.regionIds[GameState.levelForMap(nextMapId)]!;
+    d.player = null;
+    d.checkpoint = null;
+    d.objectiveStep = 0;
+    d.fragments = 0;
+    await SaveService.saveNow(takeSnapshot: false);
+  }
+}
+
+/// onReady for every map: restore the objective on CONTINUE, otherwise start
+/// the level fresh and save the transition.
+void _startLevel(BonfireGameInterface game, int level) {
+  _onMapReady(game);
+  SaveService.snapshot = _snapshot;
+  _playClock
+    ..reset()
+    ..start();
+  final d = SaveService.data;
+  if (SaveService.resumeObjective && d.mapId == GameState.mapIds[level]) {
+    SaveService.resumeObjective = false;
+    GameState.restore(level, d);
+    return;
+  }
+  SaveService.resumeObjective = false;
+  switch (level) {
+    case 1:
+      GameState.resetMap1();
+    case 2:
+      GameState.resetMap2();
+    default:
+      GameState.resetMap3();
+  }
+  SaveService.saveNow();
+}
+
+// ---------------------------------------------------------------------------
 // Shared debug state
 // ---------------------------------------------------------------------------
 
@@ -321,6 +552,7 @@ void _setPaused(bool on) {
   _paused.value = on;
   final g = _activeGame;
   if (g == null) return;
+  if (on) SaveService.saveNow();
   if (on) {
     g.pauseEngine();
   } else {
@@ -377,19 +609,21 @@ class CustomMapGameScreen extends StatelessWidget {
             child: BonfireWidget(
             playerControllers: _playerControllers(),
             player: CustomPlayer(Vector2.zero()),
-            map: CustomMap('maps/world.tmj', objectsBuilder: _mapObjects()),
+            map: CustomMap('maps/world.tmj', objectsBuilder: _mapObjects('world')),
             cameraConfig: CameraConfig(moveOnlyMapArea: true, zoom: 2.0),
             overlayBuilderMap: {
               'portalReached': (ctx, game) => _PortalOverlay(
                     game: game,
-                    onEnter: () => Navigator.of(ctx).pushReplacement(
-                      MaterialPageRoute(builder: (_) => const Map2GameScreen()),
-                    ),
+                    onEnter: () async {
+                      final nav = Navigator.of(ctx);
+                      await _leaveMap(nextMapId: 'world2');
+                      nav.pushReplacement(
+                          MaterialPageRoute(builder: (_) => const Map2GameScreen()));
+                    },
                   ),
             },
             onReady: (game) {
-              _onMapReady(game);
-              GameState.resetMap1();
+              _startLevel(game, 1);
               MusicManager().play('assets/audio/music/Whispering_Pines.mp3');
             },
           )),
@@ -428,21 +662,23 @@ class Map2GameScreen extends StatelessWidget {
             child: BonfireWidget(
             playerControllers: _playerControllers(),
             player: CustomPlayer(Vector2.zero()),
-            map: CustomMap('maps/world2.tmj', objectsBuilder: _mapObjects()),
+            map: CustomMap('maps/world2.tmj', objectsBuilder: _mapObjects('world2')),
             cameraConfig: CameraConfig(moveOnlyMapArea: true, zoom: 2.0),
             overlayBuilderMap: {
               'portalReached': (ctx, game) => _PortalOverlay(
                     game: game,
                     label: 'THE CORE',
                     subtitle: 'Gaia\'s memory is restored. Elysium lives.',
-                    onEnter: () => Navigator.of(ctx).pushReplacement(
-                      MaterialPageRoute(builder: (_) => const Map3GameScreen()),
-                    ),
+                    onEnter: () async {
+                      final nav = Navigator.of(ctx);
+                      await _leaveMap(nextMapId: 'world3');
+                      nav.pushReplacement(
+                          MaterialPageRoute(builder: (_) => const Map3GameScreen()));
+                    },
                   ),
             },
             onReady: (game) {
-              _onMapReady(game);
-              GameState.resetMap2();
+              _startLevel(game, 2);
               MusicManager().play('assets/audio/music/Neon_Shadows.mp3');
             },
           )),
@@ -486,21 +722,24 @@ class Map3GameScreen extends StatelessWidget {
             child: BonfireWidget(
               playerControllers: _playerControllers(),
               player: CustomPlayer(Vector2.zero()),
-              map: CustomMap('maps/world3.tmj', objectsBuilder: _mapObjects()),
+              map: CustomMap('maps/world3.tmj', objectsBuilder: _mapObjects('world3')),
               cameraConfig: CameraConfig(moveOnlyMapArea: true, zoom: 2.0),
               overlayBuilderMap: {
                 'portalReached': (ctx, game) => _PortalOverlay(
                       game: game,
                       label: 'EXTRACTION POINT',
                       subtitle: 'The ruins hold the final truth.\nElysium\'s fate is decided here.',
-                      onEnter: () => Navigator.of(ctx).pushReplacement(
-                        MaterialPageRoute(builder: (_) => const _VictoryScreen()),
-                      ),
+                      onEnter: () async {
+                        final nav = Navigator.of(ctx);
+                        SaveService.data.setFlag('completed');
+                        await _leaveMap();
+                        nav.pushReplacement(
+                            MaterialPageRoute(builder: (_) => const _VictoryScreen()));
+                      },
                     ),
               },
               onReady: (game) {
-                _onMapReady(game);
-                GameState.resetMap3();
+                _startLevel(game, 3);
                 MusicManager().play('assets/audio/music/Neon_Mirage.mp3');
               },
             ),
@@ -1023,8 +1262,7 @@ class _VictoryScreen extends StatelessWidget {
             children: [
               _CyberButton(
                 label: 'PLAY AGAIN',
-                onTap: () => Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(builder: (_) => const CustomMapGameScreen())),
+                onTap: () => _beginNewGame(context),
               ),
               _CyberButton(
                 label: 'MAIN MENU',
@@ -1082,10 +1320,13 @@ class _CyberButton extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
   final Color color;
+  /// Primary action: stronger fill.
+  final bool filled;
   const _CyberButton({
     required this.label,
     required this.onTap,
     this.color = const Color(0xFF00FFCC),
+    this.filled = false,
   });
 
   @override
@@ -1093,9 +1334,9 @@ class _CyberButton extends StatelessWidget {
     return TextButton(
       onPressed: onTap,
       style: TextButton.styleFrom(
-        backgroundColor: color.withOpacity(0.12),
-        side: BorderSide(color: color),
-        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+        backgroundColor: color.withOpacity(filled ? 0.28 : 0.12),
+        side: BorderSide(color: color, width: filled ? 2 : 1),
+        padding: EdgeInsets.symmetric(horizontal: filled ? 40 : 28, vertical: filled ? 14 : 12),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
       ),
       child: Text(label,
@@ -1103,7 +1344,7 @@ class _CyberButton extends StatelessWidget {
               color: color,
               fontWeight: FontWeight.bold,
               letterSpacing: 2,
-              fontSize: 13)),
+              fontSize: filled ? 15 : 13)),
     );
   }
 }
@@ -1290,9 +1531,11 @@ class _CalmLayer extends StatelessWidget {
                             _CyberButton(
                               label: 'MAIN MENU',
                               color: Colors.white38,
-                              onTap: () {
+                              onTap: () async {
+                                final nav = Navigator.of(ctx);
                                 _setPaused(false);
-                                Navigator.of(ctx).pushReplacement(
+                                await _leaveMap();
+                                nav.pushReplacement(
                                     MaterialPageRoute(builder: (_) => const IntroScreen()));
                               },
                             ),

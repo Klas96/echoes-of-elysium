@@ -37,9 +37,10 @@ jobs:
       # Lenient on purpose: existing infos/warnings must not fail the build,
       # only real errors do.
       - name: flutter analyze
-        # test/ is excluded for now: test/widget_test.dart is the stale template test
-        # (references a non-existent CyberpunkSpaceRPGApp) and is a hard error.
-        run: flutter analyze --no-fatal-infos --no-fatal-warnings lib
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings lib test
+
+      - name: flutter test
+        run: flutter test
 
       - name: Build web
         run: flutter build web --release
