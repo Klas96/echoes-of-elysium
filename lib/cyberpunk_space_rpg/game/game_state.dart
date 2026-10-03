@@ -14,7 +14,7 @@ class GameState {
   static final portalUnlocked = ValueNotifier<bool>(false);
 
   /// Shown when the game is finished.
-  static const endingText = 'Gaia remembers. The Aetherians live on.';
+  static const endingText = 'The Aetherians live on.';
 
   // 1 woods, 2 city, 3 ruins (0 before any map is ready).
   static int _level = 0;
