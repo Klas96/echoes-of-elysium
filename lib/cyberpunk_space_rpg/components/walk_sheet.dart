@@ -6,6 +6,9 @@ import 'package:bonfire/bonfire.dart';
 /// Sheet layout: rows are down, up, right[, left]; cols 0-3 are the walk
 /// cycle (8 fps), cols 4-5 the idle breathe (2 fps). Sheets with only three
 /// rows have no left row: Bonfire mirrors the right row instead.
+///
+/// Diagonals (keyboard/joystick up-left etc.) use the left/right walk and
+/// idle explicitly, so all eight directions animate.
 class WalkSheet {
   static const double frameSize = 32;
   static const double walkStep = 1 / 8;
@@ -32,15 +35,30 @@ class WalkSheet {
           ),
         );
 
+    final idleRight = anim(_right, idle: true);
+    final runRight = anim(_right, idle: false);
+    final idleLeft = hasLeft ? anim(_left, idle: true) : null;
+    final runLeft = hasLeft ? anim(_left, idle: false) : null;
+
     return SimpleDirectionAnimation(
       idleDown: anim(_down, idle: true),
       runDown: anim(_down, idle: false),
       idleUp: anim(_up, idle: true),
       runUp: anim(_up, idle: false),
-      idleRight: anim(_right, idle: true),
-      runRight: anim(_right, idle: false),
-      idleLeft: hasLeft ? anim(_left, idle: true) : null,
-      runLeft: hasLeft ? anim(_left, idle: false) : null,
+      idleRight: idleRight,
+      runRight: runRight,
+      idleLeft: idleLeft,
+      runLeft: runLeft,
+      // Without a left row, leave the left diagonals unset so Bonfire falls
+      // back to the mirrored right row.
+      idleUpRight: idleRight,
+      idleDownRight: idleRight,
+      runUpRight: runRight,
+      runDownRight: runRight,
+      idleUpLeft: idleLeft,
+      idleDownLeft: idleLeft,
+      runUpLeft: runLeft,
+      runDownLeft: runLeft,
     );
   }
 
