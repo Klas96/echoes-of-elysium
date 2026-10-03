@@ -37,6 +37,8 @@ flutter:
     - assets/audio/music/
     - assets/audio/sfx/
     - assets/audio/voices/
+    - assets/cutscenes/awakening/
+    - assets/cutscenes/coalition/
 flutter_launcher_icons:
   android: true
   ios: false
