@@ -899,47 +899,59 @@ class _PortalOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 28),
-        decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.88),
-          border: Border.all(color: const Color(0xFF00FFFF), width: 2),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(label,
-                style: const TextStyle(
-                    color: Color(0xFF00FFFF),
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 5)),
-            const SizedBox(height: 8),
-            Text(
-              subtitle,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white60, fontSize: 13, height: 1.6),
+    // Scrollable + scaled title so it never overflows a phone in landscape.
+    return SafeArea(
+      child: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 520),
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.88),
+              border: Border.all(color: const Color(0xFF00FFFF), width: 2),
+              borderRadius: BorderRadius.circular(16),
             ),
-            const SizedBox(height: 24),
-            Row(
+            child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextButton(
-                  onPressed: () => game.overlays.remove('portalReached'),
-                  style: TextButton.styleFrom(
-                      side: const BorderSide(color: Colors.white24),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 10)),
-                  child: const Text('NOT YET',
-                      style: TextStyle(color: Colors.white38)),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(label,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                          color: Color(0xFF00FFFF),
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 5)),
                 ),
-                const SizedBox(width: 12),
-                _CyberButton(label: 'ENTER', onTap: onEnter),
+                const SizedBox(height: 8),
+                Text(
+                  subtitle,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white60, fontSize: 13, height: 1.6),
+                ),
+                const SizedBox(height: 24),
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    TextButton(
+                      onPressed: () => game.overlays.remove('portalReached'),
+                      style: TextButton.styleFrom(
+                          side: const BorderSide(color: Colors.white24),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 10)),
+                      child: const Text('NOT YET',
+                          style: TextStyle(color: Colors.white38)),
+                    ),
+                    _CyberButton(label: 'ENTER', onTap: onEnter),
+                  ],
+                ),
               ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -949,50 +961,71 @@ class _PortalOverlay extends StatelessWidget {
 class _VictoryScreen extends StatelessWidget {
   const _VictoryScreen();
 
+  static const _story =
+      'You reached the Core and activated the Aetherian resonance.\n\n'
+      'Gaia\'s memory floods back — ten thousand years of harmony, of a civilization that chose '
+      'to become one with their world rather than consume it.\n\n'
+      'The UEC drones go silent. Commander Voss withdraws.\n\n'
+      'Elysium breathes again.';
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(40),
-          child: Column(
+      body: SafeArea(
+        child: LayoutBuilder(builder: (context, box) {
+          // Same approach as IntroScreen: phones in landscape are only ~400
+          // logical px tall, so shrink and put the story beside the title and
+          // buttons; always scrollable as a fallback.
+          final compact = box.maxHeight < 600;
+          final wide = box.maxWidth >= 700;
+          final pad = compact ? 16.0 : 40.0;
+
+          final title = Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('GAIA REMEMBERS',
-                  style: TextStyle(
-                      color: Color(0xFF00FFCC),
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 5)),
-              const SizedBox(height: 12),
-              const Text(GameState.endingText,
-                  style: TextStyle(color: Colors.white38, fontSize: 14, letterSpacing: 1)),
-              const SizedBox(height: 36),
-              Container(
-                constraints: const BoxConstraints(maxWidth: 520),
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  border: Border.all(color: const Color(0xFF00FFCC).withOpacity(0.3)),
-                  borderRadius: BorderRadius.circular(8),
-                  color: Colors.white.withOpacity(0.03),
-                ),
-                child: const Text(
-                  'You reached the Core and activated the Aetherian resonance.\n\n'
-                  'Gaia\'s memory floods back — ten thousand years of harmony, of a civilization that chose '
-                  'to become one with their world rather than consume it.\n\n'
-                  'The UEC drones go silent. Commander Voss withdraws.\n\n'
-                  'Elysium breathes again.',
-                  style: TextStyle(color: Colors.white70, fontSize: 14, height: 1.75),
-                ),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text('GAIA REMEMBERS',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        color: const Color(0xFF00FFCC),
+                        fontSize: compact ? 24 : 32,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: compact ? 4 : 5)),
               ),
-              const SizedBox(height: 36),
+              SizedBox(height: compact ? 8 : 12),
+              const Text(GameState.endingText,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white38, fontSize: 14, letterSpacing: 1)),
+            ],
+          );
+
+          final story = Container(
+            constraints: const BoxConstraints(maxWidth: 520),
+            padding: EdgeInsets.all(compact ? 16 : 24),
+            decoration: BoxDecoration(
+              border: Border.all(color: const Color(0xFF00FFCC).withOpacity(0.3)),
+              borderRadius: BorderRadius.circular(8),
+              color: Colors.white.withOpacity(0.03),
+            ),
+            child: Text(_story,
+                style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: compact ? 13 : 14,
+                    height: compact ? 1.5 : 1.75)),
+          );
+
+          final actions = Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 16,
+            runSpacing: compact ? 12 : 16,
+            children: [
               _CyberButton(
                 label: 'PLAY AGAIN',
                 onTap: () => Navigator.of(context).pushReplacement(
                     MaterialPageRoute(builder: (_) => const CustomMapGameScreen())),
               ),
-              const SizedBox(height: 16),
               _CyberButton(
                 label: 'MAIN MENU',
                 color: Colors.white38,
@@ -1000,8 +1033,46 @@ class _VictoryScreen extends StatelessWidget {
                     MaterialPageRoute(builder: (_) => const IntroScreen())),
               ),
             ],
-          ),
-        ),
+          );
+
+          final Widget content = (compact && wide)
+              ? Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [title, const SizedBox(height: 24), actions],
+                      ),
+                    ),
+                    const SizedBox(width: 24),
+                    Expanded(child: story),
+                  ],
+                )
+              : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    title,
+                    SizedBox(height: compact ? 20 : 36),
+                    story,
+                    SizedBox(height: compact ? 20 : 36),
+                    actions,
+                  ],
+                );
+
+          return SingleChildScrollView(
+            padding: EdgeInsets.all(pad),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: box.maxHeight - pad * 2),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1000),
+                  child: content,
+                ),
+              ),
+            ),
+          );
+        }),
       ),
     );
   }
@@ -1181,42 +1252,55 @@ class _CalmLayer extends StatelessWidget {
           ),
         ),
       ),
-      // Pause menu
+      // Pause menu (scrollable so it fits a phone in landscape)
       ValueListenableBuilder<bool>(
         valueListenable: _paused,
         builder: (ctx, paused, __) => paused
             ? Container(
                 color: Colors.black.withValues(alpha: 0.7),
                 alignment: Alignment.center,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 26),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF06060F).withValues(alpha: 0.96),
-                    border: Border.all(color: const Color(0xFF00FFCC).withValues(alpha: 0.6)),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    const Text('PAUSED',
-                        style: TextStyle(
-                            color: Color(0xFF00FFCC),
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 5)),
-                    const SizedBox(height: 18),
-                    const _StoryModeToggle(),
-                    const SizedBox(height: 18),
-                    _CyberButton(label: 'RESUME', onTap: () => _setPaused(false)),
-                    const SizedBox(height: 12),
-                    _CyberButton(
-                      label: 'MAIN MENU',
-                      color: Colors.white38,
-                      onTap: () {
-                        _setPaused(false);
-                        Navigator.of(ctx).pushReplacement(
-                            MaterialPageRoute(builder: (_) => const IntroScreen()));
-                      },
+                child: SafeArea(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
+                    child: Container(
+                      constraints: const BoxConstraints(maxWidth: 420),
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF06060F).withValues(alpha: 0.96),
+                        border: Border.all(
+                            color: const Color(0xFF00FFCC).withValues(alpha: 0.6)),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                        const Text('PAUSED',
+                            style: TextStyle(
+                                color: Color(0xFF00FFCC),
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 5)),
+                        const SizedBox(height: 14),
+                        const _StoryModeToggle(),
+                        const SizedBox(height: 14),
+                        Wrap(
+                          alignment: WrapAlignment.center,
+                          spacing: 12,
+                          runSpacing: 12,
+                          children: [
+                            _CyberButton(label: 'RESUME', onTap: () => _setPaused(false)),
+                            _CyberButton(
+                              label: 'MAIN MENU',
+                              color: Colors.white38,
+                              onTap: () {
+                                _setPaused(false);
+                                Navigator.of(ctx).pushReplacement(
+                                    MaterialPageRoute(builder: (_) => const IntroScreen()));
+                              },
+                            ),
+                          ],
+                        ),
+                      ]),
                     ),
-                  ]),
+                  ),
                 ),
               )
             : const SizedBox.shrink(),
