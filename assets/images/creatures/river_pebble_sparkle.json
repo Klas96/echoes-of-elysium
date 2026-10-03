@@ -1,0 +1,13 @@
+{
+ "frame": [
+  16,
+  16
+ ],
+ "frames": 2,
+ "stepTime": [
+  1.2,
+  0.18
+ ],
+ "loop": true,
+ "note": "frame 0 == river_pebble.png; frame 1 = glint flare + sparkle. Ripple omitted (keyed badly)."
+}

@@ -3,12 +3,18 @@ import 'package:bonfire/bonfire.dart';
 import 'package:flutter/material.dart';
 import 'custom_player.dart';
 import '../game/save_service.dart';
+import '../creatures/day_cycle.dart';
+import '../creatures/interaction.dart';
 
 /// A respawn point placed in Tiled ("checkpoint" objects in the gameplay
 /// layer: one at the spawn plus one per area entrance). Walking over it makes
 /// it the place Gaia pulls Kaela back to at 0 HP. Drawn as a soft Aetherian
 /// ring that blooms green once active (placeholder until Designer art).
-class Checkpoint extends GameDecoration {
+///
+/// It is also a rest spot: once active, REST skips to nightfall (by day) or
+/// morning (by night) and restores health, so night-only creatures are
+/// always reachable without waiting out the 10-minute day.
+class Checkpoint extends GameDecoration with Interactable {
   static const double _activateRadius = 30;
 
   /// Short "Checkpoint · <label>" toast for the HUD (null = hidden).
@@ -49,6 +55,31 @@ class Checkpoint extends GameDecoration {
       SaveService.data.checkpoint = SavePoint(position.x, position.y);
       SaveService.requestAutosave();
     }
+  }
+
+  @override
+  bool get canFocus => isActive && !(_player?.isRespawning ?? true);
+
+  @override
+  double get interactRadius => 34;
+
+  @override
+  PromptInfo get prompt =>
+      PromptInfo(DayCycle.night ? 'REST UNTIL MORNING' : 'REST UNTIL NIGHTFALL', hold: 0.6);
+
+  @override
+  void interact() {
+    final wasNight = DayCycle.night;
+    DayCycle.time.value = DayCycle.restTarget(DayCycle.time.value);
+    CustomPlayer.healthNotifier.value = CustomPlayer.maxHealth;
+    SaveService.data.dayTime = DayCycle.time.value;
+    SaveService.requestAutosave();
+    GameToast.show(wasNight ? 'MORNING' : 'NIGHTFALL',
+        body: wasNight
+            ? 'You rest by the glyph ring until the sun comes up.'
+            : 'You rest by the glyph ring. The moons rise over the woods.',
+        color: wasNight ? const Color(0xFFFFD27A) : const Color(0xFFB8C4FF),
+        seconds: 3);
   }
 
   void _showToast() {

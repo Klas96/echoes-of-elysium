@@ -15,6 +15,13 @@ import '../components/sentinel_drone.dart';
 import '../components/checkpoint.dart';
 import '../components/building.dart';
 import '../audio/music_manager.dart';
+import '../creatures/bonds.dart';
+import '../creatures/creature_components.dart';
+import '../creatures/creature_species.dart';
+import '../creatures/day_cycle.dart';
+import '../creatures/interaction.dart';
+import '../creatures/journal_ui.dart';
+import '../creatures/obstacles.dart';
 import 'game_state.dart';
 import 'save_service.dart';
 import 'settings.dart';
@@ -135,6 +142,30 @@ Map<String, ObjectBuilder> _mapObjects(String mapId) => {
           ? _Gone()
           : SentinelDrone(p.position, onDefeated: GameState.onSentinelDefeated),
       'checkpoint': (p) => Checkpoint(p.position, label: (p.others['label'] ?? '').toString()),
+      // --- M2: creatures and ability-gated secrets (woods) ---
+      'creature': (p) {
+        final id = (p.others['species'] ?? '').toString();
+        final species = creatureSpecies[id];
+        if (species == null) return _Gone(); // retired/unknown species: skip
+        return WildCreature(species, p.position,
+            objectId: _pickupId(mapId, 'creature', p.position),
+            radiusTiles: _numProp(p, 'radius', 1),
+            netted: p.others['netted'] == true);
+      },
+      'boulder': (p) => Boulder(p.position, p.size,
+          id: _pickupId(mapId, 'boulder', p.position),
+          push: Vector2(_numProp(p, 'pushX'), _numProp(p, 'pushY')) * 32),
+      'darkzone': (p) => DarkZone(p.position, p.size, id: _pickupId(mapId, 'darkzone', p.position)),
+      'glyph': (p) => GlyphTablet(p.position,
+          id: _pickupId(mapId, 'glyph', p.position), glyph: (p.others['glyph'] ?? '').toString()),
+      'stash': (p) => GlimmerStash(p.position,
+          id: _pickupId(mapId, 'stash', p.position), amount: _numProp(p, 'glimmer', 10).round()),
+      'hidden': (p) => BuriedItem(p.position,
+          id: _pickupId(mapId, 'hidden', p.position), amount: _numProp(p, 'glimmer', 10).round()),
+      'hiddenpath': (p) => HiddenPath(p.position, p.size, id: _pickupId(mapId, 'hiddenpath', p.position)),
+      'stump': (p) => SweetrootStump(p.position),
+      'pebble': (p) => RiverPebble(p.position, id: _pickupId(mapId, 'pebble', p.position)),
+      'moonflower': (p) => Moonflower(p.position),
       // Tile objects: Tiled anchors them bottom-left, so x/y is the sprite's
       // bottom-left corner.
       'building': (p) {
@@ -169,11 +200,17 @@ class _PlayerSpawn extends GameComponent {
     size = Vector2.all(CustomPlayer.sizePlayer);
   }
 
+  /// Removal is deferred to Flame's lifecycle queue, which can lag a frame
+  /// or two while other components finish loading; place the player once.
+  bool _done = false;
+
   @override
   void update(double dt) {
     super.update(dt);
+    if (_done) return;
     final player = gameRef.player;
     if (player == null) return;
+    _done = true;
     final save = SaveService.data;
     if (SaveService.resumePlayer && player is CustomPlayer) {
       SaveService.resumePlayer = false;
@@ -335,7 +372,7 @@ class IntroScreen extends StatelessWidget {
               SizedBox(height: compact ? 10 : 16),
               Text(_isTouch
                       ? 'Joystick to move · tap TALK to interact · tap to shoot'
-                      : 'WASD / Arrow keys · E to interact · Esc to pause · ` to debug',
+                      : 'WASD / Arrow keys · E to interact · J journal · Esc to pause · ` to debug',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.white24, fontSize: 11, letterSpacing: 1.2)),
             ],
@@ -460,6 +497,7 @@ final _playClock = Stopwatch();
 /// Copies live game state into the save record before every write.
 void _snapshot(SaveData d) {
   d.settings['storyMode'] = GameSettings.storyMode.value;
+  d.dayTime = DayCycle.time.value;
   d.playTimeSeconds += _playClock.elapsedMilliseconds / 1000;
   _playClock.reset();
   if (_activeGame == null) return;
@@ -500,6 +538,25 @@ Future<void> _leaveMap({String? nextMapId}) async {
 void _startLevel(BonfireGameInterface game, int level) {
   _onMapReady(game);
   SaveService.snapshot = _snapshot;
+  // M2: day/night clock, companion and creature/obstacle interactions
+  DayCycle.time.value = SaveService.data.dayTime;
+  Bonds.revision.value++;
+  Interaction.reset();
+  GameToast.current.value = null;
+  Journal.open.value = false;
+  Journal.onOpenChanged = (open) {
+    final g = _activeGame;
+    if (g == null || _paused.value) return;
+    if (open) {
+      SaveService.saveNow();
+      g.pauseEngine();
+    } else {
+      g.resumeEngine();
+    }
+  };
+  game.add(DayClock());
+  game.add(InteractionManager());
+  game.add(Companion());
   _playClock
     ..reset()
     ..start();
@@ -533,6 +590,16 @@ KeyEventResult _handleDebugKey(FocusNode _, KeyEvent event) {
     return KeyEventResult.handled;
   }
   if (event is KeyDownEvent &&
+      (event.logicalKey == LogicalKeyboardKey.keyJ || event.logicalKey == LogicalKeyboardKey.keyM) &&
+      !_paused.value) {
+    Journal.toggle();
+    return KeyEventResult.handled;
+  }
+  if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape && Journal.open.value) {
+    Journal.hide();
+    return KeyEventResult.handled;
+  }
+  if (event is KeyDownEvent &&
       (event.logicalKey == LogicalKeyboardKey.escape ||
           event.logicalKey == LogicalKeyboardKey.keyP)) {
     _setPaused(!_paused.value);
@@ -549,6 +616,9 @@ final _paused = ValueNotifier<bool>(false);
 BonfireGameInterface? _activeGame;
 
 void _setPaused(bool on) {
+  if (on && Journal.open.value) {
+    Journal.open.value = false; // the pause menu takes over (engine stays paused)
+  }
   _paused.value = on;
   final g = _activeGame;
   if (g == null) return;
@@ -627,13 +697,18 @@ class CustomMapGameScreen extends StatelessWidget {
               MusicManager().play('assets/audio/music/Whispering_Pines.mp3');
             },
           )),
+          const NightTint(),
           const _Vignette(),
           const _GameHUD(),
+          const CreatureHud(),
           const _NpcDialogueLayer(),
           // NPC interact prompt
           const _InteractPrompt(),
+          const InteractPromptLayer(),
+          const ToastLayer(),
           const _CalmLayer(),
           _DebugOverlay(),
+          const JournalOverlay(),
         ]),
       ),
     );
@@ -682,8 +757,10 @@ class Map2GameScreen extends StatelessWidget {
               MusicManager().play('assets/audio/music/Neon_Shadows.mp3');
             },
           )),
+          const NightTint(),
           const _Vignette(),
           const _GameHUD(),
+          const CreatureHud(),
           // AI Fragment dialogue overlay
           ValueListenableBuilder<String?>(
             valueListenable: AIFragment.activeDialogue,
@@ -692,8 +769,11 @@ class Map2GameScreen extends StatelessWidget {
           ),
           const _NpcDialogueLayer(),
           const _InteractPrompt(),
+          const InteractPromptLayer(),
+          const ToastLayer(),
           const _CalmLayer(),
           _DebugOverlay(),
+          const JournalOverlay(),
         ]),
       ),
     );
@@ -744,12 +824,17 @@ class Map3GameScreen extends StatelessWidget {
               },
             ),
           ),
+          const NightTint(),
           const _Vignette(),
           const _GameHUD(),
+          const CreatureHud(),
           const _NpcDialogueLayer(),
           const _InteractPrompt(),
+          const InteractPromptLayer(),
+          const ToastLayer(),
           const _CalmLayer(),
           _DebugOverlay(),
+          const JournalOverlay(),
         ]),
       ),
     );
@@ -1528,6 +1613,16 @@ class _CalmLayer extends StatelessWidget {
                           runSpacing: 12,
                           children: [
                             _CyberButton(label: 'RESUME', onTap: () => _setPaused(false)),
+                            _CyberButton(
+                              label: 'JOURNAL',
+                              color: const Color(0xFFE8D0FF),
+                              onTap: () {
+                                // Swap the pause menu for the journal; the
+                                // engine stays paused while it is open.
+                                _paused.value = false;
+                                Journal.show();
+                              },
+                            ),
                             _CyberButton(
                               label: 'MAIN MENU',
                               color: Colors.white38,

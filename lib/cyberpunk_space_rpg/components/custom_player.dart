@@ -18,6 +18,10 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision {
   static final ValueNotifier<int> healthNotifier = ValueNotifier(maxHealth);
   static final ValueNotifier<bool> damageFlash = ValueNotifier(false);
   static final ValueNotifier<Vector2?> pendingShot = ValueNotifier(null);
+  /// Shots fired so far and where the last one left from: creatures listen
+  /// for noise (quiet approach).
+  static int shotCount = 0;
+  static Vector2? lastShotFrom;
 
   // --- Calm gameplay: no game over, gentle regen -------------------------
   /// Seconds without taking damage before health starts coming back.
@@ -271,6 +275,8 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision {
       dir.normalized(),
     ));
     SfxManager().playShoot();
+    shotCount++;
+    lastShotFrom = position + size / 2;
     _shootCooldown = 0.22;
   }
 

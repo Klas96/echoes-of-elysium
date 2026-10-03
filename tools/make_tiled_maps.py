@@ -24,6 +24,14 @@ with objects named spawn, portal, npc (property name), fragment, health,
 drone (property startAngle), sentinel, checkpoint (property label). Object x/y = component top-left in
 world px, width/height = component size (same coords the code used before).
 
+M2 (woods only): creature (species, radius in tiles, netted, gated), stump
+(the vine fox's sweetroot), pebble (the brookling's river pebble), stash
+(glimmer), moonflower (decor), glyph (glyph id), hidden (glimmer; only found with the vine fox's
+SCENT), hiddenpath (brambles the vine fox's SCENT opens), boulder (2x2 tiles,
+pushX/pushY in tiles; needs the stone turtle's PUSH) and darkzone (a rect of
+darkness; the glowmoth's LIGHT reveals the glyph inside). Ability gates only
+guard secrets (glyph, stash, hidden, creatures marked gated).
+
 Buildings (tools/buildings/buildings.tsj, art in assets/images/maps/buildings/)
 are Tiled tile objects named "building" with a string property building=<id>.
 The buildings tileset (collection of images) is embedded after the terrain
@@ -362,7 +370,10 @@ class Level:
                     for cx in range(int(x // T), int((x + w - 0.01) // T) + 1)]
         def overlap(a, b):
             return a[0] < b[0] + b[2] and b[0] < a[0] + a[2] and a[1] < b[1] + b[3] and b[1] < a[1] + a[3]
+        def floorless(o):
+            return o["name"] == "darkzone" or (o["name"] == "creature" and o["props"]["species"] in FLYING)
         for o in self.objects:
+            if floorless(o): continue
             for (x, y) in cells(o):
                 if not ok[y, x]:
                     raise SystemExit(f"{o['name']} {o['props']} at tile {x},{y} is not on walkable floor")
@@ -413,8 +424,10 @@ class Level:
                 raise SystemExit(f"building {b['name']} door (tile {dx},{dy}) is not reachable")
         for o in self.objects:
             if o["name"] in ("drone", "sentinel"): continue   # they fly; just need floor
+            if floorless(o): continue
             if not all(seen[y, x] for (x, y) in cells(o)):
                 raise SystemExit(f"{o['name']} {o['props']} not reachable from spawn")
+        self.validate_secrets(ok, seen, cells, flood)
         # UECDrone detection radius is 160 px (220 before the calm pass; centre
         # to centre) and it patrols a 70 px circle around its origin; keep
         # enemies outside that reach so the player isn't attacked at the spawn.
@@ -439,6 +452,51 @@ class Level:
                 if d < lim:
                     raise SystemExit(f"checkpoint {c['props']} is {d:.0f}px from {o['name']} (< {lim})")
         return ok, seen
+
+    def validate_secrets(self, ok, seen, cells, flood):
+        """Ability gates (M2): a boulder must block something optional and be
+        pushable into open floor; nothing but secrets may sit behind it; ground
+        creatures' habitats must be floor; dark zones must cover a glyph."""
+        objs = self.objects
+        gates = [o for o in objs if o["name"] in ("boulder", "hiddenpath")]
+        blocked = ok.copy()
+        for g in gates:
+            for (x, y) in cells(g): blocked[y, x] = False
+        with_all = flood(blocked)
+        def secret(o):
+            return o["name"] in SECRET_KINDS or (o["name"] == "creature" and o["props"].get("gated"))
+        for g in gates:
+            opened = blocked.copy()
+            for (x, y) in cells(g): opened[y, x] = True
+            if g["name"] == "boulder":
+                px, py = g["props"]["pushX"], g["props"]["pushY"]
+                moved = dict(g, x=g["x"] + px * T, y=g["y"] + py * T)
+                for (x, y) in cells(moved):
+                    if not ok[y, x]:
+                        raise SystemExit(f"boulder at {g['x']},{g['y']} would be pushed onto wall at tile {x},{y}")
+                for (x, y) in cells(moved): opened[y, x] = False
+            gained = flood(opened) & ~with_all
+            inside = [o for o in objs if any(gained[y, x] for (x, y) in cells(o))]
+            if not any(secret(o) for o in inside):
+                raise SystemExit(f"{g['name']} at {g['x']},{g['y']} guards no secret")
+        for o in objs:
+            if o["name"] in ("drone", "sentinel", "darkzone", "boulder", "hiddenpath"): continue
+            if o["name"] == "creature" and o["props"]["species"] in FLYING: continue
+            if secret(o): continue
+            if not all(with_all[y, x] for (x, y) in cells(o)):
+                raise SystemExit(f"{o['name']} {o['props']} is behind an ability gate (only secrets may be)")
+        for o in objs:
+            if o["name"] != "creature" or o["props"]["species"] in FLYING: continue
+            cx, cy = (o["x"] + o["w"] / 2) / T, (o["y"] + o["h"] / 2) / T
+            r = o["props"]["radius"]
+            for y in range(int(cy - r - 1), int(cy + r + 2)):
+                for x in range(int(cx - r - 1), int(cx + r + 2)):
+                    if (x + 0.5 - cx) ** 2 + (y + 0.5 - cy) ** 2 <= r * r and not ok[y, x]:
+                        raise SystemExit(f"creature {o['props']['species']} habitat covers blocked tile {x},{y}")
+        for z in (o for o in objs if o["name"] == "darkzone"):
+            if not any(g["name"] == "glyph" and z["x"] <= g["x"] and g["x"] + g["w"] <= z["x"] + z["w"]
+                       and z["y"] <= g["y"] and g["y"] + g["h"] <= z["y"] + z["h"] for g in objs):
+                raise SystemExit(f"dark zone at {z['x']},{z['y']} hides no glyph")
 
     def write(self, fname, image_rel):
         ok, seen = self.validate()
@@ -488,7 +546,9 @@ class Level:
         d = ImageDraw.Draw(im)
         col = dict(spawn=(0, 255, 0), portal=(0, 255, 255), npc=(255, 255, 0), fragment=(200, 80, 255),
                    health=(0, 255, 120), drone=(255, 60, 60), sentinel=(255, 120, 0),
-                   checkpoint=(120, 255, 220))
+                   checkpoint=(120, 255, 220), creature=(255, 170, 255), stump=(200, 140, 60),
+                   boulder=(160, 160, 160), stash=(255, 230, 90), glyph=(90, 255, 255), hidden=(255, 140, 200),
+                   darkzone=(40, 40, 120), pebble=(140, 200, 255), moonflower=(240, 240, 255), hiddenpath=(255, 120, 200))
         for b in sorted(self.buildings, key=lambda b: b["ty"]):
             spr, bc, door = self.building_rects(b)
             bim = Image.open(os.path.join(BLIMG, BUILDINGS.defs[b["name"]]["image"])).convert("RGBA")
@@ -506,7 +566,12 @@ class Level:
               f"{n_col} blocking tiles, reachable floor {int(seen.sum())}")
 
 # --------------------------------------------------------------- sizes used by the code
-SZ = dict(spawn=32, portal=56, npc=30, fragment=18, health=16, drone=24, sentinel=48, checkpoint=32)
+SZ = dict(spawn=32, portal=56, npc=30, fragment=18, health=16, drone=24, sentinel=48, checkpoint=32,
+          creature=32, stump=32, stash=32, glyph=24, hidden=24, pebble=16, moonflower=16)
+# creatures that fly (no floor needed under their habitat)
+FLYING = {"glowmoth"}
+# objects an ability gate may hide; anything else behind a boulder is an error
+SECRET_KINDS = {"glyph", "stash", "hidden", "moonflower"}
 # min centre distance from a checkpoint to each enemy kind (see validate)
 CP_CLEAR = dict(drone=260, sentinel=300)
 
@@ -564,8 +629,17 @@ def map1():
     lv.stamp("campfire", 7, 4) if lv.prop_fits("campfire", 7, 4) else None
     # ranger cabin in a small clearing east of the crash site, off the trail
     lv.building("ranger_cabin", 16, 2)
-    lv.carve_lots(wall, [(15, 2, 21, 7)],
-                  lambda x, y, w, rng: None if (water[y, x] or path[y, x]) else blob(ts, "grass-forest", w, x, y, rng))
+    reground1 = lambda x, y, w, rng: None if (water[y, x] or path[y, x]) else blob(ts, "grass-forest", w, x, y, rng)
+    wall = lv.carve_lots(wall, [(15, 2, 21, 7)], reground1)
+    # M2 secret nooks behind a 2-tile tunnel through a 2-thick wall, each
+    # plugged by a boulder just inside the nook (PUSH shoves it one tile
+    # east, freeing the nook's west column). A separate pass so the rest of
+    # the map stays as it was.
+    wall = lv.carve_lots(wall, [(24, 2, 27, 7), (22, 4, 23, 5),      # beside the ranger cabin
+                                (29, 36, 31, 42), (27, 38, 28, 39),   # east of the fourth fragment
+                                (29, 29, 31, 33), (26, 29, 28, 30),   # hushdeer's hidden glade
+                                (25, 27, 25, 28)],                    # (clears the pines in its way)
+                         reground1)
     # gameplay objects
     place(lv, "spawn", *P["spawn"])
     place(lv, "npc", *P["gaia"], name="gaia")
@@ -583,8 +657,54 @@ def map1():
     place(lv, "checkpoint", P["asha"][0] + 1.5, P["asha"][1] + 1.0, label="Asha's Trail")
     place(lv, "checkpoint", P["f5"][0] + 1.2, P["f5"][1] + 1.2, label="Old Grove")
     place(lv, "checkpoint", P["portal"][0] - 2.5, P["portal"][1] - 2.0, label="Aetherian Gate")
+    woods_creatures_and_secrets(lv)
     lv.write("world.tmj", "tilesets/woods.png")
     return ts
+
+def woods_creatures_and_secrets(lv):
+    """M2: creatures (journal + companions) and ability-gated optional secrets.
+    Nothing on the main route needs an ability; validate() checks that."""
+    # creatures: species, centre (tiles), habitat radius (tiles)
+    creature(lv, "glowmoth", 28.5, 21.5, 1.4)       # pond glade, only out at night
+    creature(lv, "stoneturtle", 24.5, 24.5, 0.6, netted=True)   # caught in a UEC drone net by the pond
+    creature(lv, "vinefox", 18.5, 40.5, 1.2)        # old grove clearing
+    creature(lv, "puffcap", 11.5, 21.5, 0.0)        # hides in its cap in the mossy hollow
+    creature(lv, "brookling", 24.5, 21.5, 0.6)      # otter on the pond bank
+    creature(lv, "hushdeer", 30.5, 31.5, 0.8, gated=True)       # hidden glade, night only
+    # the brookling's river pebble, in the shallows at the pond's south bank
+    place(lv, "pebble", 24.5, 26.5)
+    # SCENT: brambles hiding the path into the hushdeer's glade
+    lv.obj("hiddenpath", 27 * T, 29 * T, 2 * T, 2 * T)
+    # moonflowers: a trail of hints up to the brambles, more inside the glade
+    for (fx, fy) in ((22.5, 27.5), (25.5, 28.5), (26.5, 30.5), (29.5, 29.5), (31.5, 30.5), (29.5, 33.5), (31.5, 33.5)):
+        place(lv, "moonflower", fx, fy)
+    # the vine fox's sweetroot, under a stump tucked in the west hollow
+    place(lv, "stump", 6.5, 28.5)
+    # PUSH: boulders in the nook mouths, pushed one tile east
+    boulder(lv, 24, 4, 1, 0)
+    place(lv, "stash", 26.5, 6.5, glimmer=25)
+    boulder(lv, 29, 38, 1, 0)
+    place(lv, "glyph", 30.5, 41.5, glyph="woods_nook")
+    # LIGHT: dark zones with a glyph inside
+    darkzone(lv, 29, 22, 29, 26)                    # the strip behind the pond
+    place(lv, "glyph", 29.5, 25.5, glyph="woods_pond")
+    darkzone(lv, 17, 55, 22, 56)                    # the hollow behind the gate
+    place(lv, "glyph", 21.5, 55.5, glyph="woods_gate")
+    # SCENT: buried glimmer, invisible until the vine fox sniffs it out
+    place(lv, "hidden", 12.5, 12.5, glimmer=15)
+    place(lv, "hidden", 14.5, 46.5, glimmer=20)
+
+def creature(lv, species, tx, ty, radius, **props):
+    place(lv, "creature", tx, ty, species=species, radius=float(radius), **props)
+
+def boulder(lv, tx, ty, push_x, push_y):
+    """2x2-tile boulder with its top-left at tile (tx, ty); PUSH moves it by
+    (push_x, push_y) tiles"""
+    lv.obj("boulder", tx * T, ty * T, 2 * T, 2 * T, pushX=int(push_x), pushY=int(push_y))
+
+def darkzone(lv, x0, y0, x1, y1):
+    """darkness over tiles x0..x1, y0..y1 (inclusive), with a half-tile fringe"""
+    lv.obj("darkzone", x0 * T - T // 2, y0 * T - T // 2, (x1 - x0 + 2) * T, (y1 - y0 + 2) * T)
 
 # =============================================================== MAP 2: city
 def map2():
