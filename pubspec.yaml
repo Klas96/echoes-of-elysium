@@ -31,6 +31,9 @@ flutter:
     - assets/images/maps/tilesets/
     - assets/images/maps/buildings/
     - assets/images/sprites/
+    - assets/images/creatures/
+    - assets/images/obstacles/
+    - assets/images/ui/
     - assets/audio/music/
     - assets/audio/sfx/
     - assets/audio/voices/

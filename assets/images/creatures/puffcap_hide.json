@@ -1,0 +1,32 @@
+{
+ "frame": [
+  32,
+  32
+ ],
+ "frames": 3,
+ "order": [
+  "hidden",
+  "peek",
+  "idle_down"
+ ],
+ "baseline": 29,
+ "reveal": {
+  "frames": [
+   0,
+   1,
+   2
+  ],
+  "stepTime": 0.25,
+  "trigger": "player stands still within range for 5 s"
+ },
+ "hide": {
+  "frames": [
+   2,
+   1,
+   0
+  ],
+  "stepTime": 0.12,
+  "trigger": "player footsteps nearby"
+ },
+ "idle_source": "puffcap_sheet.png row down col 4"
+}

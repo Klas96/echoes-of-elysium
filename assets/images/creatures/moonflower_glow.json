@@ -1,0 +1,12 @@
+{
+ "frame": [
+  16,
+  24
+ ],
+ "frames": 2,
+ "stepTime": 0.9,
+ "loop": true,
+ "pingpong": true,
+ "anchor": "bottom-centre (stem base on row 22-23)",
+ "note": "frame 0 == moonflower.png (soft glow); frame 1 = brighter, wider glow. Glow pixels are semi-transparent."
+}

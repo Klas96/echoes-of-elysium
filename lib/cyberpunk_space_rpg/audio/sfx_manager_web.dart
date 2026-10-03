@@ -12,6 +12,7 @@ class SfxManager {
   html.AudioElement? _damage;
   html.AudioElement? _portal;
   html.AudioElement? _shoot;
+  html.AudioElement? _chime;
   html.AudioElement? _currentVoice;
 
   Future<void> init() async {
@@ -19,6 +20,7 @@ class SfxManager {
     _damage   = _preload('audio/sfx/damage_hit.mp3');
     _portal   = _preload('audio/sfx/portal.mp3');
     _shoot    = _preload('audio/sfx/shoot.mp3');
+    _chime    = _preload('audio/sfx/computer_beep.wav');
   }
 
   html.AudioElement _preload(String path) {
@@ -41,6 +43,8 @@ class SfxManager {
   Future<void> playDamage()   async => _play(_damage,   'damage');
   Future<void> playPortal()   async => _play(_portal,   'portal');
   Future<void> playShoot()    async => _play(_shoot,    'shoot');
+  /// Soft chime for bonds and finds (reuses the computer beep).
+  Future<void> playChime()    async => _play(_chime,    'chime');
 
   void playVoice(String assetPath) {
     try {

@@ -9,6 +9,7 @@ class SfxManager {
   final ap.AudioPlayer _damage   = ap.AudioPlayer();
   final ap.AudioPlayer _portal   = ap.AudioPlayer();
   final ap.AudioPlayer _shoot    = ap.AudioPlayer();
+  final ap.AudioPlayer _chime    = ap.AudioPlayer();
   ap.AudioPlayer? _voice;
 
   Future<void> init() async {}
@@ -27,6 +28,11 @@ class SfxManager {
 
   Future<void> playShoot() async {
     try { await _shoot.play(ap.AssetSource('audio/sfx/shoot.mp3')); } catch (_) {}
+  }
+
+  /// Soft chime for bonds and finds (reuses the computer beep).
+  Future<void> playChime() async {
+    try { await _chime.play(ap.AssetSource('audio/sfx/computer_beep.wav')); } catch (_) {}
   }
 
   void playVoice(String assetPath) {
