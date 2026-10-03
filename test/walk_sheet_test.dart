@@ -9,7 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// left/right looked like a single still frame.
 void main() {
   const frame = 32;
-  const legTop = 26; // lower-leg band inside a 32px frame
+  const legTop = 20; // leg band inside a 32px frame
 
   Future<(int, Uint8List)> rgba(String path) async {
     final codec = await ui.instantiateImageCodec(File(path).readAsBytesSync());
@@ -25,7 +25,12 @@ void main() {
         final py = row * frame + y;
         final a = (py * width + colA * frame + x) * 4;
         final b = (py * width + colB * frame + x) * 4;
-        if (px[a + 3] != px[b + 3]) diff++;
+        if (px[a] != px[b] ||
+            px[a + 1] != px[b + 1] ||
+            px[a + 2] != px[b + 2] ||
+            px[a + 3] != px[b + 3]) {
+          diff++;
+        }
       }
     }
     return diff;
