@@ -1,0 +1,14 @@
+{
+  "id": "memory2",
+  "trigger": "picking up memory fragment 2 (flashbacks play in story order)",
+  "size": [1280, 720],
+  "note": "Same format as awakening.json. No text in images; subtitles in the lower fifth. ~7 s per panel, 0.8 s crossfade.",
+  "pan_format": "[zoom, centerX 0-1, centerY 0-1]",
+  "panelDuration": 7.0,
+  "crossfade": 0.8,
+  "panels": [
+    {"image": "memory2_p1.webp", "pan": {"from": [1.0, 0.5, 0.5], "to": [1.08, 0.5, 0.45]}, "lines": [{"speaker": "AETHERIAN", "text": "The first of us stepped into Gaia's lattice. They were afraid."}]},
+    {"image": "memory2_p2.webp", "pan": {"from": [1.06, 0.45, 0.55], "to": [1.0, 0.5, 0.5]}, "lines": [{"speaker": "AETHERIAN", "text": "It was not an ending. Our bodies rested, and our minds took root."}]},
+    {"image": "memory2_p3.webp", "pan": {"from": [1.0, 0.5, 0.5], "to": [1.1, 0.5, 0.45]}, "lines": [{"speaker": "AETHERIAN", "text": "Every forest on this world still remembers their names."}, {"speaker": "KAELA", "text": "So they're not gone. They're everywhere."}]}
+  ]
+}

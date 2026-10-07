@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'memories.dart';
 import 'save_service.dart';
 
 /// Level state and the HUD objective line.
@@ -12,7 +13,9 @@ import 'save_service.dart';
 class GameState {
   static final objective = ValueNotifier<String>('');
   static final fragmentsCollected = ValueNotifier<int>(0);
-  static const fragmentsRequired = 3;
+  /// Memory fragments 1-2 are in the woods; both open its portal (the
+  /// other three memories are optional, see Memories).
+  static const fragmentsRequired = 2;
   static final portalUnlocked = ValueNotifier<bool>(false);
 
   /// Shown when the game is finished.
@@ -90,6 +93,12 @@ class GameState {
   }
 
   static void onFragmentCollected() {
+    // Only the woods count fragments towards a portal; the optional City and
+    // Ruins fragments are memories only (Memories).
+    if (_level != 1) {
+      _progress();
+      return;
+    }
     final n = fragmentsCollected.value + 1;
     fragmentsCollected.value = n;
     if (n >= fragmentsRequired) {
@@ -105,6 +114,7 @@ class GameState {
   /// Called when the player opens an NPC's dialogue. [npc] is the Tiled
   /// npc name key (gaia, asha, echo7, archivist, voss).
   static void onNpcTalk(String npc) {
+    Memories.onNpcTalk(npc);
     if (!SaveService.data.flag('talked:$npc')) {
       SaveService.data.setFlag('talked:$npc');
       _progress();

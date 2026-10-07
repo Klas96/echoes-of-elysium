@@ -100,6 +100,69 @@ void main() {
       expect(b.effects, isEmpty);
     });
 
+    test('coalition p4: pulse through the glow mask', () {
+      final s = _asset('coalition');
+      final fx = s.panels[3].effects.single;
+      expect(fx.type, 'pulse');
+      expect(fx.color, const Color(0xFF00FF88));
+      expect(fx.mask, 'assets/cutscenes/coalition/coalition_p4_glow.webp');
+      expect(fx.isLocal, isTrue);
+      expect(s.maskPaths, [fx.mask]);
+      expect(File(fx.mask!).existsSync(), isTrue);
+      // Peaks one breath in, then keeps breathing.
+      expect(fx.amount(0), 0);
+      expect(fx.amount(fx.start + fx.duration * 1.5), closeTo(fx.strength, 1e-6));
+    });
+
+    test('mask and soft-spot fields', () {
+      final s = Cutscene.parse('''{"panels": [{"image": "a.webp", "fx": [
+          {"type": "brighten", "mask": "m.webp", "strength": 0.5},
+          {"type": "flash", "mask": "assets/x/abs.webp"},
+          {"type": "brighten", "center": [0.2, 0.7], "radius": 0.1},
+          "pulse green glow on the seed (x0.58, y0.63)",
+          "brighten cyan from the flower over 2 s"]}]}''', basePath: 'assets/cutscenes/t');
+      final fx = s.panels.single.effects;
+      expect(fx[0].mask, 'assets/cutscenes/t/m.webp');
+      expect(fx[0].strength, 0.5);
+      expect(fx[1].mask, 'assets/x/abs.webp');
+      expect(fx[2].center, const Offset(0.2, 0.7));
+      expect(fx[2].radius, 0.1);
+      expect(fx[3].type, 'pulse');
+      expect(fx[3].center, const Offset(0.58, 0.63));
+      expect(fx[4].center, isNull);
+      expect(fx[4].mask, isNull);
+      expect(fx[4].duration, 2);
+    });
+
+    test('all five memory flashbacks parse', () {
+      for (var n = 1; n <= 5; n++) {
+        final s = _asset('memory$n');
+        expect(s.id, 'memory$n');
+        expect(s.panels, hasLength(n == 5 ? 4 : 3), reason: 'memory$n');
+        expect(s.crossfade, n == 5 ? 1.2 : 0.8);
+        for (final p in s.panels) {
+          expect(p.duration, n == 5 ? 8.0 : 7.0);
+          expect(p.lines, isNotEmpty);
+          expect(p.image, endsWith('.webp'));
+          expect(File(p.image).existsSync(), isTrue, reason: p.image);
+        }
+      }
+      final m3 = _asset('memory3');
+      expect(m3.panels[1].effects.single.center, const Offset(0.58, 0.63));
+      expect(m3.speaker('ARCHIVIST').color, const Color(0xFFFFDD44));
+      expect(m3.speaker('AETHERIAN').color, const Color(0xFFCC66FF));
+      expect(_asset('memory4').panels[2].effects.single.center, const Offset(0.79, 0.36));
+      expect(_asset('memory5').panels[3].effects.single.type, 'brighten');
+    });
+
+    test('cutscene assets ship as WebP only', () {
+      final pngs = Directory('assets/cutscenes')
+          .listSync(recursive: true)
+          .whereType<File>()
+          .where((f) => f.path.toLowerCase().endsWith('.png'));
+      expect(pngs, isEmpty);
+    });
+
     test('no usable panels is an error', () {
       expect(() => Cutscene.parse('{"panels": []}'), throwsFormatException);
       expect(() => Cutscene.parse('[1]'), throwsFormatException);

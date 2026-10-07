@@ -1,0 +1,15 @@
+{
+  "id": "memory5",
+  "trigger": "picking up memory fragment 5 (flashbacks play in story order)",
+  "size": [1280, 720],
+  "note": "Same format as awakening.json. No text in images; subtitles in the lower fifth. ~8 s per panel, 1.2 s crossfade (slower: the reveal). p1 and p2 are mirrored from the generated stills so the child's temple clip is on her LEFT temple.",
+  "pan_format": "[zoom, centerX 0-1, centerY 0-1]",
+  "panelDuration": 8.0,
+  "crossfade": 1.2,
+  "panels": [
+    {"image": "memory5_p1.webp", "pan": {"from": [1.08, 0.5, 0.45], "to": [1.0, 0.5, 0.5]}, "lines": [{"speaker": "GAIA", "text": "You were six. You wandered into the old forest and got lost."}]},
+    {"image": "memory5_p2.webp", "pan": {"from": [1.0, 0.5, 0.5], "to": [1.1, 0.35, 0.35]}, "lines": [{"speaker": "GAIA", "text": "I found you. I sang to you until your mind matched ours."}]},
+    {"image": "memory5_p3.webp", "pan": {"from": [1.0, 0.5, 0.5], "to": [1.07, 0.5, 0.55]}, "lines": [{"speaker": "KAELA", "text": "That was you? I thought it was a dream."}]},
+    {"image": "memory5_p4.webp", "pan": {"from": [1.06, 0.5, 0.5], "to": [1.0, 0.5, 0.5]}, "fx": "brighten cyan from the flower over 2 s", "lines": [{"speaker": "GAIA", "text": "I am sorry I chose for you. But I hoped one day you would choose me back."}]}
+  ]
+}

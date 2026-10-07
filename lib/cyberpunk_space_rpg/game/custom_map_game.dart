@@ -24,6 +24,7 @@ import '../creatures/journal_ui.dart';
 import '../creatures/obstacles.dart';
 import '../ui/cutscenes.dart';
 import 'game_state.dart';
+import 'memories.dart';
 import 'save_service.dart';
 import 'settings.dart';
 
@@ -127,8 +128,10 @@ Map<String, ObjectBuilder> _mapObjects(String mapId) => {
       'fragment': (p) {
         final id = _pickupId(mapId, 'fragment', p.position);
         if (SaveService.data.collected.contains(id)) return _Gone();
-        return FragmentPickup(p.position,
-            onCollected: () => SaveService.data.collected.add(id));
+        return FragmentPickup(p.position, onCollected: () {
+          SaveService.data.collected.add(id);
+          Memories.onFragmentPicked();
+        });
       },
       'health': (p) {
         final id = _pickupId(mapId, 'health', p.position);
@@ -635,6 +638,7 @@ void _setPaused(bool on) {
 /// Called from each map's onReady.
 void _onMapReady(BonfireGameInterface game) {
   _activeGame = game;
+  Memories.attach(game);
   _paused.value = false;
 }
 
@@ -1289,11 +1293,12 @@ class _PortalOverlay extends StatelessWidget {
 class _VictoryScreen extends StatelessWidget {
   const _VictoryScreen();
 
-  static const _story =
+  // Ending branch: all five memories found = Voss stands down (Memories).
+  static String get _story =>
       'You reached the Core and activated the Aetherian resonance.\n\n'
       'Gaia\'s memory floods back — ten thousand years of harmony, of a civilization that chose '
       'to become one with their world rather than consume it.\n\n'
-      'The UEC drones go silent. Commander Voss withdraws.\n\n'
+      '${Memories.endingVoss}\n\n'
       'Elysium breathes again.';
 
   @override
@@ -1323,9 +1328,9 @@ class _VictoryScreen extends StatelessWidget {
                         letterSpacing: compact ? 4 : 5)),
               ),
               SizedBox(height: compact ? 8 : 12),
-              const Text(GameState.endingText,
+              Text(Memories.endingLine,
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white38, fontSize: 14, letterSpacing: 1)),
+                  style: const TextStyle(color: Colors.white38, fontSize: 14, letterSpacing: 1)),
             ],
           );
 

@@ -1,0 +1,14 @@
+{
+  "id": "memory3",
+  "trigger": "picking up memory fragment 3 (flashbacks play in story order)",
+  "size": [1280, 720],
+  "note": "Same format as awakening.json. No text in images; subtitles in the lower fifth. ~7 s per panel, 0.8 s crossfade.",
+  "pan_format": "[zoom, centerX 0-1, centerY 0-1]",
+  "panelDuration": 7.0,
+  "crossfade": 0.8,
+  "panels": [
+    {"image": "memory3_p1.webp", "pan": {"from": [1.0, 0.5, 0.5], "to": [1.07, 0.5, 0.5]}, "lines": [{"speaker": "AETHERIAN", "text": "One of us had to stay awake, to remember for the rest."}]},
+    {"image": "memory3_p2.webp", "pan": {"from": [1.0, 0.5, 0.5], "to": [1.1, 0.58, 0.6]}, "fx": "pulse green glow on the seed (x0.58, y0.63)", "lines": [{"speaker": "ARCHIVIST", "text": "I will keep her first memory. If it is lost, she is lost."}]},
+    {"image": "memory3_p3.webp", "pan": {"from": [1.08, 0.5, 0.45], "to": [1.0, 0.5, 0.5]}, "lines": [{"speaker": "AETHERIAN", "text": "We gave him the Core Record, and he has guarded it ever since."}, {"speaker": "KAELA", "text": "The Archivist from the city. He's been waiting all this time."}]}
+  ]
+}

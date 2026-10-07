@@ -42,8 +42,11 @@ class Cutscene {
   static const defaultSpeakerColors = {
     'GAIA': Color(0xFF00FF88),
     'KAELA': Color(0xFF00FFCC),
-    'VOSS': Color(0xFFFF5566),
+    'VOSS': Color(0xFFFF4444),
     'ASHA': Color(0xFFFFAA00),
+    'AETHERIAN': Color(0xFFCC66FF),
+    'ECHO-7': Color(0xFFCC66FF),
+    'ARCHIVIST': Color(0xFFFFDD44),
   };
 
   /// [basePath] is the asset folder the JSON lives in; relative image paths
@@ -104,6 +107,13 @@ class Cutscene {
 
   /// Image asset paths in play order (for precaching).
   List<String> get imagePaths => [for (final p in panels) p.image];
+
+  /// Effect mask images (for precaching).
+  List<String> get maskPaths => [
+        for (final p in panels)
+          for (final e in p.effects)
+            if (e.mask != null) e.mask!
+      ];
 }
 
 class CutsceneSpeaker {
@@ -277,28 +287,52 @@ class CutsceneEffect {
   final double duration;
   final double strength;
 
+  /// Optional mask image (asset path): the effect only shows through its
+  /// alpha, stretched over the panel and moving with the pan.
+  final String? mask;
+
+  /// Optional soft spot instead of a mask image: centre as fractions of the
+  /// panel and [radius] as a fraction of its width.
+  final Offset? center;
+  final double radius;
+
   const CutsceneEffect({
     required this.type,
     this.color = const Color(0xFFFFFFFF),
     this.start = 0,
     this.duration = 1.5,
     this.strength = 0.4,
+    this.mask,
+    this.center,
+    this.radius = 0.22,
   });
+
+  bool get isLocal => mask != null || center != null;
 
   /// Accepts an object `{"type": "brighten", "color": "#00FF88", "start": 0.5,
   /// "duration": 1.5, "strength": 0.35}` or the shorthand string
   /// `"brighten green over 1.5 s"`. Unknown types are dropped.
-  static CutsceneEffect? fromJson(Object? v) {
+  /// [basePath] resolves a relative `mask` like the panel images.
+  static CutsceneEffect? fromJson(Object? v, {String basePath = ''}) {
     if (v is String) return _fromShorthand(v);
     if (v is! Map) return null;
     final type = v['type'] is String ? (v['type'] as String).toLowerCase() : '';
     if (!types.contains(type)) return null;
+    final mask = v['mask'];
+    final center = v['center'];
+    final pulse = type == 'pulse';
     return CutsceneEffect(
       type: type,
       color: parseColor(v['color']) ?? const Color(0xFFFFFFFF),
-      start: _num(v['start'], 0).clamp(0.0, 60.0).toDouble(),
-      duration: _num(v['duration'], 1.5).clamp(0.05, 60.0).toDouble(),
-      strength: _num(v['strength'], 0.4).clamp(0.0, 1.0).toDouble(),
+      start: _num(v['start'], pulse ? 0.4 : 0).clamp(0.0, 60.0).toDouble(),
+      duration: _num(v['duration'], pulse ? 2.4 : 1.5).clamp(0.05, 60.0).toDouble(),
+      // A masked effect only lights a small area, so it can be stronger.
+      strength: _num(v['strength'], mask is String ? 0.6 : (pulse ? 0.22 : 0.4)).clamp(0.0, 1.0).toDouble(),
+      mask: mask is String && mask.isNotEmpty ? resolvePath(basePath, mask) : null,
+      center: center is List && center.length >= 2 && center[0] is num && center[1] is num
+          ? Offset((center[0] as num).toDouble().clamp(0.0, 1.0), (center[1] as num).toDouble().clamp(0.0, 1.0))
+          : null,
+      radius: _num(v['radius'], 0.22).clamp(0.02, 2.0).toDouble(),
     );
   }
 
@@ -325,14 +359,19 @@ class CutsceneEffect {
         break;
       }
     }
-    final over = RegExp(r'(?:over|in)\s+([0-9.]+)\s*s').firstMatch(lower);
+    final over = RegExp(r'(?:over|in)\s+([0-9.]+)\s*s\b').firstMatch(lower);
     final duration = double.tryParse(over?.group(1) ?? '') ?? (type == 'pulse' ? 2.4 : 1.5);
+    // "(x0.58, y0.63)" = a soft spot there instead of the whole frame.
+    final at = RegExp(r'\(\s*x\s*=?\s*([0-9.]+)\s*,\s*y\s*=?\s*([0-9.]+)\s*\)').firstMatch(lower);
+    final cx = double.tryParse(at?.group(1) ?? ''), cy = double.tryParse(at?.group(2) ?? '');
+    final center = cx != null && cy != null ? Offset(cx.clamp(0.0, 1.0), cy.clamp(0.0, 1.0)) : null;
     return CutsceneEffect(
       type: type,
       color: color,
       start: type == 'flash' ? 0 : 0.4,
       duration: duration.clamp(0.05, 60.0),
-      strength: type == 'pulse' ? 0.22 : 0.35,
+      strength: center != null ? 0.55 : (type == 'pulse' ? 0.22 : 0.35),
+      center: center,
     );
   }
 
@@ -394,7 +433,7 @@ class CutscenePanel {
           ? [for (final l in rawLines) CutsceneLine.fromJson(l)].whereType<CutsceneLine>().toList()
           : const [],
       effects: [
-        for (final e in (fx is List ? fx : [fx])) CutsceneEffect.fromJson(e),
+        for (final e in (fx is List ? fx : [fx])) CutsceneEffect.fromJson(e, basePath: basePath),
       ].whereType<CutsceneEffect>().toList(),
       titleCard: CutsceneTitleCard.fromJson(j['titleCard'] ?? j['title']) ??
           CutsceneTitleCard.fromThen(j['then']),

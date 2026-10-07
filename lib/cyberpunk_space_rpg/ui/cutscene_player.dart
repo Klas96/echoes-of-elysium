@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -330,7 +331,7 @@ class _CutscenePlayerState extends State<CutscenePlayer> with SingleTickerProvid
   /// Waits (briefly) for the first panel so the scene does not open on a
   /// blank frame; the rest load in the background.
   Future<void> _precache(Cutscene scene) async {
-    final paths = scene.imagePaths.toSet().toList();
+    final paths = {...scene.imagePaths, ...scene.maskPaths}.toList();
     Future<void> load(String p) => precacheImage(AssetImage(p), context, onError: (e, _) {
           debugPrint('CutscenePlayer: missing image $p ($e)');
         });
@@ -597,24 +598,29 @@ class _CutsceneView extends StatelessWidget {
   }
 
   /// One switch per effect type; add new [CutsceneEffect.types] here.
+  /// A local effect (mask image or soft spot) draws the filtered panel again
+  /// on top, cut down to the mask's alpha.
   static Widget _applyEffect(CutsceneEffect fx, double amount, Widget child) {
     if (amount <= 0.001) return child;
+    final Widget filtered;
     switch (fx.type) {
       case 'brighten':
       case 'pulse':
       case 'flash':
-        return ColorFiltered(
+        filtered = ColorFiltered(
           colorFilter: ColorFilter.mode(fx.color.withValues(alpha: amount), BlendMode.screen),
           child: child,
         );
       case 'darken':
-        return ColorFiltered(
+        filtered = ColorFiltered(
           colorFilter: ColorFilter.mode(Color.lerp(Colors.white, fx.color, amount)!, BlendMode.multiply),
           child: child,
         );
       default:
         return child;
     }
+    if (!fx.isLocal) return filtered;
+    return Stack(children: [child, _LocalMask(fx: fx, child: filtered)]);
   }
 }
 
@@ -776,5 +782,87 @@ class _SkipButton extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// Shows [child] only through the effect's mask: a mask image's alpha
+/// (stretched over the panel) or a soft radial spot.
+class _LocalMask extends StatefulWidget {
+  const _LocalMask({required this.fx, required this.child});
+
+  final CutsceneEffect fx;
+  final Widget child;
+
+  @override
+  State<_LocalMask> createState() => _LocalMaskState();
+}
+
+class _LocalMaskState extends State<_LocalMask> {
+  static final _cache = <String, ui.Image>{};
+  ImageStream? _stream;
+  ImageStreamListener? _listener;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _resolve();
+  }
+
+  @override
+  void didUpdateWidget(_LocalMask old) {
+    super.didUpdateWidget(old);
+    if (old.fx.mask != widget.fx.mask) _resolve();
+  }
+
+  void _resolve() {
+    final path = widget.fx.mask;
+    if (path == null || _cache.containsKey(path)) return;
+    _unlisten();
+    final stream = AssetImage(path).resolve(createLocalImageConfiguration(context));
+    final listener = ImageStreamListener((info, _) {
+      _cache[path] = info.image.clone();
+      info.dispose();
+      if (mounted) setState(() {});
+    }, onError: (e, _) => debugPrint('CutscenePlayer: missing mask $path ($e)'));
+    stream.addListener(listener);
+    _stream = stream;
+    _listener = listener;
+  }
+
+  void _unlisten() {
+    if (_stream != null && _listener != null) _stream!.removeListener(_listener!);
+    _stream = null;
+    _listener = null;
+  }
+
+  @override
+  void dispose() {
+    _unlisten();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final fx = widget.fx;
+    final Shader Function(Rect) shader;
+    if (fx.mask != null) {
+      final img = _cache[fx.mask!];
+      if (img == null) return const SizedBox.shrink();
+      shader = (b) => ImageShader(
+            img,
+            TileMode.clamp,
+            TileMode.clamp,
+            Matrix4.diagonal3Values(b.width / img.width, b.height / img.height, 1).storage,
+          );
+    } else {
+      final c = fx.center!;
+      shader = (b) => RadialGradient(
+            center: Alignment(c.dx * 2 - 1, c.dy * 2 - 1),
+            radius: fx.radius * b.width / math.max(1.0, b.shortestSide),
+            colors: const [Colors.white, Color(0x99FFFFFF), Colors.transparent],
+            stops: const [0, 0.45, 1],
+          ).createShader(b);
+    }
+    return ShaderMask(shaderCallback: shader, blendMode: BlendMode.dstIn, child: widget.child);
   }
 }

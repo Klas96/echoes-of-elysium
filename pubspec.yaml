@@ -39,6 +39,11 @@ flutter:
     - assets/audio/voices/
     - assets/cutscenes/awakening/
     - assets/cutscenes/coalition/
+    - assets/cutscenes/memory1/
+    - assets/cutscenes/memory2/
+    - assets/cutscenes/memory3/
+    - assets/cutscenes/memory4/
+    - assets/cutscenes/memory5/
 flutter_launcher_icons:
   android: true
   ios: false
