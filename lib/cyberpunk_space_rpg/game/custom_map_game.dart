@@ -24,12 +24,12 @@ import '../creatures/journal_ui.dart';
 import '../creatures/obstacles.dart';
 import '../ui/cutscenes.dart';
 import '../ui/equipment_ui.dart';
+import '../ui/shop_ui.dart';
 import 'game_state.dart';
 import 'progression.dart';
 import 'memories.dart';
 import 'save_service.dart';
-import 'settings.dart';
-
+import 'travel.dart';
 // ---------------------------------------------------------------------------
 // NPC dialogue data
 // ---------------------------------------------------------------------------
@@ -93,13 +93,44 @@ const _voss = NpcDialogue(
 // Tiled object layer -> gameplay components
 // ---------------------------------------------------------------------------
 
+const _gaiaCore = NpcDialogue(
+  name: 'GAIA  ·  CORE',
+  color: Color(0xFF00FF88),
+  lines: [
+    'You found the way, Kaela. This is my first memory — the Core Record where the Aetherians chose to merge with Elysium.',
+    'The UEC wants it erased. If you activate the resonance, their suppressors fail. I remember. We all remember.',
+    'Step into the light when you are ready. Whatever comes next, we face it together.',
+  ],
+  // Reuse woods lines until Core-specific voices exist.
+  voicePaths: ['audio/voices/gaia_1.mp3', 'audio/voices/gaia_2.mp3', 'audio/voices/gaia_3.mp3'],
+);
+
+const _mira = NpcDialogue(
+  name: 'MIRA  ·  COLONY VENDOR',
+  color: Color(0xFFFFE08A),
+  lines: [
+    'Lantern Town keeps its lamps lit for travellers like you. UEC patrols rarely bother us here.',
+    'I trade glimmer for gear — scrap plating, optics, charms from the old colony.',
+    'Browse the stall whenever you like. The return portal is south when you\'re ready to leave.',
+  ],
+  voicePaths: [],
+);
+
 const _npcDialogues = <String, NpcDialogue>{
   'gaia': _gaia,
   'asha': _asha,
   'echo7': _echo7,
   'archivist': _archivist,
   'voss': _voss,
+  'mira': _mira,
 };
+
+NpcDialogue _dialogueFor(String mapId, String name) {
+  if (mapId == 'world4' && name == 'gaia') return _gaiaCore;
+  final d = _npcDialogues[name];
+  if (d == null) throw ArgumentError('Unknown npc name "$name" in Tiled map');
+  return d;
+}
 
 double _numProp(TiledObjectProperties p, String key, [double fallback = 0]) {
   final v = p.others[key];
@@ -117,15 +148,19 @@ String _pickupId(String mapId, String kind, Vector2 pos) =>
 
 Map<String, ObjectBuilder> _mapObjects(String mapId) => {
       'spawn': (p) => _PlayerSpawn(p.position),
-      'portal': (p) => PortalComponent(p.position),
+      'portal': (p) {
+        final dest = (p.others['dest'] ?? '').toString();
+        if (dest == 'town') {
+          return PortalComponent(p.position, canActivate: () => true);
+        }
+        return PortalComponent(p.position);
+      },
       'npc': (p) {
         final name = (p.others['name'] ?? '').toString().toLowerCase();
-        final dialogue = _npcDialogues[name];
-        if (dialogue == null) {
-          throw ArgumentError('Unknown npc name "$name" in Tiled map');
-        }
+        final sprite = (p.others['sprite'] ?? name).toString().toLowerCase();
+        final dialogue = _dialogueFor(mapId, name);
         return NpcCharacter(p.position,
-            dialogue: dialogue, spritePath: 'sprites/npc_$name.png', npcKey: name);
+            dialogue: dialogue, spritePath: 'sprites/npc_$sprite.png', npcKey: name);
       },
       'fragment': (p) {
         final id = _pickupId(mapId, 'fragment', p.position);
@@ -378,8 +413,6 @@ class IntroScreen extends StatelessWidget {
                       ),
               ),
               SizedBox(height: compact ? 12 : 20),
-              const _StoryModeToggle(),
-              SizedBox(height: compact ? 10 : 16),
               Text(_isTouch
                       ? 'Joystick to move · tap TALK to interact · tap to shoot'
                       : 'WASD / Arrow keys · E to interact · J journal · Esc to pause · ` to debug',
@@ -439,6 +472,8 @@ const _regionNames = {
   'woods': 'Whispering Woods',
   'city': 'The City',
   'ruins': 'The Ruins',
+  'core': 'Gaia\'s Core',
+  'town': 'Lantern Town',
 };
 
 String _saveSummary(SaveData d) {
@@ -454,9 +489,37 @@ Widget _screenForMap(String mapId) {
       return const Map2GameScreen();
     case 'world3':
       return const Map3GameScreen();
+    case 'world4':
+      return const Map4GameScreen();
+    case 'world5':
+      return const Map5GameScreen();
     default:
       return const CustomMapGameScreen();
   }
+}
+
+/// Warp to a travel destination (shared by every portal menu).
+Future<void> _travelTo(BuildContext context, TravelDest dest) async {
+  final nav = Navigator.of(context);
+  final mapId = Travel.mapIdFor(dest.level);
+  await _leaveMap(nextMapId: mapId);
+  final screen = _screenForMap(mapId);
+  if (dest.level == 2) {
+    nav.pushReplacement(Cutscenes.route(
+      id: Cutscenes.coalition,
+      once: true,
+      then: (_) => screen,
+    ));
+  } else {
+    nav.pushReplacement(MaterialPageRoute(builder: (_) => screen));
+  }
+}
+
+Future<void> _activateCoreRecord(BuildContext context) async {
+  final nav = Navigator.of(context);
+  SaveService.data.setFlag('completed');
+  await _leaveMap();
+  nav.pushReplacement(MaterialPageRoute(builder: (_) => const _VictoryScreen()));
 }
 
 void _continueGame(BuildContext context) {
@@ -507,7 +570,6 @@ final _playClock = Stopwatch();
 
 /// Copies live game state into the save record before every write.
 void _snapshot(SaveData d) {
-  d.settings['storyMode'] = GameSettings.storyMode.value;
   d.dayTime = DayCycle.time.value;
   d.playTimeSeconds += _playClock.elapsedMilliseconds / 1000;
   _playClock.reset();
@@ -556,27 +618,40 @@ void _startLevel(BonfireGameInterface game, int level) {
   GameToast.current.value = null;
   Journal.open.value = false;
   Equipment.open.value = false;
+  Shop.open.value = false;
   void onOverlay(bool open) {
     final g = _activeGame;
     if (g == null || _paused.value) return;
     if (open) {
       SaveService.saveNow();
       g.pauseEngine();
-    } else if (!Journal.open.value && !Equipment.open.value) {
+    } else if (!Journal.open.value && !Equipment.open.value && !Shop.open.value) {
       g.resumeEngine();
     }
   }
 
   Journal.onOpenChanged = onOverlay;
   Equipment.onOpenChanged = onOverlay;
-  Journal.dismissOthers = () => Equipment.open.value = false;
-  Equipment.dismissOthers = () => Journal.open.value = false;
+  Shop.onOpenChanged = onOverlay;
+  Journal.dismissOthers = () {
+    Equipment.open.value = false;
+    Shop.open.value = false;
+  };
+  Equipment.dismissOthers = () {
+    Journal.open.value = false;
+    Shop.open.value = false;
+  };
+  Shop.dismissOthers = () {
+    Journal.open.value = false;
+    Equipment.open.value = false;
+  };
   game.add(DayClock());
   game.add(InteractionManager());
   game.add(Companion());
   _playClock
     ..reset()
     ..start();
+  Travel.markVisited(level);
   final d = SaveService.data;
   if (SaveService.resumeObjective && d.mapId == GameState.mapIds[level]) {
     SaveService.resumeObjective = false;
@@ -589,8 +664,14 @@ void _startLevel(BonfireGameInterface game, int level) {
       GameState.resetMap1();
     case 2:
       GameState.resetMap2();
-    default:
+    case 3:
       GameState.resetMap3();
+    case 4:
+      GameState.resetMap4();
+    case 5:
+      GameState.resetMap5();
+    default:
+      GameState.resetMap1();
   }
   SaveService.saveNow();
 }
@@ -627,6 +708,10 @@ KeyEventResult _handleDebugKey(FocusNode _, KeyEvent event) {
       Equipment.hide();
       return KeyEventResult.handled;
     }
+    if (Shop.open.value) {
+      Shop.hide();
+      return KeyEventResult.handled;
+    }
   }
   if (event is KeyDownEvent &&
       (event.logicalKey == LogicalKeyboardKey.escape ||
@@ -638,7 +723,7 @@ KeyEventResult _handleDebugKey(FocusNode _, KeyEvent event) {
 }
 
 // ---------------------------------------------------------------------------
-// Pause (Esc / P or the PAUSE button): freezes the game, offers Story Mode.
+// Pause (Esc / P or the PAUSE button): freezes the game.
 // ---------------------------------------------------------------------------
 
 final _paused = ValueNotifier<bool>(false);
@@ -650,6 +735,9 @@ void _setPaused(bool on) {
   }
   if (on && Equipment.open.value) {
     Equipment.open.value = false;
+  }
+  if (on && Shop.open.value) {
+    Shop.open.value = false;
   }
   _paused.value = on;
   final g = _activeGame;
@@ -715,17 +803,8 @@ class CustomMapGameScreen extends StatelessWidget {
             map: CustomMap('maps/world.tmj', objectsBuilder: _mapObjects('world')),
             cameraConfig: CameraConfig(moveOnlyMapArea: true, zoom: 2.0),
             overlayBuilderMap: {
-              'portalReached': (ctx, game) => _PortalOverlay(
-                    game: game,
-                    onEnter: () async {
-                      final nav = Navigator.of(ctx);
-                      await _leaveMap(nextMapId: 'world2');
-                      nav.pushReplacement(Cutscenes.route(
-                          id: Cutscenes.coalition,
-                          once: true,
-                          then: (_) => const Map2GameScreen()));
-                    },
-                  ),
+              'portalReached': (ctx, game) =>
+                  _PortalOverlay(game: game, fromLevel: 1),
             },
             onReady: (game) {
               _startLevel(game, 1);
@@ -745,6 +824,7 @@ class CustomMapGameScreen extends StatelessWidget {
           _DebugOverlay(),
           const JournalOverlay(),
           const EquipmentOverlay(),
+          const ShopOverlay(),
         ]),
       ),
     );
@@ -752,7 +832,7 @@ class CustomMapGameScreen extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Map 2 — The Aetherian Ruins
+// Map 2 — Neon City
 // ---------------------------------------------------------------------------
 
 class Map2GameScreen extends StatelessWidget {
@@ -776,17 +856,8 @@ class Map2GameScreen extends StatelessWidget {
             map: CustomMap('maps/world2.tmj', objectsBuilder: _mapObjects('world2')),
             cameraConfig: CameraConfig(moveOnlyMapArea: true, zoom: 2.0),
             overlayBuilderMap: {
-              'portalReached': (ctx, game) => _PortalOverlay(
-                    game: game,
-                    label: 'THE CORE',
-                    subtitle: 'Gaia\'s memory is restored. Elysium lives.',
-                    onEnter: () async {
-                      final nav = Navigator.of(ctx);
-                      await _leaveMap(nextMapId: 'world3');
-                      nav.pushReplacement(
-                          MaterialPageRoute(builder: (_) => const Map3GameScreen()));
-                    },
-                  ),
+              'portalReached': (ctx, game) =>
+                  _PortalOverlay(game: game, fromLevel: 2),
             },
             onReady: (game) {
               _startLevel(game, 2);
@@ -811,6 +882,7 @@ class Map2GameScreen extends StatelessWidget {
           _DebugOverlay(),
           const JournalOverlay(),
           const EquipmentOverlay(),
+          const ShopOverlay(),
         ]),
       ),
     );
@@ -842,18 +914,8 @@ class Map3GameScreen extends StatelessWidget {
               map: CustomMap('maps/world3.tmj', objectsBuilder: _mapObjects('world3')),
               cameraConfig: CameraConfig(moveOnlyMapArea: true, zoom: 2.0),
               overlayBuilderMap: {
-                'portalReached': (ctx, game) => _PortalOverlay(
-                      game: game,
-                      label: 'EXTRACTION POINT',
-                      subtitle: 'The ruins hold the final truth.\nElysium\'s fate is decided here.',
-                      onEnter: () async {
-                        final nav = Navigator.of(ctx);
-                        SaveService.data.setFlag('completed');
-                        await _leaveMap();
-                        nav.pushReplacement(
-                            MaterialPageRoute(builder: (_) => const _VictoryScreen()));
-                      },
-                    ),
+                'portalReached': (ctx, game) =>
+                    _PortalOverlay(game: game, fromLevel: 3),
               },
               onReady: (game) {
                 _startLevel(game, 3);
@@ -873,6 +935,113 @@ class Map3GameScreen extends StatelessWidget {
           _DebugOverlay(),
           const JournalOverlay(),
           const EquipmentOverlay(),
+          const ShopOverlay(),
+        ]),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Map 4 — Gaia's Core
+// ---------------------------------------------------------------------------
+
+class Map4GameScreen extends StatelessWidget {
+  const Map4GameScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Focus(
+      autofocus: true,
+      onKeyEvent: _handleDebugKey,
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: Stack(children: [
+          GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTapDown: (d) => CustomPlayer.pendingShot.value =
+                Vector2(d.localPosition.dx, d.localPosition.dy),
+            child: BonfireWidget(
+              playerControllers: _playerControllers(),
+              player: CustomPlayer(Vector2.zero()),
+              map: CustomMap('maps/world4.tmj', objectsBuilder: _mapObjects('world4')),
+              cameraConfig: CameraConfig(moveOnlyMapArea: true, zoom: 2.0),
+              overlayBuilderMap: {
+                'portalReached': (ctx, game) =>
+                    _PortalOverlay(game: game, fromLevel: 4),
+              },
+              onReady: (game) {
+                _startLevel(game, 4);
+                MusicManager().play('assets/audio/music/Echoes_of_the Deep_Mine.mp3');
+              },
+            ),
+          ),
+          const NightTint(),
+          const _Vignette(),
+          const _GameHUD(),
+          const CreatureHud(),
+          const _NpcDialogueLayer(),
+          const _InteractPrompt(),
+          const InteractPromptLayer(),
+          const ToastLayer(),
+          const _CalmLayer(),
+          _DebugOverlay(),
+          const JournalOverlay(),
+          const EquipmentOverlay(),
+          const ShopOverlay(),
+        ]),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Map 5 — Lantern Town
+// ---------------------------------------------------------------------------
+
+class Map5GameScreen extends StatelessWidget {
+  const Map5GameScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Focus(
+      autofocus: true,
+      onKeyEvent: _handleDebugKey,
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: Stack(children: [
+          GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTapDown: (d) => CustomPlayer.pendingShot.value =
+                Vector2(d.localPosition.dx, d.localPosition.dy),
+            child: BonfireWidget(
+              playerControllers: _playerControllers(),
+              player: CustomPlayer(Vector2.zero()),
+              map: CustomMap('maps/world5.tmj', objectsBuilder: _mapObjects('world5')),
+              cameraConfig: CameraConfig(moveOnlyMapArea: true, zoom: 2.0),
+              overlayBuilderMap: {
+                'portalReached': (ctx, game) =>
+                    _PortalOverlay(game: game, fromLevel: 5),
+              },
+              onReady: (game) {
+                _startLevel(game, 5);
+                MusicManager().play('assets/audio/music/Neon_Mirage.mp3');
+              },
+            ),
+          ),
+          const NightTint(),
+          const _Vignette(),
+          const _GameHUD(),
+          const CreatureHud(),
+          const _NpcDialogueLayer(),
+          const _InteractPrompt(),
+          const InteractPromptLayer(),
+          const ToastLayer(),
+          const _CalmLayer(),
+          _DebugOverlay(),
+          const JournalOverlay(),
+          const EquipmentOverlay(),
+          const ShopOverlay(),
         ]),
       ),
     );
@@ -976,6 +1145,18 @@ class _NpcDialogueLayerState extends State<_NpcDialogueLayer> {
                       child: const Text('SKIP', style: TextStyle(color: Colors.white24, fontSize: 11)),
                     ),
                     const SizedBox(width: 8),
+                    if (isLast && d.name.startsWith('MIRA')) ...[
+                      _CyberButton(
+                        label: 'TRADE',
+                        color: d.color,
+                        filled: true,
+                        onTap: () {
+                          _closeDialogue();
+                          Shop.show();
+                        },
+                      ),
+                      const SizedBox(width: 8),
+                    ],
                     _CyberButton(
                       label: isLast ? 'CLOSE' : 'NEXT ›',
                       color: d.color,
@@ -1291,18 +1472,16 @@ class _DebugHud extends StatelessWidget {
 
 class _PortalOverlay extends StatelessWidget {
   final BonfireGame game;
-  final VoidCallback onEnter;
-  final String label;
-  final String subtitle;
-  const _PortalOverlay({
-    required this.game,
-    required this.onEnter,
-    this.label = 'AETHERIAN GATE',
-    this.subtitle = 'A resonance field from the lost civilisation.\nThe Aetherian echoes grow stronger beyond.',
-  });
+  final int fromLevel;
+  const _PortalOverlay({required this.game, required this.fromLevel});
 
   @override
   Widget build(BuildContext context) {
+    final dests = Travel.availableFrom(fromLevel);
+    final here = Travel.byLevel(fromLevel);
+    final canActivateCore = fromLevel == 4 &&
+        GameState.portalUnlocked.value &&
+        !SaveService.data.flag('completed');
     // Scrollable + scaled title so it never overflows a phone in landscape.
     return SafeArea(
       child: Center(
@@ -1310,7 +1489,7 @@ class _PortalOverlay extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child: Container(
             constraints: const BoxConstraints(maxWidth: 520),
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 22),
             decoration: BoxDecoration(
               color: Colors.black.withOpacity(0.88),
               border: Border.all(color: const Color(0xFF00FFFF), width: 2),
@@ -1318,43 +1497,112 @@ class _PortalOverlay extends StatelessWidget {
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                FittedBox(
+                const FittedBox(
                   fit: BoxFit.scaleDown,
-                  child: Text(label,
+                  child: Text('AETHERIAN GATE',
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
+                      style: TextStyle(
                           color: Color(0xFF00FFFF),
-                          fontSize: 24,
+                          fontSize: 22,
                           fontWeight: FontWeight.bold,
-                          letterSpacing: 5)),
+                          letterSpacing: 4)),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 Text(
-                  subtitle,
+                  here == null
+                      ? 'Choose a destination.'
+                      : 'Standing in ${here.title}. Travel to any unlocked region.',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white60, fontSize: 13, height: 1.6),
+                  style: const TextStyle(color: Colors.white60, fontSize: 12, height: 1.5),
                 ),
-                const SizedBox(height: 24),
-                Wrap(
-                  alignment: WrapAlignment.center,
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: [
-                    TextButton(
-                      onPressed: () => game.overlays.remove('portalReached'),
-                      style: TextButton.styleFrom(
-                          side: const BorderSide(color: Colors.white24),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 20, vertical: 10)),
-                      child: const Text('NOT YET',
-                          style: TextStyle(color: Colors.white38)),
+                const SizedBox(height: 16),
+                if (dests.isEmpty && !canActivateCore)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: Text(
+                      'No destinations yet.\nFinish this region\'s objective to open the path.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.white38, fontSize: 13, height: 1.5),
                     ),
-                    _CyberButton(label: 'ENTER', onTap: onEnter),
-                  ],
+                  ),
+                ...dests.map((d) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: _TravelDestButton(
+                        dest: d,
+                        onTap: () async {
+                          game.overlays.remove('portalReached');
+                          await _travelTo(context, d);
+                        },
+                      ),
+                    )),
+                if (canActivateCore) ...[
+                  const SizedBox(height: 4),
+                  _CyberButton(
+                    label: 'ACTIVATE CORE RECORD',
+                    filled: true,
+                    color: const Color(0xFF00FF88),
+                    onTap: () async {
+                      game.overlays.remove('portalReached');
+                      await _activateCoreRecord(context);
+                    },
+                  ),
+                ],
+                const SizedBox(height: 12),
+                Center(
+                  child: TextButton(
+                    onPressed: () => game.overlays.remove('portalReached'),
+                    style: TextButton.styleFrom(
+                        side: const BorderSide(color: Colors.white24),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 10)),
+                    child: const Text('NOT YET',
+                        style: TextStyle(color: Colors.white38)),
+                  ),
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TravelDestButton extends StatelessWidget {
+  final TravelDest dest;
+  final VoidCallback onTap;
+  const _TravelDestButton({required this.dest, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: const Color(0xFF00FFFF).withOpacity(0.08),
+            border: Border.all(color: const Color(0xFF00FFFF).withOpacity(0.55)),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(dest.title,
+                  style: const TextStyle(
+                      color: Color(0xFF00FFFF),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      letterSpacing: 1)),
+              const SizedBox(height: 3),
+              Text(dest.blurb,
+                  style: const TextStyle(color: Colors.white54, fontSize: 11, height: 1.35)),
+            ],
           ),
         ),
       ),
@@ -1516,49 +1764,8 @@ class _CyberButton extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Calm gameplay UI: respawn fade, checkpoint toast, pause + Story Mode
+// Calm gameplay UI: respawn fade, checkpoint toast, pause
 // ---------------------------------------------------------------------------
-
-class _StoryModeToggle extends StatelessWidget {
-  const _StoryModeToggle();
-
-  @override
-  Widget build(BuildContext context) {
-    return ValueListenableBuilder<bool>(
-      valueListenable: GameSettings.storyMode,
-      builder: (_, on, __) => InkWell(
-        onTap: () => GameSettings.setStoryMode(!on),
-        borderRadius: BorderRadius.circular(6),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Switch(
-              value: on,
-              onChanged: GameSettings.setStoryMode,
-              activeColor: const Color(0xFF66FFAA),
-            ),
-            const SizedBox(width: 6),
-            Flexible(child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('STORY MODE  ${on ? 'ON' : 'OFF'}',
-                    style: TextStyle(
-                        color: on ? const Color(0xFF66FFAA) : Colors.white54,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 2)),
-                const SizedBox(height: 2),
-                const Text('Enemies stay calm and can\'t hurt you. Just enjoy the story.',
-                    style: TextStyle(color: Colors.white38, fontSize: 11)),
-              ],
-            )),
-          ]),
-        ),
-      ),
-    );
-  }
-}
 
 class _CalmLayer extends StatelessWidget {
   const _CalmLayer();
@@ -1566,38 +1773,27 @@ class _CalmLayer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Stack(children: [
-      // Pause button + Story Mode tag, under the health bar
+      // Pause button under the health bar
       Positioned(
         top: 62,
         left: 12,
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          GestureDetector(
-            onTap: () => _setPaused(true),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.6),
-                border: Border.all(color: Colors.white24),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: const Text('II  PAUSE',
-                  style: TextStyle(
-                      color: Colors.white54,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.5)),
+        child: GestureDetector(
+          onTap: () => _setPaused(true),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.6),
+              border: Border.all(color: Colors.white24),
+              borderRadius: BorderRadius.circular(4),
             ),
+            child: const Text('II  PAUSE',
+                style: TextStyle(
+                    color: Colors.white54,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.5)),
           ),
-          const SizedBox(width: 8),
-          ValueListenableBuilder<bool>(
-            valueListenable: GameSettings.storyMode,
-            builder: (_, on, __) => on
-                ? const Text('STORY MODE',
-                    style: TextStyle(
-                        color: Color(0xFF66FFAA), fontSize: 10, letterSpacing: 1.5))
-                : const SizedBox.shrink(),
-          ),
-        ]),
+        ),
       ),
       // Checkpoint toast
       ValueListenableBuilder<String?>(
@@ -1685,8 +1881,6 @@ class _CalmLayer extends StatelessWidget {
                                 fontSize: 22,
                                 fontWeight: FontWeight.bold,
                                 letterSpacing: 5)),
-                        const SizedBox(height: 14),
-                        const _StoryModeToggle(),
                         const SizedBox(height: 14),
                         Wrap(
                           alignment: WrapAlignment.center,

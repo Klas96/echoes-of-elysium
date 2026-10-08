@@ -84,6 +84,15 @@ class Progression {
       health: 20,
       fireCooldown: 0.9,
     ),
+    'lantern_charm': GearItem(
+      id: 'lantern_charm',
+      name: 'Lantern Charm',
+      blurb: 'Colony glass that hums when Mira smiles.',
+      slot: GearSlot.relic,
+      health: 10,
+      damage: 2,
+      fireCooldown: 0.95,
+    ),
   };
 
   static SaveData get _d => SaveService.data;
@@ -147,6 +156,15 @@ class Progression {
       parts.add('+$pct% RATE');
     }
     return parts.isEmpty ? '—' : parts.join('  ·  ');
+  }
+
+  /// Buy catalog gear with glimmer (shop). Returns false if already owned or broke.
+  static bool buyWithGlimmer(String id, int price) {
+    final item = catalog[id];
+    if (item == null || inventory.contains(id)) return false;
+    if (!Bonds.spendGlimmer(price)) return false;
+    _grantGear(id);
+    return true;
   }
 
   /// Equip an owned item into its slot.

@@ -114,4 +114,13 @@ class Bonds {
     _d.glimmer += n;
     _changed();
   }
+
+  /// Spend glimmer. Returns false if the balance is too low.
+  static bool spendGlimmer(int n) {
+    if (n <= 0) return true;
+    if (_d.glimmer < n) return false;
+    _d.glimmer -= n;
+    _changed();
+    return true;
+  }
 }

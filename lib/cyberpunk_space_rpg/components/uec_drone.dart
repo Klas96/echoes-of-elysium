@@ -5,7 +5,6 @@ import 'custom_player.dart';
 import 'enemy_bullet.dart';
 import 'explosion_effect.dart';
 import '../game/progression.dart';
-import '../game/settings.dart';
 
 enum DroneKind {
   /// Balanced melee chase — the original UEC drone.
@@ -228,19 +227,13 @@ class UECDrone extends GameDecoration {
 
     final toPlayer =
         (player.position + player.size / 2) - (position + size / 2);
-    final dist =
-        GameSettings.storyMode.value ? double.infinity : toPlayer.length;
+    final dist = toPlayer.length;
 
     _updateState(dist);
     _act(dt, toPlayer, dist);
   }
 
   void _updateState(double dist) {
-    if (dist == double.infinity) {
-      _state = _DroneState.patrol;
-      return;
-    }
-
     switch (kind) {
       case DroneKind.sniper:
         if (dist > _stats.detectionRadius) {

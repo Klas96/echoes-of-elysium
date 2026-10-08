@@ -3,17 +3,23 @@ import 'package:bonfire/bonfire.dart';
 import 'package:flutter/material.dart';
 import '../audio/music_manager.dart';
 import '../game/game_state.dart';
+import '../game/travel.dart';
 
 class PortalComponent extends GameDecoration {
   static const double _radius = 28.0;
   final bool Function() canActivate;
+  final String overlayId;
   double _pulse = 0.0;
   bool _triggered = false;
   bool _near = false;
   static const double _nearRadius = 320.0;
 
-  PortalComponent(Vector2 position, {bool Function()? canActivate})
-      : canActivate = canActivate ?? (() => GameState.portalUnlocked.value),
+  PortalComponent(
+    Vector2 position, {
+    bool Function()? canActivate,
+    this.overlayId = 'portalReached',
+  })  : canActivate = canActivate ??
+            (() => Travel.portalUsable(GameState.level)),
         super(position: position, size: Vector2.all(_radius * 2));
 
   @override
@@ -21,7 +27,6 @@ class PortalComponent extends GameDecoration {
     super.update(dt);
     _pulse += dt * 3.0;
 
-    if (_triggered) return;
     final player = gameRef.player;
     if (player == null) return;
     final dist = ((player.position + player.size / 2) - (position + size / 2)).length;
@@ -29,11 +34,19 @@ class PortalComponent extends GameDecoration {
       _near = true;
       GameState.onNearPortal();
     }
+    // Allow re-entry after the player leaves (or closes the overlay).
+    if (_triggered) {
+      final overlayOpen = gameRef.overlays.isActive(overlayId);
+      if (!overlayOpen && dist >= _radius * 1.15) {
+        _triggered = false;
+      }
+      return;
+    }
     if (!canActivate()) return;
     if (dist < _radius) {
       _triggered = true;
       SfxManager().playPortal();
-      gameRef.overlays.add('portalReached');
+      gameRef.overlays.add(overlayId);
     }
   }
 

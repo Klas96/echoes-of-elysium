@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the three Bonfire/Tiled levels for Echoes of Elysium.
+"""Generate the Bonfire/Tiled levels for Echoes of Elysium.
 
     python3 tools/make_tiled_maps.py [out_dir] [--preview DIR]
     (needs numpy + Pillow: pip install numpy pillow)
@@ -15,6 +15,8 @@ only .json/.tsj), and writes:
   <out>/world.tmj   woods / starter   (tileset woods)
   <out>/world2.tmj  city              (tileset city)
   <out>/world3.tmj  cyberpunk ruins   (tileset cyberpunk)
+  <out>/world4.tmj  Gaia Core         (tileset core)
+  <out>/world5.tmj  Lantern Town hub  (tileset city)
   <out>/tilesets/<name>.png
   <preview>/preview_world*.png        (only with --preview: render + walkability)
 
@@ -259,8 +261,8 @@ class Level:
         self.buildings = []         # dicts: name, tx, ty (sprite top-left in tiles)
         self.seed = seed
 
-    def obj(self, kind, x, y, w, h, **props):
-        self.objects.append(dict(name=kind, x=float(x), y=float(y), w=float(w), h=float(h), props=props))
+    def obj(self, obj, x, y, w, h, **props):
+        self.objects.append(dict(name=obj, x=float(x), y=float(y), w=float(w), h=float(h), props=props))
 
     def stamp(self, name, x, y, layer=None):
         w, h, grid = self.ts.props[name]
@@ -575,10 +577,11 @@ SECRET_KINDS = {"glyph", "stash", "hidden", "moonflower"}
 # min centre distance from a checkpoint to each enemy kind (see validate)
 CP_CLEAR = dict(drone=260, sentinel=300)
 
-def place(lv, kind, tx, ty, **props):
-    """place an object whose CENTRE is at tile coords (tx, ty) (floats)"""
-    s = SZ[kind]
-    lv.obj(kind, round(tx * T - s / 2), round(ty * T - s / 2), s, s, **props)
+def place(lv, obj, tx, ty, **props):
+    """place an object whose CENTRE is at tile coords (tx, ty) (floats).
+    Extra kwargs become Tiled properties (e.g. kind='sniper', name='gaia')."""
+    s = SZ[obj]
+    lv.obj(obj, round(tx * T - s / 2), round(ty * T - s / 2), s, s, **props)
 
 def carve_route(lv, pts, half, mask=None):
     m = lv.floor if mask is None else mask
@@ -721,7 +724,7 @@ def map2():
     lv = Level(ts, 34, 46, seed=22)
     P = dict(spawn=(16.5, 4.5), echo7=(12.5, 7.5), h1=(17.5, 12.5), d1=(6.5, 17.5), arch=(17.5, 20.5),
              h2=(14.5, 21.5), d2=(25.5, 27), sentinel=(16.5, 29), h3=(17.5, 33), voss=(11.5, 37.5),
-             portal=(16.5, 41))
+             portal=(16.5, 41), town=(30.5, 4.5))
     road = np.zeros((lv.H, lv.W), bool)
     rect_carve(road, 15, 2, 19, 44)            # main avenue (asphalt) N-S
     rect_carve(road, 4, 16, 15, 19)            # west street to the drone yard
@@ -732,7 +735,7 @@ def map2():
     rect_carve(floor, 7, 25, 29, 35)           # Sentinel plaza (boss arena)
     rect_carve(floor, 22, 23, 30, 31)          # east lot (drone 2)
     rect_carve(floor, 8, 35, 13, 40)           # Voss alcove
-    rect_carve(floor, 9, 2, 25, 6)             # top street at the spawn
+    rect_carve(floor, 9, 2, 32, 7)             # top street + Lantern Town gate
     rect_carve(floor, 12, 39, 22, 44)          # portal square
     lv.floor = floor | road
     wall = clean_walls(~lv.floor)
@@ -793,10 +796,66 @@ def map2():
     place(lv, "fragment", 3.5, 17.5)
     place(lv, "drone", 5.0, 15.5, startAngle=0.4, kind="swarm")
     place(lv, "portal", *P["portal"])
+    place(lv, "portal", *P["town"], dest="town")
     place(lv, "checkpoint", *P["spawn"], label="Upper Street")
     place(lv, "checkpoint", P["h1"][0] - 1.5, P["h1"][1] + 1.0, label="Avenue")
     place(lv, "checkpoint", P["voss"][0] + 2.0, P["voss"][1] + 2.5, label="Portal Square")
+    place(lv, "checkpoint", *P["town"], label="Lantern Gate")
     lv.write("world2.tmj", "tilesets/city.png")
+    return ts
+
+# =============================================================== MAP 5: Lantern Town
+def map5():
+    """Peaceful colony hub off the City — vendor, rest, return travel."""
+    ts = Tileset("city")
+    lv = Level(ts, 28, 28, seed=55)
+    P = dict(spawn=(14, 5.5), mira=(10.5, 13.5), h1=(17.5, 12.5), portal=(14, 22.5),
+             stash=(20.5, 16.5))
+    road = np.zeros((lv.H, lv.W), bool)
+    rect_carve(road, 12, 3, 16, 25)            # market lane N-S
+    rect_carve(road, 6, 12, 22, 15)            # cross street
+    floor = np.zeros_like(road)
+    rect_carve(floor, 8, 3, 20, 25)            # main plaza
+    rect_carve(floor, 4, 10, 24, 17)           # market square
+    rect_carve(floor, 11, 20, 17, 26)          # portal court
+    lv.floor = floor | road
+    wall = clean_walls(~lv.floor)
+    lv.floor = ~wall
+    road &= lv.floor
+    road = clean_walls(road, border=0) & road
+    sidewalk = ~road
+    for y in range(lv.H):
+        for x in range(lv.W):
+            if wall[y, x]:
+                lv.ground[y, x] = blob(ts, "sidewalk-building", wall, x, y, lv.rng)
+            else:
+                lv.ground[y, x] = blob(ts, "road-sidewalk", sidewalk, x, y, lv.rng, exclude={4, 5, 6, 7, 8})
+    # warm plaza tiles in the market square
+    for y in range(11, 16):
+        for x in range(8, 20):
+            if not road[y, x] and not wall[y, x]:
+                lv.ground[y, x] = 12 if (x * 5 + y * 3) % 11 else 13
+    lv.keepout = road.copy()
+    lv.keepout_hard = np.zeros_like(wall)
+    for k, (x, y) in P.items():
+        disk_carve(lv.keepout, x, y, 2.6); disk_carve(lv.keepout_hard, x, y, 1.5)
+    lv.scatter(["street_lamp", "planter_small", "bench", "trash_bin", "bollard", "vending_machine"], 18)
+    lv.scatter(["planter_tree", "kiosk", "bus_stop"], 4)
+    for name, tx, ty in (("tea_house", 4, 8), ("noodle_shop", 19, 8), ("greenhouse", 4, 18)):
+        lv.building(name, tx, ty)
+    def reground5(x, y, w, rng):
+        if w[y, x]: return blob(ts, "sidewalk-building", w, x, y, rng)
+        return blob(ts, "road-sidewalk", ~road, x, y, rng, exclude={4, 5, 6, 7, 8})
+    lv.carve_lots(wall, [(3, 7, 9, 13), (18, 7, 24, 13), (3, 17, 9, 23)], reground5)
+    place(lv, "spawn", *P["spawn"])
+    place(lv, "npc", *P["mira"], name="mira", sprite="asha")
+    place(lv, "health", *P["h1"])
+    place(lv, "stash", *P["stash"], glimmer=15)
+    place(lv, "portal", *P["portal"])
+    place(lv, "checkpoint", *P["spawn"], label="Lantern Gate")
+    place(lv, "checkpoint", *P["mira"], label="Market Square")
+    place(lv, "checkpoint", *P["portal"], label="Return Portal")
+    lv.write("world5.tmj", "tilesets/city.png")
     return ts
 
 # =============================================================== MAP 3: cyberpunk ruins
@@ -858,8 +917,73 @@ def map3():
     lv.write("world3.tmj", "tilesets/cyberpunk.png")
     return ts
 
+# =============================================================== MAP 4: Gaia Core
+def map4():
+    """Sacred chamber under the ruins — activate the Core Record."""
+    ts = Tileset("core")
+    lv = Level(ts, 30, 36, seed=44)
+    P = dict(
+        spawn=(15, 4.5),
+        h1=(15, 11),
+        d1=(6.5, 17),
+        d2=(23.5, 17),
+        gaia=(15, 20),
+        h2=(15, 24),
+        d3=(23.5, 25),
+        portal=(15, 30),
+    )
+    edges = [
+        ("spawn", "h1"), ("h1", "gaia"), ("gaia", "portal"),
+        ("h1", "d1"), ("h1", "d2"), ("gaia", "h2"), ("gaia", "d3"),
+    ]
+    for a, b in edges:
+        seg_carve(lv.floor, P[a], P[b], 2.1)
+    for k, (x, y) in P.items():
+        r = 4.5 if k in ("spawn", "portal", "gaia") else 3.2
+        disk_carve(lv.floor, x, y, r)
+    # Slightly wider processional hall
+    rect_carve(lv.floor, 12, 6, 17, 30)
+    wall = clean_walls(~lv.floor)
+    lv.floor = ~wall
+    dais = np.zeros_like(wall)
+    disk_carve(dais, *P["portal"], 3.8)
+    disk_carve(dais, *P["gaia"], 2.8)
+    dais &= lv.floor
+    for y in range(lv.H):
+        for x in range(lv.W):
+            if dais[y, x]:
+                lv.ground[y, x] = blob(ts, "floor-dais", dais, x, y, lv.rng)
+            else:
+                lv.ground[y, x] = blob(ts, "floor-void", wall, x, y, lv.rng)
+    lv.keepout = np.zeros_like(wall)
+    lv.keepout_hard = np.zeros_like(wall)
+    for a, b in edges:
+        seg_carve(lv.keepout, P[a], P[b], 2.5)
+    for k, (x, y) in P.items():
+        disk_carve(lv.keepout, x, y, 2.8)
+        disk_carve(lv.keepout_hard, x, y, 1.6)
+    lv.scatter(
+        ["orb_pylon", "orb_pylon_large", "data_crystals", "energy_brazier",
+         "gold_glyph_stone", "memory_pedestal", "core_terminal", "core_console",
+         "broken_pillar", "lattice_panel", "root_bulb", "floor_ring_marker"],
+        22,
+    )
+    place(lv, "spawn", *P["spawn"])
+    place(lv, "npc", *P["gaia"], name="gaia")
+    place(lv, "health", *P["h1"])
+    place(lv, "health", *P["h2"])
+    place(lv, "drone", *P["d1"], startAngle=1.2, kind="sniper")
+    place(lv, "drone", *P["d2"], startAngle=4.0, kind="swarm")
+    place(lv, "drone", *P["d3"], startAngle=2.5, kind="shield")
+    place(lv, "portal", *P["portal"])
+    place(lv, "checkpoint", *P["spawn"], label="Core Threshold")
+    place(lv, "checkpoint", *P["h1"], label="Antechamber")
+    place(lv, "checkpoint", *P["h2"], label="Core Record")
+    lv.write("world4.tmj", "tilesets/core.png")
+    return ts
+
 if __name__ == "__main__":
     os.makedirs(os.path.join(OUT, "tilesets"), exist_ok=True)
     for n in ("woods", "city", "cyberpunk", "core"):
         shutil.copy(os.path.join(TSDIR, f"{n}.png"), os.path.join(OUT, "tilesets", f"{n}.png"))
-    map1(); map2(); map3()
+    map1(); map2(); map3(); map4(); map5()

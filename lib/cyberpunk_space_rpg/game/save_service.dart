@@ -38,8 +38,8 @@ class SavePoint {
 ///   "version": 1,
 ///   "savedAt": "2026-10-03T09:54:00.000Z",
 ///   "playTimeSeconds": 0,
-///   "mapId": "world",              // Tiled map file stem: world, world2, world3...
-///   "regionId": "woods",           // woods, city, ruins (later: route1, lantern_town...)
+///   "mapId": "world",              // Tiled map file stem: world, world2, world3, world4...
+///   "regionId": "woods",           // woods, city, ruins, core, town
 ///   "player": {"x": 0, "y": 0},    // null = use the map's spawn
 ///   "health": 100,
 ///   "checkpoint": {"x": 0, "y": 0},// last respawn point on mapId, null = spawn
@@ -57,7 +57,7 @@ class SavePoint {
 ///   "equipped": {"rifle": "pulse_optic", "suit": "scrap_plating"},
 ///   "challenges": {"riddle_old_colonist": {"done": true, "best": 41.2}},
 ///   "dayTime": 0.3,                // 0..1 fraction of the day cycle (0 = midnight)
-///   "settings": {"storyMode": false}
+///   "settings": {}
 /// }
 /// ```
 /// Unknown keys are kept in [extra] so an older build never drops data a newer
@@ -300,7 +300,7 @@ class SaveService {
   }
 
   /// Starts a fresh playthrough and overwrites the stored save. Settings
-  /// (Story Mode) carry over.
+  /// carry over.
   static Future<void> startNewGame() async {
     _debounce?.cancel();
     final settings = Map<String, dynamic>.from(data.settings);

@@ -21,7 +21,7 @@ class GameState {
   /// Shown when the game is finished.
   static const endingText = 'The Aetherians live on.';
 
-  // 1 woods, 2 city, 3 ruins (0 before any map is ready).
+  // 1 woods, 2 city, 3 ruins, 4 core, 5 lantern town (0 before any map is ready).
   static int _level = 0;
   static int _step = 0;
 
@@ -31,10 +31,35 @@ class GameState {
   static const _l2Echo = 0, _l2Archivist = 1, _l2Voss = 2, _l2Sentinel = 3, _l2Core = 4;
   // Level 3 steps
   static const _l3Ruins = 0, _l3Light = 1;
+  // Level 4 steps
+  static const _l4Enter = 0, _l4Gaia = 1, _l4Activate = 2;
+  // Level 5 steps (peaceful hub)
+  static const _l5Town = 0;
 
   /// Tiled map stem and region id for each level, as stored in the save.
-  static const mapIds = {1: 'world', 2: 'world2', 3: 'world3'};
-  static const regionIds = {1: 'woods', 2: 'city', 3: 'ruins'};
+  static const mapIds = {
+    1: 'world',
+    2: 'world2',
+    3: 'world3',
+    4: 'world4',
+    5: 'world5',
+  };
+  static const regionIds = {
+    1: 'woods',
+    2: 'city',
+    3: 'ruins',
+    4: 'core',
+    5: 'town',
+  };
+
+  static bool hasVisitedRegion(String regionId) =>
+      SaveService.data.flag('visited:$regionId');
+
+  static void markRegionVisited(String regionId) {
+    if (regionId.isEmpty || hasVisitedRegion(regionId)) return;
+    SaveService.data.setFlag('visited:$regionId');
+    _progress();
+  }
 
   static int get level => _level;
   static int get step => _step;
@@ -62,6 +87,12 @@ class GameState {
         portalUnlocked.value = d.flag('portalUnlocked:world') || d.fragments >= fragmentsRequired;
       case 2:
         portalUnlocked.value = d.flag('portalUnlocked:world2') || d.flag('sentinelDefeated');
+      case 3:
+        portalUnlocked.value = true;
+      case 4:
+        portalUnlocked.value = d.flag('portalUnlocked:world4');
+      case 5:
+        portalUnlocked.value = true;
       default:
         portalUnlocked.value = true;
     }
@@ -88,6 +119,20 @@ class GameState {
   static void resetMap3() {
     _level = 3;
     _step = _l3Ruins;
+    portalUnlocked.value = true;
+    _refresh();
+  }
+
+  static void resetMap4() {
+    _level = 4;
+    _step = _l4Enter;
+    portalUnlocked.value = false;
+    _refresh();
+  }
+
+  static void resetMap5() {
+    _level = 5;
+    _step = _l5Town;
     portalUnlocked.value = true;
     _refresh();
   }
@@ -121,7 +166,14 @@ class GameState {
     }
     switch (npc) {
       case 'gaia':
-        _advance(1, _l1Asha);
+        if (_level == 4) {
+          portalUnlocked.value = true;
+          _advance(4, _l4Activate);
+          _refresh();
+          _progress();
+        } else {
+          _advance(1, _l1Asha);
+        }
       case 'asha':
         _advance(1, _l1Fragments);
       case 'echo7':
@@ -130,6 +182,8 @@ class GameState {
         _advance(2, _l2Voss);
       case 'voss':
         _advance(2, _l2Sentinel);
+      case 'mira':
+        break;
     }
   }
 
@@ -145,7 +199,10 @@ class GameState {
   }
 
   /// The player is close to the level's portal.
-  static void onNearPortal() => _advance(3, _l3Light);
+  static void onNearPortal() {
+    if (_level == 3) _advance(3, _l3Light);
+    if (_level == 4) _advance(4, _l4Gaia);
+  }
 
   static void _advance(int level, int step) {
     if (_level != level || step <= _step) return;
@@ -167,12 +224,21 @@ class GameState {
         }
         return _step >= _l1Asha ? 'Find Asha by the old trail' : 'Listen to Gaia';
       case 2:
-        if (portalUnlocked.value || _step >= _l2Core) return 'Follow the path to the Core';
+        if (portalUnlocked.value || _step >= _l2Core) return 'Follow the path through the City';
         if (_step >= _l2Sentinel) return 'Quiet the UEC Sentinel';
         if (_step >= _l2Voss) return 'Hear what Commander Voss wants';
         return _step >= _l2Archivist ? 'Seek out the Archivist' : 'Meet Echo-7';
       case 3:
-        return _step >= _l3Light ? 'Reach the light at the Extraction Point' : 'Find a way through the ruins';
+        return _step >= _l3Light
+            ? 'Descend to Gaia\'s Core'
+            : 'Fight through the ruins toward the Core';
+      case 4:
+        if (portalUnlocked.value || _step >= _l4Activate) {
+          return 'Activate the Core Record';
+        }
+        return _step >= _l4Gaia ? 'Speak with Gaia at the dais' : 'Enter Gaia\'s Core';
+      case 5:
+        return 'Browse Mira\'s stall, then take the portal when ready';
     }
     return '';
   }

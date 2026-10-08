@@ -2,7 +2,6 @@ import 'dart:math';
 import 'package:bonfire/bonfire.dart';
 import 'package:flutter/material.dart';
 import 'custom_player.dart';
-import '../game/settings.dart';
 
 /// Orange UEC pulse fired by sniper drones.
 class EnemyBullet extends GameDecoration {
@@ -24,10 +23,6 @@ class EnemyBullet extends GameDecoration {
   void update(double dt) {
     super.update(dt);
     if (_hit) return;
-    if (GameSettings.storyMode.value) {
-      removeFromParent();
-      return;
-    }
 
     final step = _velocity * min(dt, 1 / 30);
     position += step;

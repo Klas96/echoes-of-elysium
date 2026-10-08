@@ -10,7 +10,6 @@ import 'walk_sheet.dart';
 import 'building.dart';
 import '../audio/music_manager.dart';
 import '../game/progression.dart';
-import '../game/settings.dart';
 
 class CustomPlayer extends SimplePlayer with BlockMovementCollision {
   static const double sizePlayer = 32;
@@ -56,11 +55,10 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision {
   bool get isRespawning => _respawnT >= 0;
   bool get isInvulnerable => isRespawning || _grace > 0;
 
-  /// All enemy damage goes through here. Story Mode, the respawn fade and
-  /// the short grace period after it ignore damage. At 0 HP Kaela is pulled
-  /// back to the last checkpoint instead of a game over.
+  /// All enemy damage goes through here. The respawn fade and the short
+  /// grace period after it ignore damage. At 0 HP Kaela is pulled back to
+  /// the last checkpoint instead of a game over.
   static void applyDamage(int amount) {
-    if (GameSettings.storyMode.value) return;
     final p = current;
     if (p != null && p.isInvulnerable) return;
     final hp = (healthNotifier.value - amount).clamp(0, maxHealth);

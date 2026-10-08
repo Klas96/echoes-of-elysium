@@ -32,7 +32,7 @@ void main() {
           'race_courier': {'done': true, 'best': 41.2}
         },
         dayTime: 0.75,
-        settings: {'storyMode': true},
+        settings: {'locale': 'en'},
         playTimeSeconds: 125,
       );
 
@@ -76,7 +76,7 @@ void main() {
     expect(SaveService.data.mapId, 'world');
     expect(SaveService.data.collected, isEmpty);
     expect(SaveService.data.glimmer, 0);
-    expect(SaveService.data.settings['storyMode'], isTrue);
+    expect(SaveService.data.settings['locale'], 'en');
   });
 
   test('lenient parsing: unknown keys survive, bad fields fall back', () {
