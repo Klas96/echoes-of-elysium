@@ -19,19 +19,21 @@ import '../creatures/bonds.dart';
 import '../creatures/creature_components.dart';
 import '../creatures/creature_species.dart';
 import '../creatures/day_cycle.dart';
+import '../creatures/examine.dart';
 import '../creatures/interaction.dart';
 import '../creatures/journal_ui.dart';
 import '../creatures/obstacles.dart';
 import '../ui/cutscenes.dart';
 import '../ui/equipment_ui.dart';
 import '../ui/shop_ui.dart';
+import 'adventure.dart';
 import 'game_state.dart';
 import 'progression.dart';
 import 'memories.dart';
 import 'save_service.dart';
 import 'travel.dart';
 // ---------------------------------------------------------------------------
-// NPC dialogue data
+// NPC dialogue data (choices / key items resolve at talk time)
 // ---------------------------------------------------------------------------
 
 const _gaia = NpcDialogue(
@@ -45,90 +47,289 @@ const _gaia = NpcDialogue(
   voicePaths: ['audio/voices/gaia_1.mp3', 'audio/voices/gaia_2.mp3', 'audio/voices/gaia_3.mp3'],
 );
 
-const _asha = NpcDialogue(
-  name: 'ASHA  ·  EX-UEC',
-  color: Color(0xFFFFAA00),
-  lines: [
-    'Keep moving. Name\'s Asha — ex-UEC. I deserted after they ordered me to erase a "sympathetic" AI on Station Seven.',
-    'Three hundred colonists went dark when that lattice woke. Voss still carries their names. That\'s why he hunts Gaia.',
-    'I kept one UEC override key. If Gaia turns out to be a lie, I can still cut her signal. Don\'t make me use it.',
-  ],
-  voicePaths: ['audio/voices/asha_1.mp3', 'audio/voices/asha_2.mp3', 'audio/voices/asha_3.mp3'],
-);
+/// Core Gaia: different lines + distinct VO files (Lily) from forest Gaia (Ava).
+NpcDialogue _gaiaCoreDialogue() {
+  final archive = Adventure.openedArchive;
+  final orders = Adventure.readUecOrders;
+  return NpcDialogue(
+    name: 'GAIA  ·  CORE',
+    color: const Color(0xFF00FF88),
+    lines: [
+      archive
+          ? 'You found the way — and the archive draft. You already know we voted in fear as much as hope.'
+          : 'You found the way. This is the Core Record — and the moment you decide whether I deserve to wake.',
+      orders
+          ? 'Voss\'s orders are on your slate. He is not wrong to fear lattices — and he is not clean of that fear either.'
+          : 'Voss is not wrong to fear lattices. Station Seven died. I cannot promise your colony feels no tremor when I remember.',
+      'I chose for you once, when you were six. I will not choose again. Step into the light only if you choose me back.',
+    ],
+    voicePaths: archive || orders
+        ? const []
+        : const [
+            'audio/voices/gaia_core_1.mp3',
+            'audio/voices/gaia_core_2.mp3',
+            'audio/voices/gaia_core_3.mp3',
+          ],
+  );
+}
 
-const _echo7 = NpcDialogue(
-  name: 'ECHO-7  ·  AETHERIAN',
-  color: Color(0xFFCC66FF),
-  lines: [
-    'Traveller... you carry the resonance of one who seeks. We have waited ten thousand years for such a signal.',
-    'Not all of us chose the lattice freely. Some were afraid. Some were dying with our sun and had nowhere else to go.',
-    'Help Gaia remember us honestly — the peace and the fear — or do not remember us at all.',
-  ],
-  voicePaths: ['audio/voices/echo7_1.mp3', 'audio/voices/echo7_2.mp3', 'audio/voices/echo7_3.mp3'],
-);
+NpcDialogue _ashaDialogue() {
+  if (Adventure.readUecOrders) {
+    return const NpcDialogue(
+      name: 'ASHA  ·  EX-UEC',
+      color: Color(0xFFFFAA00),
+      lines: [
+        'You burned the key on the truth. Good.',
+        '"Collateral risk accepted." That\'s the line that made me run. Take it to the Core — Voss needs to hear it from someone who still believes in people.',
+      ],
+      voicePaths: [],
+    );
+  }
+  final hasKey = Bonds.hasItem('uec_override') || Bonds.usedItem('uec_override');
+  return NpcDialogue(
+    name: 'ASHA  ·  EX-UEC',
+    color: const Color(0xFFFFAA00),
+    lines: hasKey
+        ? [
+            'You\'ve got the override. Find a UEC field terminal if you want the real Station Seven orders.',
+            'I\'m still watching. Trust Gaia if you must — but keep your eyes open.',
+          ]
+        : [
+            'Keep moving. Name\'s Asha — ex-UEC. I deserted after they ordered me to erase a "sympathetic" AI on Station Seven.',
+            'Three hundred colonists went dark when that lattice woke. Voss still carries their names. That\'s why he hunts Gaia.',
+            'I kept one UEC override key. If Gaia turns out to be a lie, I can still cut her signal. Don\'t make me use it.',
+          ],
+    voicePaths: hasKey
+        ? const []
+        : const ['audio/voices/asha_1.mp3', 'audio/voices/asha_2.mp3', 'audio/voices/asha_3.mp3'],
+    choices: hasKey
+        ? const []
+        : const [
+            DialogueChoice(
+              label: 'ASK FOR THE OVERRIDE KEY',
+              giveItem: 'uec_override',
+              discoverClue: 'override_key',
+              requireNoItem: 'uec_override',
+              replyLines: [
+                '...Alright. One key. Use it on a UEC terminal — not on her.',
+                'If you burn it for the truth, good. If you keep it as insurance... I understand.',
+              ],
+            ),
+            DialogueChoice(
+              label: 'TELL HER YOU BELIEVE GAIA',
+              setFlag: 'said_trust_gaia',
+              discoverClue: 'asha_warning',
+              requireFlagUnset: 'said_trust_gaia',
+              replyLines: [
+                '...Then prove it. Don\'t make Station Seven happen again.',
+              ],
+            ),
+          ],
+  );
+}
 
-const _archivist = NpcDialogue(
-  name: 'THE ARCHIVIST  ·  AETHERIAN',
-  color: Color(0xFFFFDD44),
-  lines: [
-    'The Core Record lies below us. Gaia\'s first memory — the moment we chose to merge our consciousness with this world.',
-    'Commander Voss seeks to delete it. He believes waking her will kill your colony the way Station Seven died.',
-    'Your neural signature matches the Aetherian activation code, Kaela. Only you can open the Core — and decide what truth he hears.',
-  ],
-  voicePaths: ['audio/voices/archivist_1.mp3', 'audio/voices/archivist_2.mp3', 'audio/voices/archivist_3.mp3'],
-);
+NpcDialogue _echo7Dialogue() {
+  return NpcDialogue(
+    name: 'ECHO-7  ·  AETHERIAN',
+    color: const Color(0xFFCC66FF),
+    lines: const [
+      'Traveller... you carry the resonance of one who seeks. We have waited ten thousand years for such a signal.',
+      'Not all of us chose the lattice freely. Some were afraid. Some were dying with our sun and had nowhere else to go.',
+      'Help Gaia remember us honestly — the peace and the fear — or do not remember us at all.',
+    ],
+    voicePaths: const ['audio/voices/echo7_1.mp3', 'audio/voices/echo7_2.mp3', 'audio/voices/echo7_3.mp3'],
+    choices: const [
+      DialogueChoice(
+        label: 'ASK ABOUT THE FEAR',
+        discoverClue: 'echo_split',
+        setFlag: 'asked_echo_fear',
+        requireFlagUnset: 'asked_echo_fear',
+        replyLines: [
+          'The vote was a whisper. Peace won — barely. Remember both, or you remember a lie.',
+        ],
+      ),
+      DialogueChoice(
+        label: 'PROMISE TO REMEMBER BOTH',
+        setFlag: 'promised_echo',
+        requireFlagUnset: 'promised_echo',
+        replyLines: [
+          'Then walk with open eyes. The Archivist holds a seal you may need.',
+        ],
+      ),
+    ],
+  );
+}
 
-const _voss = NpcDialogue(
-  name: 'COMMANDER VOSS  ·  UEC',
-  color: Color(0xFFFF4444),
-  lines: [
-    'Doctor Kaela Osei. Last chance. Hand over the fragments and walk away with your clearance intact.',
-    'Station Seven went dark the last time a lattice woke. I will not bury another colony for an alien ghost story.',
-    'If you reach the Core, understand this: I am not erasing history. I am choosing the living over the dead.',
-  ],
-  voicePaths: ['audio/voices/voss_1.mp3', 'audio/voices/voss_2.mp3', 'audio/voices/voss_3.mp3'],
-);
+NpcDialogue _archivistDialogue() {
+  if (Adventure.openedArchive) {
+    return const NpcDialogue(
+      name: 'THE ARCHIVIST  ·  AETHERIAN',
+      color: Color(0xFFFFDD44),
+      lines: [
+        'You read the draft. Good. Carry both the fear and the hope into the Core — or Voss will only hear a weapon.',
+        'The vote was a whisper. Let your waking of Gaia be louder — and kinder.',
+      ],
+      voicePaths: [],
+    );
+  }
+  final gaveSeal =
+      Bonds.hasItem('archive_seal') || Bonds.usedItem('archive_seal');
+  return NpcDialogue(
+    name: 'THE ARCHIVIST  ·  AETHERIAN',
+    color: const Color(0xFFFFDD44),
+    lines: [
+      'The Core Record lies below us. Gaia\'s first memory — the moment we chose to merge our consciousness with this world.',
+      'Commander Voss seeks to delete it. He believes waking her will kill your colony the way Station Seven died.',
+      gaveSeal
+          ? 'The library seal is yours. Read what we wrote before fear had a name — then decide what Voss hears.'
+          : 'Your neural signature matches the Aetherian activation code, Kaela. Only you can open the Core — and decide what truth he hears.',
+    ],
+    voicePaths: gaveSeal
+        ? const []
+        : const [
+            'audio/voices/archivist_1.mp3',
+            'audio/voices/archivist_2.mp3',
+            'audio/voices/archivist_3.mp3',
+          ],
+    choices: gaveSeal
+        ? const [
+            DialogueChoice(
+              label: 'ASK ABOUT STATION SEVEN',
+              discoverClue: 'station_seven',
+              setFlag: 'asked_archivist_s7',
+              requireFlagUnset: 'asked_archivist_s7',
+              replyLines: [
+                'Your coalition woke a lattice without consent. We asked. That difference is everything — and also nothing, if the dead cannot speak.',
+              ],
+            ),
+          ]
+        : const [
+            DialogueChoice(
+              label: 'ASK FOR THE ARCHIVE SEAL',
+              giveItem: 'archive_seal',
+              discoverClue: 'archivist_seal',
+              requireNoItem: 'archive_seal',
+              replyLines: [
+                'Take it. The library faces this avenue. Inside is the draft of our first memory — not the Core, but the argument that made it.',
+              ],
+            ),
+            DialogueChoice(
+              label: 'ASK ABOUT STATION SEVEN',
+              discoverClue: 'station_seven',
+              setFlag: 'asked_archivist_s7',
+              requireFlagUnset: 'asked_archivist_s7',
+              replyLines: [
+                'Your coalition woke a lattice without consent. We asked. That difference is everything — and also nothing, if the dead cannot speak.',
+              ],
+            ),
+          ],
+  );
+}
 
-// ---------------------------------------------------------------------------
-// Tiled object layer -> gameplay components
-// ---------------------------------------------------------------------------
+NpcDialogue _vossDialogue() {
+  if (Adventure.readUecOrders) {
+    return NpcDialogue(
+      name: 'COMMANDER VOSS  ·  UEC',
+      color: const Color(0xFFFF4444),
+      lines: const [
+        'You cracked a field terminal. Those orders were classified for a reason, Doctor.',
+        'Collateral risk accepted. My signature. I know what I signed after Seven.',
+        'If you still walk into the Core, bring me something truer than a ghost story — or we end the same way.',
+      ],
+      voicePaths: const [],
+      choices: [
+        if (!Adventure.flag('confronted_voss_orders'))
+          const DialogueChoice(
+            label: 'CONFRONT HIM WITH THE ORDERS',
+            setFlag: 'confronted_voss_orders',
+            replyLines: [
+              '...I wrote that line so no one else would have to. It did not save them.',
+              'Go. If your Gaia is different, prove it. If she is not — I will finish what I started.',
+            ],
+          ),
+        if (!Adventure.flag('refused_voss'))
+          const DialogueChoice(
+            label: 'REFUSE TO HAND OVER FRAGMENTS',
+            setFlag: 'refused_voss',
+            replyLines: [
+              'Then we are finished talking. The wipe is already queued.',
+            ],
+          ),
+      ],
+    );
+  }
+  return NpcDialogue(
+    name: 'COMMANDER VOSS  ·  UEC',
+    color: const Color(0xFFFF4444),
+    lines: const [
+      'Doctor Kaela Osei. Last chance. Hand over the fragments and walk away with your clearance intact.',
+      'Station Seven went dark the last time a lattice woke. I will not bury another colony for an alien ghost story.',
+      'If you reach the Core, understand this: I am not erasing history. I am choosing the living over the dead.',
+    ],
+    voicePaths: const ['audio/voices/voss_1.mp3', 'audio/voices/voss_2.mp3', 'audio/voices/voss_3.mp3'],
+    choices: const [
+      DialogueChoice(
+        label: 'ASK WHY HE HUNTS GAIA',
+        discoverClue: 'voss_motive',
+        setFlag: 'asked_voss_why',
+        requireFlagUnset: 'asked_voss_why',
+        replyLines: [
+          'I signed the quarantine after Seven. I still hear the silence on that channel. Walk away, Doctor.',
+        ],
+      ),
+      DialogueChoice(
+        label: 'REFUSE TO HAND OVER FRAGMENTS',
+        setFlag: 'refused_voss',
+        requireFlagUnset: 'refused_voss',
+        replyLines: [
+          'Then we are finished talking. The wipe is already queued. Pray your ghost is worth three hundred more names.',
+        ],
+      ),
+    ],
+  );
+}
 
-const _gaiaCore = NpcDialogue(
-  name: 'GAIA  ·  CORE',
-  color: Color(0xFF00FF88),
-  lines: [
-    'You found the way. This is the Core Record — and the moment you decide whether I deserve to wake.',
-    'Voss is not wrong to fear lattices. Station Seven died. I cannot promise your colony feels no tremor when I remember.',
-    'I chose for you once, when you were six. I will not choose again. Step into the light only if you choose me back.',
-  ],
-  voicePaths: ['audio/voices/gaia_core_1.mp3', 'audio/voices/gaia_core_2.mp3', 'audio/voices/gaia_core_3.mp3'],
-);
-
-const _mira = NpcDialogue(
-  name: 'MIRA  ·  COLONY VENDOR',
-  color: Color(0xFFFFE08A),
-  lines: [
-    'Lantern Town keeps its lamps lit for travellers like you. UEC patrols rarely bother us here.',
-    'I trade glimmer for gear — scrap plating, optics, charms from the old colony.',
-    'Browse the stall whenever you like. The return portal is south when you\'re ready to leave.',
-  ],
-  voicePaths: [],
-);
-
-const _npcDialogues = <String, NpcDialogue>{
-  'gaia': _gaia,
-  'asha': _asha,
-  'echo7': _echo7,
-  'archivist': _archivist,
-  'voss': _voss,
-  'mira': _mira,
-};
+NpcDialogue _miraDialogue() {
+  return NpcDialogue(
+    name: 'MIRA  ·  COLONY VENDOR',
+    color: const Color(0xFFFFE08A),
+    lines: const [
+      'Lantern Town keeps its lamps lit for travellers like you. UEC patrols rarely bother us here.',
+      'I trade glimmer for gear — scrap plating, optics, charms from the old colony.',
+      'Browse the stall whenever you like. The return portal is south when you\'re ready to leave.',
+    ],
+    voicePaths: const [],
+    choices: const [
+      DialogueChoice(
+        label: 'ASK ABOUT THE ARCHIVE',
+        discoverClue: 'mira_rumour',
+        setFlag: 'asked_mira_archive',
+        requireFlagUnset: 'asked_mira_archive',
+        replyLines: [
+          'Traders say drones avoid the old archive walls. Something in there still hums on Aetherian frequencies.',
+        ],
+      ),
+    ],
+  );
+}
 
 NpcDialogue _dialogueFor(String mapId, String name) {
-  if (mapId == 'world4' && name == 'gaia') return _gaiaCore;
-  final d = _npcDialogues[name];
-  if (d == null) throw ArgumentError('Unknown npc name "$name" in Tiled map');
-  return d;
+  switch (name) {
+    case 'gaia':
+      return mapId == 'world4' ? _gaiaCoreDialogue() : _gaia;
+    case 'asha':
+      return _ashaDialogue();
+    case 'echo7':
+      return _echo7Dialogue();
+    case 'archivist':
+      return _archivistDialogue();
+    case 'voss':
+      return _vossDialogue();
+    case 'mira':
+      return _miraDialogue();
+    default:
+      throw ArgumentError('Unknown npc name "$name" in Tiled map');
+  }
 }
 
 double _numProp(TiledObjectProperties p, String key, [double fallback = 0]) {
@@ -150,16 +351,44 @@ Map<String, ObjectBuilder> _mapObjects(String mapId) => {
       'portal': (p) {
         final dest = (p.others['dest'] ?? '').toString();
         if (dest == 'town') {
-          return PortalComponent(p.position, canActivate: () => true);
+          // Side gate: only Lantern Town — not the full travel menu.
+          return PortalComponent(
+            p.position,
+            canActivate: () => true,
+            overlayId: 'portalTown',
+          );
         }
         return PortalComponent(p.position);
       },
       'npc': (p) {
         final name = (p.others['name'] ?? '').toString().toLowerCase();
         final sprite = (p.others['sprite'] ?? name).toString().toLowerCase();
-        final dialogue = _dialogueFor(mapId, name);
         return NpcCharacter(p.position,
-            dialogue: dialogue, spritePath: 'sprites/npc_$sprite.png', npcKey: name);
+            dialogueOf: () => _dialogueFor(mapId, name),
+            spritePath: 'sprites/npc_$sprite.png',
+            npcKey: name);
+      },
+      'examine': (p) {
+        final id = (p.others['id'] ?? _pickupId(mapId, 'examine', p.position)).toString();
+        return ExamineHotspot(
+          p.position,
+          id: id,
+          title: (p.others['title'] ?? 'EXAMINE').toString(),
+          text: (p.others['text'] ?? '...').toString(),
+          clueId: () {
+            final c = (p.others['clue'] ?? '').toString();
+            return c.isEmpty ? null : c;
+          }(),
+          requiresItem: () {
+            final i = (p.others['item'] ?? '').toString();
+            return i.isEmpty ? null : i;
+          }(),
+          consumeItem: p.others['consume'] == true || p.others['consume'] == 'true',
+          setFlag: () {
+            final f = (p.others['flag'] ?? '').toString();
+            return f.isEmpty ? null : f;
+          }(),
+        );
       },
       'fragment': (p) {
         final id = _pickupId(mapId, 'fragment', p.position);
@@ -861,6 +1090,7 @@ class Map2GameScreen extends StatelessWidget {
             overlayBuilderMap: {
               'portalReached': (ctx, game) =>
                   _PortalOverlay(game: game, fromLevel: 2),
+              'portalTown': (ctx, game) => _TownPortalOverlay(game: game),
             },
             onReady: (game) {
               _startLevel(game, 2);
@@ -1111,11 +1341,34 @@ class _NpcDialogueLayerState extends State<_NpcDialogueLayer> {
     }
   }
 
+  void _pickChoice(DialogueChoice choice) {
+    final d = _dialogue;
+    if (d == null) return;
+    choice.apply();
+    SfxManager().stopVoice();
+    if (choice.replyLines.isEmpty) {
+      _closeDialogue();
+      return;
+    }
+    final reply = NpcDialogue(
+      name: d.name,
+      color: d.color,
+      lines: choice.replyLines,
+      voicePaths: const [],
+    );
+    NpcCharacter.activeDialogue.value = reply;
+    setState(() {
+      _dialogue = reply;
+      _line = 0;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final d = _dialogue;
     if (d == null) return const SizedBox.shrink();
     final isLast = _line >= d.lines.length - 1;
+    final choices = isLast ? d.visibleChoices : const <DialogueChoice>[];
     return Positioned(
       bottom: 24, left: 24, right: 24,
       child: Center(
@@ -1139,13 +1392,30 @@ class _NpcDialogueLayerState extends State<_NpcDialogueLayer> {
                 const SizedBox(height: 10),
                 Text(d.lines[_line],
                     style: const TextStyle(color: Colors.white70, fontSize: 15, height: 1.7)),
-                const SizedBox(height: 16),
+                if (choices.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  for (final c in choices) ...[
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: _CyberButton(
+                        label: c.label,
+                        color: d.color,
+                        filled: true,
+                        onTap: () => _pickChoice(c),
+                      ),
+                    ),
+                  ],
+                ],
+                const SizedBox(height: 8),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     TextButton(
                       onPressed: _closeDialogue,
-                      child: const Text('SKIP', style: TextStyle(color: Colors.white24, fontSize: 11)),
+                      child: Text(
+                        choices.isNotEmpty ? 'LEAVE' : 'SKIP',
+                        style: const TextStyle(color: Colors.white24, fontSize: 11),
+                      ),
                     ),
                     const SizedBox(width: 8),
                     if (isLast && d.name.startsWith('MIRA')) ...[
@@ -1160,11 +1430,12 @@ class _NpcDialogueLayerState extends State<_NpcDialogueLayer> {
                       ),
                       const SizedBox(width: 8),
                     ],
-                    _CyberButton(
-                      label: isLast ? 'CLOSE' : 'NEXT ›',
-                      color: d.color,
-                      onTap: _advance,
-                    ),
+                    if (choices.isEmpty)
+                      _CyberButton(
+                        label: isLast ? 'CLOSE' : 'NEXT ›',
+                        color: d.color,
+                        onTap: _advance,
+                      ),
                   ],
                 ),
               ],
@@ -1478,20 +1749,41 @@ class _PortalOverlay extends StatelessWidget {
   final int fromLevel;
   const _PortalOverlay({required this.game, required this.fromLevel});
 
+  Future<void> _go(BuildContext context, TravelDest d) async {
+    game.overlays.remove('portalReached');
+    await _travelTo(context, d);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final dests = Travel.availableFrom(fromLevel);
+    final menu = Travel.menuFrom(fromLevel);
+    final cont = menu.continueTo;
+    final returns = menu.returns;
     final here = Travel.byLevel(fromLevel);
     final canActivateCore = fromLevel == 4 &&
         GameState.portalUnlocked.value &&
         !SaveService.data.flag('completed');
-    // Scrollable + scaled title so it never overflows a phone in landscape.
+    final empty = cont == null && returns.isEmpty && !canActivateCore;
+
+    String subtitle;
+    if (canActivateCore && cont == null && returns.isEmpty) {
+      subtitle = 'The Core Record is ready.';
+    } else if (cont != null && returns.isEmpty) {
+      subtitle = 'Path open.';
+    } else if (cont != null) {
+      subtitle = 'Continue the story — or step back to a place you know.';
+    } else if (returns.length == 1) {
+      subtitle = 'Return when you are ready.';
+    } else {
+      subtitle = here == null ? 'Choose where to go.' : 'Return to a place you know.';
+    }
+
     return SafeArea(
       child: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Container(
-            constraints: const BoxConstraints(maxWidth: 520),
+            constraints: const BoxConstraints(maxWidth: 420),
             padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 22),
             decoration: BoxDecoration(
               color: Colors.black.withOpacity(0.88),
@@ -1512,16 +1804,18 @@ class _PortalOverlay extends StatelessWidget {
                           fontWeight: FontWeight.bold,
                           letterSpacing: 4)),
                 ),
+                if (here != null) ...[
+                  const SizedBox(height: 4),
+                  Text(here.title,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.white38, fontSize: 11, letterSpacing: 1)),
+                ],
                 const SizedBox(height: 6),
-                Text(
-                  here == null
-                      ? 'Choose a destination.'
-                      : 'Standing in ${here.title}. Travel to any unlocked region.',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white60, fontSize: 12, height: 1.5),
-                ),
+                Text(subtitle,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.white60, fontSize: 12, height: 1.5)),
                 const SizedBox(height: 16),
-                if (dests.isEmpty && !canActivateCore)
+                if (empty)
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 12),
                     child: Text(
@@ -1530,18 +1824,7 @@ class _PortalOverlay extends StatelessWidget {
                       style: TextStyle(color: Colors.white38, fontSize: 13, height: 1.5),
                     ),
                   ),
-                ...dests.map((d) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: _TravelDestButton(
-                        dest: d,
-                        onTap: () async {
-                          game.overlays.remove('portalReached');
-                          await _travelTo(context, d);
-                        },
-                      ),
-                    )),
                 if (canActivateCore) ...[
-                  const SizedBox(height: 4),
                   _CyberButton(
                     label: 'ACTIVATE CORE RECORD',
                     filled: true,
@@ -1551,6 +1834,34 @@ class _PortalOverlay extends StatelessWidget {
                       await _activateCoreRecord(context);
                     },
                   ),
+                  if (cont != null || returns.isNotEmpty) const SizedBox(height: 14),
+                ],
+                if (cont != null)
+                  _TravelDestButton(
+                    label: 'CONTINUE TO ${cont.title.toUpperCase()}',
+                    blurb: cont.blurb,
+                    primary: true,
+                    onTap: () => _go(context, cont),
+                  ),
+                if (returns.isNotEmpty) ...[
+                  if (cont != null || canActivateCore) ...[
+                    const SizedBox(height: 14),
+                    const Text('RETURN',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                            color: Colors.white30,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 2)),
+                    const SizedBox(height: 8),
+                  ],
+                  ...returns.map((d) => Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: _TravelDestButton(
+                          label: d.title,
+                          onTap: () => _go(context, d),
+                        ),
+                      )),
                 ],
                 const SizedBox(height: 12),
                 Center(
@@ -1573,10 +1884,84 @@ class _PortalOverlay extends StatelessWidget {
   }
 }
 
+/// City side-gate: only Lantern Town, no full travel list.
+class _TownPortalOverlay extends StatelessWidget {
+  final BonfireGame game;
+  const _TownPortalOverlay({required this.game});
+
+  @override
+  Widget build(BuildContext context) {
+    final town = Travel.byLevel(5)!;
+    return SafeArea(
+      child: Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 380),
+          margin: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 22),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.88),
+            border: Border.all(color: const Color(0xFFFFE08A), width: 2),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text('LANTERN GATE',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      color: Color(0xFFFFE08A),
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 3)),
+              const SizedBox(height: 8),
+              const Text(
+                'A quiet side path into Lantern Town — Mira\'s market, rest, and gear.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white60, fontSize: 12, height: 1.5),
+              ),
+              const SizedBox(height: 18),
+              _TravelDestButton(
+                label: 'ENTER LANTERN TOWN',
+                blurb: town.blurb,
+                primary: true,
+                accent: const Color(0xFFFFE08A),
+                onTap: () async {
+                  game.overlays.remove('portalTown');
+                  await _travelTo(context, town);
+                },
+              ),
+              const SizedBox(height: 12),
+              Center(
+                child: TextButton(
+                  onPressed: () => game.overlays.remove('portalTown'),
+                  style: TextButton.styleFrom(
+                      side: const BorderSide(color: Colors.white24),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10)),
+                  child: const Text('NOT YET', style: TextStyle(color: Colors.white38)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _TravelDestButton extends StatelessWidget {
-  final TravelDest dest;
+  final String label;
+  final String? blurb;
   final VoidCallback onTap;
-  const _TravelDestButton({required this.dest, required this.onTap});
+  final bool primary;
+  final Color accent;
+  const _TravelDestButton({
+    required this.label,
+    required this.onTap,
+    this.blurb,
+    this.primary = false,
+    this.accent = const Color(0xFF00FFFF),
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1587,24 +1972,26 @@ class _TravelDestButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          padding: EdgeInsets.symmetric(horizontal: 14, vertical: primary ? 14 : 10),
           decoration: BoxDecoration(
-            color: const Color(0xFF00FFFF).withOpacity(0.08),
-            border: Border.all(color: const Color(0xFF00FFFF).withOpacity(0.55)),
+            color: accent.withOpacity(primary ? 0.16 : 0.06),
+            border: Border.all(color: accent.withOpacity(primary ? 0.85 : 0.4), width: primary ? 2 : 1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(dest.title,
-                  style: const TextStyle(
-                      color: Color(0xFF00FFFF),
+              Text(label,
+                  style: TextStyle(
+                      color: accent,
                       fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      letterSpacing: 1)),
-              const SizedBox(height: 3),
-              Text(dest.blurb,
-                  style: const TextStyle(color: Colors.white54, fontSize: 11, height: 1.35)),
+                      fontSize: primary ? 14 : 13,
+                      letterSpacing: primary ? 1.2 : 0.5)),
+              if (blurb != null) ...[
+                const SizedBox(height: 3),
+                Text(blurb!,
+                    style: const TextStyle(color: Colors.white54, fontSize: 11, height: 1.35)),
+              ],
             ],
           ),
         ),
@@ -1616,18 +2003,22 @@ class _TravelDestButton extends StatelessWidget {
 class _VictoryScreen extends StatelessWidget {
   const _VictoryScreen();
 
-  // Ending branch: all five memories found = Ending A (Memories).
-  static String get _story => Memories.allFound
-      ? 'You opened the Core with the whole truth in hand.\n\n'
-          'Voss saw the Aetherians refuse a winnable war, enter the lattice in fear as much as hope, '
-          'and leave a key only a matched mind could turn — your mind, rewritten when you were six.\n\n'
-          '${Memories.endingVoss}\n\n'
-          'Gaia promises to learn the colony\'s fear. Elysium breathes again.'
-      : 'You opened the Core — bright, but incomplete.\n\n'
-          'Without every memory, Voss cannot forgive what he still calls a lattice risk. '
-          'The drones fall quiet for now; Earth will not stay quiet forever.\n\n'
-          '${Memories.endingVoss}\n\n'
-          'Gaia is awake. The rest of the truth is still out there.';
+  // Ending A/B from memories; adventure clues add a coda when present.
+  static String get _story {
+    final base = Memories.allFound
+        ? 'You opened the Core with the whole truth in hand.\n\n'
+            'Voss saw the Aetherians refuse a winnable war, enter the lattice in fear as much as hope, '
+            'and leave a key only a matched mind could turn — your mind, rewritten when you were six.\n\n'
+            '${Memories.endingVoss}\n\n'
+            'Gaia promises to learn the colony\'s fear. Elysium breathes again.'
+        : 'You opened the Core — bright, but incomplete.\n\n'
+            'Without every memory, Voss cannot forgive what he still calls a lattice risk. '
+            'The drones fall quiet for now; Earth will not stay quiet forever.\n\n'
+            '${Memories.endingVoss}\n\n'
+            'Gaia is awake. The rest of the truth is still out there.';
+    final coda = Adventure.endingCoda;
+    return coda.isEmpty ? base : '$base\n\n$coda';
+  }
 
   @override
   Widget build(BuildContext context) {

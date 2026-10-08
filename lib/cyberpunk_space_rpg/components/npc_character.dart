@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:bonfire/bonfire.dart';
 import 'package:flutter/material.dart';
 import 'walk_sheet.dart';
+import '../game/adventure.dart';
 import '../game/game_state.dart';
 
 class NpcDialogue {
@@ -9,13 +10,18 @@ class NpcDialogue {
   final Color color;
   final List<String> lines;
   final List<String> voicePaths;
+  final List<DialogueChoice> choices;
 
   const NpcDialogue({
     required this.name,
     required this.color,
     required this.lines,
     required this.voicePaths,
+    this.choices = const [],
   });
+
+  List<DialogueChoice> get visibleChoices =>
+      [for (final c in choices) if (c.visible) c];
 }
 
 /// Animated NPC. Uses the walk sheet 'sprites/<name>_walk.png' (derived from
@@ -29,7 +35,7 @@ class NpcCharacter extends SimpleNpc {
 
   static const double npcSize = 32;
 
-  final NpcDialogue dialogue;
+  final NpcDialogue Function() dialogueOf;
   final String spritePath;
   /// Tiled npc name key (gaia, asha, ...), reported to the objectives.
   final String npcKey;
@@ -37,8 +43,12 @@ class NpcCharacter extends SimpleNpc {
   static const double _interactRadius = 72;
 
   // The Tiled objects are 30x30; keep the same centre at 32x32.
-  NpcCharacter(Vector2 position, {required this.dialogue, required this.spritePath, this.npcKey = ''})
-      : super(
+  NpcCharacter(
+    Vector2 position, {
+    required this.dialogueOf,
+    required this.spritePath,
+    this.npcKey = '',
+  }) : super(
           position: position - Vector2.all(1),
           size: Vector2.all(npcSize),
           initDirection: Direction.down,
@@ -46,6 +56,8 @@ class NpcCharacter extends SimpleNpc {
 
   String get walkSheetPath =>
       spritePath.replaceFirstMapped(RegExp(r'npc_(\w+)\.png$'), (m) => '${m[1]}_walk.png');
+
+  Color get accent => dialogueOf().color;
 
   @override
   Future<void> onLoad() async {
@@ -67,7 +79,7 @@ class NpcCharacter extends SimpleNpc {
   }
 
   void interact() {
-    activeDialogue.value = dialogue;
+    activeDialogue.value = dialogueOf();
     GameState.onNpcTalk(npcKey);
   }
 
@@ -97,7 +109,7 @@ class NpcCharacter extends SimpleNpc {
     final cx = size.x / 2;
     final cy = size.y / 2;
     final r = size.x / 2;
-    final col = dialogue.color;
+    final col = accent;
     final p = sin(_pulse);
 
     // Soft glow aura

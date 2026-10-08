@@ -9,6 +9,7 @@ import '../components/custom_player.dart';
 import '../components/npc_character.dart';
 import '../ui/cutscene_player.dart';
 import '../ui/cutscenes.dart';
+import 'adventure.dart';
 import 'save_service.dart';
 
 /// The five Aetherian memory flashbacks (dialogue-flashbacks-and-finale.md).
@@ -180,13 +181,42 @@ class Memories {
   // ------------------------------------------------------------- ending
 
   /// Ending hook (Ending A with all five memories, otherwise B).
-  static String get endingVoss => allFound
-      ? 'Voss sees every memory — including Station Seven\'s shadow beside the Aetherians\' choice — and stands the drones down.'
-      : 'Voss withdraws the drones, but vows that Earth will send another fleet.';
+  /// Key adventure clues (UEC orders, archive draft) deepen the same branches.
+  static String get endingVoss {
+    if (allFound) {
+      final buf = StringBuffer(
+          'Voss sees every memory — including Station Seven\'s shadow beside the Aetherians\' choice — and stands the drones down.');
+      if (Adventure.readUecOrders) {
+        buf.write(
+            ' Your field-terminal readout leaves him no room to call the risk theoretical.');
+      }
+      if (Adventure.openedArchive) {
+        buf.write(
+            ' The archive draft — fear beside hope — hits harder than any UEC briefing.');
+      }
+      return buf.toString();
+    }
+    if (Adventure.readUecOrders) {
+      return 'Voss flinches at his own orders on your slate. He withdraws the drones, but vows that Earth will send another fleet.';
+    }
+    return 'Voss withdraws the drones, but vows that Earth will send another fleet.';
+  }
 
-  static String get endingLine => allFound
-      ? 'Gaia remembers fully. The colony lives — and so do the Aetherians.'
-      : 'Mission complete. Gaia is awake, but the story is still unfinished.';
+  static String get endingLine {
+    if (allFound) {
+      if (Adventure.openedArchive && Adventure.readUecOrders) {
+        return 'Gaia remembers fully — vote, fear, and proof. The colony lives.';
+      }
+      if (Adventure.openedArchive) {
+        return 'Gaia remembers fully — including the whisper of a vote. The colony lives.';
+      }
+      return 'Gaia remembers fully. The colony lives — and so do the Aetherians.';
+    }
+    if (Adventure.readUecOrders) {
+      return 'Mission complete. Gaia is awake; Voss has seen his own orders. The story is still unfinished.';
+    }
+    return 'Mission complete. Gaia is awake, but the story is still unfinished.';
+  }
 
   /// Test hook: forget the live game.
   @visibleForTesting

@@ -1,5 +1,6 @@
 import 'package:bonfire/bonfire.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/components/npc_character.dart';
+import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/game/adventure.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/game/game_state.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/game/memories.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/game/save_service.dart';
@@ -76,6 +77,20 @@ void main() {
     expect(Memories.allFound, isFalse);
     expect(Memories.endingLine, startsWith('Mission complete'));
     expect(Memories.endingVoss, contains('another fleet'));
+  });
+
+  test('adventure clues deepen ending A and the victory coda', () {
+    for (var i = 0; i < 5; i++) {
+      Memories.claimNext();
+    }
+    Adventure.discover('uec_orders');
+    Adventure.discover('archive_first_memory');
+    Adventure.setFlag('archive_opened');
+    expect(Memories.endingVoss, contains('field-terminal'));
+    expect(Memories.endingVoss, contains('archive draft'));
+    expect(Memories.endingLine, contains('vote'));
+    expect(Adventure.endingCoda, contains('Station Seven orders'));
+    expect(Adventure.endingCoda, contains('archive draft'));
   });
 
   test('woods: two fragments open the portal; city fragments never do', () {

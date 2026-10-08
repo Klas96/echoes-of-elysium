@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 
+import '../game/adventure.dart';
 import '../ui/equipment_ui.dart';
 import 'bonds.dart';
 import 'creature_species.dart';
@@ -325,6 +326,8 @@ class _JournalPanel extends StatefulWidget {
 
 class _JournalPanelState extends State<_JournalPanel> {
   late String _sel = Journal.focus ?? Bonds.active ?? creatureOrder.first;
+  /// 0 = creatures, 1 = clues / items
+  int _tab = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -340,6 +343,30 @@ class _JournalPanelState extends State<_JournalPanel> {
                 valueListenable: Bonds.revision,
                 builder: (_, __, ___) => LayoutBuilder(builder: (context, box) {
                   final wide = box.maxWidth > box.maxHeight * 1.2 && box.maxWidth >= 600;
+                  if (_tab == 1) {
+                    final clues = _cluesPage(close: !wide);
+                    if (wide) {
+                      final k = min(box.maxWidth / (2 * _BookPage.w), box.maxHeight / (_BookPage.caps + _BookPage.strip));
+                      final n = _BookPage.strips(box.maxHeight, k);
+                      return Row(mainAxisSize: MainAxisSize.min, children: [
+                        _BookPage(right: false, k: k, n: n, child: clues),
+                        _BookPage(
+                          right: true,
+                          k: k,
+                          n: n,
+                          child: Stack(clipBehavior: Clip.none, children: [
+                            const SingleChildScrollView(
+                              padding: EdgeInsets.only(right: 30),
+                              child: _CluesHint(),
+                            ),
+                            Positioned(right: -14, top: -14, child: _closeButton()),
+                          ]),
+                        ),
+                      ]);
+                    }
+                    final k = max(2.0, (box.maxWidth / _BookPage.w).floorToDouble());
+                    return _BookPage(right: true, k: k, n: _BookPage.strips(box.maxHeight, k), child: clues);
+                  }
                   final grid = _grid(3);
                   final detail = _Detail(id: _sel);
                   if (wide) {
@@ -408,8 +435,38 @@ class _JournalPanelState extends State<_JournalPanel> {
         icon: const Icon(Icons.close, color: _inkSoft),
       );
 
+  Widget _tabs() {
+    Widget chip(String label, int i) {
+      final on = _tab == i;
+      return GestureDetector(
+        onTap: () => setState(() => _tab = i),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          decoration: BoxDecoration(
+            color: on ? _inkDark.withValues(alpha: 0.12) : Colors.transparent,
+            border: Border.all(color: on ? _inkDark : _inkSoft.withValues(alpha: 0.4)),
+            borderRadius: BorderRadius.circular(3),
+          ),
+          child: Text(label,
+              style: TextStyle(
+                  color: on ? _inkDark : _inkSoft,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.2)),
+        ),
+      );
+    }
+
+    return Row(children: [
+      chip('CREATURES', 0),
+      const SizedBox(width: 6),
+      chip('CLUES', 1),
+    ]);
+  }
+
   Widget _header({bool close = false}) {
     const count = TextStyle(color: _inkSoft, fontSize: 12, fontWeight: FontWeight.w600);
+    final clues = Adventure.found.length;
     return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Image.asset('assets/images/ui/tab_paw_32@2x.png', width: 30, height: 30, filterQuality: FilterQuality.none),
       const SizedBox(width: 8),
@@ -420,8 +477,12 @@ class _JournalPanelState extends State<_JournalPanel> {
             child: Text('JOURNAL',
                 style: TextStyle(color: _inkDark, fontSize: 17, fontWeight: FontWeight.bold, letterSpacing: 3)),
           ),
+          const SizedBox(height: 4),
+          _tabs(),
+          const SizedBox(height: 4),
           Wrap(spacing: 10, runSpacing: 0, crossAxisAlignment: WrapCrossAlignment.center, children: [
             Text('Befriended ${Bonds.befriendedCount}/${Bonds.total}', style: count),
+            Text('Clues $clues/${Adventure.catalog.length}', style: count),
             Row(mainAxisSize: MainAxisSize.min, children: [
               Image.asset('assets/images/ui/crystal_16@2x.png',
                   width: 14, height: 14, filterQuality: FilterQuality.none),
@@ -432,6 +493,55 @@ class _JournalPanelState extends State<_JournalPanel> {
         ]),
       ),
       if (close) _closeButton(),
+    ]);
+  }
+
+  Widget _cluesPage({bool close = false}) {
+    final found = Adventure.found;
+    final items = Bonds.items.toList()..sort();
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      _header(close: close),
+      Expanded(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.only(top: 8, bottom: 8, right: 8),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            if (items.isNotEmpty) ...[
+              const Text('KEY ITEMS',
+                  style: TextStyle(color: _inkDark, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 2)),
+              const SizedBox(height: 6),
+              for (final id in items)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Text('· ${itemLabels[id] ?? id}',
+                      style: const TextStyle(color: _inkSoft, fontSize: 12, height: 1.4)),
+                ),
+              const SizedBox(height: 10),
+              Container(height: 1, color: _inkSoft.withValues(alpha: 0.35)),
+              const SizedBox(height: 10),
+            ],
+            const Text('CLUE BOARD',
+                style: TextStyle(color: _inkDark, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 2)),
+            const SizedBox(height: 8),
+            if (found.isEmpty)
+              const Text(
+                'Examine markers in the world, talk to people, and use key items. Clues you find will collect here.',
+                style: TextStyle(color: _inkSoft, fontSize: 12, height: 1.55),
+              )
+            else
+              for (final c in found)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(c.title,
+                        style: const TextStyle(color: _inkDark, fontSize: 13, fontWeight: FontWeight.w700)),
+                    Text(c.where, style: const TextStyle(color: _inkSoft, fontSize: 10, letterSpacing: 0.5)),
+                    const SizedBox(height: 3),
+                    Text(c.body, style: const TextStyle(color: _inkSoft, fontSize: 12, height: 1.5)),
+                  ]),
+                ),
+          ]),
+        ),
+      ),
     ]);
   }
 
@@ -451,6 +561,26 @@ class _JournalPanelState extends State<_JournalPanel> {
         ],
       );
     });
+  }
+}
+
+class _CluesHint extends StatelessWidget {
+  const _CluesHint();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.only(top: 8),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('FIELD NOTES',
+            style: TextStyle(color: _inkDark, fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 2)),
+        SizedBox(height: 8),
+        Text(
+          'Blue sparkles mark things you can examine. Talk choices can unlock key items — use them at locked doors and terminals.',
+          style: TextStyle(color: _inkSoft, fontSize: 12, height: 1.55),
+        ),
+      ]),
+    );
   }
 }
 

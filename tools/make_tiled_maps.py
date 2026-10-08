@@ -550,7 +550,8 @@ class Level:
                    health=(0, 255, 120), drone=(255, 60, 60), sentinel=(255, 120, 0),
                    checkpoint=(120, 255, 220), creature=(255, 170, 255), stump=(200, 140, 60),
                    boulder=(160, 160, 160), stash=(255, 230, 90), glyph=(90, 255, 255), hidden=(255, 140, 200),
-                   darkzone=(40, 40, 120), pebble=(140, 200, 255), moonflower=(240, 240, 255), hiddenpath=(255, 120, 200))
+                   darkzone=(40, 40, 120), pebble=(140, 200, 255), moonflower=(240, 240, 255),
+                   hiddenpath=(255, 120, 200), examine=(140, 220, 255))
         for b in sorted(self.buildings, key=lambda b: b["ty"]):
             spr, bc, door = self.building_rects(b)
             bim = Image.open(os.path.join(BLIMG, BUILDINGS.defs[b["name"]]["image"])).convert("RGBA")
@@ -569,7 +570,7 @@ class Level:
 
 # --------------------------------------------------------------- sizes used by the code
 SZ = dict(spawn=32, portal=56, npc=30, fragment=18, health=16, drone=24, sentinel=48, checkpoint=32,
-          creature=32, stump=64, stash=32, glyph=24, hidden=24, pebble=16, moonflower=16)
+          creature=32, stump=64, stash=32, glyph=24, hidden=24, pebble=16, moonflower=16, examine=20)
 # creatures that fly (no floor needed under their habitat)
 FLYING = {"glowmoth"}
 # objects an ability gate may hide; anything else behind a boulder is an error
@@ -666,6 +667,13 @@ def map1():
     place(lv, "checkpoint", P["asha"][0] + 1.5, P["asha"][1] + 1.0, label="Asha's Trail")
     place(lv, "checkpoint", P["f5"][0] + 1.2, P["f5"][1] + 1.2, label="Old Grove")
     place(lv, "checkpoint", P["portal"][0] - 2.5, P["portal"][1] - 2.0, label="Aetherian Gate")
+    # Adventure: examine hotspots (clue board)
+    place(lv, "examine", P["spawn"][0] + 1.8, P["spawn"][1] - 0.6,
+          id="woods_plaque", title="WEATHERED PLAQUE",
+          text="Half-worn Aetherian letters cling to the stone.", clue="gaia_plaque")
+    place(lv, "examine", P["asha"][0] - 1.4, P["asha"][1] + 0.8,
+          id="woods_boot", title="UEC BOOT PRINT",
+          text="Fresh composite sole marks in the moss after rain.", clue="boot_print")
     woods_creatures_and_secrets(lv)
     lv.write("world.tmj", "tilesets/woods.png")
     return ts
@@ -801,6 +809,14 @@ def map2():
     place(lv, "checkpoint", P["h1"][0] - 1.5, P["h1"][1] + 1.0, label="Avenue")
     place(lv, "checkpoint", P["voss"][0] + 2.0, P["voss"][1] + 2.5, label="Portal Square")
     place(lv, "checkpoint", *P["town"], label="Lantern Gate")
+    # Adventure: plaque + UEC terminal (needs Asha's override key)
+    place(lv, "examine", 22.5, 19.5,
+          id="city_archive_plaque", title="ARCHIVE PLAQUE",
+          text="Sealed by the Archivist. First memory drafts keep here — not the Core itself.")
+    place(lv, "examine", P["voss"][0] + 2.2, P["voss"][1] - 0.5,
+          id="city_uec_terminal", title="UEC FIELD TERMINAL",
+          text="Override accepted. Field orders scroll past.",
+          clue="uec_orders", item="uec_override", consume=True, flag="read_uec_orders")
     lv.write("world2.tmj", "tilesets/city.png")
     return ts
 
@@ -855,6 +871,10 @@ def map5():
     place(lv, "checkpoint", *P["spawn"], label="Lantern Gate")
     place(lv, "checkpoint", *P["mira"], label="Market Square")
     place(lv, "checkpoint", *P["portal"], label="Return Portal")
+    place(lv, "examine", P["mira"][0] + 1.6, P["mira"][1] + 0.4,
+          id="town_stall_note", title="STALL NOTE",
+          text="A chalk scribble: 'Archive walls still hum. Drones won't go near.'",
+          clue="mira_rumour")
     lv.write("world5.tmj", "tilesets/city.png")
     return ts
 
@@ -979,6 +999,10 @@ def map4():
     place(lv, "checkpoint", *P["spawn"], label="Core Threshold")
     place(lv, "checkpoint", *P["h1"], label="Antechamber")
     place(lv, "checkpoint", *P["h2"], label="Core Record")
+    place(lv, "examine", P["spawn"][0] + 1.5, P["spawn"][1] + 1.2,
+          id="core_console", title="CORE CONSOLE",
+          text="Activation waits on a living neural match. A remote wipe is already queued.",
+          clue="core_console")
     lv.write("world4.tmj", "tilesets/core.png")
     return ts
 

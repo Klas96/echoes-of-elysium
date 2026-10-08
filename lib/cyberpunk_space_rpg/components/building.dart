@@ -1,6 +1,10 @@
 import 'package:bonfire/bonfire.dart';
 import 'package:flutter/material.dart';
-import 'checkpoint.dart';
+
+import '../audio/sfx_manager.dart';
+import '../creatures/bonds.dart';
+import '../creatures/interaction.dart';
+import '../game/adventure.dart';
 
 /// Sprite size, collision box and door point of a placeable building, in px
 /// from the sprite's top-left. Generated from tools/buildings/<name>.json
@@ -10,7 +14,7 @@ class BuildingDef {
   final Rect collision;
   final Offset door;
 
-  /// Shown in the HUD toast when Kaela steps up to the (closed) door.
+  /// Shown when Kaela examines the door.
   final String flavour;
 
   const BuildingDef(this.w, this.h, this.collision, this.door, this.flavour);
@@ -37,16 +41,11 @@ const buildingDefs = <String, BuildingDef>{
 /// building=<id>) in the gameplay layer. [position] is the sprite's top-left.
 ///
 /// The solid box only covers the wall base, so Kaela can walk behind the
-/// roof: Bonfire y-sorts components by the bottom of their hitboxes, which
-/// draws her behind the building while she's north of the box and in front of
-/// it once she's south of it. The door is decorative; standing at it shows a
-/// short flavour line in the HUD toast.
-class Building extends GameDecorationWithCollision {
-  static const double _doorRadius = 18;
-
+/// roof. Doors are [Interactable]: EXAMINE for flavour, and the archive can
+/// be opened with the Archivist's seal.
+class Building extends GameDecorationWithCollision with Interactable {
   final String id;
   final BuildingDef def;
-  bool _atDoor = false;
 
   Building(Vector2 position, {required this.id, required this.def})
       : super.withSprite(
@@ -69,24 +68,63 @@ class Building extends GameDecorationWithCollision {
     paint.filterQuality = FilterQuality.none;
   }
 
+  bool get _archiveOpen => Adventure.flag('archive_opened');
+
   @override
-  void update(double dt) {
-    super.update(dt);
-    final player = gameRef.player;
-    if (player == null) return;
-    // Kaela's feet vs a point just in front of the door.
-    final feet = Vector2(player.rectCollision.center.dx, player.rectCollision.bottom);
-    final door = position + Vector2(def.door.dx, def.door.dy + 8);
-    final d = feet.distanceTo(door);
-    if (!_atDoor && d < _doorRadius) {
-      _atDoor = true;
-      final text = def.flavour;
-      Checkpoint.toast.value = text;
-      Future.delayed(const Duration(milliseconds: 3000), () {
-        if (Checkpoint.toast.value == text) Checkpoint.toast.value = null;
-      });
-    } else if (_atDoor && d > _doorRadius * 2.5) {
-      _atDoor = false;
+  Vector2 get interactPoint => position + Vector2(def.door.dx, def.door.dy + 8);
+
+  @override
+  double get interactRadius => 28;
+
+  @override
+  PromptInfo get prompt {
+    if (id == 'archive_library') {
+      if (_archiveOpen) {
+        return const PromptInfo.note('Archive · Open. Dust and quiet light.');
+      }
+      if (Bonds.hasItem('archive_seal')) return const PromptInfo('USE SEAL');
+      return const PromptInfo.note('Archive · Sealed. Needs the Archivist\'s seal.');
     }
+    if (id == 'ruin_shrine' && !Adventure.hasClue('shrine_note')) {
+      return const PromptInfo('EXAMINE');
+    }
+    return const PromptInfo('EXAMINE');
+  }
+
+  @override
+  void interact() {
+    if (id == 'archive_library') {
+      if (_archiveOpen) {
+        GameToast.show('ARCHIVE', body: 'Shelves of quiet light. The first memory page is already in your journal.',
+            color: const Color(0xFFFFDD44), seconds: 4);
+        return;
+      }
+      if (!Bonds.hasItem('archive_seal')) return;
+      Bonds.useItem('archive_seal');
+      Adventure.setFlag('archive_opened');
+      Adventure.discover('archive_first_memory');
+      SfxManager().playChime();
+      GameToast.show(
+        'ARCHIVE OPENED',
+        body:
+            'The seal clicks. Inside: a brittle draft of the merge vote — and a clue for your journal.',
+        color: const Color(0xFFFFDD44),
+        seconds: 6,
+      );
+      return;
+    }
+    if (id == 'ruin_shrine') {
+      Adventure.discover('shrine_note');
+      SfxManager().playChime();
+      GameToast.show(
+        'SHRINE',
+        body:
+            'Someone carved into the base: "Core below. Choose before he does." — Clue added to journal.',
+        color: const Color(0xFFCC88FF),
+        seconds: 5,
+      );
+      return;
+    }
+    GameToast.show('DOOR', body: def.flavour, color: const Color(0xFFAACCEE), seconds: 4);
   }
 }

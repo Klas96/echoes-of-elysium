@@ -1,0 +1,228 @@
+import 'package:flutter/foundation.dart';
+
+import '../creatures/bonds.dart';
+import 'save_service.dart';
+
+/// A journal clue unlocked by examining, talking, or using a key item.
+@immutable
+class ClueDef {
+  final String id;
+  final String title;
+  final String body;
+  final String where;
+
+  const ClueDef({
+    required this.id,
+    required this.title,
+    required this.body,
+    required this.where,
+  });
+}
+
+/// Player-facing names for key items carried via Bonds (`item:<id>`).
+const itemLabels = <String, String>{
+  'uec_override': 'UEC Override Key',
+  'archive_seal': 'Archive Seal',
+};
+
+/// Branching talk options shown on the last line of an [NpcDialogue].
+@immutable
+class DialogueChoice {
+  final String label;
+  final List<String> replyLines;
+  final String? giveItem;
+  final String? setFlag;
+  final String? discoverClue;
+  /// Hide this choice once the flag is already set.
+  final String? requireFlagUnset;
+  /// Hide once the player already carries or has used this item.
+  final String? requireNoItem;
+
+  const DialogueChoice({
+    required this.label,
+    this.replyLines = const [],
+    this.giveItem,
+    this.setFlag,
+    this.discoverClue,
+    this.requireFlagUnset,
+    this.requireNoItem,
+  });
+
+  bool get visible {
+    if (requireFlagUnset != null && Adventure.flag(requireFlagUnset!)) return false;
+    if (requireNoItem != null &&
+        (Bonds.hasItem(requireNoItem!) || Bonds.usedItem(requireNoItem!))) {
+      return false;
+    }
+    return true;
+  }
+
+  void apply() {
+    if (giveItem != null) Bonds.giveItem(giveItem!);
+    if (setFlag != null) Adventure.setFlag(setFlag!);
+    if (discoverClue != null) Adventure.discover(discoverClue!);
+  }
+}
+
+/// Examine / talk / key-item adventure layer on top of [SaveService] flags.
+class Adventure {
+  static final revision = ValueNotifier<int>(0);
+
+  static SaveData get _d => SaveService.data;
+
+  static void _bump({bool now = false}) {
+    revision.value++;
+    Bonds.revision.value++;
+    if (now) {
+      SaveService.saveNow();
+    } else {
+      SaveService.requestAutosave();
+    }
+  }
+
+  static bool flag(String key) => _d.flag(key);
+  static void setFlag(String key, [bool value = true]) {
+    if (_d.flag(key) == value) return;
+    _d.setFlag(key, value);
+    _bump();
+  }
+
+  static bool hasClue(String id) => _d.flag('clue:$id');
+
+  /// Returns true the first time this clue is found.
+  static bool discover(String id) {
+    if (hasClue(id)) return false;
+    _d.setFlag('clue:$id');
+    _bump();
+    return true;
+  }
+
+  static List<ClueDef> get found =>
+      [for (final c in catalog) if (hasClue(c.id)) c];
+
+  static ClueDef? byId(String id) {
+    for (final c in catalog) {
+      if (c.id == id) return c;
+    }
+    return null;
+  }
+
+  /// Used the override on the City UEC terminal (or has the clue).
+  static bool get readUecOrders => hasClue('uec_orders') || flag('read_uec_orders');
+
+  /// Opened the Archive Library with the seal.
+  static bool get openedArchive =>
+      hasClue('archive_first_memory') || flag('archive_opened');
+
+  /// Extra victory paragraphs when key clues shaped the ending.
+  static String get endingCoda {
+    final parts = <String>[];
+    if (readUecOrders) {
+      parts.add(
+        'The Station Seven orders stay on your slate — not as a weapon, but as proof that fear already wrote UEC policy once.');
+    }
+    if (openedArchive) {
+      parts.add(
+        'The archive draft travels with Gaia\'s waking: the merge was never clean courage. It was a whisper of a vote, and you chose to remember it.');
+    }
+    if (flag('said_trust_gaia') && flag('promised_echo')) {
+      parts.add(
+        'Asha\'s trust and Echo-7\'s promise both held. The living and the remembered share the same sky tonight.');
+    }
+    return parts.join('\n\n');
+  }
+
+  static const catalog = <ClueDef>[
+    ClueDef(
+      id: 'boot_print',
+      title: 'UEC Boot Print',
+      body:
+          'Fresh composite sole marks in the moss — patrol size. Someone from the coalition walked this trail after the rain.',
+      where: 'Woods · near Asha',
+    ),
+    ClueDef(
+      id: 'gaia_plaque',
+      title: 'Weathered Plaque',
+      body:
+          '"We did not conquer this world. We asked to stay." — half the Aetherian letters have worn smooth.',
+      where: 'Woods · crash site',
+    ),
+    ClueDef(
+      id: 'asha_warning',
+      title: "Asha's Warning",
+      body:
+          'She kept a UEC override after Station Seven. Trust is not the same as certainty — she wants a way out if Gaia lies.',
+      where: 'Woods · Asha',
+    ),
+    ClueDef(
+      id: 'override_key',
+      title: 'Override Key Taken',
+      body:
+          'Asha handed you a single-use UEC field override. It opens coalition terminals — and could still cut a lattice signal.',
+      where: 'Woods · Asha',
+    ),
+    ClueDef(
+      id: 'echo_split',
+      title: 'The Split Vote',
+      body:
+          'Echo-7 remembers fear as clearly as peace. Not every Aetherian chose the merge. Some only had nowhere else to go.',
+      where: 'City · Echo-7',
+    ),
+    ClueDef(
+      id: 'archivist_seal',
+      title: 'Archive Seal',
+      body:
+          'The Archivist entrusted you with the seal to the library across the avenue. Inside: Gaia\'s first written memory.',
+      where: 'City · Archivist',
+    ),
+    ClueDef(
+      id: 'station_seven',
+      title: 'Station Seven',
+      body:
+          'Three hundred colonists went dark when a lattice woke. Voss still carries their names. That is why he hunts Gaia.',
+      where: 'City · talk',
+    ),
+    ClueDef(
+      id: 'voss_motive',
+      title: "Voss's Motive",
+      body:
+          'He is not erasing history for sport. He is choosing the living over the dead — and he believes you will bury another colony.',
+      where: 'City · Voss',
+    ),
+    ClueDef(
+      id: 'uec_orders',
+      title: 'Field Orders · Station Seven',
+      body:
+          'Terminal log: "Sympathetic AI classified for erasure. Collateral risk accepted." Voss signed the follow-up quarantine. Asha\'s name is on the desertion list.',
+      where: 'City · UEC terminal',
+    ),
+    ClueDef(
+      id: 'archive_first_memory',
+      title: 'First Memory Draft',
+      body:
+          'A brittle page: "If we merge, we stop dying with our sun. If we do not, we end as dust that remembers nothing." The vote passed by a whisper.',
+      where: 'City · Archive Library',
+    ),
+    ClueDef(
+      id: 'mira_rumour',
+      title: "Mira's Rumour",
+      body:
+          'Lantern Town traders say UEC drones avoid the old archive. Something in the walls still hums on Aetherian frequencies.',
+      where: 'Lantern Town · Mira',
+    ),
+    ClueDef(
+      id: 'shrine_note',
+      title: 'Shrine Scratching',
+      body:
+          'Someone carved into the ruin shrine base: "Core below. Choose before he does." The cut is recent.',
+      where: 'Ruins · shrine',
+    ),
+    ClueDef(
+      id: 'core_console',
+      title: 'Core Console',
+      body:
+          'Activation requires a living neural match — yours. The console will not choose for you. Voss\'s remote wipe is already queued.',
+      where: 'Core · threshold',
+    ),
+  ];
+}
