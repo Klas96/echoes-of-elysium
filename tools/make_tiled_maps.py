@@ -21,7 +21,7 @@ only .json/.tsj), and writes:
 Layers per map: "ground" (blob/wang terrain incl. walls), "props" (decor,
 some collide via per-tile collision rects) and an object layer "gameplay"
 with objects named spawn, portal, npc (property name), fragment, health,
-drone (property startAngle), sentinel, checkpoint (property label). Object x/y = component top-left in
+drone (properties startAngle, kind=scout|sniper|shield|swarm), sentinel, checkpoint (property label). Object x/y = component top-left in
 world px, width/height = component size (same coords the code used before).
 
 M2 (woods only): creature (species, radius in tiles, netted, gated), stump
@@ -652,7 +652,9 @@ def map1():
     for k in ("h1", "h2", "h3"): place(lv, "health", *P[k])
     # calm pass: d3 (between the second health pickup and Asha) is gone; its
     # clearing stays so the terrain is unchanged.
-    for k, a in (("d1", 0.0), ("d2", 2.1)): place(lv, "drone", *P[k], startAngle=a)
+    # Variety: early scout, then a sniper on the side branch.
+    place(lv, "drone", *P["d1"], startAngle=0.0, kind="scout")
+    place(lv, "drone", *P["d2"], startAngle=2.1, kind="sniper")
     place(lv, "portal", *P["portal"])
     # checkpoints (respawn points): spawn + area entrances, beside the points
     # so they sit in already-clear spots
@@ -784,12 +786,12 @@ def map2():
     place(lv, "npc", *P["voss"], name="voss")
     for k in ("h1", "h2", "h3"): place(lv, "health", *P[k])
     place(lv, "sentinel", *P["sentinel"])
-    place(lv, "drone", *P["d1"], startAngle=1.0)
-    place(lv, "drone", *P["d2"], startAngle=3.3)
+    place(lv, "drone", *P["d1"], startAngle=1.0, kind="shield")
+    place(lv, "drone", *P["d2"], startAngle=3.3, kind="scout")
     # memory fragment 3 (optional): at the far end of the west yard side
     # street, guarded by d1 and a second drone
     place(lv, "fragment", 3.5, 17.5)
-    place(lv, "drone", 5.0, 15.5, startAngle=0.4)
+    place(lv, "drone", 5.0, 15.5, startAngle=0.4, kind="swarm")
     place(lv, "portal", *P["portal"])
     place(lv, "checkpoint", *P["spawn"], label="Upper Street")
     place(lv, "checkpoint", P["h1"][0] - 1.5, P["h1"][1] + 1.0, label="Avenue")
@@ -839,13 +841,15 @@ def map3():
     for k in ("h1", "h2", "h3", "h4"): place(lv, "health", *P[k])
     # calm pass: 6 -> 4 drones (d2 next to the central clearing and d6 in the
     # south-west dead end are gone; their clearings stay)
-    for k, a in (("d1", 0.5), ("d3", 3.1), ("d4", 4.5), ("d5", 2.3)):
-        place(lv, "drone", *P[k], startAngle=a)
+    place(lv, "drone", *P["d1"], startAngle=0.5, kind="sniper")
+    place(lv, "drone", *P["d3"], startAngle=3.1, kind="shield")
+    place(lv, "drone", *P["d4"], startAngle=4.5, kind="scout")
+    place(lv, "drone", *P["d5"], startAngle=2.3, kind="swarm")
     # memory fragment 5 (optional): off the main path by the collapsed shrine
     # tower in the south-west dead end (before the Core), guarded by a pair
     place(lv, "fragment", 14.5, 34.5)
-    place(lv, "drone", 17.5, 33.0, startAngle=1.2)
-    place(lv, "drone", 18.5, 30.5, startAngle=4.0)
+    place(lv, "drone", 17.5, 33.0, startAngle=1.2, kind="swarm")
+    place(lv, "drone", 18.5, 30.5, startAngle=4.0, kind="swarm")
     place(lv, "portal", *P["portal"])
     place(lv, "checkpoint", *P["spawn"], label="Ruined Landing")
     place(lv, "checkpoint", P["h2"][0] - 1.2, P["h2"][1] + 1.2, label="Central Clearing")

@@ -23,7 +23,9 @@ import '../creatures/interaction.dart';
 import '../creatures/journal_ui.dart';
 import '../creatures/obstacles.dart';
 import '../ui/cutscenes.dart';
+import '../ui/equipment_ui.dart';
 import 'game_state.dart';
+import 'progression.dart';
 import 'memories.dart';
 import 'save_service.dart';
 import 'settings.dart';
@@ -141,7 +143,11 @@ Map<String, ObjectBuilder> _mapObjects(String mapId) => {
           SaveService.requestAutosave();
         });
       },
-      'drone': (p) => UECDrone(p.position, startAngle: _numProp(p, 'startAngle')),
+      'drone': (p) => UECDrone(
+            p.position,
+            startAngle: _numProp(p, 'startAngle'),
+            kind: DroneKindParse.from((p.others['kind'] ?? '').toString()),
+          ),
       'sentinel': (p) => SaveService.data.flag('sentinelDefeated')
           ? _Gone()
           : SentinelDrone(p.position, onDefeated: GameState.onSentinelDefeated),
@@ -549,16 +555,22 @@ void _startLevel(BonfireGameInterface game, int level) {
   Interaction.reset();
   GameToast.current.value = null;
   Journal.open.value = false;
-  Journal.onOpenChanged = (open) {
+  Equipment.open.value = false;
+  void onOverlay(bool open) {
     final g = _activeGame;
     if (g == null || _paused.value) return;
     if (open) {
       SaveService.saveNow();
       g.pauseEngine();
-    } else {
+    } else if (!Journal.open.value && !Equipment.open.value) {
       g.resumeEngine();
     }
-  };
+  }
+
+  Journal.onOpenChanged = onOverlay;
+  Equipment.onOpenChanged = onOverlay;
+  Journal.dismissOthers = () => Equipment.open.value = false;
+  Equipment.dismissOthers = () => Journal.open.value = false;
   game.add(DayClock());
   game.add(InteractionManager());
   game.add(Companion());
@@ -600,9 +612,21 @@ KeyEventResult _handleDebugKey(FocusNode _, KeyEvent event) {
     Journal.toggle();
     return KeyEventResult.handled;
   }
-  if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape && Journal.open.value) {
-    Journal.hide();
+  if (event is KeyDownEvent &&
+      event.logicalKey == LogicalKeyboardKey.keyI &&
+      !_paused.value) {
+    Equipment.toggle();
     return KeyEventResult.handled;
+  }
+  if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
+    if (Journal.open.value) {
+      Journal.hide();
+      return KeyEventResult.handled;
+    }
+    if (Equipment.open.value) {
+      Equipment.hide();
+      return KeyEventResult.handled;
+    }
   }
   if (event is KeyDownEvent &&
       (event.logicalKey == LogicalKeyboardKey.escape ||
@@ -623,6 +647,9 @@ BonfireGameInterface? _activeGame;
 void _setPaused(bool on) {
   if (on && Journal.open.value) {
     Journal.open.value = false; // the pause menu takes over (engine stays paused)
+  }
+  if (on && Equipment.open.value) {
+    Equipment.open.value = false;
   }
   _paused.value = on;
   final g = _activeGame;
@@ -717,6 +744,7 @@ class CustomMapGameScreen extends StatelessWidget {
           const _CalmLayer(),
           _DebugOverlay(),
           const JournalOverlay(),
+          const EquipmentOverlay(),
         ]),
       ),
     );
@@ -782,6 +810,7 @@ class Map2GameScreen extends StatelessWidget {
           const _CalmLayer(),
           _DebugOverlay(),
           const JournalOverlay(),
+          const EquipmentOverlay(),
         ]),
       ),
     );
@@ -843,6 +872,7 @@ class Map3GameScreen extends StatelessWidget {
           const _CalmLayer(),
           _DebugOverlay(),
           const JournalOverlay(),
+          const EquipmentOverlay(),
         ]),
       ),
     );
@@ -1016,36 +1046,65 @@ class _GameHUDState extends State<_GameHUD> {
                 : pct > 0.25
                     ? const Color(0xFFFFAA00)
                     : const Color(0xFFFF3333);
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('KAELA',
-                    style: TextStyle(
-                        color: Colors.white54, fontSize: 10, letterSpacing: 2)),
-                const SizedBox(height: 3),
-                Container(
-                  width: 120,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: Colors.black54,
-                    border: Border.all(color: Colors.white12),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                  child: FractionallySizedBox(
-                    alignment: Alignment.centerLeft,
-                    widthFactor: pct.clamp(0, 1),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: barColor,
-                        borderRadius: BorderRadius.circular(2),
+            return ValueListenableBuilder<int>(
+              valueListenable: Progression.revision,
+              builder: (_, __, ___) => Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('KAELA  ·  LV ${Progression.level}',
+                      style: const TextStyle(
+                          color: Colors.white54, fontSize: 10, letterSpacing: 2)),
+                  const SizedBox(height: 3),
+                  Container(
+                    width: 120,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      border: Border.all(color: Colors.white12),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                    child: FractionallySizedBox(
+                      alignment: Alignment.centerLeft,
+                      widthFactor: pct.clamp(0, 1),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: barColor,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text('$hp / ${CustomPlayer.maxHealth}',
-                    style: const TextStyle(color: Colors.white38, fontSize: 9)),
-              ],
+                  const SizedBox(height: 2),
+                  Text('$hp / ${CustomPlayer.maxHealth}',
+                      style: const TextStyle(color: Colors.white38, fontSize: 9)),
+                  const SizedBox(height: 6),
+                  Container(
+                    width: 120,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      border: Border.all(color: Colors.white12),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                    child: FractionallySizedBox(
+                      alignment: Alignment.centerLeft,
+                      widthFactor: Progression.xpProgress,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFE08A),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'XP ${Progression.xp}/${Progression.xpToNext(Progression.level)}'
+                    '${Progression.bonusDamage > 0 ? '  ·  +${Progression.bonusDamage} DMG' : ''}',
+                    style: const TextStyle(color: Colors.white38, fontSize: 9),
+                  ),
+                ],
+              ),
             );
           },
         ),

@@ -51,6 +51,10 @@ class SavePoint {
 ///   "activeCompanion": null,       // creature id
 ///   "abilities": ["light"],        // unlocked companion abilities
 ///   "glimmer": 0,
+///   "level": 1,
+///   "xp": 0,
+///   "inventory": ["scrap_plating"],
+///   "equipped": {"rifle": "pulse_optic", "suit": "scrap_plating"},
 ///   "challenges": {"riddle_old_colonist": {"done": true, "best": 41.2}},
 ///   "dayTime": 0.3,                // 0..1 fraction of the day cycle (0 = midnight)
 ///   "settings": {"storyMode": false}
@@ -79,6 +83,10 @@ class SaveData {
   String? activeCompanion;
   Set<String> abilities;
   int glimmer;
+  int level;
+  int xp;
+  List<String> inventory;
+  Map<String, String> equipped;
   Map<String, Map<String, dynamic>> challenges;
   double dayTime;
   Map<String, dynamic> settings;
@@ -101,6 +109,10 @@ class SaveData {
     this.activeCompanion,
     Set<String>? abilities,
     this.glimmer = 0,
+    this.level = 1,
+    this.xp = 0,
+    List<String>? inventory,
+    Map<String, String>? equipped,
     Map<String, Map<String, dynamic>>? challenges,
     this.dayTime = defaultDayTime,
     Map<String, dynamic>? settings,
@@ -110,6 +122,8 @@ class SaveData {
         collected = collected ?? {},
         bonds = bonds ?? {},
         abilities = abilities ?? {},
+        inventory = inventory ?? [],
+        equipped = equipped ?? {},
         challenges = challenges ?? {},
         settings = settings ?? {},
         extra = extra ?? {};
@@ -118,6 +132,7 @@ class SaveData {
     'version', 'savedAt', 'playTimeSeconds', 'mapId', 'regionId', 'player',
     'health', 'checkpoint', 'objectiveStep', 'fragments', 'storyFlags',
     'collected', 'bonds', 'activeCompanion', 'abilities', 'glimmer',
+    'level', 'xp', 'inventory', 'equipped',
     'challenges', 'dayTime', 'settings',
   };
 
@@ -142,6 +157,10 @@ class SaveData {
         'activeCompanion': activeCompanion,
         'abilities': abilities.toList()..sort(),
         'glimmer': glimmer,
+        'level': level,
+        'xp': xp,
+        'inventory': inventory.toList(),
+        'equipped': equipped,
         'challenges': challenges,
         'dayTime': dayTime,
         'settings': settings,
@@ -184,6 +203,17 @@ class SaveData {
       activeCompanion: j['activeCompanion'] is String ? j['activeCompanion'] as String : null,
       abilities: strings(j['abilities']),
       glimmer: asInt(j['glimmer'], 0),
+      level: asInt(j['level'], 1).clamp(1, 99),
+      xp: asInt(j['xp'], 0).clamp(0, 999999),
+      inventory: j['inventory'] is List
+          ? (j['inventory'] as List).whereType<String>().toList()
+          : [],
+      equipped: j['equipped'] is Map
+          ? {
+              for (final e in (j['equipped'] as Map).entries)
+                if (e.value is String) e.key.toString(): e.value as String
+            }
+          : {},
       challenges: nested(j['challenges']),
       dayTime: asDouble(j['dayTime'], defaultDayTime),
       settings: j['settings'] is Map ? Map<String, dynamic>.from(j['settings'] as Map) : {},

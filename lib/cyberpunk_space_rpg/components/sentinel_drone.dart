@@ -5,6 +5,7 @@ import 'custom_player.dart';
 import 'explosion_effect.dart';
 import '../game/settings.dart';
 import '../game/game_state.dart';
+import '../game/progression.dart';
 
 enum _SState { idle, chase, attack, rage }
 
@@ -53,6 +54,7 @@ class SentinelDrone extends GameDecoration {
     _health = (_health - amount).clamp(0, maxHealth);
     if (_health <= 0 && !_deathFired) {
       _deathFired = true;
+      Progression.onSentinelKilled();
       gameRef.add(ExplosionEffect(position.clone()));
       Future.microtask(onDefeated);
       removeFromParent();

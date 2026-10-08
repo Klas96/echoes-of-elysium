@@ -9,15 +9,18 @@ import 'player_bullet.dart';
 import 'walk_sheet.dart';
 import 'building.dart';
 import '../audio/music_manager.dart';
+import '../game/progression.dart';
 import '../game/settings.dart';
 
 class CustomPlayer extends SimplePlayer with BlockMovementCollision {
   static const double sizePlayer = 32;
   /// Width of the feet hitbox that collides with the world.
   static const double feetWidth = sizePlayer * 0.5;
-  static const int maxHealth = 100;
+  static const int baseMaxHealth = 100;
+  /// Base HP plus level/gear bonuses (Runescape-lite progression).
+  static int get maxHealth => baseMaxHealth + Progression.bonusHealth;
   static final ValueNotifier<Vector2> positionNotifier = ValueNotifier(Vector2.zero());
-  static final ValueNotifier<int> healthNotifier = ValueNotifier(maxHealth);
+  static final ValueNotifier<int> healthNotifier = ValueNotifier(baseMaxHealth);
   static final ValueNotifier<bool> damageFlash = ValueNotifier(false);
   static final ValueNotifier<Vector2?> pendingShot = ValueNotifier(null);
   /// Shots fired so far and where the last one left from: creatures listen
@@ -279,7 +282,7 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision {
     SfxManager().playShoot();
     shotCount++;
     lastShotFrom = position + size / 2;
-    _shootCooldown = 0.28;
+    _shootCooldown = 0.28 * Progression.fireCooldownMult;
   }
 
   // Joystick and keyboard (Bonfire's Keyboard controller) both arrive here.

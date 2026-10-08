@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:bonfire/util/collision_game_component.dart';
 import 'uec_drone.dart';
 import 'sentinel_drone.dart';
+import '../game/progression.dart';
 
 class PlayerBullet extends GameDecoration {
   static const double _speed = 380;
   static const double _maxDistance = 520;
-  static const int _damage = 18;
+  static const int _baseDamage = 18;
+  static int get _damage => _baseDamage + Progression.bonusDamage;
   static const double bulletSize = 16;
 
   final Vector2 _velocity;

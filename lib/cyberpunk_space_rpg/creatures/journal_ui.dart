@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 
+import '../ui/equipment_ui.dart';
 import 'bonds.dart';
 import 'creature_species.dart';
 import 'day_cycle.dart';
@@ -21,8 +22,12 @@ class Journal {
   /// Entry to show first when opened.
   static String? focus;
 
+  /// Optional: close gear (or other overlays) without resuming.
+  static void Function()? dismissOthers;
+
   static void show({String? entry}) {
     focus = entry;
+    dismissOthers?.call();
     if (open.value) return;
     open.value = true;
     onOpenChanged?.call(true);
@@ -63,6 +68,8 @@ class CreatureHud extends StatelessWidget {
       left: 12,
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         const JournalButton(),
+        const SizedBox(width: 8),
+        const EquipmentButton(),
         const SizedBox(width: 8),
         ValueListenableBuilder<double>(
           valueListenable: DayCycle.time,
@@ -148,10 +155,14 @@ class InteractPromptLayer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: Listenable.merge([Interaction.info, Interaction.progress, Journal.open]),
+      animation: Listenable.merge(
+          [Interaction.info, Interaction.progress, Journal.open, Equipment.open],
+      ),
       builder: (_, __) {
         final info = Interaction.info.value;
-        if (info == null || Journal.open.value) return const SizedBox.shrink();
+        if (info == null || Journal.open.value || Equipment.open.value) {
+          return const SizedBox.shrink();
+        }
         if (!info.enabled) {
           return Positioned(
             bottom: 80,
