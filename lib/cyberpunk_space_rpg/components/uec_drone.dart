@@ -10,20 +10,19 @@ enum _DroneState { patrol, chase, attack }
 class UECDrone extends GameDecoration {
   static final List<UECDrone> active = [];
 
-  // Calm tuning (brief v2): slower scout, 8 contact damage, shorter notice
-  // range and a gentler attack rhythm. Was 220 / 55 / 12 / 1.2.
-  static const double _detectionRadius = 160;
+  static const double _detectionRadius = 260;
   static const double _attackRadius = 36;
-  static const double _speed = 40;
-  static const int _damage = 8;
-  static const double _attackCooldown = 1.5;
+  static const double _speed = 70;
+  static const int _damage = 16;
+  static const double _attackCooldown = 0.9;
+  static const int maxHealth = 100;
 
   final Vector2 _origin;
   _DroneState _state = _DroneState.patrol;
   double _patrolAngle;
   double _attackTimer = 0;
   double _pulse = 0;
-  int _health = 60;
+  int _health = maxHealth;
   bool get isDead => _health <= 0;
 
   UECDrone(Vector2 position, {double startAngle = 0})
@@ -124,7 +123,7 @@ class UECDrone extends GameDecoration {
     canvas.drawRect(Rect.fromLTWH(barX, barY, barW, barH),
         Paint()..color = Colors.black54);
     canvas.drawRect(
-        Rect.fromLTWH(barX, barY, barW * (_health / 60).clamp(0, 1), barH),
+        Rect.fromLTWH(barX, barY, barW * (_health / maxHealth).clamp(0, 1), barH),
         Paint()..color = const Color(0xFFFF4444));
   }
 }

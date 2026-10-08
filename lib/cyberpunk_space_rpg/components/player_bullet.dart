@@ -8,7 +8,7 @@ import 'sentinel_drone.dart';
 class PlayerBullet extends GameDecoration {
   static const double _speed = 380;
   static const double _maxDistance = 520;
-  static const int _damage = 30;
+  static const int _damage = 18;
   static const double bulletSize = 16;
 
   final Vector2 _velocity;

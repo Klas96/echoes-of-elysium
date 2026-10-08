@@ -12,7 +12,6 @@ dependencies:
     sdk: flutter
   bonfire: ^3.7.2
   just_audio: ^0.9.36
-  audioplayers: ^6.0.0
 
   cupertino_icons: ^1.0.2
   shared_preferences: ^2.5.3

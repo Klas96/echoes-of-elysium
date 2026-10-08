@@ -24,4 +24,10 @@ class MusicManager {
     _currentTrack = null;
     await _player.stop();
   }
+
+  Future<void> setVolume(double volume) async {
+    try {
+      await _player.setVolume(volume.clamp(0.0, 1.0));
+    } catch (_) {}
+  }
 }

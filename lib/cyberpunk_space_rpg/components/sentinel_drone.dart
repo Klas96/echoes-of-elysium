@@ -10,17 +10,15 @@ enum _SState { idle, chase, attack, rage }
 
 class SentinelDrone extends GameDecoration {
   static SentinelDrone? instance;
-  static const int maxHealth = 300;
-  // Calm tuning (brief v2): a forgiving guardian, not a threat.
-  // Was 320 / 60 / 105 / 1.1 / 0.55 / 18 / 28.
-  static const double _detectR = 260;
+  static const int maxHealth = 420;
+  static const double _detectR = 360;
   static const double _attackR = 50;
-  static const double _speed = 45;
-  static const double _rageSpeed = 70;
-  static const double _cooldown = 1.4;
-  static const double _rageCooldown = 0.9;
-  static const int _damage = 10;
-  static const int _rageDamage = 14;
+  static const double _speed = 75;
+  static const double _rageSpeed = 120;
+  static const double _cooldown = 0.9;
+  static const double _rageCooldown = 0.45;
+  static const int _damage = 22;
+  static const int _rageDamage = 35;
 
   int _health = maxHealth;
   bool get isDead => _health <= 0;

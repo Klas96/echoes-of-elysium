@@ -279,7 +279,7 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision {
     SfxManager().playShoot();
     shotCount++;
     lastShotFrom = position + size / 2;
-    _shootCooldown = 0.22;
+    _shootCooldown = 0.28;
   }
 
   // Joystick and keyboard (Bonfire's Keyboard controller) both arrive here.

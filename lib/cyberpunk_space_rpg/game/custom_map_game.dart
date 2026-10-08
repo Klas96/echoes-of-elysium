@@ -879,9 +879,19 @@ class _NpcDialogueLayerState extends State<_NpcDialogueLayer> {
   void _onDialogueChange() {
     final d = NpcCharacter.activeDialogue.value;
     setState(() { _dialogue = d; _line = 0; });
-    if (d != null && d.voicePaths.isNotEmpty) {
+    if (d == null) {
+      SfxManager().stopVoice();
+      MusicManager().setVolume(1.0);
+    } else if (d.voicePaths.isNotEmpty) {
+      MusicManager().setVolume(0.2);
       SfxManager().playVoice(d.voicePaths[0]);
     }
+  }
+
+  void _closeDialogue() {
+    SfxManager().stopVoice();
+    MusicManager().setVolume(1.0);
+    NpcCharacter.activeDialogue.value = null;
   }
 
   void _advance() {
@@ -889,10 +899,13 @@ class _NpcDialogueLayerState extends State<_NpcDialogueLayer> {
     if (d == null) return;
     final next = _line + 1;
     if (next >= d.lines.length) {
-      NpcCharacter.activeDialogue.value = null;
+      _closeDialogue();
     } else {
       setState(() => _line = next);
-      if (next < d.voicePaths.length) SfxManager().playVoice(d.voicePaths[next]);
+      if (next < d.voicePaths.length) {
+        MusicManager().setVolume(0.2);
+        SfxManager().playVoice(d.voicePaths[next]);
+      }
     }
   }
 
@@ -929,7 +942,7 @@ class _NpcDialogueLayerState extends State<_NpcDialogueLayer> {
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     TextButton(
-                      onPressed: () => NpcCharacter.activeDialogue.value = null,
+                      onPressed: _closeDialogue,
                       child: const Text('SKIP', style: TextStyle(color: Colors.white24, fontSize: 11)),
                     ),
                     const SizedBox(width: 8),

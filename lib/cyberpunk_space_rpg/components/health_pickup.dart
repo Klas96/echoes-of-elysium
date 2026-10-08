@@ -5,7 +5,7 @@ import 'custom_player.dart';
 
 class HealthPickup extends GameDecoration {
   static const double _collectRadius = 24;
-  static const int _healAmount = 40;
+  static const int _healAmount = 20;
   double _pulse = 0;
   bool _collected = false;
   Sprite? _sprite;
