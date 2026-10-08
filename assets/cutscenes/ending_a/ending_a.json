@@ -1,0 +1,72 @@
+{
+  "id": "ending_a",
+  "trigger": "Core Record activated with all five memories",
+  "size": [1280, 720],
+  "panelDuration": 7.0,
+  "crossfade": 0.9,
+  "note": "Reuses stills from other cutscenes; no new art required.",
+  "panels": [
+    {
+      "image": "assets/cutscenes/awakening/awakening_p5.webp",
+      "pan": {"from": [1.05, 0.5, 0.45], "to": [1.0, 0.5, 0.5]},
+      "lines": [
+        {
+          "speaker": "N",
+          "text": "The Core Record opens. Ten thousand years of light pour into the command channel.",
+          "voice": "audio/voices/cut_ending_a_p1_l1.mp3"
+        }
+      ]
+    },
+    {
+      "image": "assets/cutscenes/coalition/coalition_p3.webp",
+      "pan": {"from": [1.0, 0.45, 0.5], "to": [1.06, 0.4, 0.45]},
+      "lines": [
+        {
+          "speaker": "VOSS",
+          "text": "Enough. Show me what you found — before this kills another station.",
+          "voice": "audio/voices/cut_ending_a_p2_l1.mp3"
+        }
+      ]
+    },
+    {
+      "image": "assets/cutscenes/memory5/memory5_p2.webp",
+      "pan": {"from": [1.0, 0.5, 0.5], "to": [1.08, 0.4, 0.4]},
+      "lines": [
+        {
+          "speaker": "N",
+          "text": "Kaela does not argue. She opens every memory — the war refused, the lattice, the child in the woods.",
+          "voice": "audio/voices/cut_ending_a_p3_l1.mp3"
+        }
+      ]
+    },
+    {
+      "image": "assets/cutscenes/coalition/coalition_p3.webp",
+      "pan": {"from": [1.06, 0.4, 0.45], "to": [1.0, 0.5, 0.5]},
+      "lines": [
+        {
+          "speaker": "VOSS",
+          "text": "Stand down. All units, stand down.",
+          "voice": "audio/voices/cut_ending_a_p4_l1.mp3"
+        },
+        {
+          "speaker": "VOSS",
+          "text": "Station Seven was a wound. This… this is a people. I was wrong about what they were.",
+          "voice": "audio/voices/cut_ending_a_p4_l2.mp3"
+        }
+      ]
+    },
+    {
+      "image": "assets/cutscenes/memory5/memory5_p4.webp",
+      "pan": {"from": [1.05, 0.5, 0.5], "to": [1.0, 0.5, 0.5]},
+      "fx": "brighten green over 2 s",
+      "lines": [
+        {
+          "speaker": "GAIA",
+          "text": "Thank you for choosing. The colony will feel me — gently. I promise to learn their fear.",
+          "voice": "audio/voices/cut_ending_a_p5_l1.mp3"
+        }
+      ],
+      "then": "title card GAIA REMEMBERS over the upper sky"
+    }
+  ]
+}

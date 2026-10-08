@@ -65,8 +65,8 @@ void main() {
     final stored = SaveService.decode(SaveService.encode(SaveService.data))!;
     SaveService.data = stored;
     expect(Memories.found, 5);
-    expect(Memories.endingLine, contains('and so does the colony'));
-    expect(Memories.endingVoss, contains('Stand down'));
+    expect(Memories.endingLine, contains('remembers fully'));
+    expect(Memories.endingVoss, contains('stands the drones down'));
   });
 
   test('fewer than five: ending B', () {
@@ -75,6 +75,7 @@ void main() {
     }
     expect(Memories.allFound, isFalse);
     expect(Memories.endingLine, startsWith('Mission complete'));
+    expect(Memories.endingVoss, contains('another fleet'));
   });
 
   test('woods: two fragments open the portal; city fragments never do', () {

@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:bonfire/bonfire.dart';
 import 'package:flutter/material.dart';
 import 'custom_player.dart';
+import 'drone_bounds.dart';
 import 'enemy_bullet.dart';
 import 'explosion_effect.dart';
 import '../game/progression.dart';
@@ -147,6 +148,8 @@ class UECDrone extends GameDecoration {
   double _shieldRegen = 0;
   double _shieldRegenAcc = 0;
   bool _rewarded = false;
+  /// Residual shove from player shots (px/s), decays each frame.
+  Vector2 _knockback = Vector2.zero();
   bool get isDead => _health <= 0;
   int get maxHealth => _stats.maxHealth;
 
@@ -182,10 +185,11 @@ class UECDrone extends GameDecoration {
     super.onRemove();
   }
 
-  void takeDamage(int amount) {
+  void takeDamage(int amount, {Vector2? knockbackDir}) {
     if (isDead || amount <= 0) return;
     _shieldRegen = 0;
     _shieldRegenAcc = 0;
+    if (knockbackDir != null) _applyKnockback(knockbackDir);
     if (_shield > 0) {
       final absorbed = min(_shield, amount);
       _shield -= absorbed;
@@ -193,6 +197,33 @@ class UECDrone extends GameDecoration {
       if (amount <= 0) return;
     }
     _health -= amount;
+  }
+
+  void _applyKnockback(Vector2 dir) {
+    if (dir.length2 < 1e-8) return;
+    final mult = switch (kind) {
+      DroneKind.swarm => 1.25,
+      DroneKind.scout => 1.0,
+      DroneKind.sniper => 0.9,
+      DroneKind.shield => 0.4,
+    };
+    // Replace rather than stack so rapid fire feels snappy, not rocket-launch.
+    _knockback = dir.normalized() * (140 * mult);
+  }
+
+  double get _leash => max(120.0, _stats.detectionRadius * 0.75);
+
+  void _move(Vector2 delta) {
+    final before = position.clone();
+    final ok = DroneBounds.moveBy(this, delta, origin: _origin, leash: _leash);
+    if (!ok) {
+      _knockback.setZero();
+      return;
+    }
+    // Partial slide into a wall/leash — stop the shove.
+    if ((position - (before + delta)).length2 > 1) {
+      _knockback.setZero();
+    }
   }
 
   @override
@@ -222,6 +253,8 @@ class UECDrone extends GameDecoration {
       }
     }
 
+    DroneBounds.rescue(this, origin: _origin, leash: _leash);
+
     final player = gameRef.player;
     if (player == null) return;
 
@@ -230,7 +263,15 @@ class UECDrone extends GameDecoration {
     final dist = toPlayer.length;
 
     _updateState(dist);
-    _act(dt, toPlayer, dist);
+    // Strong shove briefly overrides chase so hits read clearly.
+    if (_knockback.length < 50) {
+      _act(dt, toPlayer, dist);
+    }
+    if (_knockback.length2 > 0.25) {
+      _move(_knockback * dt);
+      _knockback.scale(exp(-14 * dt));
+      if (_knockback.length2 < 4) _knockback.setZero();
+    }
   }
 
   void _updateState(double dist) {
@@ -267,16 +308,15 @@ class UECDrone extends GameDecoration {
             Vector2(cos(_patrolAngle) * radius, sin(_patrolAngle) * radius);
         final step = target - position;
         if (step.length > 1) {
-          position +=
-              step.normalized() * min(_stats.speed * dt, step.length);
+          _move(step.normalized() * min(_stats.speed * dt, step.length));
         }
       case _DroneState.chase:
         if (toPlayer.length > 1) {
-          position += toPlayer.normalized() * _stats.speed * dt;
+          _move(toPlayer.normalized() * _stats.speed * dt);
         }
       case _DroneState.retreat:
         if (toPlayer.length > 1) {
-          position -= toPlayer.normalized() * _stats.speed * 1.1 * dt;
+          _move(-toPlayer.normalized() * _stats.speed * 1.1 * dt);
         }
         if (_attackTimer <= 0 && dist <= _stats.attackRadius) {
           _fireOrMelee(toPlayer);

@@ -1,0 +1,61 @@
+{
+  "id": "ending_b",
+  "trigger": "Core Record activated without all five memories",
+  "size": [1280, 720],
+  "panelDuration": 7.0,
+  "crossfade": 0.9,
+  "note": "Reuses stills from other cutscenes; no new art required.",
+  "panels": [
+    {
+      "image": "assets/cutscenes/awakening/awakening_p5.webp",
+      "pan": {"from": [1.05, 0.5, 0.45], "to": [1.0, 0.5, 0.5]},
+      "lines": [
+        {
+          "speaker": "N",
+          "text": "The Core Record opens — bright, incomplete. Gaps remain where memories were never found.",
+          "voice": "audio/voices/cut_ending_b_p1_l1.mp3"
+        }
+      ]
+    },
+    {
+      "image": "assets/cutscenes/coalition/coalition_p3.webp",
+      "pan": {"from": [1.0, 0.45, 0.5], "to": [1.06, 0.4, 0.45]},
+      "lines": [
+        {
+          "speaker": "VOSS",
+          "text": "You bought her time. Not forgiveness.",
+          "voice": "audio/voices/cut_ending_b_p2_l1.mp3"
+        },
+        {
+          "speaker": "VOSS",
+          "text": "Earth will send another fleet. When they ask why the drones stood down, I will have no answer that saves you.",
+          "voice": "audio/voices/cut_ending_b_p2_l2.mp3"
+        }
+      ]
+    },
+    {
+      "image": "assets/cutscenes/coalition/coalition_p4.webp",
+      "pan": {"from": [1.06, 0.5, 0.45], "to": [1.0, 0.5, 0.5]},
+      "fx": [
+        {
+          "type": "pulse",
+          "color": "#00FF88",
+          "mask": "assets/cutscenes/coalition/coalition_p4_glow.webp"
+        }
+      ],
+      "lines": [
+        {
+          "speaker": "GAIA",
+          "text": "Then we will still be here when they arrive. Incomplete — but awake.",
+          "voice": "audio/voices/cut_ending_b_p3_l1.mp3"
+        },
+        {
+          "speaker": "KAELA",
+          "text": "Next time, we bring him the rest of the truth.",
+          "voice": "audio/voices/cut_ending_b_p3_l2.mp3"
+        }
+      ],
+      "then": "title card THE CORE HOLDS over the upper sky"
+    }
+  ]
+}

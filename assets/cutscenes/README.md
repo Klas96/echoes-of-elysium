@@ -10,6 +10,11 @@ Played by `CutscenePlayer` (`lib/cyberpunk_space_rpg/ui/cutscene_player.dart`);
 screen and stores the story flag `cutscene:<id>` in the save when it ends or
 is skipped (`once: true` skips it if already seen).
 
+Story spine cutscenes: `awakening` (new game), `coalition` (enter City),
+`memory1`–`memory5` (flashbacks), `ending_a` / `ending_b` (Core finale).
+Ending stills reuse art from other folders via absolute `assets/cutscenes/...`
+image paths.
+
 Preview while authoring (any panel can be frozen for screenshots):
 
     flutter run -d chrome -t tools/cutscene_preview.dart

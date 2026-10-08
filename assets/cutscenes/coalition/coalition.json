@@ -1,81 +1,56 @@
 {
   "id": "coalition",
   "trigger": "entering the City, first Voss meeting",
-  "size": [
-    1280,
-    720
-  ],
+  "size": [1280, 720],
   "note": "Same format as awakening.json. No text in images; subtitles in the lower fifth. ~6-8 s per panel, 0.8 s crossfade.",
   "pan_format": "[zoom, centerX 0-1, centerY 0-1]",
   "panels": [
     {
       "image": "coalition_p1.webp",
-      "pan": {
-        "from": [
-          1.0,
-          0.5,
-          0.5
-        ],
-        "to": [
-          1.08,
-          0.6,
-          0.35
-        ]
-      },
-      "lines": []
+      "pan": {"from": [1.0, 0.5, 0.5], "to": [1.08, 0.6, 0.35]},
+      "lines": [
+        {
+          "speaker": "N",
+          "text": "The City. UEC banners hang over streets the colony built before it learned to be afraid.",
+          "voice": "audio/voices/cut_coalition_p1_l1.mp3"
+        }
+      ]
     },
     {
       "image": "coalition_p2.webp",
-      "pan": {
-        "from": [
-          1.1,
-          0.3,
-          0.5
-        ],
-        "to": [
-          1.0,
-          0.5,
-          0.5
-        ]
-      },
-      "lines": []
+      "pan": {"from": [1.1, 0.3, 0.5], "to": [1.0, 0.5, 0.5]},
+      "lines": [
+        {
+          "speaker": "N",
+          "text": "Commander Voss is waiting. He does not look like a man who bluffs.",
+          "voice": "audio/voices/cut_coalition_p2_l1.mp3"
+        }
+      ]
     },
     {
       "image": "coalition_p3.webp",
-      "pan": {
-        "from": [
-          1.0,
-          0.45,
-          0.5
-        ],
-        "to": [
-          1.06,
-          0.4,
-          0.45
-        ]
-      },
+      "pan": {"from": [1.0, 0.45, 0.5], "to": [1.06, 0.4, 0.45]},
       "lines": [
         {
           "speaker": "VOSS",
           "text": "Dr. Osei. You've woken something that should have stayed asleep.",
           "voice": "audio/voices/cut_coalition_p3_l1.mp3"
+        },
+        {
+          "speaker": "VOSS",
+          "text": "Station Seven went dark when a lattice like hers woke. Three hundred people. I buried the reports myself.",
+          "voice": "audio/voices/cut_coalition_p3_l2.mp3"
+        },
+        {
+          "speaker": "VOSS",
+          "text": "Hand over every fragment. Walk away. Keep your clearance.",
+          "voice": "audio/voices/cut_coalition_p3_l3.mp3"
         }
       ]
     },
     {
       "image": "coalition_p4.webp",
-      "pan": {
-        "from": [
-          1.06,
-          0.5,
-          0.45
-        ],
-        "to": [
-          1.0,
-          0.5,
-          0.5
-        ]
-      },
+      "pan": {"from": [1.06, 0.5, 0.45], "to": [1.0, 0.5, 0.5]},
       "fx": [
         {
           "type": "pulse",
@@ -88,6 +63,16 @@
           "speaker": "KAELA",
           "text": "She was never asleep. You just weren't listening.",
           "voice": "audio/voices/cut_coalition_p4_l1.mp3"
+        },
+        {
+          "speaker": "KAELA",
+          "text": "If you're afraid of her, help me understand her. Don't erase her.",
+          "voice": "audio/voices/cut_coalition_p4_l2.mp3"
+        },
+        {
+          "speaker": "VOSS",
+          "text": "Then you are classified hostile. The drones will find you.",
+          "voice": "audio/voices/cut_coalition_p4_l3.mp3"
         }
       ]
     }

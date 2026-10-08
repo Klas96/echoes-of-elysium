@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:bonfire/bonfire.dart';
 import 'package:flutter/material.dart';
 import 'custom_player.dart';
+import 'drone_bounds.dart';
 import 'explosion_effect.dart';
 import '../game/game_state.dart';
 import '../game/progression.dart';
@@ -26,10 +27,13 @@ class SentinelDrone extends GameDecoration {
   double _attackTimer = 0;
   double _pulse = 0;
   bool _deathFired = false;
+  Vector2 _knockback = Vector2.zero();
+  late final Vector2 _origin;
   final VoidCallback onDefeated;
 
   SentinelDrone(Vector2 position, {required this.onDefeated})
-      : super(position: position, size: Vector2.all(48));
+      : _origin = position.clone(),
+        super(position: position, size: Vector2.all(48));
 
   Sprite? _sprite;
 
@@ -47,9 +51,26 @@ class SentinelDrone extends GameDecoration {
     super.onRemove();
   }
 
-  void takeDamage(int amount) {
+  static const double _leash = 220;
+
+  void _move(Vector2 delta) {
+    final ok = DroneBounds.moveBy(
+      this,
+      delta,
+      origin: _origin,
+      leash: _leash,
+      pad: 32,
+    );
+    if (!ok) _knockback.setZero();
+  }
+
+  void takeDamage(int amount, {Vector2? knockbackDir}) {
     if (isDead) return;
     GameState.onSentinelEngaged();
+    if (knockbackDir != null && knockbackDir.length2 > 1e-8) {
+      // Heavy boss: short flinch, not a shove across the plaza.
+      _knockback = knockbackDir.normalized() * 70;
+    }
     _health = (_health - amount).clamp(0, maxHealth);
     if (_health <= 0 && !_deathFired) {
       _deathFired = true;
@@ -86,8 +107,17 @@ class SentinelDrone extends GameDecoration {
 
     final spd = (rage && _state != _SState.idle) ? _rageSpeed : _speed;
 
-    if ((_state == _SState.chase || _state == _SState.rage) && dist > _attackR) {
-      position += toPlayer.normalized() * spd * dt;
+    DroneBounds.rescue(this, origin: _origin, leash: _leash, pad: 32);
+
+    if (_knockback.length < 40 &&
+        (_state == _SState.chase || _state == _SState.rage) &&
+        dist > _attackR) {
+      _move(toPlayer.normalized() * spd * dt);
+    }
+    if (_knockback.length2 > 0.25) {
+      _move(_knockback * dt);
+      _knockback.scale(exp(-12 * dt));
+      if (_knockback.length2 < 4) _knockback.setZero();
     }
     if (dist < _attackR * 1.5 && _attackTimer <= 0) {
       final dmg = rage ? _rageDamage : _damage;

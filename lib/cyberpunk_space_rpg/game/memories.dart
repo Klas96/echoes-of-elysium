@@ -179,15 +179,14 @@ class Memories {
 
   // ------------------------------------------------------------- ending
 
-  /// Ending hook (dialogue doc: Ending A with all five, otherwise B). The
-  /// full Voss finale isn't built yet; the victory screen uses these lines.
+  /// Ending hook (Ending A with all five memories, otherwise B).
   static String get endingVoss => allFound
-      ? 'Kaela shows Commander Voss what the Aetherians chose. "Stand down. All units, stand down."'
-      : 'The UEC drones go silent. Commander Voss withdraws.';
+      ? 'Voss sees every memory — including Station Seven\'s shadow beside the Aetherians\' choice — and stands the drones down.'
+      : 'Voss withdraws the drones, but vows that Earth will send another fleet.';
 
   static String get endingLine => allFound
-      ? 'Gaia\'s memory is restored. The Aetherians live on, and so does the colony.'
-      : 'Mission complete. Gaia\'s memory is restored. The Aetherians live on.';
+      ? 'Gaia remembers fully. The colony lives — and so do the Aetherians.'
+      : 'Mission complete. Gaia is awake, but the story is still unfinished.';
 
   /// Test hook: forget the live game.
   @visibleForTesting

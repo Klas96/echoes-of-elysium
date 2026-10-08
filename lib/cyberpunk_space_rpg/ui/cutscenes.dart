@@ -15,6 +15,12 @@ class Cutscenes {
   /// First time Kaela reaches the City (world2).
   static const coalition = 'coalition';
 
+  /// Core finale when all five memories were found.
+  static const endingA = 'ending_a';
+
+  /// Core finale when some memories are still missing.
+  static const endingB = 'ending_b';
+
   static String assetFor(String id) => 'assets/cutscenes/$id/$id.json';
   static String flagFor(String id) => 'cutscene:$id';
   static bool seen(String id) => SaveService.data.flag(flagFor(id));

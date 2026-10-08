@@ -59,12 +59,27 @@ void main() {
     test('coalition.json parses, including the glow pulse shorthand', () {
       final s = _asset('coalition');
       expect(s.panels, hasLength(4));
-      expect(s.panels[0].lines, isEmpty);
-      expect(s.panels[2].lines.single.speaker, 'VOSS');
+      expect(s.panels[0].lines.single.speaker, 'N');
+      expect(s.panels[2].lines.first.speaker, 'VOSS');
+      expect(s.panels[2].lines, hasLength(3));
+      expect(s.panels[3].lines, hasLength(3));
       expect(s.panels[3].effects.single.type, 'pulse');
       expect(s.panels[3].effects.single.color, const Color(0xFF00FF88));
       for (final p in s.panels) {
         expect(File(p.image).existsSync(), isTrue, reason: p.image);
+      }
+    });
+
+    test('ending_a and ending_b parse and reuse existing stills', () {
+      for (final id in ['ending_a', 'ending_b']) {
+        final s = _asset(id);
+        expect(s.panels, isNotEmpty);
+        for (final p in s.panels) {
+          expect(File(p.image).existsSync(), isTrue, reason: p.image);
+          for (final l in p.lines) {
+            expect(l.text, isNotEmpty);
+          }
+        }
       }
     });
 

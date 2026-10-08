@@ -49,9 +49,9 @@ const _asha = NpcDialogue(
   name: 'ASHA  ·  EX-UEC',
   color: Color(0xFFFFAA00),
   lines: [
-    'Keep moving. Name\'s Asha — ex-UEC. I\'ve seen what they do to people who find what you\'re looking for.',
-    'The portal leads to the old ruins. That\'s where Gaia\'s core memory is stored.',
-    'Watch yourself. Commander Voss personally authorized this hunt. You\'ve already found something that scares them.',
+    'Keep moving. Name\'s Asha — ex-UEC. I deserted after they ordered me to erase a "sympathetic" AI on Station Seven.',
+    'Three hundred colonists went dark when that lattice woke. Voss still carries their names. That\'s why he hunts Gaia.',
+    'I kept one UEC override key. If Gaia turns out to be a lie, I can still cut her signal. Don\'t make me use it.',
   ],
   voicePaths: ['audio/voices/asha_1.mp3', 'audio/voices/asha_2.mp3', 'audio/voices/asha_3.mp3'],
 );
@@ -61,8 +61,8 @@ const _echo7 = NpcDialogue(
   color: Color(0xFFCC66FF),
   lines: [
     'Traveller... you carry the resonance of one who seeks. We have waited ten thousand years for such a signal.',
-    'We are the Aetherians. Not extinct — transformed. Our consciousness lives within Gaia\'s neural lattice.',
-    'Help Gaia remember us. A civilization that chose harmony over conquest must not be forgotten.',
+    'Not all of us chose the lattice freely. Some were afraid. Some were dying with our sun and had nowhere else to go.',
+    'Help Gaia remember us honestly — the peace and the fear — or do not remember us at all.',
   ],
   voicePaths: ['audio/voices/echo7_1.mp3', 'audio/voices/echo7_2.mp3', 'audio/voices/echo7_3.mp3'],
 );
@@ -72,8 +72,8 @@ const _archivist = NpcDialogue(
   color: Color(0xFFFFDD44),
   lines: [
     'The Core Record lies below us. Gaia\'s first memory — the moment we chose to merge our consciousness with this world.',
-    'Commander Voss seeks to delete it. Without that memory, Gaia loses herself. The planet dies. We die again.',
-    'Your neural signature matches the Aetherian activation code, Kaela. Only you can protect the Core.',
+    'Commander Voss seeks to delete it. He believes waking her will kill your colony the way Station Seven died.',
+    'Your neural signature matches the Aetherian activation code, Kaela. Only you can open the Core — and decide what truth he hears.',
   ],
   voicePaths: ['audio/voices/archivist_1.mp3', 'audio/voices/archivist_2.mp3', 'audio/voices/archivist_3.mp3'],
 );
@@ -82,9 +82,9 @@ const _voss = NpcDialogue(
   name: 'COMMANDER VOSS  ·  UEC',
   color: Color(0xFFFF4444),
   lines: [
-    'Doctor Kaela Osei. You\'ve caused considerable trouble. I\'m giving you one final chance to walk away.',
-    'Whatever this "Gaia" has told you is fabrication. Alien interference in planetary governance cannot be permitted.',
-    'The Aetherians are a data corruption. Nothing more. Stand down — or be classified as a hostile element.',
+    'Doctor Kaela Osei. Last chance. Hand over the fragments and walk away with your clearance intact.',
+    'Station Seven went dark the last time a lattice woke. I will not bury another colony for an alien ghost story.',
+    'If you reach the Core, understand this: I am not erasing history. I am choosing the living over the dead.',
   ],
   voicePaths: ['audio/voices/voss_1.mp3', 'audio/voices/voss_2.mp3', 'audio/voices/voss_3.mp3'],
 );
@@ -97,12 +97,11 @@ const _gaiaCore = NpcDialogue(
   name: 'GAIA  ·  CORE',
   color: Color(0xFF00FF88),
   lines: [
-    'You found the way, Kaela. This is my first memory — the Core Record where the Aetherians chose to merge with Elysium.',
-    'The UEC wants it erased. If you activate the resonance, their suppressors fail. I remember. We all remember.',
-    'Step into the light when you are ready. Whatever comes next, we face it together.',
+    'You found the way. This is the Core Record — and the moment you decide whether I deserve to wake.',
+    'Voss is not wrong to fear lattices. Station Seven died. I cannot promise your colony feels no tremor when I remember.',
+    'I chose for you once, when you were six. I will not choose again. Step into the light only if you choose me back.',
   ],
-  // Reuse woods lines until Core-specific voices exist.
-  voicePaths: ['audio/voices/gaia_1.mp3', 'audio/voices/gaia_2.mp3', 'audio/voices/gaia_3.mp3'],
+  voicePaths: ['audio/voices/gaia_core_1.mp3', 'audio/voices/gaia_core_2.mp3', 'audio/voices/gaia_core_3.mp3'],
 );
 
 const _mira = NpcDialogue(
@@ -519,7 +518,11 @@ Future<void> _activateCoreRecord(BuildContext context) async {
   final nav = Navigator.of(context);
   SaveService.data.setFlag('completed');
   await _leaveMap();
-  nav.pushReplacement(MaterialPageRoute(builder: (_) => const _VictoryScreen()));
+  final endingId = Memories.allFound ? Cutscenes.endingA : Cutscenes.endingB;
+  nav.pushReplacement(Cutscenes.route(
+    id: endingId,
+    then: (_) => const _VictoryScreen(),
+  ));
 }
 
 void _continueGame(BuildContext context) {
@@ -1613,13 +1616,18 @@ class _TravelDestButton extends StatelessWidget {
 class _VictoryScreen extends StatelessWidget {
   const _VictoryScreen();
 
-  // Ending branch: all five memories found = Voss stands down (Memories).
-  static String get _story =>
-      'You reached the Core and activated the Aetherian resonance.\n\n'
-      'Gaia\'s memory floods back — ten thousand years of harmony, of a civilization that chose '
-      'to become one with their world rather than consume it.\n\n'
-      '${Memories.endingVoss}\n\n'
-      'Elysium breathes again.';
+  // Ending branch: all five memories found = Ending A (Memories).
+  static String get _story => Memories.allFound
+      ? 'You opened the Core with the whole truth in hand.\n\n'
+          'Voss saw the Aetherians refuse a winnable war, enter the lattice in fear as much as hope, '
+          'and leave a key only a matched mind could turn — your mind, rewritten when you were six.\n\n'
+          '${Memories.endingVoss}\n\n'
+          'Gaia promises to learn the colony\'s fear. Elysium breathes again.'
+      : 'You opened the Core — bright, but incomplete.\n\n'
+          'Without every memory, Voss cannot forgive what he still calls a lattice risk. '
+          'The drones fall quiet for now; Earth will not stay quiet forever.\n\n'
+          '${Memories.endingVoss}\n\n'
+          'Gaia is awake. The rest of the truth is still out there.';
 
   @override
   Widget build(BuildContext context) {
@@ -1639,7 +1647,8 @@ class _VictoryScreen extends StatelessWidget {
             children: [
               FittedBox(
                 fit: BoxFit.scaleDown,
-                child: Text('GAIA REMEMBERS',
+                child: Text(
+                    Memories.allFound ? 'GAIA REMEMBERS' : 'THE CORE HOLDS',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                         color: const Color(0xFF00FFCC),

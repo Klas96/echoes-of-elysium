@@ -51,11 +51,11 @@ class PlayerBullet extends GameDecoration {
     if (!_hit) {
       if (other is UECDrone && !other.isDead) {
         _hit = true;
-        other.takeDamage(_damage);
+        other.takeDamage(_damage, knockbackDir: _velocity);
         removeFromParent();
       } else if (other is SentinelDrone && !other.isDead) {
         _hit = true;
-        other.takeDamage(_damage);
+        other.takeDamage(_damage, knockbackDir: _velocity);
         removeFromParent();
       } else if (other is TileWithCollision ||
           other is CollisionMapComponent ||
