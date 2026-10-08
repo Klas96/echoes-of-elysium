@@ -196,23 +196,42 @@ class CutsceneLine {
   /// derived from its length.
   final double? hold;
 
-  const CutsceneLine({required this.speaker, required this.text, this.delay = 0.5, this.hold});
+  /// Optional spoken line asset (`audio/voices/...` or `assets/audio/voices/...`).
+  final String? voice;
+
+  const CutsceneLine({
+    required this.speaker,
+    required this.text,
+    this.delay = 0.5,
+    this.hold,
+    this.voice,
+  });
 
   static CutsceneLine? fromJson(Object? v) {
     if (v is String && v.trim().isNotEmpty) return CutsceneLine(speaker: 'N', text: v);
     if (v is! Map) return null;
     final text = v['text'];
     if (text is! String || text.trim().isEmpty) return null;
+    final voice = v['voice'];
     return CutsceneLine(
       speaker: v['speaker'] is String ? v['speaker'] as String : 'N',
       text: text,
       delay: _num(v['delay'], 0.5).clamp(0.0, 30.0).toDouble(),
       hold: v['hold'] is num ? (v['hold'] as num).toDouble().clamp(0.2, 60.0) : null,
+      voice: voice is String && voice.trim().isNotEmpty ? voice.trim() : null,
     );
   }
 
-  /// Auto-advance hold after the typewriter finishes: long enough to read.
-  double get holdSeconds => hold ?? (1.6 + text.length * 0.045).clamp(1.8, 6.0);
+  /// Auto-advance hold after the typewriter finishes: long enough to read,
+  /// and (when voiced) long enough for the spoken line to finish.
+  double get holdSeconds {
+    final read = hold ?? (1.6 + text.length * 0.045).clamp(1.8, 6.0);
+    if (voice == null) return read;
+    // Spoken pace ~12.5 chars/s; overlap with the typewriter reveal.
+    final voiceDur = text.length / 12.5 + 0.45;
+    final reveal = text.length / 38.0;
+    return math.max(read, voiceDur - reveal + 0.35);
+  }
 }
 
 class CutsceneTitleCard {

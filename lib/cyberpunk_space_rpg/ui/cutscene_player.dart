@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 
+import '../audio/music_manager.dart';
 import 'cutscene_data.dart';
 
 export 'cutscene_data.dart';
@@ -300,6 +301,7 @@ class _CutscenePlayerState extends State<CutscenePlayer> with SingleTickerProvid
   bool _finished = false;
   bool _started = false;
   final _focus = FocusNode(debugLabel: 'cutscene');
+  String? _voiceKey;
 
   @override
   void initState() {
@@ -347,12 +349,42 @@ class _CutscenePlayerState extends State<CutscenePlayer> with SingleTickerProvid
     _last = elapsed;
     // A long frame (tab in background) must not skip whole panels.
     _playback?.tick(dt.clamp(0.0, 0.1));
+    _syncVoice();
+  }
+
+  /// Plays a line's voice once when its subtitle becomes visible.
+  void _syncVoice() {
+    final p = _playback;
+    if (p == null || _finished) return;
+    if (p.phase == CutscenePhase.outro || p.phase == CutscenePhase.done) {
+      _stopVoice();
+      return;
+    }
+    final line = p.currentLine;
+    final voice = line?.voice;
+    if (voice == null || voice.isEmpty) return;
+    final key = '${p.panelIndex}:${p.lineIndex}:$voice';
+    if (key == _voiceKey) return;
+    _voiceKey = key;
+    MusicManager().setVolume(0.2);
+    SfxManager().playVoice(voice);
+  }
+
+  void _stopVoice() {
+    if (_voiceKey == null) {
+      SfxManager().stopVoice();
+      return;
+    }
+    _voiceKey = null;
+    SfxManager().stopVoice();
+    MusicManager().setVolume(1.0);
   }
 
   void _finish() {
     if (_finished) return;
     _finished = true;
     if (_ticker.isActive) _ticker.stop();
+    _stopVoice();
     // Called from inside a tick/build: defer to the next frame.
     SchedulerBinding.instance.addPostFrameCallback((_) => widget.onFinished());
     SchedulerBinding.instance.scheduleFrame();
@@ -362,6 +394,7 @@ class _CutscenePlayerState extends State<CutscenePlayer> with SingleTickerProvid
   void dispose() {
     _ticker.dispose();
     _focus.dispose();
+    _stopVoice();
     if (widget.playback == null) _playback?.dispose();
     super.dispose();
   }
@@ -372,13 +405,17 @@ class _CutscenePlayerState extends State<CutscenePlayer> with SingleTickerProvid
     final k = e.logicalKey;
     if (k == LogicalKeyboardKey.escape) {
       p.skip();
+      _syncVoice();
       return KeyEventResult.handled;
     }
     if (k == LogicalKeyboardKey.space ||
         k == LogicalKeyboardKey.enter ||
         k == LogicalKeyboardKey.numpadEnter ||
         k == LogicalKeyboardKey.arrowRight) {
-      if (_started) p.advance();
+      if (_started) {
+        p.advance();
+        _syncVoice();
+      }
       return KeyEventResult.handled;
     }
     return KeyEventResult.ignored;
@@ -394,7 +431,10 @@ class _CutscenePlayerState extends State<CutscenePlayer> with SingleTickerProvid
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () {
-          if (_started) p?.advance();
+          if (_started) {
+            p?.advance();
+            _syncVoice();
+          }
         },
         child: ColoredBox(
           color: Colors.black,
@@ -406,7 +446,10 @@ class _CutscenePlayerState extends State<CutscenePlayer> with SingleTickerProvid
                     builder: (context, box) => _CutsceneView(
                       playback: p,
                       size: box.biggest,
-                      onSkip: p.skip,
+                      onSkip: () {
+                        p.skip();
+                        _syncVoice();
+                      },
                     ),
                   ),
                 ),

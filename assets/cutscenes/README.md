@@ -52,8 +52,11 @@ are ignored; a malformed optional field falls back to its default.
   GAIA green, KAELA cyan, VOSS red, ASHA amber, AETHERIAN / ECHO-7 violet,
   ARCHIVIST gold; any other name shows in cyan. `delay` = seconds before the
   line appears (0.5), `hold` = seconds after it's fully typed (default from
-  length, 1.8-6 s). A plain string is a narrator line. `"lines": []` = a
-  silent panel. A panel stays at least `duration`, longer if its lines need it.
+  length, 1.8-6 s; longer when `voice` is set so the VO can finish).
+  Optional `voice`: asset path under `audio/voices/` played when the line
+  appears (regenerate with `tools/gen_cutscene_voices.py`). A plain string is
+  a narrator line. `"lines": []` = a silent panel. A panel stays at least
+  `duration`, longer if its lines need it.
 - **Input**: tap/click/Space/Enter finishes the typing, then goes to the next
   line/panel. SKIP button or Esc ends the cutscene.
 - **pan**: Ken Burns move, eased, over the panel's running time. Only `from`

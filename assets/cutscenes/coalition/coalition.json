@@ -1,13 +1,95 @@
 {
   "id": "coalition",
   "trigger": "entering the City, first Voss meeting",
-  "size": [1280, 720],
+  "size": [
+    1280,
+    720
+  ],
   "note": "Same format as awakening.json. No text in images; subtitles in the lower fifth. ~6-8 s per panel, 0.8 s crossfade.",
   "pan_format": "[zoom, centerX 0-1, centerY 0-1]",
   "panels": [
-    {"image": "coalition_p1.webp", "pan": {"from": [1.0, 0.5, 0.5], "to": [1.08, 0.6, 0.35]}, "lines": []},
-    {"image": "coalition_p2.webp", "pan": {"from": [1.1, 0.3, 0.5], "to": [1.0, 0.5, 0.5]}, "lines": []},
-    {"image": "coalition_p3.webp", "pan": {"from": [1.0, 0.45, 0.5], "to": [1.06, 0.4, 0.45]}, "lines": [{"speaker": "VOSS", "text": "Dr. Osei. You've woken something that should have stayed asleep."}]},
-    {"image": "coalition_p4.webp", "pan": {"from": [1.06, 0.5, 0.45], "to": [1.0, 0.5, 0.5]}, "fx": [{"type": "pulse", "color": "#00FF88", "mask": "coalition_p4_glow.webp"}], "lines": [{"speaker": "KAELA", "text": "She was never asleep. You just weren't listening."}]}
+    {
+      "image": "coalition_p1.webp",
+      "pan": {
+        "from": [
+          1.0,
+          0.5,
+          0.5
+        ],
+        "to": [
+          1.08,
+          0.6,
+          0.35
+        ]
+      },
+      "lines": []
+    },
+    {
+      "image": "coalition_p2.webp",
+      "pan": {
+        "from": [
+          1.1,
+          0.3,
+          0.5
+        ],
+        "to": [
+          1.0,
+          0.5,
+          0.5
+        ]
+      },
+      "lines": []
+    },
+    {
+      "image": "coalition_p3.webp",
+      "pan": {
+        "from": [
+          1.0,
+          0.45,
+          0.5
+        ],
+        "to": [
+          1.06,
+          0.4,
+          0.45
+        ]
+      },
+      "lines": [
+        {
+          "speaker": "VOSS",
+          "text": "Dr. Osei. You've woken something that should have stayed asleep.",
+          "voice": "audio/voices/cut_coalition_p3_l1.mp3"
+        }
+      ]
+    },
+    {
+      "image": "coalition_p4.webp",
+      "pan": {
+        "from": [
+          1.06,
+          0.5,
+          0.45
+        ],
+        "to": [
+          1.0,
+          0.5,
+          0.5
+        ]
+      },
+      "fx": [
+        {
+          "type": "pulse",
+          "color": "#00FF88",
+          "mask": "coalition_p4_glow.webp"
+        }
+      ],
+      "lines": [
+        {
+          "speaker": "KAELA",
+          "text": "She was never asleep. You just weren't listening.",
+          "voice": "audio/voices/cut_coalition_p4_l1.mp3"
+        }
+      ]
+    }
   ]
 }

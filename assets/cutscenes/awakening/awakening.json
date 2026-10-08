@@ -1,14 +1,124 @@
 {
   "id": "awakening",
   "trigger": "after BEGIN JOURNEY, before the Woods",
-  "size": [1280, 720],
+  "size": [
+    1280,
+    720
+  ],
   "note": "Images contain no text. Draw subtitles in the lower fifth; scale with cover/fit. Pans are gentle (Ken Burns), ~6-8 s per panel, 0.8 s crossfade.",
   "panels": [
-    {"image": "awakening_p1.webp", "pan": {"from": [1.0, 0.5, 0.5], "to": [1.08, 0.45, 0.5]}, "lines": [{"speaker": "N", "text": "Elysium Colony. Year 2387."}]},
-    {"image": "awakening_p2.webp", "pan": {"from": [1.08, 0.4, 0.5], "to": [1.0, 0.5, 0.5]}, "lines": [{"speaker": "N", "text": "Dr. Kaela Osei was only meant to run a routine diagnostic on Gaia, the planet's caretaker system."}]},
-    {"image": "awakening_p3.webp", "pan": {"from": [1.0, 0.5, 0.5], "to": [1.1, 0.55, 0.45]}, "fx": "brighten green over 1.5 s", "lines": [{"speaker": "GAIA", "text": "...Who are you?"}]},
-    {"image": "awakening_p4.webp", "pan": {"from": [1.0, 0.5, 0.45], "to": [1.06, 0.5, 0.4]}, "lines": [{"speaker": "KAELA", "text": "Gaia? You're... awake?"}]},
-    {"image": "awakening_p5.webp", "pan": {"from": [1.1, 0.4, 0.6], "to": [1.0, 0.5, 0.5]}, "lines": [{"speaker": "N", "text": "Far above, someone else noticed too."}], "then": "title card ECHOES OF ELYSIUM over the upper sky, fade into the Woods"}
+    {
+      "image": "awakening_p1.webp",
+      "pan": {
+        "from": [
+          1.0,
+          0.5,
+          0.5
+        ],
+        "to": [
+          1.08,
+          0.45,
+          0.5
+        ]
+      },
+      "lines": [
+        {
+          "speaker": "N",
+          "text": "Elysium Colony. Year 2387.",
+          "voice": "audio/voices/cut_awakening_p1_l1.mp3"
+        }
+      ]
+    },
+    {
+      "image": "awakening_p2.webp",
+      "pan": {
+        "from": [
+          1.08,
+          0.4,
+          0.5
+        ],
+        "to": [
+          1.0,
+          0.5,
+          0.5
+        ]
+      },
+      "lines": [
+        {
+          "speaker": "N",
+          "text": "Dr. Kaela Osei was only meant to run a routine diagnostic on Gaia, the planet's caretaker system.",
+          "voice": "audio/voices/cut_awakening_p2_l1.mp3"
+        }
+      ]
+    },
+    {
+      "image": "awakening_p3.webp",
+      "pan": {
+        "from": [
+          1.0,
+          0.5,
+          0.5
+        ],
+        "to": [
+          1.1,
+          0.55,
+          0.45
+        ]
+      },
+      "fx": "brighten green over 1.5 s",
+      "lines": [
+        {
+          "speaker": "GAIA",
+          "text": "...Who are you?",
+          "voice": "audio/voices/cut_awakening_p3_l1.mp3"
+        }
+      ]
+    },
+    {
+      "image": "awakening_p4.webp",
+      "pan": {
+        "from": [
+          1.0,
+          0.5,
+          0.45
+        ],
+        "to": [
+          1.06,
+          0.5,
+          0.4
+        ]
+      },
+      "lines": [
+        {
+          "speaker": "KAELA",
+          "text": "Gaia? You're... awake?",
+          "voice": "audio/voices/cut_awakening_p4_l1.mp3"
+        }
+      ]
+    },
+    {
+      "image": "awakening_p5.webp",
+      "pan": {
+        "from": [
+          1.1,
+          0.4,
+          0.6
+        ],
+        "to": [
+          1.0,
+          0.5,
+          0.5
+        ]
+      },
+      "lines": [
+        {
+          "speaker": "N",
+          "text": "Far above, someone else noticed too.",
+          "voice": "audio/voices/cut_awakening_p5_l1.mp3"
+        }
+      ],
+      "then": "title card ECHOES OF ELYSIUM over the upper sky, fade into the Woods"
+    }
   ],
   "pan_format": "[zoom, centerX 0-1, centerY 0-1]"
 }
