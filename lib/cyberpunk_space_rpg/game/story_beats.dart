@@ -8,6 +8,7 @@ import '../components/npc_character.dart';
 import '../ui/cutscene_player.dart';
 import '../ui/cutscenes.dart';
 import 'game_state.dart';
+import 'pause.dart';
 
 /// Mid-game story moments played over a live map (like Memories).
 class StoryBeats {
@@ -46,9 +47,10 @@ class StoryBeats {
   static Future<void> playOverGame(BonfireGameInterface game, String id) async {
     if (_busy || Cutscenes.seen(id)) return;
     _busy = true;
-    NpcCharacter.activeDialogue.value = null;
-    AIFragment.activeDialogue.value = null;
     CustomPlayer.pendingShot.value = null;
+    final fromTalk = NpcCharacter.activeDialogue.value != null ||
+        AIFragment.activeDialogue.value != null;
+    Pause.dismissDialogueForStory();
     final wasPaused = game.paused;
     if (!wasPaused) game.pauseEngine();
     try {
@@ -70,7 +72,7 @@ class StoryBeats {
               JoystickDirectionalEvent(directional: JoystickMoveDirectional.IDLE));
         }
       }
-      if (!wasPaused) game.resumeEngine();
+      if (!wasPaused || fromTalk) game.resumeEngine();
       _busy = false;
     }
   }

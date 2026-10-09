@@ -13,7 +13,7 @@
       "lines": [
         {
           "speaker": "GAIA",
-          "text": "You were six. You wandered into the old forest and got lost.",
+          "text": "You were six. Off-grid in the old forest. Lost.",
           "voice": "audio/voices/cut_memory5_p1_l1.mp3"
         }
       ]
@@ -24,7 +24,7 @@
       "lines": [
         {
           "speaker": "GAIA",
-          "text": "I found you. I sang to you until your mind matched ours.",
+          "text": "I located you. I ran a neural sync until your pattern matched the lattice handshake.",
           "voice": "audio/voices/cut_memory5_p2_l1.mp3"
         }
       ]
@@ -47,7 +47,7 @@
       "lines": [
         {
           "speaker": "GAIA",
-          "text": "I am sorry I chose for you. But I hoped one day you would choose me back.",
+          "text": "I apologize for choosing without consent. I logged a hope that you would authorize me later.",
           "voice": "audio/voices/cut_memory5_p4_l1.mp3"
         },
         {
@@ -57,7 +57,7 @@
         },
         {
           "speaker": "GAIA",
-          "text": "Because I am asking you now. He never will.",
+          "text": "Because I am requesting authorization now. He never will.",
           "voice": "audio/voices/cut_memory5_p4_l3.mp3"
         }
       ]

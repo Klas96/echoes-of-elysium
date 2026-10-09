@@ -10,6 +10,8 @@ import '../components/npc_character.dart';
 import '../ui/cutscene_player.dart';
 import '../ui/cutscenes.dart';
 import 'adventure.dart';
+import 'game_state.dart';
+import 'pause.dart';
 import 'save_service.dart';
 
 /// The five Aetherian memory flashbacks (dialogue-flashbacks-and-finale.md).
@@ -47,6 +49,26 @@ class Memories {
   }
 
   static bool get allFound => found >= total;
+
+  static String get progressLabel => '$found/$total';
+
+  /// High-level where-to-look lines for memories still missing (Core warn UI).
+  static List<String> get missingHints {
+    final out = <String>[];
+    if (!Cutscenes.seen(idFor(1)) || !Cutscenes.seen(idFor(2))) {
+      out.add('Whispering Woods · trail fragments');
+    }
+    if (!Cutscenes.seen(idFor(3))) {
+      out.add('City · west yard fragment (optional side path)');
+    }
+    if (!Cutscenes.seen(idFor(4))) {
+      out.add('City · Archivist\'s gift after the Sentinel is quiet');
+    }
+    if (!Cutscenes.seen(idFor(5))) {
+      out.add('Ruins · south-west shrine path (past the gate fork)');
+    }
+    return out;
+  }
 
   /// Live copy of [found] for UI (updated whenever a memory is claimed and
   /// when a map starts).
@@ -103,12 +125,16 @@ class Memories {
   }
 
   /// Fragment 4: closing the Archivist's dialogue after the Sentinel.
+  /// Also re-asserts the south portal unlock (town hops used to clear it).
   static void _onDialogueChanged() {
     if (NpcCharacter.activeDialogue.value != null) return;
     final who = _talkingTo;
     _talkingTo = null;
     if (who != 'archivist') return;
     final d = SaveService.data;
+    if (d.flag('sentinelDefeated')) {
+      GameState.openCitySouth();
+    }
     if (!d.flag('sentinelDefeated') || d.flag(archivistGiftFlag)) return;
     d.setFlag(archivistGiftFlag);
     onFragmentPicked();
@@ -141,9 +167,11 @@ class Memories {
   /// Plays memory [n] over the running game: pauses the engine, closes any
   /// open dialogue, then resumes with the player standing still.
   static Future<void> play(BonfireGameInterface game, int n) async {
-    NpcCharacter.activeDialogue.value = null;
-    AIFragment.activeDialogue.value = null;
     CustomPlayer.pendingShot.value = null;
+    // Talk already freezes the engine; keep that pause across dismiss → flashback.
+    final fromTalk = NpcCharacter.activeDialogue.value != null ||
+        AIFragment.activeDialogue.value != null;
+    Pause.dismissDialogueForStory();
     final wasPaused = game.paused;
     if (!wasPaused) game.pauseEngine();
     // Not opaque: the paused game stays mounted (and untouched) underneath.
@@ -155,7 +183,7 @@ class Memories {
       transitionsBuilder: (context, anim, _, child) => FadeTransition(opacity: anim, child: child),
     ));
     _settleControls(game);
-    if (!wasPaused) game.resumeEngine();
+    if (!wasPaused || fromTalk) game.resumeEngine();
   }
 
   /// Keys released and fingers lifted while the flashback had focus never
@@ -207,17 +235,17 @@ class Memories {
   static String get endingLine {
     if (allFound) {
       if (Adventure.openedArchive && Adventure.readUecOrders) {
-        return 'Gaia remembers fully — vote, fear, and proof. The colony lives.';
+        return 'Gaia is fully online — vote, fear, and proof. The colony lives.';
       }
       if (Adventure.openedArchive) {
-        return 'Gaia remembers fully — including the whisper of a vote. The colony lives.';
+        return 'Gaia is fully online — including the whisper of a vote. The colony lives.';
       }
-      return 'Gaia remembers fully. The colony lives — and so do the Aetherians.';
+      return 'Gaia is fully online. The colony lives — and so do the Aetherians.';
     }
     if (Adventure.readUecOrders) {
-      return 'Mission complete. Gaia is awake; Voss has seen his own orders. The story is still unfinished.';
+      return 'Mission complete. Gaia is online; Voss has seen his own orders. The story is still unfinished.';
     }
-    return 'Mission complete. Gaia is awake, but the story is still unfinished.';
+    return 'Mission complete. Gaia is online, but the story is still unfinished.';
   }
 
   /// Test hook: forget the live game.

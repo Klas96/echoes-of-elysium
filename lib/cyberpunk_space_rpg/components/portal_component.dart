@@ -9,6 +9,8 @@ class PortalComponent extends GameDecoration {
   static const double _radius = 28.0;
   final bool Function() canActivate;
   final String overlayId;
+  /// Story portals stay cyan; side hubs (Lantern Gate) use amber.
+  final Color accent;
   double _pulse = 0.0;
   bool _triggered = false;
   bool _near = false;
@@ -18,6 +20,7 @@ class PortalComponent extends GameDecoration {
     Vector2 position, {
     bool Function()? canActivate,
     this.overlayId = 'portalReached',
+    this.accent = const Color(0xFF00FFFF),
   })  : canActivate = canActivate ??
             (() => Travel.portalUsable(GameState.level)),
         super(position: position, size: Vector2.all(_radius * 2));
@@ -54,6 +57,8 @@ class PortalComponent extends GameDecoration {
   void render(Canvas canvas) {
     final center = Offset(size.x / 2, size.y / 2);
     final outerRadius = _radius + sin(_pulse) * 4;
+    final deep = Color.lerp(const Color(0xFF001F3F), accent, 0.35)!;
+    final secondary = Color.lerp(accent, const Color(0xFF7F00FF), 0.45)!;
 
     // Outer glow rings
     for (int i = 3; i >= 1; i--) {
@@ -61,7 +66,7 @@ class PortalComponent extends GameDecoration {
         center,
         outerRadius + i * 5,
         Paint()
-          ..color = const Color(0xFF00FFFF).withOpacity(0.06 * i)
+          ..color = accent.withValues(alpha: 0.06 * i)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
       );
     }
@@ -70,17 +75,17 @@ class PortalComponent extends GameDecoration {
     canvas.drawCircle(
       center,
       outerRadius,
-      Paint()..color = const Color(0xFF001F3F).withOpacity(0.85),
+      Paint()..color = deep.withValues(alpha: 0.85),
     );
     canvas.drawCircle(
       center,
       outerRadius * 0.65,
-      Paint()..color = const Color(0xFF00FFFF).withOpacity(0.25 + sin(_pulse) * 0.1),
+      Paint()..color = accent.withValues(alpha: 0.25 + sin(_pulse) * 0.1),
     );
 
     // Spinning arc ring
     final arcPaint = Paint()
-      ..color = const Color(0xFF00FFFF)
+      ..color = accent
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.5;
     canvas.drawArc(
@@ -95,14 +100,14 @@ class PortalComponent extends GameDecoration {
       _pulse + pi,
       pi * 1.4,
       false,
-      arcPaint..color = const Color(0xFF7F00FF),
+      arcPaint..color = secondary,
     );
 
     // Inner bright core
     canvas.drawCircle(
       center,
       6 + sin(_pulse * 2) * 2,
-      Paint()..color = Colors.white.withOpacity(0.9),
+      Paint()..color = Colors.white.withValues(alpha: 0.9),
     );
   }
 }

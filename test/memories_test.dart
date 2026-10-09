@@ -115,6 +115,17 @@ void main() {
     expect(GameState.objective.value.toLowerCase(), contains('archivist'));
     GameState.onNpcTalk('archivist');
     expect(SaveService.data.flag('archivistPostSentinel'), isTrue);
+    expect(SaveService.data.flag('portalUnlocked:world2'), isTrue);
+    expect(GameState.portalUnlocked.value, isTrue);
+  });
+
+  test('city south portal stays open after resetMap2 (town hop)', () {
+    GameState.resetMap2();
+    GameState.onSentinelDefeated();
+    GameState.onNpcTalk('archivist');
+    expect(GameState.portalUnlocked.value, isTrue);
+    GameState.resetMap2();
+    expect(GameState.citySouthOpen, isTrue);
     expect(GameState.portalUnlocked.value, isTrue);
   });
 

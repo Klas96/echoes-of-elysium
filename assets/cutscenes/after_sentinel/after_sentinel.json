@@ -65,7 +65,7 @@
         },
         {
           "speaker": "GAIA",
-          "text": "Kaela. The Archivist kept something for this hour. Hear him before you walk into the dark.",
+          "text": "Kaela. Priority handoff: the Archivist has a packet for this window. Query him before you enter low-signal terrain.",
           "voice": "audio/voices/cut_after_sentinel_p2_l3.mp3"
         }
       ]

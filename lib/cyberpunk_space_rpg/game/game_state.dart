@@ -92,10 +92,8 @@ class GameState {
         fragmentsCollected.value = d.fragments.clamp(0, fragmentsRequired);
         portalUnlocked.value = d.flag('portalUnlocked:world') || d.fragments >= fragmentsRequired;
       case 2:
-        // New flow: Archivist after Sentinel. Old saves that already unlocked
-        // the city portal keep that unlock.
-        portalUnlocked.value = d.flag('portalUnlocked:world2') ||
-            d.flag('archivistPostSentinel') ||
+        // Archivist after Sentinel. Old saves that already unlocked keep it.
+        portalUnlocked.value = citySouthOpen ||
             (d.flag('sentinelDefeated') && d.flag('portalUnlocked:world2'));
       case 3:
         portalUnlocked.value = true;
@@ -122,8 +120,27 @@ class GameState {
   static void resetMap2() {
     _level = 2;
     _step = _l2Echo;
-    portalUnlocked.value = false;
+    // Re-entering the city (town hop, CONTINUE off) must not erase the south
+    // road after the Archivist's post-Sentinel talk.
+    portalUnlocked.value = citySouthOpen;
     _refresh();
+  }
+
+  /// South gate to the Ruins — opened by the Archivist after the Sentinel.
+  static bool get citySouthOpen {
+    final d = SaveService.data;
+    return d.flag('archivistPostSentinel') || d.flag('portalUnlocked:world2');
+  }
+
+  /// Idempotent: persist and open the city → ruins road.
+  static void openCitySouth() {
+    final d = SaveService.data;
+    d.setFlag('archivistPostSentinel');
+    d.setFlag('portalUnlocked:world2');
+    portalUnlocked.value = true;
+    _advance(2, _l2Core);
+    _refresh();
+    _progress();
   }
 
   static void resetMap3() {
@@ -190,13 +207,8 @@ class GameState {
         _advance(2, _l2Archivist);
       case 'archivist':
         _advance(2, _l2Voss);
-        if (SaveService.data.flag('sentinelDefeated') &&
-            !SaveService.data.flag('archivistPostSentinel')) {
-          SaveService.data.setFlag('archivistPostSentinel');
-          portalUnlocked.value = true;
-          _advance(2, _l2Core);
-          _refresh();
-          _progress();
+        if (SaveService.data.flag('sentinelDefeated')) {
+          openCitySouth();
         }
       case 'voss':
         _advance(2, _l2Sentinel);
@@ -247,7 +259,8 @@ class GameState {
     switch (_level) {
       case 1:
         if (portalUnlocked.value || _step >= _l1Portal) {
-          return job ?? 'Slip past the UEC patrols to the portal';
+          return job ??
+              'Woods portal → City · look east for Lantern Town once you arrive';
         }
         if (_step >= _l1Fragments) {
           return 'Gather the Aetherian fragments (${fragmentsCollected.value}/$fragmentsRequired)';
@@ -262,7 +275,7 @@ class GameState {
                   Adventure.hasClue('archivist_seal'))) {
             return 'Open the Archive (optional) — then south to the Ruins';
           }
-          return job ?? 'South portal → Ruins · Lantern Gate for gear';
+          return job ?? 'South → Ruins · or Lantern Town (east gate / portal menu)';
         }
         if (_step >= _l2Quiet || SaveService.data.flag('sentinelDefeated')) {
           return 'Speak with the Archivist — then the road south opens';
@@ -272,20 +285,32 @@ class GameState {
         if (Bonds.hasItem('archive_seal') && !Adventure.openedArchive) {
           return 'Use the Archivist\'s seal on the Archive Library';
         }
-        return _step >= _l2Archivist ? 'Seek out the Archivist' : 'Meet Echo-7';
+        if (_step >= _l2Archivist) return 'Seek out the Archivist';
+        return 'Arrival plaza: east Lantern Gate · west Echo-7 · south avenue';
       case 3:
-        if (_step >= _l3Light) return 'Descend to Gaia\'s Core';
-        if (_step >= _l3Shrine || Adventure.hasClue('shrine_note')) {
-          return 'Push east to the Core portal';
+        if (_step >= _l3Light || Adventure.flag('ruins_gate_open')) {
+          return 'Descend to Gaia\'s Core';
         }
-        return 'Seek the south-west shrine — a memory waits there';
+        if (Bonds.hasItem('ruins_gate_key')) {
+          return 'Open the SE gate with the keystone — then the Core';
+        }
+        if (_step >= _l3Shrine || Adventure.hasClue('shrine_note')) {
+          return 'NE for the keystone · SW shrine memory is optional';
+        }
+        return 'Reach the central clearing — NE key wing, SW optional memory';
       case 4:
         if (portalUnlocked.value || _step >= _l4Activate) {
-          return 'Activate the Core Record';
+          if (Memories.allFound) return 'Activate the Core Record';
+          return 'Activate Core (${Memories.progressLabel}) — or seek missing memories';
         }
-        return _step >= _l4Gaia ? 'Speak with Gaia at the dais' : 'Enter Gaia\'s Core';
+        if (Memories.allFound) {
+          return _step >= _l4Gaia ? 'Speak with Gaia at the dais' : 'Enter Gaia\'s Core';
+        }
+        return _step >= _l4Gaia
+            ? 'Speak with Gaia · memories ${Memories.progressLabel}'
+            : 'Core ahead · memories ${Memories.progressLabel}';
       case 5:
-        return job ?? 'Job board by Mira · stall · portal when ready';
+        return job ?? 'Mira\'s stall (trade glimmer) · job board · portal south';
     }
     return '';
   }

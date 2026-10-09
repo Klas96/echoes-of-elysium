@@ -138,8 +138,8 @@ class UECDrone extends GameDecoration {
   static final List<UECDrone> active = [];
 
   final DroneKind kind;
-  /// When true, death counts toward the Lantern Town nest job.
-  final bool nestQuest;
+  /// When set, death counts toward that job board nest quest.
+  final String? nestQuestId;
   final _DroneStats _stats;
   final Vector2 _origin;
   _DroneState _state = _DroneState.patrol;
@@ -160,7 +160,7 @@ class UECDrone extends GameDecoration {
     Vector2 position, {
     double startAngle = 0,
     this.kind = DroneKind.scout,
-    this.nestQuest = false,
+    this.nestQuestId,
   })  : _stats = _DroneStats.forKind(kind),
         _origin = position.clone(),
         _patrolAngle = startAngle,
@@ -236,7 +236,8 @@ class UECDrone extends GameDecoration {
       if (!_rewarded) {
         _rewarded = true;
         Progression.onDroneKilled(kind);
-        if (nestQuest) Quests.onNestDroneKilled();
+        final nest = nestQuestId;
+        if (nest != null && nest.isNotEmpty) Quests.onNestDroneKilled(nest);
       }
       gameRef.add(ExplosionEffect(position.clone()));
       removeFromParent();

@@ -3,9 +3,12 @@ import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatf
 import 'package:flutter/material.dart';
 
 import '../game/adventure.dart';
+import '../game/memories.dart';
 import '../game/pause.dart';
 import '../game/quests.dart';
+import '../game/save_service.dart';
 import '../ui/equipment_ui.dart';
+import '../ui/shop_ui.dart';
 import 'bonds.dart';
 import 'creature_species.dart';
 import 'day_cycle.dart';
@@ -75,6 +78,34 @@ class CreatureHud extends StatelessWidget {
         const JournalButton(),
         const SizedBox(width: 8),
         const EquipmentButton(),
+        const SizedBox(width: 8),
+        ValueListenableBuilder<int>(
+          valueListenable: Bonds.revision,
+          builder: (_, __, ___) => _Chip(
+            border: const Color(0xFFFFE08A).withValues(alpha: 0.45),
+            child: Text('${Bonds.glimmer}◆',
+                style: const TextStyle(
+                    color: Color(0xFFFFE08A),
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1)),
+          ),
+        ),
+        if (SaveService.data.mapId == 'world5') ...[
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: Shop.show,
+            child: const _Chip(
+              border: Color(0xFFFFE08A),
+              child: Text('STALL',
+                  style: TextStyle(
+                      color: Color(0xFFFFE08A),
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.5)),
+            ),
+          ),
+        ],
         const SizedBox(width: 8),
         ValueListenableBuilder<double>(
           valueListenable: DayCycle.time,
@@ -180,11 +211,14 @@ class InteractPromptLayer extends StatelessWidget {
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: Listenable.merge(
-          [Interaction.info, Interaction.progress, Journal.open, Equipment.open],
+          [Interaction.info, Interaction.progress, Journal.open, Equipment.open, Shop.open],
       ),
       builder: (_, __) {
         final info = Interaction.info.value;
-        if (info == null || Journal.open.value || Equipment.open.value) {
+        if (info == null ||
+            Journal.open.value ||
+            Equipment.open.value ||
+            Shop.open.value) {
           return const SizedBox.shrink();
         }
         if (!info.enabled) {
@@ -520,6 +554,7 @@ class _JournalPanelState extends State<_JournalPanel> {
           const SizedBox(height: 4),
           Wrap(spacing: 10, runSpacing: 0, crossAxisAlignment: WrapCrossAlignment.center, children: [
             Text('Befriended ${Bonds.befriendedCount}/${Bonds.total}', style: count),
+            Text('Memories ${Memories.progressLabel}', style: count),
             Text('Clues $clues/${Adventure.catalog.length}', style: count),
             Row(mainAxisSize: MainAxisSize.min, children: [
               Image.asset('assets/images/ui/crystal_16@2x.png',
@@ -562,7 +597,7 @@ class _JournalPanelState extends State<_JournalPanel> {
             const SizedBox(height: 6),
             if (Quests.activeJobs.isEmpty && Quests.turnedInCount == 0)
               const Text(
-                'Lantern Town\'s job board posts woods errands. Accept one, finish it in the woods, turn it in at Town.',
+                'Lantern Town\'s job board posts woods and city errands. Spend glimmer at Mira\'s stall for gear.',
                 style: TextStyle(color: _inkSoft, fontSize: 12, height: 1.55),
               )
             else ...[

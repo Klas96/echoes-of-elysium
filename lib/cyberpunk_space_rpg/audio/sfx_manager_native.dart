@@ -2,6 +2,9 @@ import 'package:audioplayers/audioplayers.dart';
 
 /// Desktop / mobile SFX via audioplayers (Linux, Windows, Android, iOS, macOS).
 /// just_audio has no Linux plugin — MissingPluginException on desktop.
+///
+/// Linux/GStreamer often no-ops `seek(0)+resume` once a short clip has finished.
+/// Re-`play(AssetSource)` each shot (same path as VO) is reliable.
 class SfxManager {
   static final SfxManager _instance = SfxManager._();
   factory SfxManager() => _instance;
@@ -16,6 +19,12 @@ class SfxManager {
   bool _ready = false;
   int _voiceToken = 0;
 
+  static const _footAsset = 'audio/sfx/footstep_grass.mp3';
+  static const _damageAsset = 'audio/sfx/damage_hit.mp3';
+  static const _portalAsset = 'audio/sfx/portal.mp3';
+  static const _shootAsset = 'audio/sfx/shoot.mp3';
+  static const _chimeAsset = 'audio/sfx/computer_beep.wav';
+
   static String _asset(String path) =>
       path.startsWith('assets/') ? path.substring(7) : path;
 
@@ -23,35 +32,36 @@ class SfxManager {
     if (_ready) return;
     try {
       await Future.wait([
-        _footstep.setSource(AssetSource('audio/sfx/footstep_grass.mp3')),
-        _damage.setSource(AssetSource('audio/sfx/damage_hit.mp3')),
-        _portal.setSource(AssetSource('audio/sfx/portal.mp3')),
-        _shoot.setSource(AssetSource('audio/sfx/shoot.mp3')),
-        _chime.setSource(AssetSource('audio/sfx/computer_beep.wav')),
+        _footstep.setReleaseMode(ReleaseMode.stop),
+        _damage.setReleaseMode(ReleaseMode.stop),
+        _portal.setReleaseMode(ReleaseMode.stop),
+        _shoot.setReleaseMode(ReleaseMode.stop),
+        _chime.setReleaseMode(ReleaseMode.stop),
+        _footstep.setVolume(0.45),
+        _damage.setVolume(0.7),
+        _portal.setVolume(0.75),
+        _shoot.setVolume(0.85),
+        _chime.setVolume(0.55),
       ]);
-      await _footstep.setVolume(0.45);
-      await _damage.setVolume(0.7);
-      await _shoot.setVolume(0.6);
-      await _chime.setVolume(0.55);
       _ready = true;
     } catch (_) {}
   }
 
-  Future<void> _replay(AudioPlayer player) async {
+  Future<void> _playOneShot(AudioPlayer player, String asset) async {
     if (!_ready) await init();
     try {
-      await player.seek(Duration.zero);
-      await player.resume();
+      await player.stop();
+      await player.play(AssetSource(asset));
     } catch (_) {}
   }
 
-  Future<void> playFootstep() async => _replay(_footstep);
-  Future<void> playDamage() async => _replay(_damage);
-  Future<void> playPortal() async => _replay(_portal);
-  Future<void> playShoot() async => _replay(_shoot);
+  Future<void> playFootstep() async => _playOneShot(_footstep, _footAsset);
+  Future<void> playDamage() async => _playOneShot(_damage, _damageAsset);
+  Future<void> playPortal() async => _playOneShot(_portal, _portalAsset);
+  Future<void> playShoot() async => _playOneShot(_shoot, _shootAsset);
 
   /// Soft chime for bonds and finds (reuses the computer beep).
-  Future<void> playChime() async => _replay(_chime);
+  Future<void> playChime() async => _playOneShot(_chime, _chimeAsset);
 
   Future<void> playVoice(String assetPath) async {
     final token = ++_voiceToken;

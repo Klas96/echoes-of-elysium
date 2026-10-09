@@ -61,6 +61,11 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision {
   /// grace period after it ignore damage. At 0 HP Kaela is pulled back to
   /// the last checkpoint instead of a game over.
   static void applyDamage(int amount) {
+    // Talk / absorb overlays freeze combat; ignore stray hits too.
+    if (NpcCharacter.activeDialogue.value != null ||
+        AIFragment.activeDialogue.value != null) {
+      return;
+    }
     final p = current;
     if (p != null && p.isInvulnerable) return;
     final hp = (healthNotifier.value - amount).clamp(0, maxHealth);

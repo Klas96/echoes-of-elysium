@@ -156,27 +156,43 @@ class DarkZone extends GameComponent with PointOfInterest {
 
   @override
   void render(Canvas canvas) {
-    // Designer's darkness_overlay (#0b0a1a at 92%) with a soft light_mask-
-    // style radial hole. A gradient shader is used instead of a dstOut
-    // saveLayer, which the web renderer did not composite reliably.
+    // Soft fog of shadow — not a hard "local night" rectangle. Skip drawing
+    // when Kaela is far away so distant zones don't read as black tiles.
     final player = _playerCenter(gameRef);
+    final cx = position.x + size.x / 2;
+    final cy = position.y + size.y / 2;
+    final dist = player.distanceTo(Vector2(cx, cy));
+    if (dist > 280) return;
+
     final src = _lightSource;
     final k = src == null ? 0.0 : lit.toDouble();
     // The glow pools between Kaela and the moth hovering behind her.
-    final centre = src == null ? player : player + (src - player) * (0.45 * k);
-    final radius = 30 + (120 + sin(_t * 2) * 4 - 30) * k;
-    final open = 0.55 + 0.45 * k; // how much of the dark the centre loses
-    const dark = Color(0xEB0B0A1A);
+    final centre =
+        src == null ? player : player + (src - player) * (0.45 * k);
+    final radius = 36 + (130 + sin(_t * 2) * 4 - 36) * k;
+    final open = 0.5 + 0.5 * k;
+    // ~70% max so unlit patches feel like shade, not a night box.
+    const dark = Color(0xB30B0A1A);
     final inner = dark.withValues(alpha: dark.a * (1 - open));
     final c = centre - position;
     final paint = Paint()
       ..shader = ui.Gradient.radial(
         Offset(c.x, c.y),
-        radius,
-        [inner, inner, dark],
-        const [0.0, 0.25, 1.0],
-      );
-    canvas.drawRect(Offset.zero & Size(size.x, size.y), paint);
+        max(radius, max(size.x, size.y) * 0.65),
+        [
+          inner,
+          inner,
+          dark.withValues(alpha: dark.a * 0.35),
+          const Color(0x000B0A1A),
+        ],
+        const [0.0, 0.2, 0.72, 1.0],
+      )
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
+    final rect = (Offset.zero & Size(size.x, size.y)).inflate(6);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(rect, const Radius.circular(14)),
+      paint,
+    );
     super.render(canvas);
   }
 }

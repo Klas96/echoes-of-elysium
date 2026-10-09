@@ -92,7 +92,7 @@ class _BoardPanel extends StatelessWidget {
                       ],
                     ),
                     const Text(
-                      'Errands for travellers. Woods work. Return here to turn in.',
+                      'Errands for travellers — woods and city. Return here to turn in.',
                       style: TextStyle(color: Colors.white54, fontSize: 12, height: 1.4),
                     ),
                     const SizedBox(height: 14),
@@ -157,7 +157,7 @@ class _BoardPanel extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     s == QuestStatus.accepted || s == QuestStatus.done
-                        ? q.woodsHint
+                        ? q.hint
                         : 'Reward: ${q.glimmer}◆${q.gearId != null ? ' + gear' : ''}',
                     style: const TextStyle(color: _amber, fontSize: 10, letterSpacing: 0.5),
                   ),

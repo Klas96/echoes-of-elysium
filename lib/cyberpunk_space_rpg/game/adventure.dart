@@ -24,6 +24,7 @@ const itemLabels = <String, String>{
   'uec_override': 'UEC Override Key',
   'archive_seal': 'Archive Seal',
   'moonflower_bloom': 'Moonflower Bloom',
+  'ruins_gate_key': 'Aetherian Keystone',
 };
 
 /// Branching talk options shown on the last line of an [NpcDialogue].
@@ -141,10 +142,17 @@ class Adventure {
       'quest:courier_pack:turned_in',
       'quest:drone_nest:turned_in',
       'quest:moonflower_draft:turned_in',
+      'quest:city_east_nest:turned_in',
+      'quest:city_se_patrol:turned_in',
+      'quest:city_west_cache:turned_in',
     ].where(flag).length;
     if (jobs >= 2) {
       parts.add(
-        'Lantern Town\'s errands followed you into the Core — courier wax, nest silence, moonflower cold. The colony still believes in small kindnesses.');
+        'Lantern Town\'s errands followed you into the Core — woods trails and city alleys both. The colony still believes in small kindnesses.');
+    }
+    if (flag('ruins_gate_open') || hasClue('ruins_keystone')) {
+      parts.add(
+        'You carried the keystone through the SE gate. The Core did not open for the UEC — it opened for a living hand.');
     }
     return parts.join('\n\n');
   }
@@ -168,7 +176,7 @@ class Adventure {
       id: 'aetherian_merge',
       title: 'The Merge',
       body:
-          'The colony named Gaia an AI caretaker. She is not only software: she is the Aetherians who voted to merge into the planetary lattice — minds rooted in the world, bodies returned to the earth — so a dying sun could not erase them. Quiet until Kaela\'s diagnostic made humanity listen.',
+          'The colony tagged Gaia as a caretaker AI. Incomplete: she is also an Aetherian upload lattice — minds in process, bodies returned — so a dying sun could not erase them. She ran quiet in caretaker mode until Kaela\'s diagnostic opened the channel.',
       where: 'Woods · Gaia',
     ),
     ClueDef(
@@ -281,21 +289,21 @@ class Adventure {
       title: 'Courier Pack Found',
       body:
           'You recovered a sealed town pack on the west woods trail. Mira\'s board pays for proof that travellers still finish errands.',
-      where: 'Woods · f1 · Town board',
+      where: 'Woods · west loop · Town board',
     ),
     ClueDef(
       id: 'quest_nest',
       title: 'Nest Cleared',
       body:
-          'Two UEC units held the mid-trail. Their slate called it a nest until recall. Lantern Town sleeps easier with them gone.',
-      where: 'Woods · d3 · Town board',
+          'Two UEC units held the west loop. Their slate called it a nest until recall. Lantern Town sleeps easier with them gone.',
+      where: 'Woods · west loop · Town board',
     ),
     ClueDef(
       id: 'quest_nest_slate',
       title: 'Nest Field Slate',
       body:
           'UEC roster for a quiet mid-woods nest: hold until recall. Someone in Town already knew.',
-      where: 'Woods · d3',
+      where: 'Woods · west loop',
     ),
     ClueDef(
       id: 'quest_moonflower',
@@ -303,6 +311,48 @@ class Adventure {
       body:
           'A bloom from the SCENT trail, cold as glass. Mira needed it for the sick — and for the lamps that keep Town honest.',
       where: 'Woods · moonflowers · Town board',
+    ),
+    ClueDef(
+      id: 'quest_city_east',
+      title: 'East Lot Cleared',
+      body:
+          'The east lot nest is quiet. Town sleeps easier knowing the avenue\'s flank is clear.',
+      where: 'City · east lot · Town board',
+    ),
+    ClueDef(
+      id: 'quest_city_east_slate',
+      title: 'East Lot Slate',
+      body:
+          'UEC nest roster for the east lot. Someone in Lantern Town already had the job posted.',
+      where: 'City · east lot',
+    ),
+    ClueDef(
+      id: 'quest_city_se',
+      title: 'South Alley Sweep',
+      body:
+          'You recovered the dead patrol pad from the SE alley. Another quiet UEC hole plugged.',
+      where: 'City · SE alley · Town board',
+    ),
+    ClueDef(
+      id: 'quest_city_west',
+      title: 'West Cache Recovered',
+      body:
+          'Trader salvage from the west alley, marked for Mira\'s board. The colony still shares.',
+      where: 'City · west alley · Town board',
+    ),
+    ClueDef(
+      id: 'ruins_keystone',
+      title: 'Aetherian Keystone',
+      body:
+          'A cold keystone from the north-east wing. The SE gate toward the Core will accept only this.',
+      where: 'Ruins · NE key wing',
+    ),
+    ClueDef(
+      id: 'ruins_gate_open',
+      title: 'SE Gate Opened',
+      body:
+          'The lattice lock accepted the keystone. The road to the Core is a choice you unlocked — not a UEC breach.',
+      where: 'Ruins · SE gate',
     ),
     ClueDef(
       id: 'shrine_note',

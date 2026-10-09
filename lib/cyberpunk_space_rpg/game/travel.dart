@@ -91,20 +91,16 @@ class Travel {
     }).toList();
   }
 
-  /// Forward destination (highlighted) plus quieter return list.
-  /// Lantern Town is never the main "continue" from the city avenue portal —
-  /// that side trip uses the dedicated town gate.
+  /// Forward destination (highlighted) plus quieter return / side list.
+  /// Lantern Town is never the story "continue" — it stays a side option so
+  /// players who miss the Upper Street gate still see it at the south portal.
   static ({TravelDest? continueTo, List<TravelDest> returns}) menuFrom(int fromLevel) {
     final available = availableFrom(fromLevel);
-    // City main portal: don't offer town here (use the Lantern Gate).
-    final filtered = fromLevel == 2
-        ? available.where((d) => d.level != 5).toList()
-        : available;
 
     final nextId = storyNextLevel(fromLevel);
     TravelDest? cont;
     if (nextId != null) {
-      for (final d in filtered) {
+      for (final d in available) {
         if (d.level == nextId) {
           cont = d;
           break;
@@ -112,9 +108,17 @@ class Travel {
       }
     }
     final returns = [
-      for (final d in filtered)
+      for (final d in available)
         if (d.level != cont?.level) d,
     ];
+    // Prefer Lantern Town near the top of side destinations from the city.
+    if (fromLevel == 2) {
+      returns.sort((a, b) {
+        if (a.level == 5) return -1;
+        if (b.level == 5) return 1;
+        return 0;
+      });
+    }
     return (continueTo: cont, returns: returns);
   }
 

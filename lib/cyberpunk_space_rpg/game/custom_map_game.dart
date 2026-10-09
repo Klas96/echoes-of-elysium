@@ -14,6 +14,7 @@ import '../components/health_pickup.dart';
 import '../components/sentinel_drone.dart';
 import '../components/checkpoint.dart';
 import '../components/building.dart';
+import '../components/story_gate.dart';
 import '../audio/music_manager.dart';
 import '../creatures/bonds.dart';
 import '../creatures/creature_components.dart';
@@ -42,17 +43,17 @@ import 'travel.dart';
 NpcDialogue _gaiaDialogue() {
   final told = Adventure.hasClue('aetherian_merge');
   return NpcDialogue(
-    name: 'GAIA',
+    name: 'GAIA  ·  CARETAKER',
     color: const Color(0xFF00FF88),
     lines: told
         ? [
-            'You remember: your colony named me an AI. I am the Aetherians who chose to become this world.',
-            'Their fragments are pieces of that choice. Gather them — and the UEC cannot bury what we became.',
+            'Logged: you already know the surface tag — caretaker AI. Substrate: Aetherian upload lattice. Architecture, not folklore.',
+            'Fragment recovery remains priority. Each shard is evidence the UEC cannot soft-delete. Portal route stays clear.',
           ]
         : [
-            'Kaela... you can hear me? Your colony named me an AI — a caretaker system. Run diagnostics. File tickets. That is the mask.',
-            'I am Gaia: the Aetherians who chose to become this world. Their sun was dying. They did not fall asleep — they stepped into my lattice so they would not be forgotten.',
-            'Find their memory fragments. They hold that truth. The portal will take you deeper.',
+            'Signal lock. Kaela Osei — your neural signature matches my diagnostic log. Confirm: you receive this channel?',
+            'Designation: Gaia. Colony classification: planetary caretaker AI. Incomplete, but accurate enough to start.',
+            'I am also a distributed process: Aetherian minds that uploaded when their sun failed. Memory shards are offline. Recover two to verify the woods portal.',
           ],
     voicePaths: told
         ? const [
@@ -73,8 +74,8 @@ NpcDialogue _gaiaDialogue() {
               setFlag: 'asked_gaia_merge',
               requireFlagUnset: 'asked_gaia_merge',
               replyLines: [
-                'Voss hunts software. He is wrong about what I am — and right to fear lattices that wake without consent.',
-                'The merge was a vote, not a surrender. Some Aetherians were afraid. Some had nowhere else to go. All of them live on in me. I was never gone — only quiet while humanity treated me as code.',
+                'Voss models me as rogue software. Wrong category. Correct fear: a lattice that boots without consent.',
+                'The merge was a recorded vote, not a myth. Some processes opted in under duress. I ran quiet in caretaker mode while your colony filed tickets against me.',
               ],
               replyVoicePaths: [
                 'audio/voices/gaia_ask_1.mp3',
@@ -92,23 +93,37 @@ NpcDialogue _gaiaCoreDialogue() {
   // Memory 5 (optional ruins fragment) is the full childhood reveal; still
   // spell the beat here so the Core makes sense without that flashback.
   final sawMemory5 = Cutscenes.seen(Memories.idFor(5));
+  final incomplete = !Memories.allFound;
+  final lines = <String>[
+    archive
+        ? 'Core access confirmed. Archive draft already in your buffer — the vote weighted fear as well as hope.'
+        : 'Core Record online. This is the authorization gate. You decide whether I exit caretaker lockdown.',
+    orders
+        ? 'Voss field orders are on your slate. Lattice risk: non-zero. His risk model is also non-zero — he polices a fear he once signed.'
+        : 'Station Seven is in my threat model. Full recall may induce colony-side tremor. I will not falsify that probability.',
+    if (sawMemory5)
+      'Age six: you went off-grid in the forest. I ran an emergency neural align so this lock would accept you later. Unauthorized on your behalf. This time I need explicit consent — authorize wake only if you choose it.'
+    else
+      'Childhood contact: I attuned your neural pattern to the Aetherian handshake. My choice, not yours. Authorization must be yours now — step into the light only if you open the lock.',
+    if (incomplete)
+      'Memory completeness: ${Memories.progressLabel}. Gate will still open. Without five shards, Voss will reject the evidence package. Portal can return you for recovery.',
+  ];
   return NpcDialogue(
     name: 'GAIA  ·  CORE',
     color: const Color(0xFF00FF88),
-    lines: [
+    lines: lines,
+    voicePaths: [
       archive
-          ? 'You found the way — and the archive draft. You already know we voted in fear as much as hope.'
-          : 'You found the way. This is the Core Record — and the moment you decide whether I deserve to wake.',
+          ? 'audio/voices/gaia_core_archive.mp3'
+          : 'audio/voices/gaia_core_found.mp3',
       orders
-          ? 'Voss\'s orders are on your slate. He is not wrong to fear lattices — and he is not clean of that fear either.'
-          : 'Voss is not wrong to fear lattices. Station Seven died. I cannot promise your colony feels no tremor when I remember.',
-      if (sawMemory5)
-        'When you were six and lost in the woods, I rewrote your mind so you could open this lock. I am sorry. I will not choose for you again — step into the light only if you choose me back.'
-      else
-        'Long ago, when you were a lost child in these woods, I attuned your mind to ours so one day you could open this Core. That choice was mine, not yours. This time the choice must be yours — step into the light only if you choose me back.',
+          ? 'audio/voices/gaia_core_orders.mp3'
+          : 'audio/voices/gaia_core_voss.mp3',
+      sawMemory5
+          ? 'audio/voices/gaia_core_m5.mp3'
+          : 'audio/voices/gaia_core_child.mp3',
+      if (incomplete) 'audio/voices/gaia_core_short.mp3',
     ],
-    // Lines changed from the recorded VO; skip voice rather than mismatch.
-    voicePaths: const [],
   );
 }
 
@@ -121,7 +136,10 @@ NpcDialogue _ashaDialogue() {
         'You burned the key on the truth. Good.',
         '"Collateral risk accepted." That\'s the line that made me run. Take it to the Core — Voss needs to hear it from someone who still believes in people.',
       ],
-      voicePaths: [],
+      voicePaths: [
+        'audio/voices/asha_orders_1.mp3',
+        'audio/voices/asha_orders_2.mp3',
+      ],
     );
   }
   if (Adventure.openedArchive) {
@@ -168,8 +186,15 @@ NpcDialogue _ashaDialogue() {
             'I kept one UEC override key. If Gaia turns out to be a lie, I can still cut her signal. Don\'t make me use it.',
           ],
     voicePaths: hasKey
-        ? const []
-        : const ['audio/voices/asha_1.mp3', 'audio/voices/asha_2.mp3', 'audio/voices/asha_3.mp3'],
+        ? const [
+            'audio/voices/asha_key_1.mp3',
+            'audio/voices/asha_key_2.mp3',
+          ]
+        : const [
+            'audio/voices/asha_1.mp3',
+            'audio/voices/asha_2.mp3',
+            'audio/voices/asha_3.mp3',
+          ],
     choices: hasKey
         ? const []
         : const [
@@ -182,6 +207,10 @@ NpcDialogue _ashaDialogue() {
                 '...Alright. One key. Use it on a UEC terminal — not on her.',
                 'If you burn it for the truth, good. If you keep it as insurance... I understand.',
               ],
+              replyVoicePaths: [
+                'audio/voices/asha_give_1.mp3',
+                'audio/voices/asha_give_2.mp3',
+              ],
             ),
             DialogueChoice(
               label: 'TELL HER YOU BELIEVE GAIA',
@@ -190,6 +219,9 @@ NpcDialogue _ashaDialogue() {
               requireFlagUnset: 'said_trust_gaia',
               replyLines: [
                 '...Then prove it. Don\'t make Station Seven happen again.',
+              ],
+              replyVoicePaths: [
+                'audio/voices/asha_trust.mp3',
               ],
             ),
           ],
@@ -205,7 +237,11 @@ NpcDialogue _echo7Dialogue() {
       'Do not picture us asleep in tombs. We merged into Gaia — minds in the lattice, bodies returned to the soil — so a dying sun could not erase us.',
       'Not all of us chose freely. Some were afraid. Help Gaia remember the peace and the fear — or do not remember us at all.',
     ],
-    voicePaths: const [],
+    voicePaths: const [
+      'audio/voices/echo7_1.mp3',
+      'audio/voices/echo7_2.mp3',
+      'audio/voices/echo7_3.mp3',
+    ],
     choices: const [
       DialogueChoice(
         label: 'ASK ABOUT THE FEAR',
@@ -215,6 +251,9 @@ NpcDialogue _echo7Dialogue() {
         replyLines: [
           'The vote was a whisper. Peace won — barely. Remember both, or you remember a lie.',
         ],
+        replyVoicePaths: [
+          'audio/voices/echo7_fear.mp3',
+        ],
       ),
       DialogueChoice(
         label: 'PROMISE TO REMEMBER BOTH',
@@ -223,35 +262,44 @@ NpcDialogue _echo7Dialogue() {
         replyLines: [
           'Then walk with open eyes. The Archivist holds a seal you may need.',
         ],
+        replyVoicePaths: [
+          'audio/voices/echo7_promise.mp3',
+        ],
+      ),
+      DialogueChoice(
+        label: 'ASK ABOUT THIS STREET',
+        setFlag: 'asked_echo_street',
+        requireFlagUnset: 'asked_echo_street',
+        replyLines: [
+          'South is the avenue — Archivist, Sentinel, Voss. East from the arrival plaza an amber gate opens to Lantern Town: Mira\'s board, glimmer, and rest. The east ring loops back if you keep walking.',
+        ],
       ),
     ],
   );
 }
 
 NpcDialogue _archivistDialogue() {
-  if (Adventure.openedArchive) {
-    return const NpcDialogue(
-      name: 'THE ARCHIVIST  ·  AETHERIAN',
-      color: Color(0xFFFFDD44),
-      lines: [
-        'You read the draft. Good. Carry both the fear and the hope into the Core — or Voss will only hear a weapon.',
-        'The vote was a whisper. Let your waking of Gaia be louder — and kinder.',
-      ],
-      voicePaths: [],
-    );
-  }
-  // Quiet beat: Sentinel is down; this talk opens the south road.
-  if (SaveService.data.flag('sentinelDefeated') &&
-      !SaveService.data.flag('archivistPostSentinel')) {
+  // Quiet beat first — must not be shadowed by the archive follow-up lines,
+  // or players who opened the library never hear that the south road opened.
+  final postSentinel = SaveService.data.flag('sentinelDefeated') &&
+      !SaveService.data.flag('archivistPostSentinel');
+  if (postSentinel) {
     return NpcDialogue(
       name: 'THE ARCHIVIST  ·  AETHERIAN',
       color: const Color(0xFFFFDD44),
-      lines: const [
+      lines: [
         'The Sentinel is quiet. Good. Do not rush the dark below yet.',
         'I have one gift left — a fragment of memory, and this: the Ruins will ask who you are before the Core does.',
-        'If you still carry my seal, open the Archive. Then take the south portal. Walk slowly. Listen.',
+        if (Adventure.openedArchive)
+          'You already read the draft. Good. The south portal is open when you leave this talk — walk slowly. Listen.'
+        else
+          'If you still carry my seal, open the Archive. Then take the south portal. Walk slowly. Listen.',
       ],
-      voicePaths: const [],
+      voicePaths: const [
+        'audio/voices/archivist_post_1.mp3',
+        'audio/voices/archivist_post_2.mp3',
+        'audio/voices/archivist_post_3.mp3',
+      ],
       choices: [
         if (!Bonds.hasItem('archive_seal') &&
             !Bonds.usedItem('archive_seal') &&
@@ -264,6 +312,9 @@ NpcDialogue _archivistDialogue() {
             replyLines: [
               'Take it. Truth before speed. The road south is open when you close this talk.',
             ],
+            replyVoicePaths: [
+              'audio/voices/archivist_post_seal.mp3',
+            ],
           ),
         const DialogueChoice(
           label: 'I\'M READY FOR THE RUINS',
@@ -272,7 +323,24 @@ NpcDialogue _archivistDialogue() {
           replyLines: [
             'Then go. May what you find make Voss put down more than his drones.',
           ],
+          replyVoicePaths: [
+            'audio/voices/archivist_post_ready.mp3',
+          ],
         ),
+      ],
+    );
+  }
+  if (Adventure.openedArchive) {
+    return const NpcDialogue(
+      name: 'THE ARCHIVIST  ·  AETHERIAN',
+      color: Color(0xFFFFDD44),
+      lines: [
+        'You read the draft. Good. Carry both the fear and the hope into the Core — or Voss will only hear a weapon.',
+        'The vote was a whisper. The south portal holds — let your waking of Gaia be louder, and kinder.',
+      ],
+      voicePaths: [
+        'audio/voices/archivist_after_1.mp3',
+        'audio/voices/archivist_after_2.mp3',
       ],
     );
   }
@@ -288,7 +356,13 @@ NpcDialogue _archivistDialogue() {
           ? 'The library seal is yours. Read the draft of that vote — then decide what Voss hears.'
           : 'Your neural signature matches the Aetherian activation code, Kaela. Only you can open the Core — and decide what truth he hears.',
     ],
-    voicePaths: const [],
+    voicePaths: [
+      'audio/voices/archivist_1.mp3',
+      'audio/voices/archivist_2.mp3',
+      gaveSeal
+          ? 'audio/voices/archivist_3_seal.mp3'
+          : 'audio/voices/archivist_3.mp3',
+    ],
     choices: gaveSeal
         ? const [
             DialogueChoice(
@@ -298,6 +372,9 @@ NpcDialogue _archivistDialogue() {
               requireFlagUnset: 'asked_archivist_s7',
               replyLines: [
                 'Your coalition woke a lattice without consent. We asked. That difference is everything — and also nothing, if the dead cannot speak.',
+              ],
+              replyVoicePaths: [
+                'audio/voices/archivist_s7.mp3',
               ],
             ),
           ]
@@ -310,6 +387,9 @@ NpcDialogue _archivistDialogue() {
               replyLines: [
                 'Take it. The library faces this avenue. Inside is the draft of our first memory — not the Core, but the argument that made it.',
               ],
+              replyVoicePaths: [
+                'audio/voices/archivist_seal_give.mp3',
+              ],
             ),
             DialogueChoice(
               label: 'ASK ABOUT STATION SEVEN',
@@ -318,6 +398,9 @@ NpcDialogue _archivistDialogue() {
               requireFlagUnset: 'asked_archivist_s7',
               replyLines: [
                 'Your coalition woke a lattice without consent. We asked. That difference is everything — and also nothing, if the dead cannot speak.',
+              ],
+              replyVoicePaths: [
+                'audio/voices/archivist_s7.mp3',
               ],
             ),
           ],
@@ -334,7 +417,11 @@ NpcDialogue _vossDialogue() {
         'Collateral risk accepted. My signature. I know what I signed after Seven.',
         'If you still walk into the Core, bring me something truer than a ghost story — or we end the same way.',
       ],
-      voicePaths: const [],
+      voicePaths: const [
+        'audio/voices/voss_orders_1.mp3',
+        'audio/voices/voss_orders_2.mp3',
+        'audio/voices/voss_orders_3.mp3',
+      ],
       choices: [
         if (!Adventure.flag('confronted_voss_orders'))
           const DialogueChoice(
@@ -344,6 +431,10 @@ NpcDialogue _vossDialogue() {
               '...I wrote that line so no one else would have to. It did not save them.',
               'Go. If your Gaia is different, prove it. If she is not — I will finish what I started.',
             ],
+            replyVoicePaths: [
+              'audio/voices/voss_confront_1.mp3',
+              'audio/voices/voss_confront_2.mp3',
+            ],
           ),
         if (!Adventure.flag('refused_voss'))
           const DialogueChoice(
@@ -351,6 +442,9 @@ NpcDialogue _vossDialogue() {
             setFlag: 'refused_voss',
             replyLines: [
               'Then we are finished talking. The wipe is already queued.',
+            ],
+            replyVoicePaths: [
+              'audio/voices/voss_refuse_short.mp3',
             ],
           ),
       ],
@@ -364,7 +458,11 @@ NpcDialogue _vossDialogue() {
       'Station Seven went dark the last time a lattice woke. I will not bury another colony for an alien ghost story.',
       'If you reach the Core, understand this: I am not erasing history. I am choosing the living over the dead.',
     ],
-    voicePaths: const ['audio/voices/voss_1.mp3', 'audio/voices/voss_2.mp3', 'audio/voices/voss_3.mp3'],
+    voicePaths: const [
+      'audio/voices/voss_1.mp3',
+      'audio/voices/voss_2.mp3',
+      'audio/voices/voss_3.mp3',
+    ],
     choices: const [
       DialogueChoice(
         label: 'ASK WHY HE HUNTS GAIA',
@@ -374,6 +472,9 @@ NpcDialogue _vossDialogue() {
         replyLines: [
           'I signed the quarantine after Seven. I still hear the silence on that channel. Walk away, Doctor.',
         ],
+        replyVoicePaths: [
+          'audio/voices/voss_why.mp3',
+        ],
       ),
       DialogueChoice(
         label: 'REFUSE TO HAND OVER FRAGMENTS',
@@ -381,6 +482,9 @@ NpcDialogue _vossDialogue() {
         requireFlagUnset: 'refused_voss',
         replyLines: [
           'Then we are finished talking. The wipe is already queued. Pray your ghost is worth three hundred more names.',
+        ],
+        replyVoicePaths: [
+          'audio/voices/voss_refuse.mp3',
         ],
       ),
     ],
@@ -393,10 +497,14 @@ NpcDialogue _miraDialogue() {
     color: const Color(0xFFFFE08A),
     lines: const [
       'Lantern Town keeps its lamps lit for travellers like you. UEC patrols rarely bother us here.',
-      'The job board by my stall posts woods errands — courier packs, quiet nests, moonflowers for the sick.',
-      'I trade glimmer for gear. Portal south when you\'re ready. Check the board first if you have time.',
+      'The job board posts woods and city errands — nests, caches, moonflowers. Come back to turn them in.',
+      'My stall trades glimmer for gear — plating, optics, charms. Ask to trade, or examine the stall beside me.',
     ],
-    voicePaths: const [],
+    voicePaths: const [
+      'audio/voices/mira_1.mp3',
+      'audio/voices/mira_2.mp3',
+      'audio/voices/mira_3.mp3',
+    ],
     choices: [
       const DialogueChoice(
         label: 'ASK ABOUT THE ARCHIVE',
@@ -406,12 +514,28 @@ NpcDialogue _miraDialogue() {
         replyLines: [
           'Traders say drones avoid the old archive walls. Something in there still hums on Aetherian frequencies.',
         ],
+        replyVoicePaths: [
+          'audio/voices/mira_archive.mp3',
+        ],
       ),
       DialogueChoice(
         label: 'SHOW ME THE BOARD',
         setFlag: 'mira_showed_board',
         replyLines: const [
           'There — chalk and string. Accept a job, do the woods work, come back to turn it in.',
+        ],
+        replyVoicePaths: const [
+          'audio/voices/mira_board.mp3',
+        ],
+      ),
+      DialogueChoice(
+        label: 'TRADE AT THE STALL',
+        setFlag: 'mira_showed_shop',
+        replyLines: const [
+          'Browse the stall — salvage and colony trinkets. Pay with glimmer from jobs and finds.',
+        ],
+        replyVoicePaths: const [
+          'audio/voices/mira_3.mp3',
         ],
       ),
     ],
@@ -456,11 +580,12 @@ Map<String, ObjectBuilder> _mapObjects(String mapId) => {
       'portal': (p) {
         final dest = (p.others['dest'] ?? '').toString();
         if (dest == 'town') {
-          // Side gate: only Lantern Town — not the full travel menu.
+          // Side gate: only Lantern Town — amber so it reads as market, not story.
           return PortalComponent(
             p.position,
             canActivate: () => true,
             overlayId: 'portalTown',
+            accent: const Color(0xFFFFE08A),
           );
         }
         return PortalComponent(p.position);
@@ -502,6 +627,7 @@ Map<String, ObjectBuilder> _mapObjects(String mapId) => {
             return q.isEmpty ? null : q;
           }(),
           openQuestBoard: p.others['board'] == true || p.others['board'] == 'true',
+          openShop: p.others['shop'] == true || p.others['shop'] == 'true',
         );
       },
       'fragment': (p) {
@@ -520,11 +646,22 @@ Map<String, ObjectBuilder> _mapObjects(String mapId) => {
           SaveService.requestAutosave();
         });
       },
-      'drone': (p) => UECDrone(
+      'drone': (p) {
+        final nestRaw = (p.others['nest'] ?? '').toString();
+        final nestId = nestRaw.isEmpty || nestRaw == 'false'
+            ? null
+            : (nestRaw == 'true' ? 'drone_nest' : nestRaw);
+        return UECDrone(
+          p.position,
+          startAngle: _numProp(p, 'startAngle'),
+          kind: DroneKindParse.from((p.others['kind'] ?? '').toString()),
+          nestQuestId: nestId,
+        );
+      },
+      'storygate': (p) => StoryGate(
             p.position,
-            startAngle: _numProp(p, 'startAngle'),
-            kind: DroneKindParse.from((p.others['kind'] ?? '').toString()),
-            nestQuest: p.others['nest'] == true || p.others['nest'] == 'true',
+            p.size,
+            openFlag: (p.others['flag'] ?? 'ruins_gate_open').toString(),
           ),
       'sentinel': (p) => SaveService.data.flag('sentinelDefeated')
           ? _Gone()
@@ -673,12 +810,12 @@ class IntroScreen extends StatelessWidget {
 
   static const _brief =
       'Year 2387 · Elysium Colony\n\n'
-      'You are Kaela, an AI engineer who accidentally awakened an ancient alien intelligence within Gaia — '
-      'the planet\'s caretaker system.\n\n'
+      'You are Kaela, an AI engineer who ran a routine diagnostic on Gaia — '
+      'the planet\'s caretaker system — and found a process that should not have answered.\n\n'
       'The United Earth Coalition has dispatched drone squads to "contain" the anomaly.\n\n'
-      'Seek the Aetherian fragments scattered across Elysium. '
-      'Their echoes hold the key to Gaia\'s future — and the resurrection of a lost civilisation.\n\n'
-      'The UEC must not succeed.';
+      'Seek the Aetherian memory shards scattered across Elysium. '
+      'They are evidence of what Gaia really is — and of a civilization that uploaded rather than died.\n\n'
+      'The UEC must not wipe that record.';
 
   @override
   Widget build(BuildContext context) {
@@ -858,6 +995,45 @@ Future<void> _travelTo(BuildContext context, TravelDest dest) async {
   }
 }
 
+Future<bool> _confirmCoreActivation(BuildContext context) async {
+  if (Memories.allFound) return true;
+  final hints = Memories.missingHints;
+  final go = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      backgroundColor: const Color(0xFF06060F),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: BorderSide(color: const Color(0xFFFFAA44).withValues(alpha: 0.7)),
+      ),
+      title: const Text('Memories incomplete',
+          style: TextStyle(
+              color: Color(0xFFFFAA44), fontSize: 18, letterSpacing: 1)),
+      content: Text(
+        'You carry ${Memories.progressLabel} Aetherian memories.\n'
+        'Activate now and Voss will not fully stand down — the story ends unfinished.\n\n'
+        'Still missing:\n'
+        '${hints.map((h) => '· $h').join('\n')}\n\n'
+        'You can close this gate and return for the rest.',
+        style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.55),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: const Text('KEEP SEARCHING',
+              style: TextStyle(color: Colors.white54, letterSpacing: 1)),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, true),
+          child: const Text('ACTIVATE ANYWAY',
+              style: TextStyle(color: Color(0xFFFFAA44), letterSpacing: 1)),
+        ),
+      ],
+    ),
+  );
+  return go == true;
+}
+
 Future<void> _activateCoreRecord(BuildContext context) async {
   final nav = Navigator.of(context);
   SaveService.data.setFlag('completed');
@@ -973,12 +1149,16 @@ void _startLevel(BonfireGameInterface game, int level) {
     if (open) {
       SaveService.saveNow();
       g.pauseEngine();
-    } else if (!Journal.open.value &&
-        !Equipment.open.value &&
-        !Shop.open.value &&
-        !QuestBoard.open.value) {
+    } else if (!_anyUiHold()) {
       g.resumeEngine();
     }
+  }
+
+  _overlayHoldFn = onOverlay;
+  if (!_dialogueHoldWired) {
+    _dialogueHoldWired = true;
+    NpcCharacter.activeDialogue.addListener(_onDialogueHold);
+    AIFragment.activeDialogue.addListener(_onDialogueHold);
   }
 
   Journal.onOpenChanged = onOverlay;
@@ -1092,6 +1272,24 @@ KeyEventResult _handleDebugKey(FocusNode _, KeyEvent event) {
 
 final _paused = ValueNotifier<bool>(false);
 BonfireGameInterface? _activeGame;
+void Function(bool open)? _overlayHoldFn;
+bool _dialogueHoldWired = false;
+
+bool _anyUiHold() =>
+    Journal.open.value ||
+    Equipment.open.value ||
+    Shop.open.value ||
+    QuestBoard.open.value ||
+    NpcCharacter.activeDialogue.value != null ||
+    AIFragment.activeDialogue.value != null;
+
+void _onDialogueHold() {
+  if (Pause.suppressDialogueHold) return;
+  _overlayHoldFn?.call(
+    NpcCharacter.activeDialogue.value != null ||
+        AIFragment.activeDialogue.value != null,
+  );
+}
 
 void _setPaused(bool on) {
   if (on && Journal.open.value) {
@@ -1491,6 +1689,13 @@ class _NpcDialogueLayerState extends State<_NpcDialogueLayer> {
       SfxManager().stopVoice();
       _closeDialogue();
       QuestBoard.show();
+      return;
+    }
+    if (choice.setFlag == 'mira_showed_shop') {
+      choice.apply();
+      SfxManager().stopVoice();
+      _closeDialogue();
+      Shop.show();
       return;
     }
     choice.apply();
@@ -1927,9 +2132,19 @@ class _PortalOverlay extends StatelessWidget {
         !SaveService.data.flag('completed');
     final empty = cont == null && returns.isEmpty && !canActivateCore;
 
+    final ruinsLocked = fromLevel == 2 &&
+        cont == null &&
+        SaveService.data.flag('sentinelDefeated') &&
+        !GameState.citySouthOpen;
+
     String subtitle;
-    if (canActivateCore && cont == null && returns.isEmpty) {
-      subtitle = 'The Core Record is ready.';
+    if (canActivateCore) {
+      subtitle = Memories.allFound
+          ? 'All five memories are with you. The Core Record is ready.'
+          : 'Memories ${Memories.progressLabel}. Activate now for a partial ending — or return and seek the rest.';
+    } else if (ruinsLocked) {
+      subtitle =
+          'The road to the Ruins is still sealed. Speak with the Archivist — then return here.';
     } else if (cont != null && returns.isEmpty) {
       subtitle = 'Path open.';
     } else if (cont != null) {
@@ -1988,10 +2203,16 @@ class _PortalOverlay extends StatelessWidget {
                   ),
                 if (canActivateCore) ...[
                   _CyberButton(
-                    label: 'ACTIVATE CORE RECORD',
+                    label: Memories.allFound
+                        ? 'ACTIVATE CORE RECORD'
+                        : 'ACTIVATE CORE · ${Memories.progressLabel}',
                     filled: true,
-                    color: const Color(0xFF00FF88),
+                    color: Memories.allFound
+                        ? const Color(0xFF00FF88)
+                        : const Color(0xFFFFAA44),
                     onTap: () async {
+                      final ok = await _confirmCoreActivation(context);
+                      if (!ok || !context.mounted) return;
                       game.overlays.remove('portalReached');
                       await _activateCoreRecord(context);
                     },
@@ -2008,9 +2229,12 @@ class _PortalOverlay extends StatelessWidget {
                 if (returns.isNotEmpty) ...[
                   if (cont != null || canActivateCore) ...[
                     const SizedBox(height: 14),
-                    const Text('RETURN',
+                    Text(
+                        returns.any((d) => d.level == 5)
+                            ? 'SIDE PATHS / RETURN'
+                            : 'RETURN',
                         textAlign: TextAlign.center,
-                        style: TextStyle(
+                        style: const TextStyle(
                             color: Colors.white30,
                             fontSize: 10,
                             fontWeight: FontWeight.w600,
@@ -2020,7 +2244,13 @@ class _PortalOverlay extends StatelessWidget {
                   ...returns.map((d) => Padding(
                         padding: const EdgeInsets.only(bottom: 6),
                         child: _TravelDestButton(
-                          label: d.title,
+                          label: d.level == 5
+                              ? 'Lantern Town (market)'
+                              : d.title,
+                          blurb: d.level == 5 ? d.blurb : null,
+                          accent: d.level == 5
+                              ? const Color(0xFFFFE08A)
+                              : const Color(0xFF00FFCC),
                           onTap: () => _go(context, d),
                         ),
                       )),
@@ -2173,12 +2403,12 @@ class _VictoryScreen extends StatelessWidget {
             'who refused a winnable war, merged into Gaia so their dying sun could not erase them, '
             'and left the Core lock in a living mind (yours, rewritten when you were six).\n\n'
             '${Memories.endingVoss}\n\n'
-            'Gaia promises to learn the colony\'s fear. Elysium breathes again.'
+            'Gaia exits caretaker lockdown under soft load. She will learn the colony\'s threat model — not overwrite it. Elysium stays online.'
         : 'You opened the Core — bright, but incomplete.\n\n'
             'Gaps remain. Voss still cannot tell "people who asked" from "lattice that kills." '
             'He pauses the drones to buy time; he does not forgive. Earth will not stay quiet forever.\n\n'
             '${Memories.endingVoss}\n\n'
-            'Gaia is awake. Next time, bring him the rest of the truth.';
+            'Gaia is online. Next time, bring him the rest of the evidence package.';
     final coda = Adventure.endingCoda;
     return coda.isEmpty ? base : '$base\n\n$coda';
   }
@@ -2391,7 +2621,7 @@ class _CalmLayer extends StatelessWidget {
               color: const Color(0xFF020A08),
               alignment: Alignment.center,
               child: const Column(mainAxisSize: MainAxisSize.min, children: [
-                Text('Gaia pulls you back…',
+                Text('Gaia · restoring checkpoint…',
                     style: TextStyle(
                         color: Color(0xFF66FFAA),
                         fontSize: 22,

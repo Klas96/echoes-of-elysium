@@ -38,10 +38,18 @@ void main() {
 
   test('nest completes after two drone kills', () {
     Quests.accept('drone_nest');
-    Quests.onNestDroneKilled();
+    Quests.onNestDroneKilled('drone_nest');
     expect(Quests.status('drone_nest'), QuestStatus.accepted);
-    Quests.onNestDroneKilled();
+    Quests.onNestDroneKilled('drone_nest');
     expect(Quests.status('drone_nest'), QuestStatus.done);
+  });
+
+  test('city east nest uses its own kill counter', () {
+    Quests.accept('city_east_nest');
+    Quests.onNestDroneKilled('city_east_nest');
+    expect(Quests.status('city_east_nest'), QuestStatus.accepted);
+    Quests.onNestDroneKilled('city_east_nest');
+    expect(Quests.status('city_east_nest'), QuestStatus.done);
   });
 
   test('moonflower turn-in requires bloom item', () {

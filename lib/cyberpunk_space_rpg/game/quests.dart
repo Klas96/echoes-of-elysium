@@ -13,38 +13,43 @@ class QuestDef {
   final String id;
   final String title;
   final String blurb;
-  final String woodsHint;
+  /// Where to do the fieldwork (woods / city).
+  final String hint;
   final int glimmer;
   final String? gearId;
   final String clueId;
   /// If set, turn-in requires this Bonds item (consumed).
   final String? requiresItem;
+  /// How many nest-tagged drone kills complete this job (0 = examine-only).
+  final int nestKills;
 
   const QuestDef({
     required this.id,
     required this.title,
     required this.blurb,
-    required this.woodsHint,
+    required this.hint,
     required this.glimmer,
     required this.clueId,
     this.gearId,
     this.requiresItem,
+    this.nestKills = 0,
   });
 }
 
-/// Lantern Town job board — optional woods loops.
+/// Lantern Town job board — woods and city loops.
 class Quests {
   Quests._();
 
   static final revision = ValueNotifier<int>(0);
 
   static const catalog = <QuestDef>[
+    // --- Woods (Phase A) ---
     QuestDef(
       id: 'courier_pack',
       title: 'Lost Courier Pack',
       blurb:
           'A runner dropped a sealed pack on the west trail past the ranger cabin. Bring word that it was found.',
-      woodsHint: 'West clearing near the cabin trail (f1).',
+      hint: 'Woods · west loop from the Crossroads.',
       glimmer: 25,
       clueId: 'quest_courier',
     ),
@@ -53,21 +58,54 @@ class Quests {
       title: 'Quiet the Nest',
       blurb:
           'UEC left a quiet nest mid-woods. Clear the drones and read their field slate.',
-      woodsHint: 'Mid-trail clearing south of the second health shrine (d3).',
+      hint: 'Woods · west loop nest spur past the Crossroads.',
       glimmer: 10,
       gearId: 'scrap_plating',
       clueId: 'quest_nest',
+      nestKills: 2,
     ),
     QuestDef(
       id: 'moonflower_draft',
       title: 'Moonflower for the Sick',
       blurb:
           'Mira needs a moonflower bloom from the SCENT trail. Pick one and bring it home.',
-      woodsHint: 'Moonflower glade / f3 hollow on the vine-fox trail.',
+      hint: 'Woods · west loop hollow before Asha.',
       glimmer: 15,
       gearId: 'lantern_charm',
       clueId: 'quest_moonflower',
       requiresItem: 'moonflower_bloom',
+    ),
+    // --- City (Phase B) ---
+    QuestDef(
+      id: 'city_east_nest',
+      title: 'East Lot Nest',
+      blurb:
+          'UEC parked a nest on the east lot off the avenue. Quiet it before they reinforce.',
+      hint: 'City · east lot off the main avenue.',
+      glimmer: 18,
+      gearId: 'pulse_optic',
+      clueId: 'quest_city_east',
+      nestKills: 2,
+    ),
+    QuestDef(
+      id: 'city_se_patrol',
+      title: 'South Alley Sweep',
+      blurb:
+          'A patrol slate went dark in the south-east alley. Find it — and whatever is watching it.',
+      hint: 'City · SE alley south of the east lot.',
+      glimmer: 20,
+      clueId: 'quest_city_se',
+      nestKills: 1,
+    ),
+    QuestDef(
+      id: 'city_west_cache',
+      title: 'West Alley Cache',
+      blurb:
+          'Traders stashed a cache above the west yard. Recover the marked crate.',
+      hint: 'City · west mid-alley between noodle court and the yard.',
+      glimmer: 22,
+      gearId: 'swarm_thrusters',
+      clueId: 'quest_city_west',
     ),
   ];
 
@@ -88,6 +126,7 @@ class Quests {
   static String _accepted(String id) => 'quest:$id:accepted';
   static String _done(String id) => 'quest:$id:done';
   static String _turnedIn(String id) => 'quest:$id:turned_in';
+  static String _killFlag(String id, int n) => 'quest:$id:kill$n';
 
   static QuestDef? def(String id) {
     for (final q in catalog) {
@@ -117,7 +156,7 @@ class Quests {
   static String? get objectiveHint {
     for (final q in catalog) {
       final s = status(q.id);
-      if (s == QuestStatus.accepted) return 'Job: ${q.title} — ${q.woodsHint}';
+      if (s == QuestStatus.accepted) return 'Job: ${q.title} — ${q.hint}';
       if (s == QuestStatus.done) return 'Job ready: turn in "${q.title}" at the Town board';
     }
     return null;
@@ -130,7 +169,6 @@ class Quests {
     return true;
   }
 
-  /// Mark field work finished (examine / nest clear / bloom picked).
   static bool complete(String id) {
     if (!_d.flag(_accepted(id))) return false;
     if (_d.flag(_done(id)) || _d.flag(_turnedIn(id))) return false;
@@ -155,18 +193,22 @@ class Quests {
     return true;
   }
 
-  /// Nest drones report kills; completes [drone_nest] after 2.
-  static void onNestDroneKilled() {
-    if (!_d.flag(_accepted('drone_nest'))) return;
-    if (_d.flag(_done('drone_nest'))) return;
-    if (!_d.flag('quest:drone_nest:kills')) {
-      _d.setFlag('quest:drone_nest:kills');
-      _bump();
-      return;
-    }
-    if (!_d.flag('quest:drone_nest:kills2')) {
-      _d.setFlag('quest:drone_nest:kills2');
-      complete('drone_nest');
+  /// Nest-tagged drones call this with their quest id.
+  static void onNestDroneKilled(String questId) {
+    final q = def(questId);
+    if (q == null || q.nestKills <= 0) return;
+    if (!_d.flag(_accepted(questId))) return;
+    if (_d.flag(_done(questId))) return;
+    for (var i = 1; i <= q.nestKills; i++) {
+      if (!_d.flag(_killFlag(questId, i))) {
+        _d.setFlag(_killFlag(questId, i));
+        if (i >= q.nestKills) {
+          complete(questId);
+        } else {
+          _bump();
+        }
+        return;
+      }
     }
   }
 }
