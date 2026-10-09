@@ -59,6 +59,9 @@ class ExamineHotspot extends GameComponent with Interactable {
     if (openQuestBoard) return const PromptInfo('READ BOARD');
     if (openShop) return const PromptInfo('TRADE');
     if (requiresItem != null && !_hasKey && !_done) {
+      if (requiresItem == 'ruins_gate_key') {
+        return const PromptInfo.note('Sealed · keystone is in the NE wing');
+      }
       final name = itemLabels[requiresItem!] ?? requiresItem!;
       return PromptInfo.note('Locked · needs $name');
     }
@@ -79,7 +82,15 @@ class ExamineHotspot extends GameComponent with Interactable {
       Shop.show();
       return;
     }
-    if (requiresItem != null && !_hasKey && !_done) return;
+    if (requiresItem != null && !_hasKey && !_done) {
+      final name = itemLabels[requiresItem!] ?? requiresItem!;
+      final body = requiresItem == 'ruins_gate_key'
+          ? 'Find the Aetherian Keystone in the north-east wing, then return here.'
+          : 'Needs $name.';
+      GameToast.show('SEALED', body: body, color: const Color(0xFFFFAABB), compact: true);
+      GameState.refreshObjective();
+      return;
+    }
     if (requiresItem != null && _hasKey && !_done && consumeItem) {
       Bonds.useItem(requiresItem!);
     }

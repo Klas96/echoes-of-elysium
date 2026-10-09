@@ -10,6 +10,7 @@ import 'sentinel_drone.dart';
 import 'uec_drone.dart';
 import 'walk_sheet.dart';
 import 'building.dart';
+import 'muzzle_flash.dart';
 import '../audio/music_manager.dart';
 import '../game/progression.dart';
 
@@ -129,6 +130,10 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision {
   double _footstepTimer = 0;
   bool _joystickMoving = false;
   double _shootCooldown = 0;
+  Map<Direction, SpriteAnimation>? _shootAnims;
+  /// Visual-only knockback after a shot (does not move the hitbox).
+  double _shootKickT = 0;
+  Vector2 _shootKick = Vector2.zero();
 
   CustomPlayer(Vector2 position) : super(
     position: position,
@@ -156,8 +161,16 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision {
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
     );
 
-    // Kaela walk/idle animation (DirectionAnimation, driven by movement)
-    super.render(canvas);
+    // Brief visual kick opposite the shot — keeps walk art intact.
+    if (_shootKickT > 0) {
+      canvas.save();
+      final u = (_shootKickT / 0.1).clamp(0.0, 1.0);
+      canvas.translate(_shootKick.x * u, _shootKick.y * u);
+      super.render(canvas);
+      canvas.restore();
+    } else {
+      super.render(canvas);
+    }
   }
 
   @override
@@ -167,6 +180,7 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision {
     SfxManager().init();
     paint.filterQuality = FilterQuality.none;
     animation = await WalkSheet.load('sprites/kaela_walk.png');
+    _shootAnims = await ShootSheet.load('sprites/kaela_shoot.png');
     add(RectangleHitbox(
       size: Vector2(feetWidth, sizePlayer / 3),
       position: Vector2(sizePlayer * 0.25, sizePlayer * 0.65),
@@ -231,6 +245,7 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision {
     _checkInteraction();
     _updateFootsteps(dt);
     _handleShooting(dt);
+    if (_shootKickT > 0) _shootKickT = max(0, _shootKickT - dt);
   }
 
   void _updateFootsteps(double dt) {
@@ -285,10 +300,23 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision {
       origin - PlayerBullet.spriteSize / 2,
       dir,
     ));
+    gameRef.add(MuzzleFlash(origin + dir * 12, dir));
     SfxManager().playShoot();
     shotCount++;
     lastShotFrom = origin;
     _shootCooldown = 0.28 * Progression.fireCooldownMult;
+    lastDirection = WalkSheet.facingVector(dir);
+    _shootKick = -dir.normalized() * 1.5;
+    _shootKickT = 0.08;
+    _playShootAnim(dir);
+  }
+
+  void _playShootAnim(Vector2 dir) {
+    final face = WalkSheet.facingVector(dir);
+    final anim = _shootAnims?[face];
+    if (anim == null || animation == null) return;
+    lastDirection = face;
+    animation!.playOnce(anim.clone(), runToTheEnd: true);
   }
 
   /// Soft aim assist: snap toward a drone near the tap, or inside the aim cone.

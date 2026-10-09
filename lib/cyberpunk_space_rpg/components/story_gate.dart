@@ -1,12 +1,16 @@
 import 'package:bonfire/bonfire.dart';
 import 'package:flutter/material.dart';
 
+import '../creatures/bonds.dart';
+import '../creatures/interaction.dart';
 import '../game/adventure.dart';
+import '../game/game_state.dart';
 
 /// Solid barricade that vanishes when [openFlag] is set (keyed ruins wing).
 class StoryGate extends GameComponent {
   final String openFlag;
   double _pulse = 0;
+  bool _hinted = false;
 
   StoryGate(Vector2 position, Vector2 size, {required this.openFlag}) {
     this.position = position;
@@ -21,6 +25,7 @@ class StoryGate extends GameComponent {
       removeFromParent();
       return;
     }
+    // Full footprint solid — map choke is sized to this hitbox (no walk-around).
     add(RectangleHitbox(size: size, isSolid: true));
     return super.onLoad();
   }
@@ -29,7 +34,31 @@ class StoryGate extends GameComponent {
   void update(double dt) {
     super.update(dt);
     _pulse += dt * 2;
-    if (_open && isMounted) removeFromParent();
+    if (_open && isMounted) {
+      removeFromParent();
+      return;
+    }
+    final player = gameRef.player;
+    if (player == null || _hinted) return;
+    final dist = ((player.position + player.size / 2) - (position + size / 2)).length;
+    if (dist > 72) return;
+    _hinted = true;
+    GameState.refreshObjective();
+    if (Bonds.hasItem('ruins_gate_key')) {
+      GameToast.show(
+        'KEYSTONE READY',
+        body: 'Examine the sealed gate and USE the keystone.',
+        color: const Color(0xFFFFE08A),
+        compact: true,
+      );
+    } else {
+      GameToast.show(
+        'SEALED GATE',
+        body: 'Core beyond. Fetch the Aetherian Keystone from the north-east wing.',
+        color: const Color(0xFFFFAABB),
+        compact: true,
+      );
+    }
   }
 
   @override
@@ -50,10 +79,11 @@ class StoryGate extends GameComponent {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2,
     );
+    final label = Bonds.hasItem('ruins_gate_key') ? 'USE KEY' : 'NE KEY';
     final tp = TextPainter(
-      text: const TextSpan(
-        text: 'LOCKED',
-        style: TextStyle(color: Color(0xFFFFAABB), fontSize: 9, letterSpacing: 1.5),
+      text: TextSpan(
+        text: label,
+        style: const TextStyle(color: Color(0xFFFFAABB), fontSize: 9, letterSpacing: 1.2),
       ),
       textDirection: TextDirection.ltr,
     )..layout();

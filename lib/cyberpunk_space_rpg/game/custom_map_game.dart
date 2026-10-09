@@ -15,6 +15,7 @@ import '../components/sentinel_drone.dart';
 import '../components/checkpoint.dart';
 import '../components/building.dart';
 import '../components/story_gate.dart';
+import '../components/ambient_prop_fx.dart';
 import '../audio/music_manager.dart';
 import '../creatures/bonds.dart';
 import '../creatures/creature_components.dart';
@@ -662,6 +663,10 @@ Map<String, ObjectBuilder> _mapObjects(String mapId) => {
             p.position,
             p.size,
             openFlag: (p.others['flag'] ?? 'ruins_gate_open').toString(),
+          ),
+      'ambient': (p) => AmbientPropFx(
+            p.position,
+            kind: (p.others['kind'] ?? 'steam').toString(),
           ),
       'sentinel': (p) => SaveService.data.flag('sentinelDefeated')
           ? _Gone()

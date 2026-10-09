@@ -235,7 +235,12 @@ class GameState {
 
   /// The player is close to the level's portal.
   static void onNearPortal() {
-    if (_level == 3) _advance(3, _l3Light);
+    // Ruins: portal sits just past the SE gate — don't spoil the objective
+    // while the keystone lock still blocks the approach.
+    if (_level == 3) {
+      if (Adventure.flag('ruins_gate_open')) _advance(3, _l3Light);
+      return;
+    }
     if (_level == 4) _advance(4, _l4Gaia);
   }
 
@@ -288,16 +293,21 @@ class GameState {
         if (_step >= _l2Archivist) return 'Seek out the Archivist';
         return 'Arrival plaza: east Lantern Gate · west Echo-7 · south avenue';
       case 3:
-        if (_step >= _l3Light || Adventure.flag('ruins_gate_open')) {
+        if (Adventure.flag('ruins_gate_open')) {
           return 'Descend to Gaia\'s Core';
         }
         if (Bonds.hasItem('ruins_gate_key')) {
-          return 'Open the SE gate with the keystone — then the Core';
+          return 'Back to the SE sealed gate — USE the keystone';
         }
-        if (_step >= _l3Shrine || Adventure.hasClue('shrine_note')) {
-          return 'NE for the keystone · SW shrine memory is optional';
+        // Always steer toward the key; shrine / Memory 5 stay optional side paths.
+        if (_step >= _l3Shrine ||
+            Adventure.hasClue('shrine_note') ||
+            Adventure.hasClue('ruins_ring') ||
+            Adventure.hasClue('ruins_landing') ||
+            _step >= _l3Light) {
+          return 'North-east wing for the Aetherian Keystone (opens SE gate)';
         }
-        return 'Reach the central clearing — NE key wing, SW optional memory';
+        return 'Central clearing · then NE for the keystone (SE gate is locked)';
       case 4:
         if (portalUnlocked.value || _step >= _l4Activate) {
           if (Memories.allFound) return 'Activate the Core Record';

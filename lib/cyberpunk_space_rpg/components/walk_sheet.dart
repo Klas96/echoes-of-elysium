@@ -70,4 +70,39 @@ class WalkSheet {
     }
     return d.y > 0 ? Direction.down : Direction.up;
   }
+
+  /// Cardinal facing from a unit (or any) aim vector.
+  static Direction facingVector(Vector2 dir) {
+    if (dir.x.abs() > dir.y.abs()) {
+      return dir.x > 0 ? Direction.right : Direction.left;
+    }
+    return dir.y > 0 ? Direction.down : Direction.up;
+  }
+}
+
+/// One-shot shoot cycle: 4 rows (down/up/right/left) × 4 frames.
+/// Built from [WalkSheet] pixels so palette/outline match the walk art.
+class ShootSheet {
+  static const double frameSize = 32;
+  static const double stepTime = 1 / 12;
+
+  static Future<Map<Direction, SpriteAnimation>> load(String path) async {
+    final image = await Flame.images.load(path);
+    SpriteAnimation row(int r) => SpriteAnimation.fromFrameData(
+          image,
+          SpriteAnimationData.sequenced(
+            amount: 4,
+            stepTime: stepTime,
+            textureSize: Vector2.all(frameSize),
+            texturePosition: Vector2(0, r * frameSize),
+            loop: false,
+          ),
+        );
+    return {
+      Direction.down: row(0),
+      Direction.up: row(1),
+      Direction.right: row(2),
+      Direction.left: row(3),
+    };
+  }
 }

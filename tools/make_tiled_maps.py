@@ -438,7 +438,8 @@ class Level:
         def overlap(a, b):
             return a[0] < b[0] + b[2] and b[0] < a[0] + a[2] and a[1] < b[1] + b[3] and b[1] < a[1] + a[3]
         def floorless(o):
-            return o["name"] == "darkzone" or (o["name"] == "creature" and o["props"]["species"] in FLYING)
+            return o["name"] in ("darkzone", "ambient") or (
+                o["name"] == "creature" and o["props"].get("species") in FLYING)
         for o in self.objects:
             if floorless(o): continue
             for (x, y) in cells(o):
@@ -547,7 +548,8 @@ class Level:
             if not any(secret(o) for o in inside):
                 raise SystemExit(f"{g['name']} at {g['x']},{g['y']} guards no secret")
         for o in objs:
-            if o["name"] in ("drone", "sentinel", "darkzone", "boulder", "hiddenpath"): continue
+            if o["name"] in ("drone", "sentinel", "darkzone", "boulder", "hiddenpath", "ambient"):
+                continue
             if o["name"] == "creature" and o["props"]["species"] in FLYING: continue
             if secret(o): continue
             if not all(with_all[y, x] for (x, y) in cells(o)):
@@ -565,7 +567,32 @@ class Level:
                        and z["y"] <= g["y"] and g["y"] + g["h"] <= z["y"] + z["h"] for g in objs):
                 raise SystemExit(f"dark zone at {z['x']},{z['y']} hides no glyph")
 
+    def emit_ambient_fx(self):
+        """Gameplay overlays for static props that should feel alive (steam, embers)."""
+        kinds = {
+            "steam_vent": "steam",
+            "rooftop_vent": "steam",
+            "crashed_ship": "steam",
+            "campfire": "ember",
+            "energy_brazier": "ember",
+            "fountain": "mist",
+        }
+        for name, x, y in self.instances:
+            kind = kinds.get(name)
+            if not kind:
+                continue
+            w, h, _ = self.ts.props[name]
+            cx = (x + w / 2) * T
+            cy = (y + h / 2) * T
+            # Top of the prop (vents vent upward; campfire/brazier glow above)
+            if kind == "steam":
+                cy = (y + 0.15 * h) * T
+            elif kind == "ember":
+                cy = (y + 0.25 * h) * T
+            self.obj("ambient", cx - 12, cy - 12, 24, 24, kind=kind)
+
     def write(self, fname, image_rel):
+        self.emit_ambient_fx()
         ok, seen = self.validate()
         ts = self.ts
         def lay(i, name, arr):
@@ -931,7 +958,8 @@ def map2():
     lv.cluster(["bench", "trash_bin"], *P["voss"], 2, radius=2)
     interior = np.zeros_like(wall)
     interior[1:-1, 1:-1] = (wall[1:-1, 1:-1] & wall[:-2, 1:-1] & wall[2:, 1:-1] & wall[1:-1, :-2] & wall[1:-1, 2:])
-    lv.scatter_on(["rooftop_ac", "rooftop_vent", "solar_panel"], 22, interior, need_floor=False)
+    lv.scatter_on(["rooftop_ac", "solar_panel"], 14, interior, need_floor=False)
+    lv.scatter_on(["rooftop_vent"], 10, interior, need_floor=False)  # animated steam
     # Buildings sit off the plaza / ring, not blocking the fork.
     for name, tx, ty in (("noodle_shop", 4, 5), ("tea_house", 28, 5), ("archive_library", 28, 14),
                          ("apartment_block", 2, 26), ("greenhouse", 3, 35)):
@@ -1081,10 +1109,30 @@ def map3():
              ("d6", "m5a"), ("m5a", "m5b")]
     for a, b in edges: seg_carve(lv.floor, P[a], P[b], 1.9)
     for k, (x, y) in P.items():
-        r = 4.2 if k in ("spawn", "portal") else (3.6 if k in ("key", "m5b", "gate") else 3.3)
+        # Gate is a choke, not a plaza — otherwise players walk around LOCKED.
+        if k == "gate":
+            r = 1.8
+        elif k in ("spawn", "portal"):
+            r = 4.2
+        elif k in ("key", "m5b"):
+            r = 3.6
+        else:
+            r = 3.3
         disk_carve(lv.floor, x, y, r)
+    # Pinch SE approach to a 3-tile slit the storygate seals (x 36..38 at y 32..34).
+    for y in range(32, 35):
+        for x in range(33, 43):
+            lv.floor[y, x] = 36 <= x <= 38
+    # Restore portal court / short approach south of the choke.
+    disk_carve(lv.floor, *P["portal"], 4.2)
+    seg_carve(lv.floor, (37.5, 34.5), P["portal"], 1.35)
     wall = clean_walls(~lv.floor)
     lv.floor = ~wall
+    # Re-assert choke after clean_walls (it can re-open diagonals).
+    for y in range(32, 35):
+        for x in range(33, 43):
+            lv.floor[y, x] = 36 <= x <= 38
+    wall = ~lv.floor
     metal = np.zeros_like(wall)
     disk_carve(metal, *P["spawn"], 2.6); disk_carve(metal, *P["portal"], 3.2)
     metal &= lv.floor; metal = clean_walls(metal, border=0) & metal
@@ -1112,6 +1160,7 @@ def map3():
     lv.scatter_on(heavy, 10, fringe)
     lv.scatter_on(clutter, 10, fringe | pocket)
     lv.scatter_on(tech, 8, edge | fringe)
+    lv.scatter_on(["steam_vent"], 6, edge | pocket)  # ground vents — animated steam
     lv.scatter_on(["neon_streetlight"], 6, edge)
     lv.cluster(["barrel_purple", "crate", "rubble_small"], *P["h2"], 4, radius=2)
     lv.cluster(["barricade", "rubble_small"], *P["spawn"], 3, radius=3)
@@ -1132,11 +1181,11 @@ def map3():
           text="A cold keystone. The SE gate toward the Core will accept this.",
           give="ruins_gate_key", clue="ruins_keystone")
     place(lv, "drone", P["key"][0] - 1.2, P["key"][1] + 0.8, startAngle=2.0, kind="shield")
-    # SE keyed gate (barricade + examine to open)
-    lv.obj("storygate", int(36.5 * T), int(33 * T), 3 * T, T, flag="ruins_gate_open")
-    place(lv, "examine", *P["gate"],
+    # SE keyed gate — spans the full 3-tile choke (cannot walk around).
+    lv.obj("storygate", 36 * T, 32 * T, 3 * T, 3 * T, flag="ruins_gate_open")
+    place(lv, "examine", 37.5, 31.6,
           id="ruins_se_gate", title="SEALED GATE",
-          text="Aetherian lattice lock. Needs the north-east keystone.",
+          text="Lattice lock. The Aetherian Keystone is in the north-east wing — bring it back and USE it here.",
           item="ruins_gate_key", consume=True, flag="ruins_gate_open",
           clue="ruins_gate_open")
     # Memory 5 deep SW path (optional)
@@ -1154,7 +1203,7 @@ def map3():
           clue="ruins_landing")
     place(lv, "examine", P["h2"][0] - 1.0, P["h2"][1] + 0.8,
           id="ruins_clearing_ring", title="BROKEN RING",
-          text="East: Core gate (needs a keystone). South-west: shrine and a deeper memory.",
+          text="SE path to the Core is sealed. Go NORTH-EAST for the Aetherian Keystone, then return. SW shrine is optional.",
           clue="ruins_ring")
     place(lv, "stash", P["d5"][0] - 1.5, P["d5"][1] + 1.0, glimmer=20)
     place(lv, "health", P["d5"][0] + 1.5, P["d5"][1] + 0.5)
