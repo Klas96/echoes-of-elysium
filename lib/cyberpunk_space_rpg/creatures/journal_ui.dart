@@ -607,7 +607,7 @@ class _JournalPanelState extends State<_JournalPanel> {
                     padding: const EdgeInsets.only(bottom: 8),
                     child: Text(
                       '· ${q.title} — ${switch (Quests.status(q.id)) {
-                        QuestStatus.accepted => 'in woods',
+                        QuestStatus.accepted => q.acceptedJournalLabel,
                         QuestStatus.done => 'ready to turn in',
                         QuestStatus.turnedIn => 'done',
                         _ => '',

@@ -16,8 +16,34 @@ class TravelDest {
 }
 
 /// Shared travel network: portals offer a clear forward path plus quieter returns.
+/// Adjacent maps also use [MapEdgeExit] — walk off the border instead of a warp pad.
 class Travel {
   Travel._();
+
+  /// Side of the *destination* map to spawn on after an edge exit
+  /// (`north` / `south` / `east` / `west`). Cleared by [_PlayerSpawn].
+  static String? pendingSpawnEntry;
+
+  /// Dest level queued by [MapEdgeExit]; consumed by the `edgeTravel` overlay.
+  static int? pendingEdgeLevel;
+
+  /// Queue a seamless walk-off transition (no portal menu).
+  static void requestEdge(int destLevel, {required String entrySide}) {
+    pendingSpawnEntry = entrySide;
+    pendingEdgeLevel = destLevel;
+  }
+
+  static String? takePendingEntry() {
+    final s = pendingSpawnEntry;
+    pendingSpawnEntry = null;
+    return s;
+  }
+
+  static int? takePendingEdgeLevel() {
+    final l = pendingEdgeLevel;
+    pendingEdgeLevel = null;
+    return l;
+  }
 
   static const List<TravelDest> all = [
     TravelDest(

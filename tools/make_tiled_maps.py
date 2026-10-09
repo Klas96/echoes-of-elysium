@@ -438,7 +438,8 @@ class Level:
         def overlap(a, b):
             return a[0] < b[0] + b[2] and b[0] < a[0] + a[2] and a[1] < b[1] + b[3] and b[1] < a[1] + a[3]
         def floorless(o):
-            return o["name"] in ("darkzone", "ambient") or (
+            # mapexit / entry sit on border openings punched after clean_walls
+            return o["name"] in ("darkzone", "ambient", "mapexit") or (
                 o["name"] == "creature" and o["props"].get("species") in FLYING)
         for o in self.objects:
             if floorless(o): continue
@@ -663,7 +664,79 @@ class Level:
 # --------------------------------------------------------------- sizes used by the code
 SZ = dict(spawn=32, portal=56, npc=30, fragment=18, health=16, drone=24, sentinel=48, checkpoint=32,
           creature=32, stump=64, stash=32, glyph=24, hidden=24, pebble=16, moonflower=16, examine=20,
-          storygate=64)
+          storygate=64, entry=32)
+
+def open_map_edge(lv, side, cx, half=2):
+    """Punch a walkable corridor through the sealed map border (after clean_walls).
+    [side] is north/south/east/west; [cx] is the centre tile along that edge."""
+    W, H = lv.W, lv.H
+    # Sample a nearby walkable ground tile to paint into the opening.
+    sample = 1
+    if side == "south":
+        x0, x1 = max(0, cx - half), min(W, cx + half + 1)
+        sy = min(H - 4, H - 1)
+        for x in range(x0, x1):
+            if lv.floor[sy, x]:
+                sample = int(lv.ground[sy, x]); break
+        for y in range(H - 3, H):
+            for x in range(x0, x1):
+                lv.floor[y, x] = True
+                if lv.ground[y, x] < 0 or y >= H - 2:
+                    lv.ground[y, x] = sample
+    elif side == "north":
+        x0, x1 = max(0, cx - half), min(W, cx + half + 1)
+        sy = max(3, 0)
+        for x in range(x0, x1):
+            if lv.floor[min(3, H - 1), x]:
+                sample = int(lv.ground[min(3, H - 1), x]); break
+        for y in range(0, 3):
+            for x in range(x0, x1):
+                lv.floor[y, x] = True
+                lv.ground[y, x] = sample
+    elif side == "east":
+        y0, y1 = max(0, cx - half), min(H, cx + half + 1)
+        sx = min(W - 4, W - 1)
+        for y in range(y0, y1):
+            if lv.floor[y, sx]:
+                sample = int(lv.ground[y, sx]); break
+        for x in range(W - 3, W):
+            for y in range(y0, y1):
+                lv.floor[y, x] = True
+                if lv.ground[y, x] < 0 or x >= W - 2:
+                    lv.ground[y, x] = sample
+    elif side == "west":
+        y0, y1 = max(0, cx - half), min(H, cx + half + 1)
+        sx = max(3, 0)
+        for y in range(y0, y1):
+            if lv.floor[y, min(3, W - 1)]:
+                sample = int(lv.ground[y, min(3, W - 1)]); break
+        for x in range(0, 3):
+            for y in range(y0, y1):
+                lv.floor[y, x] = True
+                lv.ground[y, x] = sample
+
+def place_mapexit(lv, side, cx, dest, entry, half=2, unlock=False, **extra):
+    """Trigger strip just inside the opened edge. [entry] = spawn side on dest map."""
+    W, H, Tloc = lv.W, lv.H, T
+    props = dict(dest=dest, entry=entry, **extra)
+    if unlock:
+        props["unlock"] = "portal"
+    if side == "south":
+        x0 = max(0, (cx - half) * Tloc)
+        lv.obj("mapexit", x0, (H - 2) * Tloc, (half * 2 + 1) * Tloc, 2 * Tloc, **props)
+    elif side == "north":
+        x0 = max(0, (cx - half) * Tloc)
+        lv.obj("mapexit", x0, 0, (half * 2 + 1) * Tloc, 2 * Tloc, **props)
+    elif side == "east":
+        y0 = max(0, (cx - half) * Tloc)
+        lv.obj("mapexit", (W - 2) * Tloc, y0, 2 * Tloc, (half * 2 + 1) * Tloc, **props)
+    elif side == "west":
+        y0 = max(0, (cx - half) * Tloc)
+        lv.obj("mapexit", 0, y0, 2 * Tloc, (half * 2 + 1) * Tloc, **props)
+
+def place_entry(lv, side, tx, ty):
+    """Arrival pad when walking in from [side]."""
+    place(lv, "entry", tx, ty, side=side)
 # creatures that fly (no floor needed under their habitat)
 FLYING = {"glowmoth"}
 # objects an ability gate may hide; anything else behind a boulder is an error
@@ -703,6 +776,8 @@ def map1():
         r = 5.0 if k in ("cross", "h2") else (4.2 if k in ("portal", "spawn", "asha") else 3.4)
         disk_carve(lv.floor, x, y, r)
     seg_carve(lv.floor, P["spawn"], P["gaia"], 1.9)
+    # South road continues to the map edge (walk off → City).
+    seg_carve(lv.floor, P["portal"], (P["portal"][0], 58.5), 2.0)
     # Pond glade hangs off the east loop and rejoins toward Asha (not a dead end).
     glade = np.zeros_like(lv.floor)
     disk_carve(glade, 26, 24, 4.5); disk_carve(glade, 24, 27, 3.5)
@@ -789,11 +864,16 @@ def map1():
     place(lv, "drone", *P["d2"], startAngle=2.1, kind="sniper")
     place(lv, "drone", 6.5, 26.5, startAngle=1.2, kind="scout", nest=True)
     place(lv, "drone", 7.2, 27.2, startAngle=3.8, kind="swarm", nest=True)
-    place(lv, "portal", *P["portal"])
+    # South road out of the woods → City (no warp pad; walk off the map).
+    open_map_edge(lv, "south", int(P["portal"][0]), half=2)
+    place_mapexit(lv, "south", int(P["portal"][0]), dest="city", entry="north", half=2, unlock=True,
+                  lockedTitle="WOODS EDGE",
+                  lockedBody="Two memory fragments open the road south to the City.")
+    place_entry(lv, "south", *P["portal"])  # arriving back from the City
     place(lv, "checkpoint", *P["spawn"], label="Crash Site")
     place(lv, "checkpoint", *P["cross"], label="Crossroads")
     place(lv, "checkpoint", P["asha"][0] + 1.5, P["asha"][1] + 1.0, label="Asha's Trail")
-    place(lv, "checkpoint", P["portal"][0] - 2.5, P["portal"][1] - 2.0, label="Aetherian Gate")
+    place(lv, "checkpoint", P["portal"][0] - 2.5, P["portal"][1] - 2.0, label="South Road")
     place(lv, "examine", P["spawn"][0] + 1.8, P["spawn"][1] - 0.6,
           id="woods_plaque", title="WEATHERED PLAQUE",
           text="\"We asked to stay.\" A second line: \"Bodies to soil. Minds to Gaia.\"",
@@ -819,13 +899,13 @@ def map1():
           text="WEST loop: courier cache & UEC nest. EAST loop: pond glade & fragment. Both meet at Asha.")
     place(lv, "examine", P["h2"][0] + 0.6, P["h2"][1] + 0.4,
           id="woods_job_sign", title="TRAIL NOTICE",
-          text="Chalk: after the city portal, look EAST for Lantern Town — jobs and glimmer, not only south.")
+          text="Chalk: once you reach the City, look EAST for Lantern Town — jobs and glimmer, not only south.")
     place(lv, "examine", P["f2"][0] + 1.2, P["f2"][1] - 0.4,
           id="woods_glade_sign", title="SIDE PATH MARK",
           text="East path continues through the pond glade and rejoins south — you will not get stuck.")
     place(lv, "examine", P["portal"][0] - 1.8, P["portal"][1] - 1.2,
-          id="woods_portal_notice", title="GATE NOTICE",
-          text="City beyond. Arrival plaza forks: amber Lantern Gate east, avenue south.")
+          id="woods_portal_notice", title="SOUTH ROAD",
+          text="City beyond this tree line. Walk south off the map. Plaza forks: east Lantern Town, south avenue.")
     place(lv, "hidden", P["f5"][0] - 0.5, P["f5"][1] + 0.6, glimmer=18)
     woods_creatures_and_secrets(lv)
     lv.write("world.tmj", "tilesets/woods.png")
@@ -903,8 +983,11 @@ def map2():
     rect_carve(floor, 7, 25, 29, 35)           # Sentinel plaza
     rect_carve(floor, 22, 20, 32, 31)          # east lot (on the ring)
     rect_carve(floor, 8, 35, 13, 40)           # Voss alcove
-    rect_carve(floor, 12, 39, 22, 44)          # portal square
+    rect_carve(floor, 12, 39, 22, 44)          # south gate square
     rect_carve(floor, 23, 4, 31, 30)           # east ring walkable band
+    rect_carve(floor, 14, 2, 20, 5)            # north road → Woods edge
+    rect_carve(floor, 14, 42, 20, 45)          # south road → Ruins edge
+    rect_carve(floor, 28, 3, 35, 8)            # east road → Town edge
     disk_carve(floor, 29, 36, 3.5)             # SE alley hunt
     seg_carve(floor, (28, 31), (29, 36), 1.8)
     rect_carve(floor, 4, 9, 10, 14)            # west mid alley off plaza
@@ -978,15 +1061,25 @@ def map2():
     place(lv, "drone", *P["d2"], startAngle=3.3, kind="scout")
     place(lv, "fragment", 3.5, 17.5)
     place(lv, "drone", 5.0, 15.5, startAngle=0.4, kind="swarm")
-    place(lv, "portal", *P["portal"])
-    place(lv, "portal", *P["town"], dest="town")
+    # Walk-off edges replace warp pads for adjacent maps.
+    open_map_edge(lv, "north", int(P["spawn"][0]), half=2)
+    open_map_edge(lv, "south", int(P["portal"][0]), half=2)
+    open_map_edge(lv, "east", int(P["town"][1]), half=2)
+    place_mapexit(lv, "north", int(P["spawn"][0]), dest="woods", entry="south", half=2)
+    place_mapexit(lv, "south", int(P["portal"][0]), dest="ruins", entry="north", half=2, unlock=True,
+                  lockedTitle="SOUTH ROAD",
+                  lockedBody="The Archivist opens this road after the Sentinel falls.")
+    place_mapexit(lv, "east", int(P["town"][1]), dest="town", entry="west", half=2)
+    place_entry(lv, "north", *P["spawn"])
+    place_entry(lv, "south", *P["portal"])
+    place_entry(lv, "east", *P["town"])
     place(lv, "checkpoint", *P["spawn"], label="Arrival Plaza")
     place(lv, "checkpoint", P["echo7"][0], P["echo7"][1] + 2.0, label="Echo District")
-    place(lv, "checkpoint", P["portal"][0], P["portal"][1] - 2.0, label="Portal Square")
-    place(lv, "checkpoint", P["town"][0] - 1.2, P["town"][1], label="Lantern Gate")
+    place(lv, "checkpoint", P["portal"][0], P["portal"][1] - 2.0, label="South Gate")
+    place(lv, "checkpoint", P["town"][0] - 1.2, P["town"][1], label="Lantern Road")
     place(lv, "examine", P["spawn"][0] + 0.2, P["spawn"][1] + 1.4,
           id="city_arrival_post", title="PLAZA POST",
-          text="Three ways: EAST amber Lantern Gate (market) · SOUTH avenue (Archivist) · WEST Echo-7.")
+          text="Three ways: EAST road to Lantern Town · SOUTH avenue (Archivist) · WEST Echo-7. North walks back to the Woods.")
     place(lv, "examine", 22.5, 19.5,
           id="city_archive_plaque", title="ARCHIVE PLAQUE",
           text="Sealed by the Archivist. First memory drafts keep here — not the Core itself.",
@@ -1001,8 +1094,8 @@ def map2():
           clue="city_yard_memo")
     place(lv, "stash", 4.0, 19.5, glimmer=18)
     place(lv, "examine", P["town"][0] - 1.2, P["town"][1] + 0.5,
-          id="city_lantern_sign", title="LANTERN GATE SIGN",
-          text="Amber gate to Lantern Town. East ring continues south to the avenue — you can loop back.")
+          id="city_lantern_sign", title="LANTERN ROAD",
+          text="Walk east off the map to Lantern Town. The east ring also loops south to the avenue.")
     place(lv, "examine", 17.5, 12.5,
           id="city_branch_sign", title="CROSS STREET",
           text="West yard · east ring (Town / east lot). The city is a grid, not a single road.")
@@ -1038,7 +1131,8 @@ def map5():
     floor = np.zeros_like(road)
     rect_carve(floor, 8, 3, 20, 25)            # main plaza
     rect_carve(floor, 4, 10, 24, 17)           # market square
-    rect_carve(floor, 11, 20, 17, 26)          # portal court
+    rect_carve(floor, 11, 20, 17, 26)          # south court
+    rect_carve(floor, 0, 11, 8, 16)            # west road → City edge
     lv.floor = floor | road
     wall = clean_walls(~lv.floor)
     lv.floor = ~wall
@@ -1080,9 +1174,13 @@ def map5():
     place(lv, "npc", *P["mira"], name="mira", sprite="asha")
     place(lv, "health", *P["h1"])
     place(lv, "stash", *P["stash"], glimmer=15)
-    place(lv, "portal", *P["portal"])
+    # West road back to the City — walk off the map.
+    open_map_edge(lv, "west", int(P["mira"][1]), half=2)
+    place_mapexit(lv, "west", int(P["mira"][1]), dest="city", entry="east", half=2)
+    place_entry(lv, "west", 4.5, P["mira"][1])
+    place_entry(lv, "north", *P["spawn"])
     place(lv, "checkpoint", *P["spawn"], label="Lantern Gate")
-    place(lv, "checkpoint", *P["portal"], label="Return Portal")
+    place(lv, "checkpoint", *P["portal"], label="Market South")
     place(lv, "examine", P["mira"][0] + 1.6, P["mira"][1] + 0.4,
           id="town_stall", title="MIRA'S STALL",
           text="Salvage and colony trinkets. Pay in glimmer.",
@@ -1091,6 +1189,9 @@ def map5():
           id="town_quest_board", title="JOB BOARD",
           text="Chalk and string. Woods and city errands for travellers.",
           board=True)
+    place(lv, "examine", 5.0, P["mira"][1],
+          id="town_west_road", title="CITY ROAD",
+          text="West off the map returns to the City's Lantern Road.")
     lv.write("world5.tmj", "tilesets/city.png")
     return ts
 
@@ -1119,6 +1220,8 @@ def map3():
         else:
             r = 3.3
         disk_carve(lv.floor, x, y, r)
+    # North road back to the City edge.
+    seg_carve(lv.floor, P["spawn"], (P["spawn"][0], 1.0), 1.9)
     # Pinch SE approach to a 3-tile slit the storygate seals (x 36..38 at y 32..34).
     for y in range(32, 35):
         for x in range(33, 43):
@@ -1193,13 +1296,17 @@ def map3():
     place(lv, "drone", P["m5a"][0] + 0.8, P["m5a"][1] - 0.4, startAngle=1.2, kind="swarm")
     place(lv, "drone", P["m5b"][0] + 1.0, P["m5b"][1] - 0.6, startAngle=4.0, kind="swarm")
     place(lv, "stash", P["m5a"][0] - 0.8, P["m5a"][1] + 0.5, glimmer=22)
+    # North road back to the City; Core still uses a portal (chamber gate).
+    open_map_edge(lv, "north", int(P["spawn"][0]), half=2)
+    place_mapexit(lv, "north", int(P["spawn"][0]), dest="city", entry="south", half=2)
+    place_entry(lv, "north", *P["spawn"])
     place(lv, "portal", *P["portal"])
     place(lv, "checkpoint", *P["spawn"], label="Ruined Landing")
     place(lv, "checkpoint", P["h2"][0], P["h2"][1], label="Central Clearing")
     place(lv, "checkpoint", P["portal"][0] - 2.5, P["portal"][1] - 2.5, label="Extraction Approach")
     place(lv, "examine", P["spawn"][0] + 1.5, P["spawn"][1] + 1.0,
           id="ruins_landing_mark", title="LANDING MARK",
-          text="UEC paint over Aetherian stone: \"Wipe authorized.\" Someone scratched it out.",
+          text="UEC paint over Aetherian stone: \"Wipe authorized.\" Someone scratched it out. North walks back to the City.",
           clue="ruins_landing")
     place(lv, "examine", P["h2"][0] - 1.0, P["h2"][1] + 0.8,
           id="ruins_clearing_ring", title="BROKEN RING",

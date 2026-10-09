@@ -15,6 +15,8 @@ class QuestDef {
   final String blurb;
   /// Where to do the fieldwork (woods / city).
   final String hint;
+  /// Region badge for board/journal (`woods`, `city`, …).
+  final String region;
   final int glimmer;
   final String? gearId;
   final String clueId;
@@ -28,12 +30,19 @@ class QuestDef {
     required this.title,
     required this.blurb,
     required this.hint,
+    required this.region,
     required this.glimmer,
     required this.clueId,
     this.gearId,
     this.requiresItem,
     this.nestKills = 0,
   });
+
+  /// Board badge while accepted, e.g. `IN CITY`.
+  String get acceptedBoardLabel => 'IN ${region.toUpperCase()}';
+
+  /// Journal line while accepted, e.g. `in city`.
+  String get acceptedJournalLabel => 'in $region';
 }
 
 /// Lantern Town job board — woods and city loops.
@@ -50,6 +59,7 @@ class Quests {
       blurb:
           'A runner dropped a sealed pack on the west trail past the ranger cabin. Bring word that it was found.',
       hint: 'Woods · west loop from the Crossroads.',
+      region: 'woods',
       glimmer: 25,
       clueId: 'quest_courier',
     ),
@@ -59,6 +69,7 @@ class Quests {
       blurb:
           'UEC left a quiet nest mid-woods. Clear the drones and read their field slate.',
       hint: 'Woods · west loop nest spur past the Crossroads.',
+      region: 'woods',
       glimmer: 10,
       gearId: 'scrap_plating',
       clueId: 'quest_nest',
@@ -70,6 +81,7 @@ class Quests {
       blurb:
           'Mira needs a moonflower bloom from the SCENT trail. Pick one and bring it home.',
       hint: 'Woods · west loop hollow before Asha.',
+      region: 'woods',
       glimmer: 15,
       gearId: 'lantern_charm',
       clueId: 'quest_moonflower',
@@ -82,6 +94,7 @@ class Quests {
       blurb:
           'UEC parked a nest on the east lot off the avenue. Quiet it before they reinforce.',
       hint: 'City · east lot off the main avenue.',
+      region: 'city',
       glimmer: 18,
       gearId: 'pulse_optic',
       clueId: 'quest_city_east',
@@ -93,6 +106,7 @@ class Quests {
       blurb:
           'A patrol slate went dark in the south-east alley. Find it — and whatever is watching it.',
       hint: 'City · SE alley south of the east lot.',
+      region: 'city',
       glimmer: 20,
       clueId: 'quest_city_se',
       nestKills: 1,
@@ -103,6 +117,7 @@ class Quests {
       blurb:
           'Traders stashed a cache above the west yard. Recover the marked crate.',
       hint: 'City · west mid-alley between noodle court and the yard.',
+      region: 'city',
       glimmer: 22,
       gearId: 'swarm_thrusters',
       clueId: 'quest_city_west',

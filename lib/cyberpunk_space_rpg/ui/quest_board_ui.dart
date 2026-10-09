@@ -122,7 +122,7 @@ class _BoardPanel extends StatelessWidget {
     final s = Quests.status(q.id);
     final label = switch (s) {
       QuestStatus.available => 'ACCEPT',
-      QuestStatus.accepted => 'IN WOODS',
+      QuestStatus.accepted => q.acceptedBoardLabel,
       QuestStatus.done => 'TURN IN',
       QuestStatus.turnedIn => 'DONE',
       QuestStatus.locked => 'LOCKED',

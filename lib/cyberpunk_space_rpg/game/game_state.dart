@@ -265,7 +265,7 @@ class GameState {
       case 1:
         if (portalUnlocked.value || _step >= _l1Portal) {
           return job ??
-              'Woods portal → City · look east for Lantern Town once you arrive';
+              'South road → City · look east for Lantern Town once you arrive';
         }
         if (_step >= _l1Fragments) {
           return 'Gather the Aetherian fragments (${fragmentsCollected.value}/$fragmentsRequired)';
@@ -280,7 +280,7 @@ class GameState {
                   Adventure.hasClue('archivist_seal'))) {
             return 'Open the Archive (optional) — then south to the Ruins';
           }
-          return job ?? 'South → Ruins · or Lantern Town (east gate / portal menu)';
+          return job ?? 'South road → Ruins · or walk east to Lantern Town';
         }
         if (_step >= _l2Quiet || SaveService.data.flag('sentinelDefeated')) {
           return 'Speak with the Archivist — then the road south opens';
@@ -291,7 +291,7 @@ class GameState {
           return 'Use the Archivist\'s seal on the Archive Library';
         }
         if (_step >= _l2Archivist) return 'Seek out the Archivist';
-        return 'Arrival plaza: east Lantern Gate · west Echo-7 · south avenue';
+        return 'Arrival plaza: east → Town · west Echo-7 · south avenue · north → Woods';
       case 3:
         if (Adventure.flag('ruins_gate_open')) {
           return 'Descend to Gaia\'s Core';
@@ -320,7 +320,7 @@ class GameState {
             ? 'Speak with Gaia · memories ${Memories.progressLabel}'
             : 'Core ahead · memories ${Memories.progressLabel}';
       case 5:
-        return job ?? 'Mira\'s stall (trade glimmer) · job board · portal south';
+        return job ?? 'Mira\'s stall (trade glimmer) · job board · west road → City';
     }
     return '';
   }

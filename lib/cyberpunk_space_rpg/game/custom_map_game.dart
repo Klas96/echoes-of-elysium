@@ -6,6 +6,7 @@ import 'package:bonfire/map/tiled/builder/tiled_world_builder.dart' show ObjectB
 import '../components/custom_player.dart';
 import '../components/custom_map.dart';
 import '../components/portal_component.dart';
+import '../components/map_edge_exit.dart';
 import '../components/uec_drone.dart';
 import '../components/ai_fragment.dart';
 import '../components/npc_character.dart';
@@ -576,8 +577,61 @@ double _numProp(TiledObjectProperties p, String key, [double fallback = 0]) {
 String _pickupId(String mapId, String kind, Vector2 pos) =>
     '$mapId:$kind:${pos.x.round()}_${pos.y.round()}';
 
+int? _destLevel(String raw) {
+  switch (raw.trim().toLowerCase()) {
+    case '1':
+    case 'woods':
+      return 1;
+    case '2':
+    case 'city':
+      return 2;
+    case '3':
+    case 'ruins':
+      return 3;
+    case '4':
+    case 'core':
+      return 4;
+    case '5':
+    case 'town':
+      return 5;
+    default:
+      return int.tryParse(raw);
+  }
+}
+
 Map<String, ObjectBuilder> _mapObjects(String mapId) => {
       'spawn': (p) => _PlayerSpawn(p.position),
+      'entry': (p) {
+        final side = (p.others['side'] ?? 'north').toString().toLowerCase();
+        return MapEntryPoint(p.position, side: side);
+      },
+      'mapexit': (p) {
+        final dest = _destLevel((p.others['dest'] ?? '').toString());
+        if (dest == null) {
+          throw ArgumentError('mapexit on $mapId needs dest=woods|city|town|ruins|core');
+        }
+        final entry = (p.others['entry'] ?? 'north').toString().toLowerCase();
+        final needUnlock = p.others['unlock'] == true ||
+            p.others['unlock'] == 'true' ||
+            (p.others['unlock'] ?? '').toString() == 'portal';
+        final size = Vector2(
+          p.size.x > 0 ? p.size.x : 64,
+          p.size.y > 0 ? p.size.y : 48,
+        );
+        return MapEdgeExit(
+          p.position,
+          size,
+          destLevel: dest,
+          entrySide: entry,
+          canExit: needUnlock
+              ? () => Travel.portalUsable(GameState.level)
+              : () => true,
+          lockedTitle: (p.others['lockedTitle'] ?? 'PATH CLOSED').toString(),
+          lockedBody: (p.others['lockedBody'] ??
+                  'Something still holds this road. Check your objective.')
+              .toString(),
+        );
+      },
       'portal': (p) {
         final dest = (p.others['dest'] ?? '').toString();
         if (dest == 'town') {
@@ -740,10 +794,14 @@ class _PlayerSpawn extends GameComponent {
     if (_done) return;
     final player = gameRef.player;
     if (player == null) return;
+    // Wait a beat so [MapEntryPoint]s from the same Tiled layer register.
+    final entry = Travel.pendingSpawnEntry;
+    if (entry != null && !MapEntryPoint.bySide.containsKey(entry)) return;
     _done = true;
     final save = SaveService.data;
     if (SaveService.resumePlayer && player is CustomPlayer) {
       SaveService.resumePlayer = false;
+      Travel.takePendingEntry();
       final at = save.player ?? save.checkpoint;
       final cp = save.checkpoint;
       player.position = at != null ? Vector2(at.x, at.y) : position.clone();
@@ -751,7 +809,9 @@ class _PlayerSpawn extends GameComponent {
       CustomPlayer.healthNotifier.value =
           (save.health ?? CustomPlayer.maxHealth).clamp(1, CustomPlayer.maxHealth);
     } else {
-      player.position = position.clone();
+      final side = Travel.takePendingEntry();
+      final edge = side == null ? null : MapEntryPoint.bySide[side];
+      player.position = (edge ?? position).clone();
       // Until a checkpoint is touched, Gaia pulls Kaela back to the spawn.
       if (player is CustomPlayer) player.respawnPoint ??= position.clone();
     }
@@ -987,6 +1047,7 @@ Widget _screenForMap(String mapId) {
 Future<void> _travelTo(BuildContext context, TravelDest dest) async {
   final nav = Navigator.of(context);
   final mapId = Travel.mapIdFor(dest.level);
+  MapEntryPoint.bySide.clear();
   await _leaveMap(nextMapId: mapId);
   final screen = _screenForMap(mapId);
   if (dest.level == 2) {
@@ -998,6 +1059,34 @@ Future<void> _travelTo(BuildContext context, TravelDest dest) async {
   } else {
     nav.pushReplacement(MaterialPageRoute(builder: (_) => screen));
   }
+}
+
+/// Invisible overlay: [MapEdgeExit] queued a walk-off; travel immediately.
+class _EdgeTravelOverlay extends StatefulWidget {
+  final BonfireGameInterface game;
+  const _EdgeTravelOverlay({required this.game});
+
+  @override
+  State<_EdgeTravelOverlay> createState() => _EdgeTravelOverlayState();
+}
+
+class _EdgeTravelOverlayState extends State<_EdgeTravelOverlay> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final level = Travel.takePendingEdgeLevel();
+      widget.game.overlays.remove('edgeTravel');
+      if (level == null || !mounted) return;
+      final dest = Travel.byLevel(level);
+      if (dest == null) return;
+      SfxManager().playPortal();
+      await _travelTo(context, dest);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => const SizedBox.shrink();
 }
 
 Future<bool> _confirmCoreActivation(BuildContext context) async {
@@ -1377,6 +1466,7 @@ class CustomMapGameScreen extends StatelessWidget {
             overlayBuilderMap: {
               'portalReached': (ctx, game) =>
                   _PortalOverlay(game: game, fromLevel: 1),
+              'edgeTravel': (ctx, game) => _EdgeTravelOverlay(game: game),
             },
             onReady: (game) {
               _startLevel(game, 1);
@@ -1432,6 +1522,7 @@ class Map2GameScreen extends StatelessWidget {
               'portalReached': (ctx, game) =>
                   _PortalOverlay(game: game, fromLevel: 2),
               'portalTown': (ctx, game) => _TownPortalOverlay(game: game),
+              'edgeTravel': (ctx, game) => _EdgeTravelOverlay(game: game),
             },
             onReady: (game) {
               _startLevel(game, 2);
@@ -1491,6 +1582,7 @@ class Map3GameScreen extends StatelessWidget {
               overlayBuilderMap: {
                 'portalReached': (ctx, game) =>
                     _PortalOverlay(game: game, fromLevel: 3),
+                'edgeTravel': (ctx, game) => _EdgeTravelOverlay(game: game),
               },
               onReady: (game) {
                 _startLevel(game, 3);
@@ -1545,6 +1637,7 @@ class Map4GameScreen extends StatelessWidget {
               overlayBuilderMap: {
                 'portalReached': (ctx, game) =>
                     _PortalOverlay(game: game, fromLevel: 4),
+                'edgeTravel': (ctx, game) => _EdgeTravelOverlay(game: game),
               },
               onReady: (game) {
                 _startLevel(game, 4);
@@ -1599,6 +1692,7 @@ class Map5GameScreen extends StatelessWidget {
               overlayBuilderMap: {
                 'portalReached': (ctx, game) =>
                     _PortalOverlay(game: game, fromLevel: 5),
+                'edgeTravel': (ctx, game) => _EdgeTravelOverlay(game: game),
               },
               onReady: (game) {
                 _startLevel(game, 5);
