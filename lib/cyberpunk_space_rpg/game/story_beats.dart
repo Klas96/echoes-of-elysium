@@ -32,6 +32,17 @@ class StoryBeats {
     WidgetsBinding.instance.scheduleFrame();
   }
 
+  /// First Archive open: Asha on comms reacts to the whisper-vote draft.
+  static void onArchiveOpened() {
+    final game = _game;
+    if (game == null || !game.context.mounted) return;
+    if (Cutscenes.seen(Cutscenes.archiveAsh)) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      playOverGame(game, Cutscenes.archiveAsh);
+    });
+    WidgetsBinding.instance.scheduleFrame();
+  }
+
   static Future<void> playOverGame(BonfireGameInterface game, String id) async {
     if (_busy || Cutscenes.seen(id)) return;
     _busy = true;

@@ -1,0 +1,90 @@
+{
+  "id": "archive_ash",
+  "trigger": "Opened the City Archive Library with the seal",
+  "size": [
+    1280,
+    720
+  ],
+  "panelDuration": 7.0,
+  "crossfade": 0.85,
+  "note": "Asha on comms reacts to the merge draft. Reuses stills; VO via ElevenLabs.",
+  "panels": [
+    {
+      "image": "assets/cutscenes/memory4/memory4_p2.webp",
+      "pan": {
+        "from": [
+          1.0,
+          0.5,
+          0.5
+        ],
+        "to": [
+          1.06,
+          0.48,
+          0.42
+        ]
+      },
+      "lines": [
+        {
+          "speaker": "N",
+          "text": "Dust lifts off the draft. The vote is there in brittle ink — merge, or become dust that remembers nothing.",
+          "voice": "audio/voices/cut_archive_ash_p1_l1.mp3"
+        }
+      ]
+    },
+    {
+      "image": "assets/cutscenes/coalition/coalition_p2.webp",
+      "pan": {
+        "from": [
+          1.04,
+          0.5,
+          0.45
+        ],
+        "to": [
+          1.0,
+          0.52,
+          0.5
+        ]
+      },
+      "lines": [
+        {
+          "speaker": "ASHA",
+          "text": "Kaela — your channel just spiked. You opened the Archive.",
+          "voice": "audio/voices/cut_archive_ash_p2_l1.mp3"
+        },
+        {
+          "speaker": "ASHA",
+          "text": "A whisper of a vote. That is not clean courage. That is people scared enough to become code.",
+          "voice": "audio/voices/cut_archive_ash_p2_l2.mp3"
+        }
+      ]
+    },
+    {
+      "image": "assets/cutscenes/coalition/coalition_p3.webp",
+      "pan": {
+        "from": [
+          1.0,
+          0.5,
+          0.5
+        ],
+        "to": [
+          1.05,
+          0.45,
+          0.4
+        ]
+      },
+      "lines": [
+        {
+          "speaker": "ASHA",
+          "text": "I deserted Station Seven for a sympathetic AI. This is older. Heavier.",
+          "voice": "audio/voices/cut_archive_ash_p3_l1.mp3"
+        },
+        {
+          "speaker": "ASHA",
+          "text": "Keep the override if you still have it. Believe her if you must — but bring that fear to the Core. Voss only hears weapons. Make him hear a people.",
+          "voice": "audio/voices/cut_archive_ash_p3_l2.mp3"
+        }
+      ],
+      "then": "title card THE DRAFT SPEAKS over the lower third"
+    }
+  ]
+}

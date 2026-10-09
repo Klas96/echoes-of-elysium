@@ -6,6 +6,7 @@ import '../creatures/bonds.dart';
 import '../creatures/interaction.dart';
 import '../game/adventure.dart';
 import '../game/game_state.dart';
+import '../game/story_beats.dart';
 
 /// Sprite size, collision box and door point of a placeable building, in px
 /// from the sprite's top-left. Generated from tools/buildings/<name>.json
@@ -103,10 +104,12 @@ class Building extends GameDecorationWithCollision with Interactable {
       Bonds.useItem('archive_seal');
       Adventure.setFlag('archive_opened');
       Adventure.discover('archive_first_memory');
+      Adventure.discover('asha_on_archive');
       Bonds.addGlimmer(12);
       SfxManager().playChime();
       GameToast.show('ARCHIVE OPENED', body: '+12 glimmer · clue logged',
           color: const Color(0xFFFFDD44), compact: true);
+      StoryBeats.onArchiveOpened();
       return;
     }
     if (id == 'ruin_shrine') {

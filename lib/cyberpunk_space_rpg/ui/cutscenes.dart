@@ -18,6 +18,9 @@ class Cutscenes {
   /// After the City Sentinel falls — quiet beat before the Ruins.
   static const afterSentinel = 'after_sentinel';
 
+  /// Opening the Archive — Asha on comms reacts to the merge draft.
+  static const archiveAsh = 'archive_ash';
+
   /// Core finale when all five memories were found.
   static const endingA = 'ending_a';
 

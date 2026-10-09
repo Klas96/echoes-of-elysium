@@ -2,7 +2,7 @@ name: cyberpunk_space_rpg
 description: "A new Flutter project."
 publish_to: 'none'
 
-version: 0.2.9+209
+version: 0.2.10+210
 
 environment:
   sdk: '>=3.2.3 <4.0.0'
@@ -39,6 +39,7 @@ flutter:
     - assets/cutscenes/awakening/
     - assets/cutscenes/coalition/
     - assets/cutscenes/after_sentinel/
+    - assets/cutscenes/archive_ash/
     - assets/cutscenes/memory1/
     - assets/cutscenes/memory2/
     - assets/cutscenes/memory3/

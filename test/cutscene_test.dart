@@ -70,8 +70,8 @@ void main() {
       }
     });
 
-    test('ending_a, ending_b, after_sentinel parse and reuse existing stills', () {
-      for (final id in ['ending_a', 'ending_b', 'after_sentinel']) {
+    test('ending_a, ending_b, after_sentinel, archive_ash parse and reuse stills', () {
+      for (final id in ['ending_a', 'ending_b', 'after_sentinel', 'archive_ash']) {
         final s = _asset(id);
         expect(s.panels, isNotEmpty);
         for (final p in s.panels) {

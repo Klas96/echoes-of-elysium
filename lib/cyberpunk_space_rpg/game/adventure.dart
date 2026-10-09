@@ -131,6 +131,10 @@ class Adventure {
       parts.add(
         'Asha\'s trust and Echo-7\'s promise both held. The living and the remembered share the same sky tonight.');
     }
+    if (flag('asha_archive_ack') || hasClue('asha_on_archive')) {
+      parts.add(
+        'Asha\'s channel still echoes: carry the fear with the hope. Voss heard a people tonight — not only a lattice.');
+    }
     return parts.join('\n\n');
   }
 
@@ -246,6 +250,13 @@ class Adventure {
       body:
           'A brittle page: "If we merge, we stop dying with our sun. If we do not, we end as dust that remembers nothing." The vote passed by a whisper.',
       where: 'City · Archive Library',
+    ),
+    ClueDef(
+      id: 'asha_on_archive',
+      title: "Asha's Channel",
+      body:
+          'Asha caught the Archive spike on her comms. She heard the whisper-vote too: not clean courage — people scared enough to become the world. She wants that fear carried to the Core, where Voss only hears weapons.',
+      where: 'City · Archive · Asha link',
     ),
     ClueDef(
       id: 'mira_rumour',

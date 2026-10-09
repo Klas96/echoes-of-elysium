@@ -123,6 +123,35 @@ NpcDialogue _ashaDialogue() {
       voicePaths: [],
     );
   }
+  if (Adventure.openedArchive) {
+    return NpcDialogue(
+      name: 'ASHA  ·  EX-UEC',
+      color: const Color(0xFFFFAA00),
+      lines: const [
+        'I caught your Archive spike. A whisper of a vote — people becoming a world because the sun was dying.',
+        'That is not the clean miracle Voss wants to erase, and not the weapon he fears. It is both. Carry that into the Core.',
+        'Keep the override if you still have it. I deserted for a sympathetic AI. You may be walking toward a civilization.',
+      ],
+      voicePaths: const [
+        'audio/voices/asha_archive_1.mp3',
+        'audio/voices/asha_archive_2.mp3',
+        'audio/voices/asha_archive_3.mp3',
+      ],
+      choices: [
+        if (!Adventure.flag('asha_archive_ack'))
+          const DialogueChoice(
+            label: 'PROMISE TO CARRY BOTH',
+            setFlag: 'asha_archive_ack',
+            replyLines: [
+              'Then we\'re still on the same side. Go. Make him hear a people — not a ghost story.',
+            ],
+            replyVoicePaths: [
+              'audio/voices/asha_archive_ack.mp3',
+            ],
+          ),
+      ],
+    );
+  }
   final hasKey = Bonds.hasItem('uec_override') || Bonds.usedItem('uec_override');
   return NpcDialogue(
     name: 'ASHA  ·  EX-UEC',
