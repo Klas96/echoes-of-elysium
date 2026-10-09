@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../audio/sfx_manager.dart';
 import '../game/adventure.dart';
+import '../game/game_state.dart';
 import 'bonds.dart';
 import 'interaction.dart';
 
@@ -63,15 +64,22 @@ class ExamineHotspot extends GameComponent with Interactable {
     }
     Adventure.setFlag('examined:$id');
     if (setFlag != null) Adventure.setFlag(setFlag!);
-    var body = text;
-    if (clueId != null && Adventure.discover(clueId!)) {
-      final clue = Adventure.byId(clueId!);
-      if (clue != null) {
-        body = '${clue.body}\n\n— Clue added to journal.';
-      }
+    final loggedClue = clueId != null && Adventure.discover(clueId!);
+    var reward = 0;
+    if (loggedClue) {
+      reward = requiresItem != null ? 10 : 5;
+      Bonds.addGlimmer(reward);
     }
+    if (clueId == 'shrine_note') GameState.onShrineExamined();
     SfxManager().playChime();
-    GameToast.show(title, body: body, color: const Color(0xFFAAEEFF), seconds: 6);
+    GameToast.show(
+      title,
+      body: loggedClue
+          ? (reward > 0 ? '+$reward glimmer · clue logged' : 'Clue logged · Journal → Clues')
+          : text,
+      color: const Color(0xFFAAEEFF),
+      compact: true,
+    );
   }
 
   @override

@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatf
 import 'package:flutter/material.dart';
 
 import '../game/adventure.dart';
+import '../game/pause.dart';
 import '../ui/equipment_ui.dart';
 import 'bonds.dart';
 import 'creature_species.dart';
@@ -68,6 +69,8 @@ class CreatureHud extends StatelessWidget {
       top: 90,
       left: 12,
       child: Row(mainAxisSize: MainAxisSize.min, children: [
+        const _PauseChip(),
+        const SizedBox(width: 8),
         const JournalButton(),
         const SizedBox(width: 8),
         const EquipmentButton(),
@@ -132,6 +135,25 @@ class _Chip extends StatelessWidget {
       );
 }
 
+class _PauseChip extends StatelessWidget {
+  const _PauseChip();
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: Pause.show,
+      child: const _Chip(
+        child: Text('II  PAUSE',
+            style: TextStyle(
+                color: Colors.white54,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.5)),
+      ),
+    );
+  }
+}
+
 class JournalButton extends StatelessWidget {
   const JournalButton({super.key});
 
@@ -175,14 +197,16 @@ class InteractPromptLayer extends StatelessWidget {
                   constraints: const BoxConstraints(maxWidth: 360),
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.65),
-                    border: Border.all(color: Colors.white24),
+                    color: Colors.black.withValues(alpha: 0.5),
+                    border: Border.all(color: Colors.white12),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(info.note,
                       textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                          color: Colors.white60, fontSize: 12, fontStyle: FontStyle.italic, height: 1.4)),
+                          color: Colors.white54, fontSize: 10, fontStyle: FontStyle.italic, height: 1.3)),
                 ),
               ),
             ),
@@ -246,33 +270,37 @@ class ToastLayer extends StatelessWidget {
     return ValueListenableBuilder<ToastMessage?>(
       valueListenable: GameToast.current,
       builder: (_, m, __) {
+        if (m == null) {
+          return const Positioned(left: 0, right: 0, bottom: 0, child: SizedBox.shrink());
+        }
+        final compact = m.compact;
         return Positioned(
-          top: 124,
-          left: 16,
-          right: 16,
+          bottom: compact ? 118 : 108,
+          left: 12,
+          right: 12,
           child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            child: m == null
-                ? const SizedBox.shrink()
-                : Center(
+            duration: const Duration(milliseconds: 220),
+            child: Align(
                     key: ValueKey(m.id),
+                    alignment: Alignment.bottomCenter,
                     child: GestureDetector(
                       onTap: () => GameToast.current.value = null,
                       child: Container(
-                        constraints: const BoxConstraints(maxWidth: 380),
-                        padding: const EdgeInsets.all(12),
+                        constraints: BoxConstraints(maxWidth: compact ? 300 : 340),
+                        padding: EdgeInsets.symmetric(
+                            horizontal: compact ? 10 : 12, vertical: compact ? 6 : 9),
                         decoration: BoxDecoration(
-                          color: _ink.withValues(alpha: 0.92),
-                          border: Border.all(color: m.color.withValues(alpha: 0.8)),
-                          borderRadius: BorderRadius.circular(10),
+                          color: _ink.withValues(alpha: compact ? 0.72 : 0.82),
+                          border: Border.all(color: m.color.withValues(alpha: compact ? 0.45 : 0.55)),
+                          borderRadius: BorderRadius.circular(compact ? 6 : 8),
                         ),
                         child: Row(mainAxisSize: MainAxisSize.min, children: [
                           if (m.portrait != null) ...[
                             ClipRRect(
                               borderRadius: BorderRadius.circular(6),
-                              child: Image.asset(m.portrait!, width: 56, height: 56, filterQuality: FilterQuality.none),
+                              child: Image.asset(m.portrait!, width: 44, height: 44, filterQuality: FilterQuality.none),
                             ),
-                            const SizedBox(width: 12),
+                            const SizedBox(width: 10),
                           ],
                           Flexible(
                             child: Column(
@@ -281,11 +309,19 @@ class ToastLayer extends StatelessWidget {
                               children: [
                                 Text(m.title,
                                     style: TextStyle(
-                                        color: m.color, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 2)),
+                                        color: m.color.withValues(alpha: compact ? 0.9 : 1),
+                                        fontSize: compact ? 10 : 11,
+                                        fontWeight: FontWeight.w600,
+                                        letterSpacing: compact ? 1 : 1.5)),
                                 if (m.body.isNotEmpty) ...[
-                                  const SizedBox(height: 4),
+                                  SizedBox(height: compact ? 2 : 3),
                                   Text(m.body,
-                                      style: const TextStyle(color: Colors.white70, fontSize: 12.5, height: 1.4)),
+                                      maxLines: compact ? 2 : 3,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                          color: Colors.white.withValues(alpha: compact ? 0.55 : 0.65),
+                                          fontSize: compact ? 10 : 11,
+                                          height: 1.35)),
                                 ],
                               ],
                             ),
@@ -300,6 +336,7 @@ class ToastLayer extends StatelessWidget {
     );
   }
 }
+
 
 /// The creature journal: a grid of entries (silhouette until seen, sketch
 /// when seen, portrait + lore when befriended) and a detail panel with the

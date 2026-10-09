@@ -296,6 +296,71 @@ class Level:
                 self.stamp(name, x, y); placed += 1
         return placed
 
+    def dilate(self, mask, r=1):
+        out = mask.copy()
+        for _ in range(r):
+            m = out.copy()
+            m[1:, :] |= out[:-1, :]; m[:-1, :] |= out[1:, :]
+            m[:, 1:] |= out[:, :-1]; m[:, :-1] |= out[:, 1:]
+            out = m
+        return out
+
+    def fringe(self, wall=None):
+        """Walkable floor tiles that touch a wall (or non-floor) — good for trees/rubble."""
+        w = (~self.floor) if wall is None else wall
+        touch = np.zeros_like(self.floor)
+        touch[1:, :] |= w[:-1, :]; touch[:-1, :] |= w[1:, :]
+        touch[:, 1:] |= w[:, :-1]; touch[:, :-1] |= w[:, 1:]
+        return self.floor & touch
+
+    def path_edge(self):
+        """Floor beside a keepout corridor but not on keepout_hard — lanterns, flowers."""
+        near = self.dilate(self.keepout, 1) & ~self.keepout & self.floor
+        return near & ~self.keepout_hard
+
+    def cells_of(self, mask):
+        ys, xs = np.nonzero(mask)
+        return list(zip(xs.tolist(), ys.tolist()))
+
+    def scatter_on(self, names, n, mask, tries=None, need_floor=True):
+        """Place up to n props randomly among tiles where mask is True."""
+        cells = self.cells_of(mask)
+        if not cells or n <= 0: return 0
+        tries = tries or max(n * 40, 800)
+        placed = 0
+        for _ in range(tries):
+            if placed >= n: break
+            name = names[self.rng.integers(len(names))]
+            x, y = cells[self.rng.integers(len(cells))]
+            if self.prop_fits(name, x, y, need_floor):
+                self.stamp(name, x, y); placed += 1
+        return placed
+
+    def cluster(self, names, cx, cy, n, radius=2, need_floor=True):
+        """A small composed group around (cx, cy) tile."""
+        placed = 0
+        for _ in range(n * 12):
+            if placed >= n: break
+            name = names[self.rng.integers(len(names))]
+            x = int(cx + self.rng.integers(-radius, radius + 1))
+            y = int(cy + self.rng.integers(-radius, radius + 1))
+            if self.prop_fits(name, x, y, need_floor):
+                self.stamp(name, x, y); placed += 1
+        return placed
+
+    def line_props(self, name, points, step=3, need_floor=True):
+        """Stamp the same prop along a polyline of tile centres (e.g. lamps)."""
+        placed = 0
+        for a, b in zip(points, points[1:]):
+            ax, ay = a; bx, by = b
+            dist = max(abs(bx - ax), abs(by - ay), 1)
+            for t in range(0, int(dist) + 1, step):
+                u = t / dist
+                x, y = int(round(ax + (bx - ax) * u)), int(round(ay + (by - ay) * u))
+                if self.prop_fits(name, x, y, need_floor):
+                    self.stamp(name, x, y); placed += 1
+        return placed
+
     def building(self, name, tx, ty):
         """place building <name> with its sprite's top-left at tile (tx, ty)"""
         assert name in BUILDINGS.defs, name
@@ -625,12 +690,30 @@ def map1():
     lv.keepout_hard = np.zeros_like(wall)
     for k, (x, y) in P.items():
         disk_carve(lv.keepout, x, y, 2.6); disk_carve(lv.keepout_hard, x, y, 1.6)
-    # props
+    # Reserve tiles that later get creatures / moonflowers / secrets
+    for (fx, fy) in ((28.5, 21.5), (24.5, 24.5), (18.5, 40.5), (11.5, 21.5), (24.5, 21.5), (30.0, 33.0),
+                     (24.5, 26.5), (22.5, 27.5), (25.5, 28.5), (27.5, 29.5), (28.5, 32.5),
+                     (31.5, 32.5), (28.5, 33.5), (31.5, 33.5), (12.5, 12.5), (14.5, 46.5),
+                     (26.5, 6.5), (30.5, 41.5), (29.5, 25.5), (21.5, 55.5)):
+        disk_carve(lv.keepout, fx, fy, 1.4); disk_carve(lv.keepout_hard, fx, fy, 1.0)
+    # Scenery: ship + camp as anchors; trees on forest fringe; soft flora on path edge
     lv.stamp("crashed_ship", 2, 2) if lv.prop_fits("crashed_ship", 2, 2) else None
-    lv.scatter(["tree_green", "tree_teal", "tree_blue", "tree_purple", "tree_pine", "boulder", "bush_green",
-                "bush_glow", "rock_small", "rock_moss", "log", "stump"], 26)
-    lv.scatter(["mushrooms", "flowers", "lantern"], 22)
     lv.stamp("campfire", 7, 4) if lv.prop_fits("campfire", 7, 4) else None
+    fringe = lv.fringe(wall)
+    edge = lv.path_edge()
+    mid = lv.floor & ~lv.keepout_hard & ~fringe
+    trees = ["tree_green", "tree_teal", "tree_blue", "tree_purple", "tree_pine"]
+    big = ["boulder", "log", "stump"]
+    bush = ["bush_green", "bush_glow", "rock_small", "rock_moss"]
+    soft = ["mushrooms", "flowers", "lantern"]
+    lv.scatter_on(trees, 16, fringe)
+    lv.scatter_on(big, 6, fringe)
+    lv.scatter_on(bush, 8, fringe | (edge & mid))
+    lv.scatter_on(soft, 14, edge)
+    lv.scatter_on(soft, 4, mid)                       # a few deep-glade accents
+    lv.cluster(["flowers", "mushrooms", "lantern"], *P["h2"], 4, radius=2)
+    lv.cluster(["flowers", "bush_glow"], *P["asha"], 3, radius=2)
+    lv.cluster(["rock_moss", "flowers"], *P["portal"], 3, radius=3)
     # ranger cabin in a small clearing east of the crash site, off the trail
     lv.building("ranger_cabin", 16, 2)
     reground1 = lambda x, y, w, rng: None if (water[y, x] or path[y, x]) else blob(ts, "grass-forest", w, x, y, rng)
@@ -660,17 +743,15 @@ def map1():
     place(lv, "drone", *P["d1"], startAngle=0.0, kind="scout")
     place(lv, "drone", *P["d2"], startAngle=2.1, kind="sniper")
     place(lv, "portal", *P["portal"])
-    # checkpoints (respawn points): spawn + area entrances, beside the points
-    # so they sit in already-clear spots
+    # checkpoints: spawn + mid trail + gate (fewer, ~15+ tiles apart)
     place(lv, "checkpoint", *P["spawn"], label="Crash Site")
-    place(lv, "checkpoint", P["h2"][0] + 1.0, P["h2"][1] + 1.2, label="Mossy Hollow")
     place(lv, "checkpoint", P["asha"][0] + 1.5, P["asha"][1] + 1.0, label="Asha's Trail")
-    place(lv, "checkpoint", P["f5"][0] + 1.2, P["f5"][1] + 1.2, label="Old Grove")
     place(lv, "checkpoint", P["portal"][0] - 2.5, P["portal"][1] - 2.0, label="Aetherian Gate")
     # Adventure: examine hotspots (clue board)
     place(lv, "examine", P["spawn"][0] + 1.8, P["spawn"][1] - 0.6,
           id="woods_plaque", title="WEATHERED PLAQUE",
-          text="Half-worn Aetherian letters cling to the stone.", clue="gaia_plaque")
+          text="\"We asked to stay.\" A second line: \"Bodies to soil. Minds to Gaia.\"",
+          clue="gaia_plaque")
     place(lv, "examine", P["asha"][0] - 1.4, P["asha"][1] + 0.8,
           id="woods_boot", title="UEC BOOT PRINT",
           text="Fresh composite sole marks in the moss after rain.", clue="boot_print")
@@ -775,12 +856,23 @@ def map2():
     # crosswalks on the avenue
     for x in range(15, 19):
         lv.ground[16, x] = 6; lv.ground[19, x] = 6
-    # props on sidewalks (never on the asphalt), roof props on building interiors
-    lv.scatter(["street_lamp", "planter_small", "bench", "trash_bin", "hydrant", "bollard", "vending_machine"], 26)
-    lv.scatter(["planter_tree", "kiosk", "bus_stop"], 5)
+    # Scenery: lamps along the avenue, street furniture on sidewalk fringe, roofs on interiors
+    sidewalk = lv.floor & ~road
+    curb = sidewalk & lv.dilate(road, 1)                # sidewalk tiles next to asphalt
+    near_wall = sidewalk & lv.fringe(wall)
+    furniture = curb | near_wall
+    # Lamps on sidewalk flanks (avenue asphalt is x 15-18) — every ~4 tiles, not a solid column
+    lv.line_props("street_lamp", [(14, 4), (14, 11), (14, 18), (14, 26), (14, 34), (14, 40)], step=4)
+    lv.line_props("street_lamp", [(19, 5), (19, 13), (19, 22), (19, 32), (19, 38)], step=4)
+    lv.scatter_on(["planter_small", "bench", "bollard"], 12, furniture)
+    lv.scatter_on(["trash_bin", "hydrant", "vending_machine"], 8, near_wall)
+    lv.scatter_on(["planter_tree", "kiosk", "bus_stop"], 5, near_wall)
+    lv.cluster(["bench", "planter_small"], 17, 12, 3, radius=2)   # by Avenue health
+    lv.cluster(["bollard", "planter_small"], *P["town"], 3, radius=2)
+    lv.cluster(["bench", "trash_bin"], *P["voss"], 2, radius=2)
     interior = np.zeros_like(wall)
     interior[1:-1, 1:-1] = (wall[1:-1, 1:-1] & wall[:-2, 1:-1] & wall[2:, 1:-1] & wall[1:-1, :-2] & wall[1:-1, 2:])
-    lv.scatter(["rooftop_ac", "rooftop_vent", "solar_panel"], 30, need_floor=False, only=interior)
+    lv.scatter_on(["rooftop_ac", "rooftop_vent", "solar_panel"], 22, interior, need_floor=False)
     # buildings in courtyards off the avenue: two shops flanking the top
     # street, the archive library across from the Archivist, the apartments
     # on the plaza's west side and the greenhouse by Voss's alcove
@@ -806,17 +898,25 @@ def map2():
     place(lv, "portal", *P["portal"])
     place(lv, "portal", *P["town"], dest="town")
     place(lv, "checkpoint", *P["spawn"], label="Upper Street")
-    place(lv, "checkpoint", P["h1"][0] - 1.5, P["h1"][1] + 1.0, label="Avenue")
-    place(lv, "checkpoint", P["voss"][0] + 2.0, P["voss"][1] + 2.5, label="Portal Square")
-    place(lv, "checkpoint", *P["town"], label="Lantern Gate")
-    # Adventure: plaque + UEC terminal (needs Asha's override key)
+    place(lv, "checkpoint", P["echo7"][0], P["echo7"][1] + 2.0, label="Echo District")
+    place(lv, "checkpoint", P["portal"][0], P["portal"][1] - 2.0, label="Portal Square")
+    # Adventure: plaque + UEC terminal + west-yard side find
     place(lv, "examine", 22.5, 19.5,
           id="city_archive_plaque", title="ARCHIVE PLAQUE",
-          text="Sealed by the Archivist. First memory drafts keep here — not the Core itself.")
+          text="Sealed by the Archivist. First memory drafts keep here — not the Core itself.",
+          clue="city_archive_hint")
     place(lv, "examine", P["voss"][0] + 2.2, P["voss"][1] - 0.5,
           id="city_uec_terminal", title="UEC FIELD TERMINAL",
           text="Override accepted. Field orders scroll past.",
           clue="uec_orders", item="uec_override", consume=True, flag="read_uec_orders")
+    place(lv, "examine", 4.5, 18.5,
+          id="city_yard_memo", title="DROPPED SLATE",
+          text="A scout's note: \"Archive walls hum. Stay clear.\"",
+          clue="city_yard_memo")
+    place(lv, "stash", 4.0, 19.5, glimmer=18)
+    place(lv, "examine", P["town"][0] - 1.2, P["town"][1] + 0.5,
+          id="city_lantern_sign", title="LANTERN GATE SIGN",
+          text="Side path to Lantern Town — market, rest, no UEC banners.")
     lv.write("world2.tmj", "tilesets/city.png")
     return ts
 
@@ -855,8 +955,16 @@ def map5():
     lv.keepout_hard = np.zeros_like(wall)
     for k, (x, y) in P.items():
         disk_carve(lv.keepout, x, y, 2.6); disk_carve(lv.keepout_hard, x, y, 1.5)
-    lv.scatter(["street_lamp", "planter_small", "bench", "trash_bin", "bollard", "vending_machine"], 18)
-    lv.scatter(["planter_tree", "kiosk", "bus_stop"], 4)
+    sidewalk = lv.floor & ~road
+    curb = sidewalk & lv.dilate(road, 1)
+    near_wall = sidewalk & lv.fringe(wall)
+    # Market lane asphalt is x 12-15; lamps on the flanks, spaced like posts
+    lv.line_props("street_lamp", [(11, 5), (11, 11), (11, 17), (11, 21)], step=4)
+    lv.line_props("street_lamp", [(16, 6), (16, 12), (16, 18)], step=4)
+    lv.scatter_on(["planter_small", "bench", "bollard"], 8, curb | near_wall)
+    lv.scatter_on(["trash_bin", "vending_machine", "planter_tree"], 5, near_wall)
+    lv.cluster(["bench", "planter_small", "planter_tree"], *P["mira"], 4, radius=2)
+    lv.cluster(["bollard", "planter_small"], *P["portal"], 3, radius=2)
     for name, tx, ty in (("tea_house", 4, 8), ("noodle_shop", 19, 8), ("greenhouse", 4, 18)):
         lv.building(name, tx, ty)
     def reground5(x, y, w, rng):
@@ -869,7 +977,6 @@ def map5():
     place(lv, "stash", *P["stash"], glimmer=15)
     place(lv, "portal", *P["portal"])
     place(lv, "checkpoint", *P["spawn"], label="Lantern Gate")
-    place(lv, "checkpoint", *P["mira"], label="Market Square")
     place(lv, "checkpoint", *P["portal"], label="Return Portal")
     place(lv, "examine", P["mira"][0] + 1.6, P["mira"][1] + 0.4,
           id="town_stall_note", title="STALL NOTE",
@@ -908,10 +1015,20 @@ def map3():
     for a, b in edges: seg_carve(lv.keepout, P[a], P[b], 2.3)
     for k, (x, y) in P.items():
         disk_carve(lv.keepout, x, y, 2.8); disk_carve(lv.keepout_hard, x, y, 1.6)
-    lv.scatter(["rubble_small", "rubble_large", "wrecked_car_v", "wrecked_car_h", "barrel_purple", "barrel_toxic",
-                "dumpster", "crate", "broken_pillar", "barricade", "neon_streetlight", "drone_wreck",
-                "vending_broken", "terminal"], 30)
-    lv.scatter(["steam_vent", "loose_cables"], 14)
+    # Scenery: heavy wreckage against ruin walls; clutter in pockets; lights on path edge
+    fringe = lv.fringe(wall)
+    edge = lv.path_edge()
+    pocket = lv.floor & ~lv.keepout & ~lv.keepout_hard
+    heavy = ["rubble_large", "wrecked_car_v", "wrecked_car_h", "dumpster", "broken_pillar", "barricade"]
+    clutter = ["rubble_small", "barrel_purple", "barrel_toxic", "crate", "drone_wreck", "vending_broken"]
+    tech = ["terminal", "steam_vent", "loose_cables"]
+    lv.scatter_on(heavy, 10, fringe)
+    lv.scatter_on(clutter, 10, fringe | pocket)
+    lv.scatter_on(tech, 8, edge | fringe)
+    lv.scatter_on(["neon_streetlight"], 6, edge)
+    lv.cluster(["barrel_purple", "crate", "rubble_small"], *P["h2"], 4, radius=2)
+    lv.cluster(["barricade", "rubble_small"], *P["spawn"], 3, radius=3)
+    lv.cluster(["drone_wreck", "barrel_toxic"], *P["portal"], 3, radius=3)
     # Aetherian shrine (stand-in for the Core) in the quiet south-west dead end
     lv.building("ruin_shrine", 10, 31)
     lv.carve_lots(wall, [(9, 30, 14, 37)],
@@ -931,9 +1048,24 @@ def map3():
     place(lv, "drone", 18.5, 30.5, startAngle=4.0, kind="swarm")
     place(lv, "portal", *P["portal"])
     place(lv, "checkpoint", *P["spawn"], label="Ruined Landing")
-    place(lv, "checkpoint", P["h2"][0] - 1.2, P["h2"][1] + 1.2, label="Central Clearing")
-    place(lv, "checkpoint", P["h4"][0] + 1.2, P["h4"][1] + 1.2, label="East Ruins")
+    place(lv, "checkpoint", P["h2"][0], P["h2"][1], label="Central Clearing")
     place(lv, "checkpoint", P["portal"][0] - 2.5, P["portal"][1] - 2.5, label="Extraction Approach")
+    # Stretch: quiet reads along the road + shrine side reward
+    place(lv, "examine", P["spawn"][0] + 1.5, P["spawn"][1] + 1.0,
+          id="ruins_landing_mark", title="LANDING MARK",
+          text="UEC paint over Aetherian stone: \"Wipe authorized.\" Someone scratched it out.",
+          clue="ruins_landing")
+    place(lv, "examine", P["h2"][0] - 1.0, P["h2"][1] + 0.8,
+          id="ruins_clearing_ring", title="BROKEN RING",
+          text="A memory circle, cracked. South-west feels warmer — the shrine path.",
+          clue="ruins_ring")
+    # Side nudge toward the shrine (d6 clearing sits under the shrine sprite)
+    place(lv, "stash", P["d5"][0] - 1.5, P["d5"][1] + 1.0, glimmer=20)
+    place(lv, "health", P["d5"][0] + 1.5, P["d5"][1] + 0.5)
+    place(lv, "examine", P["d5"][0], P["d5"][1] - 1.2,
+          id="ruins_dead_end", title="WAYMARKER",
+          text="Offline UEC pad: \"Shrine sector SW — possible civilian anomaly. Do not engage alone.\"",
+          clue="ruins_dead_end")
     lv.write("world3.tmj", "tilesets/cyberpunk.png")
     return ts
 
@@ -982,12 +1114,18 @@ def map4():
     for k, (x, y) in P.items():
         disk_carve(lv.keepout, x, y, 2.8)
         disk_carve(lv.keepout_hard, x, y, 1.6)
-    lv.scatter(
-        ["orb_pylon", "orb_pylon_large", "data_crystals", "energy_brazier",
-         "gold_glyph_stone", "memory_pedestal", "core_terminal", "core_console",
-         "broken_pillar", "lattice_panel", "root_bulb", "floor_ring_marker"],
-        22,
-    )
+    # Scenery: pylons/braziers frame the processional hall; soft markers near dais
+    fringe = lv.fringe(wall)
+    edge = lv.path_edge()
+    dais_edge = lv.floor & lv.dilate(dais, 1) & ~dais
+    solemn = ["orb_pylon", "orb_pylon_large", "energy_brazier", "broken_pillar"]
+    soft = ["data_crystals", "gold_glyph_stone", "memory_pedestal", "root_bulb", "floor_ring_marker"]
+    gear = ["core_terminal", "core_console", "lattice_panel"]
+    lv.scatter_on(solemn, 8, fringe | edge)
+    lv.scatter_on(soft, 8, dais_edge | edge)
+    lv.scatter_on(gear, 4, fringe)
+    lv.cluster(["floor_ring_marker", "gold_glyph_stone"], *P["gaia"], 4, radius=3)
+    lv.cluster(["energy_brazier", "orb_pylon"], *P["portal"], 3, radius=3)
     place(lv, "spawn", *P["spawn"])
     place(lv, "npc", *P["gaia"], name="gaia")
     place(lv, "health", *P["h1"])
@@ -997,8 +1135,7 @@ def map4():
     place(lv, "drone", *P["d3"], startAngle=2.5, kind="shield")
     place(lv, "portal", *P["portal"])
     place(lv, "checkpoint", *P["spawn"], label="Core Threshold")
-    place(lv, "checkpoint", *P["h1"], label="Antechamber")
-    place(lv, "checkpoint", *P["h2"], label="Core Record")
+    place(lv, "checkpoint", *P["gaia"], label="Core Record")
     place(lv, "examine", P["spawn"][0] + 1.5, P["spawn"][1] + 1.2,
           id="core_console", title="CORE CONSOLE",
           text="Activation waits on a living neural match. A remote wipe is already queued.",

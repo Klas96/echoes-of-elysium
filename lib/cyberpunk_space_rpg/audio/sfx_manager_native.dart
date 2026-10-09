@@ -1,5 +1,7 @@
-import 'package:just_audio/just_audio.dart';
+import 'package:audioplayers/audioplayers.dart';
 
+/// Desktop / mobile SFX via audioplayers (Linux, Windows, Android, iOS, macOS).
+/// just_audio has no Linux plugin — MissingPluginException on desktop.
 class SfxManager {
   static final SfxManager _instance = SfxManager._();
   factory SfxManager() => _instance;
@@ -14,15 +16,18 @@ class SfxManager {
   bool _ready = false;
   int _voiceToken = 0;
 
+  static String _asset(String path) =>
+      path.startsWith('assets/') ? path.substring(7) : path;
+
   Future<void> init() async {
     if (_ready) return;
     try {
       await Future.wait([
-        _footstep.setAsset('assets/audio/sfx/footstep_grass.mp3'),
-        _damage.setAsset('assets/audio/sfx/damage_hit.mp3'),
-        _portal.setAsset('assets/audio/sfx/portal.mp3'),
-        _shoot.setAsset('assets/audio/sfx/shoot.mp3'),
-        _chime.setAsset('assets/audio/sfx/computer_beep.wav'),
+        _footstep.setSource(AssetSource('audio/sfx/footstep_grass.mp3')),
+        _damage.setSource(AssetSource('audio/sfx/damage_hit.mp3')),
+        _portal.setSource(AssetSource('audio/sfx/portal.mp3')),
+        _shoot.setSource(AssetSource('audio/sfx/shoot.mp3')),
+        _chime.setSource(AssetSource('audio/sfx/computer_beep.wav')),
       ]);
       await _footstep.setVolume(0.45);
       await _damage.setVolume(0.7);
@@ -36,7 +41,7 @@ class SfxManager {
     if (!_ready) await init();
     try {
       await player.seek(Duration.zero);
-      player.play();
+      await player.resume();
     } catch (_) {}
   }
 
@@ -51,14 +56,14 @@ class SfxManager {
   Future<void> playVoice(String assetPath) async {
     final token = ++_voiceToken;
     try {
-      final path =
-          assetPath.startsWith('assets/') ? assetPath : 'assets/$assetPath';
       await _voice.stop();
       if (token != _voiceToken) return;
-      await _voice.setAsset(path);
-      if (token != _voiceToken) return;
+      await _voice.play(AssetSource(_asset(assetPath)));
+      if (token != _voiceToken) {
+        await _voice.stop();
+        return;
+      }
       await _voice.setVolume(1.0);
-      await _voice.play();
     } catch (_) {}
   }
 

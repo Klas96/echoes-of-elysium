@@ -6,6 +6,8 @@ import 'dart:math';
 import 'ai_fragment.dart';
 import 'npc_character.dart';
 import 'player_bullet.dart';
+import 'sentinel_drone.dart';
+import 'uec_drone.dart';
 import 'walk_sheet.dart';
 import 'building.dart';
 import '../audio/music_manager.dart';
@@ -270,17 +272,84 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision {
     final zoom = gameRef.camera.viewfinder.zoom;
     final worldPos = camCenter + (shot - screenCenter) / zoom;
 
-    final dir = worldPos - (position + size / 2);
-    if (dir.length < 1) return;
+    final origin = position + size / 2;
+    final dir = _lockShotDirection(origin, worldPos);
+    if (dir == null) return;
 
     gameRef.add(PlayerBullet(
-      position + size / 2 - Vector2.all(PlayerBullet.bulletSize / 2),
-      dir.normalized(),
+      origin - PlayerBullet.spriteSize / 2,
+      dir,
     ));
     SfxManager().playShoot();
     shotCount++;
-    lastShotFrom = position + size / 2;
+    lastShotFrom = origin;
     _shootCooldown = 0.28 * Progression.fireCooldownMult;
+  }
+
+  /// Soft aim assist: snap toward a drone near the tap, or inside the aim cone.
+  Vector2? _lockShotDirection(Vector2 origin, Vector2 worldAim) {
+    var aim = worldAim - origin;
+    if (aim.length < 1) {
+      // Tap on Kaela: fire toward the nearest foe in range, else face forward.
+      final nearest = _nearestHostile(origin, maxRange: 280);
+      if (nearest != null) return (nearest - origin).normalized();
+      return Vector2(1, 0);
+    }
+    final aimDir = aim.normalized();
+
+    Vector2? best;
+    var bestScore = double.infinity;
+    const lockAimRadius = 88.0;
+    const lockRange = 460.0;
+    const coneDot = 0.72; // ~44° either side of the aim line
+
+    void consider(Vector2 center) {
+      final to = center - origin;
+      final dist = to.length;
+      if (dist < 10 || dist > lockRange) return;
+      final aimDist = center.distanceTo(worldAim);
+      final aligned = aimDir.dot(to.normalized()) >= coneDot;
+      if (aimDist > lockAimRadius && !aligned) return;
+      // Prefer the foe under the finger; break ties by distance.
+      final score = aimDist * 1.6 + dist * 0.25;
+      if (score < bestScore) {
+        bestScore = score;
+        best = center;
+      }
+    }
+
+    for (final d in UECDrone.active) {
+      if (!d.isMounted || d.isDead) continue;
+      consider(d.position + d.size / 2);
+    }
+    final s = SentinelDrone.instance;
+    if (s != null && s.isMounted && !s.isDead) {
+      consider(s.position + s.size / 2);
+    }
+
+    if (best != null) return (best! - origin).normalized();
+    return aimDir;
+  }
+
+  Vector2? _nearestHostile(Vector2 origin, {required double maxRange}) {
+    Vector2? best;
+    var bestD = maxRange;
+    for (final d in UECDrone.active) {
+      if (!d.isMounted || d.isDead) continue;
+      final c = d.position + d.size / 2;
+      final dist = c.distanceTo(origin);
+      if (dist < bestD) {
+        bestD = dist;
+        best = c;
+      }
+    }
+    final s = SentinelDrone.instance;
+    if (s != null && s.isMounted && !s.isDead) {
+      final c = s.position + s.size / 2;
+      final dist = c.distanceTo(origin);
+      if (dist < bestD) best = c;
+    }
+    return best;
   }
 
   // Joystick and keyboard (Bonfire's Keyboard controller) both arrive here.

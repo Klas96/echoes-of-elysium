@@ -30,6 +30,7 @@ const itemLabels = <String, String>{
 class DialogueChoice {
   final String label;
   final List<String> replyLines;
+  final List<String> replyVoicePaths;
   final String? giveItem;
   final String? setFlag;
   final String? discoverClue;
@@ -41,6 +42,7 @@ class DialogueChoice {
   const DialogueChoice({
     required this.label,
     this.replyLines = const [],
+    this.replyVoicePaths = const [],
     this.giveItem,
     this.setFlag,
     this.discoverClue,
@@ -144,8 +146,15 @@ class Adventure {
       id: 'gaia_plaque',
       title: 'Weathered Plaque',
       body:
-          '"We did not conquer this world. We asked to stay." — half the Aetherian letters have worn smooth.',
+          '"We did not conquer this world. We asked to stay." Beneath, a later cut: "Bodies to soil. Minds to Gaia." — not sleep. Merge.',
       where: 'Woods · crash site',
+    ),
+    ClueDef(
+      id: 'aetherian_merge',
+      title: 'The Merge',
+      body:
+          'The colony named Gaia an AI caretaker. She is not only software: she is the Aetherians who voted to merge into the planetary lattice — minds rooted in the world, bodies returned to the earth — so a dying sun could not erase them. Quiet until Kaela\'s diagnostic made humanity listen.',
+      where: 'Woods · Gaia',
     ),
     ClueDef(
       id: 'asha_warning',
@@ -174,6 +183,41 @@ class Adventure {
       body:
           'The Archivist entrusted you with the seal to the library across the avenue. Inside: Gaia\'s first written memory.',
       where: 'City · Archivist',
+    ),
+    ClueDef(
+      id: 'city_archive_hint',
+      title: 'Archive Plaque',
+      body:
+          'The library holds first-memory drafts — not the Core itself. Worth opening before you face Voss\'s wipe.',
+      where: 'City · Archive',
+    ),
+    ClueDef(
+      id: 'city_yard_memo',
+      title: 'Scout Slate',
+      body:
+          'UEC scouts were ordered to avoid the archive walls. Something there still hums on Aetherian frequencies.',
+      where: 'City · west yard',
+    ),
+    ClueDef(
+      id: 'ruins_landing',
+      title: 'Landing Mark',
+      body:
+          'Wipe paint on Aetherian stone — scratched out by a later hand. Someone already doubted the order.',
+      where: 'Ruins · landing',
+    ),
+    ClueDef(
+      id: 'ruins_ring',
+      title: 'Broken Ring',
+      body:
+          'A cracked memory circle. The south-west shrine path feels warmer — Memory 5 waits off the main road.',
+      where: 'Ruins · clearing',
+    ),
+    ClueDef(
+      id: 'ruins_dead_end',
+      title: 'Dead-End Terminal',
+      body:
+          'UEC noted a \"civilian anomaly\" by the shrine. The south-west dead end holds a memory fragment — worth the detour before the Core.',
+      where: 'Ruins · south-west',
     ),
     ClueDef(
       id: 'station_seven',

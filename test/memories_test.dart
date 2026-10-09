@@ -67,7 +67,7 @@ void main() {
     SaveService.data = stored;
     expect(Memories.found, 5);
     expect(Memories.endingLine, contains('remembers fully'));
-    expect(Memories.endingVoss, contains('stands the drones down'));
+    expect(Memories.endingVoss, contains('stand down'));
   });
 
   test('fewer than five: ending B', () {
@@ -77,6 +77,7 @@ void main() {
     expect(Memories.allFound, isFalse);
     expect(Memories.endingLine, startsWith('Mission complete'));
     expect(Memories.endingVoss, contains('another fleet'));
+    expect(Memories.endingVoss, contains('caution'));
   });
 
   test('adventure clues deepen ending A and the victory coda', () {
@@ -88,6 +89,7 @@ void main() {
     Adventure.setFlag('archive_opened');
     expect(Memories.endingVoss, contains('field-terminal'));
     expect(Memories.endingVoss, contains('archive draft'));
+    expect(Memories.endingVoss, contains('murdering a civilization'));
     expect(Memories.endingLine, contains('vote'));
     expect(Adventure.endingCoda, contains('Station Seven orders'));
     expect(Adventure.endingCoda, contains('archive draft'));
@@ -104,6 +106,16 @@ void main() {
     GameState.resetMap2();
     GameState.onFragmentCollected();
     expect(GameState.portalUnlocked.value, isFalse, reason: 'the Sentinel still guards the city portal');
+  });
+
+  test('city south portal opens only after Archivist talk post-Sentinel', () {
+    GameState.resetMap2();
+    GameState.onSentinelDefeated();
+    expect(GameState.portalUnlocked.value, isFalse);
+    expect(GameState.objective.value.toLowerCase(), contains('archivist'));
+    GameState.onNpcTalk('archivist');
+    expect(SaveService.data.flag('archivistPostSentinel'), isTrue);
+    expect(GameState.portalUnlocked.value, isTrue);
   });
 
   test("the Archivist's gift is memory 4's source, once, after the Sentinel", () {

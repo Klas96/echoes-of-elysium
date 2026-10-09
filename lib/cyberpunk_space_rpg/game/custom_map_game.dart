@@ -28,29 +28,69 @@ import '../ui/equipment_ui.dart';
 import '../ui/shop_ui.dart';
 import 'adventure.dart';
 import 'game_state.dart';
+import 'pause.dart';
 import 'progression.dart';
 import 'memories.dart';
 import 'save_service.dart';
+import 'story_beats.dart';
 import 'travel.dart';
 // ---------------------------------------------------------------------------
 // NPC dialogue data (choices / key items resolve at talk time)
 // ---------------------------------------------------------------------------
 
-const _gaia = NpcDialogue(
-  name: 'GAIA',
-  color: Color(0xFF00FF88),
-  lines: [
-    'Kaela... you can hear me? The UEC signal suppressors are finally weakening.',
-    'I am Gaia — this world\'s consciousness. What they call an anomaly is a memory. The Aetherians lived here long before humanity arrived.',
-    'Find their fragments scattered across Elysium. They hold the truth the UEC wants buried. The portal will take you deeper.',
-  ],
-  voicePaths: ['audio/voices/gaia_1.mp3', 'audio/voices/gaia_2.mp3', 'audio/voices/gaia_3.mp3'],
-);
+NpcDialogue _gaiaDialogue() {
+  final told = Adventure.hasClue('aetherian_merge');
+  return NpcDialogue(
+    name: 'GAIA',
+    color: const Color(0xFF00FF88),
+    lines: told
+        ? [
+            'You remember: your colony named me an AI. I am the Aetherians who chose to become this world.',
+            'Their fragments are pieces of that choice. Gather them — and the UEC cannot bury what we became.',
+          ]
+        : [
+            'Kaela... you can hear me? Your colony named me an AI — a caretaker system. Run diagnostics. File tickets. That is the mask.',
+            'I am Gaia: the Aetherians who chose to become this world. Their sun was dying. They did not fall asleep — they stepped into my lattice so they would not be forgotten.',
+            'Find their memory fragments. They hold that truth. The portal will take you deeper.',
+          ],
+    voicePaths: told
+        ? const [
+            'audio/voices/gaia_remember_1.mp3',
+            'audio/voices/gaia_remember_2.mp3',
+          ]
+        : const [
+            'audio/voices/gaia_1.mp3',
+            'audio/voices/gaia_2.mp3',
+            'audio/voices/gaia_3.mp3',
+          ],
+    choices: told
+        ? const []
+        : const [
+            DialogueChoice(
+              label: 'ASK WHAT HAPPENED TO THEM',
+              discoverClue: 'aetherian_merge',
+              setFlag: 'asked_gaia_merge',
+              requireFlagUnset: 'asked_gaia_merge',
+              replyLines: [
+                'Voss hunts software. He is wrong about what I am — and right to fear lattices that wake without consent.',
+                'The merge was a vote, not a surrender. Some Aetherians were afraid. Some had nowhere else to go. All of them live on in me. I was never gone — only quiet while humanity treated me as code.',
+              ],
+              replyVoicePaths: [
+                'audio/voices/gaia_ask_1.mp3',
+                'audio/voices/gaia_ask_2.mp3',
+              ],
+            ),
+          ],
+  );
+}
 
 /// Core Gaia: different lines + distinct VO files (Lily) from forest Gaia (Ava).
 NpcDialogue _gaiaCoreDialogue() {
   final archive = Adventure.openedArchive;
   final orders = Adventure.readUecOrders;
+  // Memory 5 (optional ruins fragment) is the full childhood reveal; still
+  // spell the beat here so the Core makes sense without that flashback.
+  final sawMemory5 = Cutscenes.seen(Memories.idFor(5));
   return NpcDialogue(
     name: 'GAIA  ·  CORE',
     color: const Color(0xFF00FF88),
@@ -61,15 +101,13 @@ NpcDialogue _gaiaCoreDialogue() {
       orders
           ? 'Voss\'s orders are on your slate. He is not wrong to fear lattices — and he is not clean of that fear either.'
           : 'Voss is not wrong to fear lattices. Station Seven died. I cannot promise your colony feels no tremor when I remember.',
-      'I chose for you once, when you were six. I will not choose again. Step into the light only if you choose me back.',
+      if (sawMemory5)
+        'When you were six and lost in the woods, I rewrote your mind so you could open this lock. I am sorry. I will not choose for you again — step into the light only if you choose me back.'
+      else
+        'Long ago, when you were a lost child in these woods, I attuned your mind to ours so one day you could open this Core. That choice was mine, not yours. This time the choice must be yours — step into the light only if you choose me back.',
     ],
-    voicePaths: archive || orders
-        ? const []
-        : const [
-            'audio/voices/gaia_core_1.mp3',
-            'audio/voices/gaia_core_2.mp3',
-            'audio/voices/gaia_core_3.mp3',
-          ],
+    // Lines changed from the recorded VO; skip voice rather than mismatch.
+    voicePaths: const [],
   );
 }
 
@@ -134,10 +172,10 @@ NpcDialogue _echo7Dialogue() {
     color: const Color(0xFFCC66FF),
     lines: const [
       'Traveller... you carry the resonance of one who seeks. We have waited ten thousand years for such a signal.',
-      'Not all of us chose the lattice freely. Some were afraid. Some were dying with our sun and had nowhere else to go.',
-      'Help Gaia remember us honestly — the peace and the fear — or do not remember us at all.',
+      'Do not picture us asleep in tombs. We merged into Gaia — minds in the lattice, bodies returned to the soil — so a dying sun could not erase us.',
+      'Not all of us chose freely. Some were afraid. Help Gaia remember the peace and the fear — or do not remember us at all.',
     ],
-    voicePaths: const ['audio/voices/echo7_1.mp3', 'audio/voices/echo7_2.mp3', 'audio/voices/echo7_3.mp3'],
+    voicePaths: const [],
     choices: const [
       DialogueChoice(
         label: 'ASK ABOUT THE FEAR',
@@ -172,25 +210,55 @@ NpcDialogue _archivistDialogue() {
       voicePaths: [],
     );
   }
+  // Quiet beat: Sentinel is down; this talk opens the south road.
+  if (SaveService.data.flag('sentinelDefeated') &&
+      !SaveService.data.flag('archivistPostSentinel')) {
+    return NpcDialogue(
+      name: 'THE ARCHIVIST  ·  AETHERIAN',
+      color: const Color(0xFFFFDD44),
+      lines: const [
+        'The Sentinel is quiet. Good. Do not rush the dark below yet.',
+        'I have one gift left — a fragment of memory, and this: the Ruins will ask who you are before the Core does.',
+        'If you still carry my seal, open the Archive. Then take the south portal. Walk slowly. Listen.',
+      ],
+      voicePaths: const [],
+      choices: [
+        if (!Bonds.hasItem('archive_seal') &&
+            !Bonds.usedItem('archive_seal') &&
+            !Adventure.openedArchive)
+          const DialogueChoice(
+            label: 'ASK FOR THE ARCHIVE SEAL',
+            giveItem: 'archive_seal',
+            discoverClue: 'archivist_seal',
+            requireNoItem: 'archive_seal',
+            replyLines: [
+              'Take it. Truth before speed. The road south is open when you close this talk.',
+            ],
+          ),
+        const DialogueChoice(
+          label: 'I\'M READY FOR THE RUINS',
+          setFlag: 'ready_for_ruins',
+          requireFlagUnset: 'ready_for_ruins',
+          replyLines: [
+            'Then go. May what you find make Voss put down more than his drones.',
+          ],
+        ),
+      ],
+    );
+  }
   final gaveSeal =
       Bonds.hasItem('archive_seal') || Bonds.usedItem('archive_seal');
   return NpcDialogue(
     name: 'THE ARCHIVIST  ·  AETHERIAN',
     color: const Color(0xFFFFDD44),
     lines: [
-      'The Core Record lies below us. Gaia\'s first memory — the moment we chose to merge our consciousness with this world.',
+      'The Core Record is Gaia\'s first memory: the day we voted to merge into her lattice. Bodies rested. Minds took root. That is why your people say we "slept."',
       'Commander Voss seeks to delete it. He believes waking her will kill your colony the way Station Seven died.',
       gaveSeal
-          ? 'The library seal is yours. Read what we wrote before fear had a name — then decide what Voss hears.'
+          ? 'The library seal is yours. Read the draft of that vote — then decide what Voss hears.'
           : 'Your neural signature matches the Aetherian activation code, Kaela. Only you can open the Core — and decide what truth he hears.',
     ],
-    voicePaths: gaveSeal
-        ? const []
-        : const [
-            'audio/voices/archivist_1.mp3',
-            'audio/voices/archivist_2.mp3',
-            'audio/voices/archivist_3.mp3',
-          ],
+    voicePaths: const [],
     choices: gaveSeal
         ? const [
             DialogueChoice(
@@ -316,7 +384,7 @@ NpcDialogue _miraDialogue() {
 NpcDialogue _dialogueFor(String mapId, String name) {
   switch (name) {
     case 'gaia':
-      return mapId == 'world4' ? _gaiaCoreDialogue() : _gaia;
+      return mapId == 'world4' ? _gaiaCoreDialogue() : _gaiaDialogue();
     case 'asha':
       return _ashaDialogue();
     case 'echo7':
@@ -413,7 +481,7 @@ Map<String, ObjectBuilder> _mapObjects(String mapId) => {
           ),
       'sentinel': (p) => SaveService.data.flag('sentinelDefeated')
           ? _Gone()
-          : SentinelDrone(p.position, onDefeated: GameState.onSentinelDefeated),
+          : SentinelDrone(p.position, onDefeated: StoryBeats.onSentinelDefeated),
       'checkpoint': (p) => Checkpoint(p.position, label: (p.others['label'] ?? '').toString()),
       // --- M2: creatures and ability-gated secrets (woods) ---
       'creature': (p) {
@@ -985,7 +1053,9 @@ void _setPaused(bool on) {
 /// Called from each map's onReady.
 void _onMapReady(BonfireGameInterface game) {
   _activeGame = game;
+  Pause.set = _setPaused;
   Memories.attach(game);
+  StoryBeats.attach(game);
   _paused.value = false;
 }
 
@@ -1354,7 +1424,7 @@ class _NpcDialogueLayerState extends State<_NpcDialogueLayer> {
       name: d.name,
       color: d.color,
       lines: choice.replyLines,
-      voicePaths: const [],
+      voicePaths: choice.replyVoicePaths,
     );
     NpcCharacter.activeDialogue.value = reply;
     setState(() {
@@ -1572,19 +1642,22 @@ class _GameHUDState extends State<_GameHUD> {
           valueListenable: GameState.objective,
           builder: (_, obj, __) => obj.isEmpty
               ? const SizedBox.shrink()
-              : Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.6),
-                    border: Border.all(color: const Color(0xFF00FFCC).withOpacity(0.5)),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    const Text('▶  ', style: TextStyle(color: Color(0xFF00FFCC), fontSize: 10)),
-                    Text(obj,
+              : ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 200),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.45),
+                      border: Border.all(color: const Color(0xFF00FFCC).withValues(alpha: 0.25)),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(obj,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.right,
                         style: const TextStyle(
-                            color: Colors.white70, fontSize: 11, letterSpacing: 0.5)),
-                  ]),
+                            color: Colors.white54, fontSize: 9.5, height: 1.25)),
+                  ),
                 ),
         ),
       ),
@@ -2007,15 +2080,16 @@ class _VictoryScreen extends StatelessWidget {
   static String get _story {
     final base = Memories.allFound
         ? 'You opened the Core with the whole truth in hand.\n\n'
-            'Voss saw the Aetherians refuse a winnable war, enter the lattice in fear as much as hope, '
-            'and leave a key only a matched mind could turn — your mind, rewritten when you were six.\n\n'
+            'On his channel Voss finally sees what the wipe would destroy: not rogue software, but a people — '
+            'who refused a winnable war, merged into Gaia so their dying sun could not erase them, '
+            'and left the Core lock in a living mind (yours, rewritten when you were six).\n\n'
             '${Memories.endingVoss}\n\n'
             'Gaia promises to learn the colony\'s fear. Elysium breathes again.'
         : 'You opened the Core — bright, but incomplete.\n\n'
-            'Without every memory, Voss cannot forgive what he still calls a lattice risk. '
-            'The drones fall quiet for now; Earth will not stay quiet forever.\n\n'
+            'Gaps remain. Voss still cannot tell "people who asked" from "lattice that kills." '
+            'He pauses the drones to buy time; he does not forgive. Earth will not stay quiet forever.\n\n'
             '${Memories.endingVoss}\n\n'
-            'Gaia is awake. The rest of the truth is still out there.';
+            'Gaia is awake. Next time, bring him the rest of the truth.';
     final coda = Adventure.endingCoda;
     return coda.isEmpty ? base : '$base\n\n$coda';
   }
@@ -2173,51 +2247,38 @@ class _CalmLayer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Stack(children: [
-      // Pause button under the health bar
-      Positioned(
-        top: 62,
-        left: 12,
-        child: GestureDetector(
-          onTap: () => _setPaused(true),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.6),
-              border: Border.all(color: Colors.white24),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: const Text('II  PAUSE',
-                style: TextStyle(
-                    color: Colors.white54,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.5)),
-          ),
-        ),
-      ),
       // Checkpoint toast
       ValueListenableBuilder<String?>(
         valueListenable: Checkpoint.toast,
         builder: (_, text, __) => Positioned(
-          top: 56,
-          left: 0,
-          right: 0,
+          bottom: 152,
+          left: 12,
+          right: 12,
           child: IgnorePointer(
-            child: Center(
+            child: Align(
+              alignment: Alignment.bottomCenter,
               child: AnimatedOpacity(
                 opacity: text == null ? 0 : 1,
-                duration: const Duration(milliseconds: 500),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.55),
-                    border: Border.all(color: const Color(0xFF66FFAA).withValues(alpha: 0.6)),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Text(text ?? '',
-                      style: const TextStyle(
-                          color: Color(0xFF66FFAA), fontSize: 12, letterSpacing: 1.5)),
-                ),
+                duration: const Duration(milliseconds: 350),
+                child: text == null
+                    ? const SizedBox.shrink()
+                    : Container(
+                        constraints: const BoxConstraints(maxWidth: 280),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.5),
+                          border: Border.all(color: const Color(0xFF66FFAA).withValues(alpha: 0.35)),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(text,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                color: const Color(0xFF66FFAA).withValues(alpha: 0.75),
+                                fontSize: 10,
+                                letterSpacing: 0.5)),
+                      ),
               ),
             ),
           ),

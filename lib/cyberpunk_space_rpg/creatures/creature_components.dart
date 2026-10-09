@@ -233,12 +233,10 @@ class WildCreature extends CreatureBody with Interactable {
     SfxManager().playChime();
     final ab = species.ability;
     GameToast.show(
-      'BEFRIENDED  ·  ${species.name.toUpperCase()}',
-      body: ab != null
-          ? 'Companion ability: ${ab.label}. ${ab.description}'
-          : 'It will remember you. Added to your journal.',
+      'BEFRIENDED · ${species.name}',
+      body: ab != null ? ab.label : 'Journal updated',
       portrait: species.portraitAsset(''),
-      seconds: 5,
+      seconds: 3.2,
     );
   }
 
@@ -259,7 +257,7 @@ class WildCreature extends CreatureBody with Interactable {
     final dist = pc.distanceTo(bodyCenter);
 
     if (alpha > 0.6 && dist < seenRadius && Bonds.markSeen(species.id)) {
-      GameToast.show('NEW JOURNAL ENTRY', body: '${species.name} spotted. Press J to read about it.', seconds: 3);
+      GameToast.show('${species.name} spotted', body: 'Journal', compact: true);
     }
     if (alpha <= 0.02) return;
 

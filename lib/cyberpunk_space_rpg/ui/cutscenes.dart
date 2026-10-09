@@ -15,6 +15,9 @@ class Cutscenes {
   /// First time Kaela reaches the City (world2).
   static const coalition = 'coalition';
 
+  /// After the City Sentinel falls — quiet beat before the Ruins.
+  static const afterSentinel = 'after_sentinel';
+
   /// Core finale when all five memories were found.
   static const endingA = 'ending_a';
 

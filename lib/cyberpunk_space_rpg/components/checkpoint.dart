@@ -15,7 +15,9 @@ import '../creatures/interaction.dart';
 /// morning (by night) and restores health, so night-only creatures are
 /// always reachable without waiting out the 10-minute day.
 class Checkpoint extends GameDecoration with Interactable {
-  static const double _activateRadius = 30;
+  static const double _activateRadius = 28;
+  /// Don't spam toasts when several rings sit on the same trail.
+  static const double _toastMinSeparation = 420;
 
   /// Short "Checkpoint · <label>" toast for the HUD (null = hidden).
   static final toast = ValueNotifier<String?>(null);
@@ -47,10 +49,12 @@ class Checkpoint extends GameDecoration with Interactable {
     if (active || player.isRespawning) return;
     final d = ((player.position + player.size / 2) - (position + size / 2)).length;
     if (d < _activateRadius) {
-      final first = player.respawnPoint == null;
+      final prev = player.respawnPoint;
+      final first = prev == null;
+      final movedFar = prev == null || prev.distanceTo(position) >= _toastMinSeparation;
       player.respawnPoint = position.clone();
-      // No toast for the spawn checkpoint the player starts on.
-      if (!first) _showToast();
+      // No toast at spawn; later rings only announce when they're a real step forward.
+      if (!first && movedFar) _showToast();
       // Autosave: the checkpoint becomes the place CONTINUE returns to.
       SaveService.data.checkpoint = SavePoint(position.x, position.y);
       SaveService.requestAutosave();
@@ -75,17 +79,15 @@ class Checkpoint extends GameDecoration with Interactable {
     SaveService.data.dayTime = DayCycle.time.value;
     SaveService.requestAutosave();
     GameToast.show(wasNight ? 'MORNING' : 'NIGHTFALL',
-        body: wasNight
-            ? 'You rest by the glyph ring until the sun comes up.'
-            : 'You rest by the glyph ring. The moons rise over the woods.',
+        body: 'Rested · HP restored',
         color: wasNight ? const Color(0xFFFFD27A) : const Color(0xFFB8C4FF),
-        seconds: 3);
+        compact: true);
   }
 
   void _showToast() {
     final text = label.isEmpty ? 'Checkpoint' : 'Checkpoint · $label';
     toast.value = text;
-    Future.delayed(const Duration(milliseconds: 3000), () {
+    Future.delayed(const Duration(milliseconds: 2200), () {
       if (toast.value == text) toast.value = null;
     });
   }

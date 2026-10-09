@@ -185,10 +185,12 @@ class Memories {
   static String get endingVoss {
     if (allFound) {
       final buf = StringBuffer(
-          'Voss sees every memory — including Station Seven\'s shadow beside the Aetherians\' choice — and stands the drones down.');
+          'He had treated Gaia like Station Seven — a lattice to erase before it ate a colony. '
+          'The full Core proves otherwise: a people who refused war, voted to merge, and left a living key in you. '
+          'Wiping her would mean murdering a civilization to quiet his fear. So he orders every drone to stand down.');
       if (Adventure.readUecOrders) {
         buf.write(
-            ' Your field-terminal readout leaves him no room to call the risk theoretical.');
+            ' Your field-terminal readout leaves him no room to call that fear theoretical.');
       }
       if (Adventure.openedArchive) {
         buf.write(
@@ -197,9 +199,9 @@ class Memories {
       return buf.toString();
     }
     if (Adventure.readUecOrders) {
-      return 'Voss flinches at his own orders on your slate. He withdraws the drones, but vows that Earth will send another fleet.';
+      return 'Without every memory he still sees a lattice risk. He holds the drones as caution — not belief — and vows Earth will send another fleet.';
     }
-    return 'Voss withdraws the drones, but vows that Earth will send another fleet.';
+    return 'Without every memory he still sees a lattice risk. He holds the drones as caution — not belief — and vows Earth will send another fleet.';
   }
 
   static String get endingLine {

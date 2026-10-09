@@ -201,11 +201,9 @@ class Progression {
     if (leveled) {
       GameToast.show(
         'LEVEL ${_d.level}',
-        body: reason == null
-            ? 'Kaela grows stronger. +${bonusHealth} max HP from levels & gear.'
-            : reason,
+        body: reason ?? '+${bonusHealth} max HP',
         color: const Color(0xFFFFE08A),
-        seconds: 3.5,
+        compact: true,
       );
     }
   }
@@ -253,12 +251,7 @@ class Progression {
     if (item == null) return;
     if (inventory.contains(id)) {
       Bonds.addGlimmer(5);
-      GameToast.show(
-        '+5 GLIMMER',
-        body: 'Duplicate ${item.name} salvaged for parts.',
-        color: const Color(0xFFFFE08A),
-        seconds: 2.5,
-      );
+      GameToast.show('+5 glimmer', body: 'Duplicate ${item.name}', color: const Color(0xFFFFE08A), compact: true);
       return;
     }
     _d.inventory = [...inventory, id];
@@ -270,9 +263,9 @@ class Progression {
     _bump();
     GameToast.show(
       shouldEquip ? 'EQUIPPED' : 'LOOT',
-      body: '${item.name} — ${item.blurb}',
+      body: item.name,
       color: const Color(0xFF66CCFF),
-      seconds: 3.5,
+      compact: true,
     );
   }
 }

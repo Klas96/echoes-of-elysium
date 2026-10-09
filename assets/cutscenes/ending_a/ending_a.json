@@ -2,9 +2,9 @@
   "id": "ending_a",
   "trigger": "Core Record activated with all five memories",
   "size": [1280, 720],
-  "panelDuration": 7.0,
+  "panelDuration": 7.5,
   "crossfade": 0.9,
-  "note": "Reuses stills from other cutscenes; no new art required.",
+  "note": "Reuses stills from other cutscenes; no new art required. Extra Voss lines explain the stand-down (text-only where VO would mismatch).",
   "panels": [
     {
       "image": "assets/cutscenes/awakening/awakening_p5.webp",
@@ -34,7 +34,7 @@
       "lines": [
         {
           "speaker": "N",
-          "text": "Kaela does not argue. She opens every memory — the war refused, the lattice, the child in the woods.",
+          "text": "Kaela opens every memory on his channel: the war they refused, the vote to merge into Gaia, the fear beside the hope — and the child in the woods whose mind became the key.",
           "voice": "audio/voices/cut_ending_a_p3_l1.mp3"
         }
       ]
@@ -45,12 +45,22 @@
       "lines": [
         {
           "speaker": "VOSS",
+          "text": "I thought she was Station Seven again — a lattice that wakes and eats a colony. I was hunting software.",
+          "voice": ""
+        },
+        {
+          "speaker": "VOSS",
+          "text": "This is a people who asked to stay. They chose peace over a winnable war. They merged so their sun could not erase them. Your mind is their lock — not a weapon I can purge.",
+          "voice": ""
+        },
+        {
+          "speaker": "VOSS",
           "text": "Stand down. All units, stand down.",
           "voice": "audio/voices/cut_ending_a_p4_l1.mp3"
         },
         {
           "speaker": "VOSS",
-          "text": "Station Seven was a wound. This… this is a people. I was wrong about what they were.",
+          "text": "Station Seven was a wound. This… this is a people. I was wrong about what they were. I will not erase a civilization to quiet my fear.",
           "voice": "audio/voices/cut_ending_a_p4_l2.mp3"
         }
       ]

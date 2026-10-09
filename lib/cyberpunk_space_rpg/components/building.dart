@@ -5,6 +5,7 @@ import '../audio/sfx_manager.dart';
 import '../creatures/bonds.dart';
 import '../creatures/interaction.dart';
 import '../game/adventure.dart';
+import '../game/game_state.dart';
 
 /// Sprite size, collision box and door point of a placeable building, in px
 /// from the sprite's top-left. Generated from tools/buildings/<name>.json
@@ -95,36 +96,30 @@ class Building extends GameDecorationWithCollision with Interactable {
   void interact() {
     if (id == 'archive_library') {
       if (_archiveOpen) {
-        GameToast.show('ARCHIVE', body: 'Shelves of quiet light. The first memory page is already in your journal.',
-            color: const Color(0xFFFFDD44), seconds: 4);
+        GameToast.show('ARCHIVE', body: 'Already open.', color: const Color(0xFFFFDD44), compact: true);
         return;
       }
       if (!Bonds.hasItem('archive_seal')) return;
       Bonds.useItem('archive_seal');
       Adventure.setFlag('archive_opened');
       Adventure.discover('archive_first_memory');
+      Bonds.addGlimmer(12);
       SfxManager().playChime();
-      GameToast.show(
-        'ARCHIVE OPENED',
-        body:
-            'The seal clicks. Inside: a brittle draft of the merge vote — and a clue for your journal.',
-        color: const Color(0xFFFFDD44),
-        seconds: 6,
-      );
+      GameToast.show('ARCHIVE OPENED', body: '+12 glimmer · clue logged',
+          color: const Color(0xFFFFDD44), compact: true);
       return;
     }
     if (id == 'ruin_shrine') {
-      Adventure.discover('shrine_note');
+      final first = Adventure.discover('shrine_note');
+      GameState.onShrineExamined();
+      if (first) Bonds.addGlimmer(8);
       SfxManager().playChime();
-      GameToast.show(
-        'SHRINE',
-        body:
-            'Someone carved into the base: "Core below. Choose before he does." — Clue added to journal.',
-        color: const Color(0xFFCC88FF),
-        seconds: 5,
-      );
+      GameToast.show('SHRINE',
+          body: first ? '+8 glimmer · clue logged' : 'Clue already logged',
+          color: const Color(0xFFCC88FF),
+          compact: true);
       return;
     }
-    GameToast.show('DOOR', body: def.flavour, color: const Color(0xFFAACCEE), seconds: 4);
+    GameToast.show('DOOR', body: def.flavour, color: const Color(0xFFAACCEE), compact: true);
   }
 }

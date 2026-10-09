@@ -83,7 +83,7 @@ class Boulder extends GameComponent with Interactable, PointOfInterest {
     _t = 0;
     _dustTicker = _dust?.createTicker();
     SfxManager().playChime();
-    GameToast.show('PUSH', body: 'The stone turtle leans in and the boulder rolls aside.', seconds: 3);
+    GameToast.show('PUSH', body: 'Boulder moved', compact: true);
   }
 
   @override
@@ -150,7 +150,7 @@ class DarkZone extends GameComponent with PointOfInterest {
     lit = on ? min(1, lit + dt * 1.2) : max(0, lit - dt * 0.8);
     if (lit > 0.6 && !Bonds.secretDone(id)) {
       Bonds.markSecret(id);
-      GameToast.show('LIGHT', body: 'The glowmoth\'s glow pushes back the dark. Something is carved here.', seconds: 3);
+      GameToast.show('LIGHT', body: 'Dark fades', compact: true);
     }
   }
 
@@ -216,7 +216,7 @@ class GlyphTablet extends GameComponent with Interactable {
   void interact() {
     if (!read) SfxManager().playChime();
     Bonds.markSecret(id);
-    GameToast.show('AETHERIAN GLYPH', body: _glyphLore[glyph] ?? '...', color: const Color(0xFF66FFEE), seconds: 6);
+    GameToast.show('GLYPH', body: _glyphLore[glyph] ?? '...', color: const Color(0xFF66FFEE), compact: true);
   }
 
   @override
@@ -287,7 +287,7 @@ class GlimmerStash extends GameComponent with Interactable {
     Bonds.markSecret(id);
     Bonds.addGlimmer(amount);
     SfxManager().playChime();
-    GameToast.show('+$amount GLIMMER', body: 'A forgotten ranger\'s cache.', color: const Color(0xFFFFE08A), seconds: 3);
+    GameToast.show('+$amount glimmer', color: const Color(0xFFFFE08A), compact: true);
   }
 
   @override
@@ -350,7 +350,7 @@ class BuriedItem extends GameComponent with Interactable, PointOfInterest {
     Bonds.markSecret(id);
     Bonds.addGlimmer(amount);
     SfxManager().playChime();
-    GameToast.show('+$amount GLIMMER', body: 'The vine fox digs up a buried pouch.', color: const Color(0xFFFFE08A), seconds: 3);
+    GameToast.show('+$amount glimmer', color: const Color(0xFFFFE08A), compact: true);
   }
 
   @override
@@ -457,7 +457,7 @@ class HiddenPath extends GameComponent with Interactable, PointOfInterest {
     Bonds.markSecret(id);
     _setColliders(openColliders);
     SfxManager().playChime();
-    GameToast.show('SCENT', body: 'The vine fox noses through the brambles. There\'s a path here!', seconds: 4);
+    GameToast.show('SCENT', body: 'Path found', compact: true);
   }
 
   @override
@@ -534,7 +534,7 @@ class SweetrootStump extends GameComponent with Interactable {
     if (_taken) return;
     Bonds.giveItem('sweetroot');
     SfxManager().playChime();
-    GameToast.show('SWEETROOT', body: 'A sweet, knobbly root was growing under the stump.', color: const Color(0xFFFFC07A));
+    GameToast.show('SWEETROOT', color: const Color(0xFFFFC07A), compact: true);
   }
 
   @override
@@ -590,7 +590,7 @@ class RiverPebble extends GameComponent {
       Bonds.markSecret(id);
       Bonds.giveItem('pebble');
       SfxManager().playChime();
-      GameToast.show('RIVER PEBBLE', body: 'A smooth, shiny stone from the shallows.', color: const Color(0xFF9FD0FF));
+      GameToast.show('RIVER PEBBLE', color: const Color(0xFF9FD0FF), compact: true);
     }
   }
 

@@ -1,4 +1,4 @@
-import 'package:just_audio/just_audio.dart';
+import 'package:audioplayers/audioplayers.dart';
 export 'sfx_manager.dart';
 
 class MusicManager {
@@ -9,14 +9,16 @@ class MusicManager {
   final AudioPlayer _player = AudioPlayer();
   String? _currentTrack;
 
+  static String _asset(String path) =>
+      path.startsWith('assets/') ? path.substring(7) : path;
+
   Future<void> play(String assetPath) async {
     if (_currentTrack == assetPath) return;
     _currentTrack = assetPath;
     try {
       await _player.stop();
-      await _player.setAsset(assetPath);
-      _player.setLoopMode(LoopMode.one);
-      _player.play();
+      await _player.setReleaseMode(ReleaseMode.loop);
+      await _player.play(AssetSource(_asset(assetPath)));
     } catch (_) {}
   }
 

@@ -1,0 +1,52 @@
+{
+  "id": "after_sentinel",
+  "trigger": "UEC Sentinel defeated in the City",
+  "size": [1280, 720],
+  "panelDuration": 7.0,
+  "crossfade": 0.9,
+  "note": "Quiet beat before the Ruins. Reuses stills; text-only (no new VO).",
+  "panels": [
+    {
+      "image": "assets/cutscenes/coalition/coalition_p4.webp",
+      "pan": {"from": [1.05, 0.5, 0.45], "to": [1.0, 0.5, 0.5]},
+      "fx": [
+        {
+          "type": "pulse",
+          "color": "#00FF88",
+          "mask": "assets/cutscenes/coalition/coalition_p4_glow.webp"
+        }
+      ],
+      "lines": [
+        {
+          "speaker": "N",
+          "text": "The Sentinel falls. Neon rain ticks on quiet plating. For a moment the City holds its breath."
+        }
+      ]
+    },
+    {
+      "image": "assets/cutscenes/coalition/coalition_p1.webp",
+      "pan": {"from": [1.0, 0.5, 0.5], "to": [1.06, 0.45, 0.4]},
+      "lines": [
+        {
+          "speaker": "N",
+          "text": "Voss's channel stays open — listening, not firing. The path south will open when you are ready. Not yet."
+        },
+        {
+          "speaker": "GAIA",
+          "text": "Kaela. The Archivist kept something for this hour. Hear him before you walk into the dark."
+        }
+      ]
+    },
+    {
+      "image": "assets/cutscenes/memory4/memory4_p1.webp",
+      "pan": {"from": [1.0, 0.5, 0.5], "to": [1.05, 0.5, 0.45]},
+      "lines": [
+        {
+          "speaker": "N",
+          "text": "The road to the Core is not only drones and ash. It is a choice you still have time to understand."
+        }
+      ],
+      "then": "title card THE CITY HOLDS ITS BREATH over the upper sky"
+    }
+  ]
+}

@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:bonfire/bonfire.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -151,16 +153,32 @@ class ToastMessage {
   final Color color;
   final String? portrait;
   final int id;
-  const ToastMessage(this.title, this.body, this.color, this.portrait, this.id);
+  final bool compact;
+  const ToastMessage(this.title, this.body, this.color, this.portrait, this.id, {this.compact = false});
 }
 
 class GameToast {
   static final current = ValueNotifier<ToastMessage?>(null);
   static int _n = 0;
 
-  static void show(String title,
-      {String body = '', Color color = const Color(0xFF66FFAA), String? portrait, double seconds = 4}) {
-    final m = ToastMessage(title, body, color, portrait, ++_n);
+  /// [compact]: small corner chip — one short line, no portrait, fades fast.
+  static void show(
+    String title, {
+    String body = '',
+    Color color = const Color(0xFF66FFAA),
+    String? portrait,
+    double seconds = 2.8,
+    bool compact = false,
+  }) {
+    var b = body.trim();
+    if (compact) {
+      portrait = null;
+      seconds = min(seconds, 2.4);
+      if (b.length > 56) b = '${b.substring(0, 54)}…';
+    } else if (b.length > 120) {
+      b = '${b.substring(0, 118)}…';
+    }
+    final m = ToastMessage(title, b, color, portrait, ++_n, compact: compact);
     current.value = m;
     Future.delayed(Duration(milliseconds: (seconds * 1000).round()), () {
       if (current.value?.id == m.id) current.value = null;
