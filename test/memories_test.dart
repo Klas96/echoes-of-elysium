@@ -66,7 +66,7 @@ void main() {
     final stored = SaveService.decode(SaveService.encode(SaveService.data))!;
     SaveService.data = stored;
     expect(Memories.found, 5);
-    expect(Memories.endingLine, contains('remembers fully'));
+    expect(Memories.endingLine, contains('fully online'));
     expect(Memories.endingVoss, contains('stand down'));
   });
 
