@@ -265,13 +265,16 @@ class GameState {
       case 1:
         if (portalUnlocked.value || _step >= _l1Portal) {
           return job ??
-              'South road → City · look east for Lantern Town once you arrive';
+              'Mission: walk south off the map to the City (look east for Lantern Town once you arrive)';
         }
         if (_step >= _l1Fragments) {
-          return 'Gather the Aetherian fragments (${fragmentsCollected.value}/$fragmentsRequired)';
+          return 'Mission: find glowing memory fragments '
+              '(${fragmentsCollected.value}/$fragmentsRequired) — then the south road opens';
         }
         if (job != null && _step >= _l1Asha) return job;
-        return _step >= _l1Asha ? 'Find Asha by the old trail' : 'Listen to Gaia';
+        return _step >= _l1Asha
+            ? 'Next: find Asha on the trail (south of the crossroads) — she knows the woods'
+            : 'Mission: talk to Gaia by the crash site (green figure nearby)';
       case 2:
         if (portalUnlocked.value || _step >= _l2Core) {
           if (!Adventure.openedArchive &&

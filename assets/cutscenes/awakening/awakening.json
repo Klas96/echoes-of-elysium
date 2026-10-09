@@ -113,8 +113,13 @@
       "lines": [
         {
           "speaker": "N",
-          "text": "Far above, someone else noticed too.",
+          "text": "Far above, the United Earth Coalition noticed too — and they mean to erase Gaia.",
           "voice": "audio/voices/cut_awakening_p5_l1.mp3"
+        },
+        {
+          "speaker": "N",
+          "text": "Your mission: talk to Gaia in the woods, find two glowing memory fragments, then walk south to the City. Do not let the UEC wipe her record.",
+          "voice": ""
         }
       ],
       "then": "title card ECHOES OF ELYSIUM over the upper sky, fade into the Woods"

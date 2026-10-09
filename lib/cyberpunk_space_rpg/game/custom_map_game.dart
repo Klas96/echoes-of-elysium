@@ -28,6 +28,7 @@ import '../creatures/journal_ui.dart';
 import '../creatures/obstacles.dart';
 import '../ui/cutscenes.dart';
 import '../ui/equipment_ui.dart';
+import '../ui/mmo_feedback.dart';
 import '../ui/quest_board_ui.dart';
 import '../ui/shop_ui.dart';
 import 'adventure.dart';
@@ -35,6 +36,7 @@ import 'game_state.dart';
 import 'pause.dart';
 import 'progression.dart';
 import 'memories.dart';
+import 'quests.dart';
 import 'save_service.dart';
 import 'story_beats.dart';
 import 'travel.dart';
@@ -49,13 +51,13 @@ NpcDialogue _gaiaDialogue() {
     color: const Color(0xFF00FF88),
     lines: told
         ? [
-            'Logged: you already know the surface tag — caretaker AI. Substrate: Aetherian upload lattice. Architecture, not folklore.',
-            'Fragment recovery remains priority. Each shard is evidence the UEC cannot soft-delete. Portal route stays clear.',
+            'You already know: the colony calls me a caretaker AI. Underneath, I am an Aetherian mind-lattice — people who uploaded rather than died.',
+            'Your job is unchanged. Find the glowing memory fragments. Two open the south road to the City. Each shard is proof the UEC cannot delete.',
           ]
         : [
-            'Signal lock. Kaela Osei — your neural signature matches my diagnostic log. Confirm: you receive this channel?',
-            'Designation: Gaia. Colony classification: planetary caretaker AI. Incomplete, but accurate enough to start.',
-            'I am also a distributed process: Aetherian minds that uploaded when their sun failed. Memory shards are offline. Recover two to verify the woods portal.',
+            'Kaela — can you hear me? I am Gaia. Your colony calls me the planet\'s caretaker AI. That is only half the truth.',
+            'I am also what remains of the Aetherians: a people who uploaded into this world when their sun failed. My memories are broken into glowing shards.',
+            'Please find two of those fragments in these woods. That opens the south road to the City. The UEC wants me wiped — do not let them finish the job.',
           ],
     voicePaths: told
         ? const [
@@ -71,13 +73,13 @@ NpcDialogue _gaiaDialogue() {
         ? const []
         : const [
             DialogueChoice(
-              label: 'ASK WHAT HAPPENED TO THEM',
+              label: 'WHO WERE THE AETHERIANS?',
               discoverClue: 'aetherian_merge',
               setFlag: 'asked_gaia_merge',
               requireFlagUnset: 'asked_gaia_merge',
               replyLines: [
-                'Voss models me as rogue software. Wrong category. Correct fear: a lattice that boots without consent.',
-                'The merge was a recorded vote, not a myth. Some processes opted in under duress. I ran quiet in caretaker mode while your colony filed tickets against me.',
+                'Commander Voss thinks I am rogue software. Wrong. I am a people\'s minds, still running. His fear is that I wake without asking.',
+                'Long ago they voted to merge into Gaia rather than die with their sun. Some joined in hope, some in fear. I have kept the colony alive in caretaker mode ever since.',
               ],
               replyVoicePaths: [
                 'audio/voices/gaia_ask_1.mp3',
@@ -875,12 +877,14 @@ class IntroScreen extends StatelessWidget {
 
   static const _brief =
       'Year 2387 · Elysium Colony\n\n'
-      'You are Kaela, an AI engineer who ran a routine diagnostic on Gaia — '
-      'the planet\'s caretaker system — and found a process that should not have answered.\n\n'
-      'The United Earth Coalition has dispatched drone squads to "contain" the anomaly.\n\n'
-      'Seek the Aetherian memory shards scattered across Elysium. '
-      'They are evidence of what Gaia really is — and of a civilization that uploaded rather than died.\n\n'
-      'The UEC must not wipe that record.';
+      'You are Kaela Osei. A routine check on Gaia — the planet\'s caretaker AI — '
+      'woke something that answered back.\n\n'
+      'The United Earth Coalition wants Gaia erased. She needs you to prove what she '
+      'really is: the surviving minds of an ancient people.\n\n'
+      'First steps in the woods:\n'
+      '1. Talk to Gaia by the crash site\n'
+      '2. Find two glowing memory fragments\n'
+      '3. Walk south to the City before the UEC locks the road';
 
   @override
   Widget build(BuildContext context) {
@@ -1286,6 +1290,10 @@ void _startLevel(BonfireGameInterface game, int level) {
     ..reset()
     ..start();
   Travel.markVisited(level);
+  final dest = Travel.byLevel(level);
+  if (dest != null) {
+    MmoFeedback.enterZone(dest.title, blurb: dest.blurb);
+  }
   final d = SaveService.data;
   if (SaveService.resumeObjective && d.mapId == GameState.mapIds[level]) {
     SaveService.resumeObjective = false;
@@ -1308,6 +1316,23 @@ void _startLevel(BonfireGameInterface game, int level) {
       GameState.resetMap1();
   }
   SaveService.saveNow();
+  // First landing in the woods: say the mission out loud (cutscene can blur).
+  if (level == 1 && !d.flag('opening_brief_shown')) {
+    d.setFlag('opening_brief_shown');
+    Future.delayed(const Duration(milliseconds: 900), () {
+      GameToast.show(
+        'YOUR MISSION',
+        body:
+            '1) Talk to Gaia (green figure by the crash)\n'
+            '2) Collect 2 glowing memory fragments\n'
+            '3) Walk south to the City\n\n'
+            'Objective stays on the right TRACKER.',
+        color: const Color(0xFF00FFCC),
+        seconds: 9,
+      );
+      SaveService.requestAutosave();
+    });
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -2021,37 +2046,174 @@ class _GameHUDState extends State<_GameHUD> {
                     '${Progression.bonusDamage > 0 ? '  ·  +${Progression.bonusDamage} DMG' : ''}',
                     style: const TextStyle(color: Colors.white38, fontSize: 9),
                   ),
+                  const SizedBox(height: 4),
+                  ValueListenableBuilder<int>(
+                    valueListenable: Bonds.revision,
+                    builder: (_, __, ___) => Text(
+                      '${Bonds.glimmer} ◆ glimmer',
+                      style: const TextStyle(
+                          color: Color(0xFF88DDFF), fontSize: 9, letterSpacing: 0.5),
+                    ),
+                  ),
                 ],
               ),
             );
           },
         ),
       ),
-      // Objective
+      // Quest tracker (WoW-style) — story + active jobs
       Positioned(
         top: 12,
         right: 12,
-        child: ValueListenableBuilder<String>(
-          valueListenable: GameState.objective,
-          builder: (_, obj, __) => obj.isEmpty
-              ? const SizedBox.shrink()
-              : ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 200),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.45),
-                      border: Border.all(color: const Color(0xFF00FFCC).withValues(alpha: 0.25)),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(obj,
-                        maxLines: 2,
+        child: AnimatedBuilder(
+          animation: Listenable.merge([GameState.objective, Quests.revision]),
+          builder: (_, __) {
+            final obj = GameState.objective.value;
+            final jobs = Quests.activeJobs;
+            if (obj.isEmpty && jobs.isEmpty) return const SizedBox.shrink();
+            return ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 220),
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.52),
+                  border: Border.all(color: const Color(0xFFFFE08A).withValues(alpha: 0.28)),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(jobs.isEmpty ? 'OBJECTIVE' : 'TRACKER',
+                        style: const TextStyle(
+                            color: Color(0xFFFFE08A),
+                            fontSize: 8,
+                            letterSpacing: 1.6,
+                            fontWeight: FontWeight.bold)),
+                    if (obj.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(obj,
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.right,
+                          style: const TextStyle(
+                              color: Colors.white70, fontSize: 10, height: 1.3)),
+                    ],
+                    for (final q in jobs) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        Quests.status(q.id) == QuestStatus.done
+                            ? '✓ ${q.title}'
+                            : '· ${q.title}',
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         textAlign: TextAlign.right,
-                        style: const TextStyle(
-                            color: Colors.white54, fontSize: 9.5, height: 1.25)),
+                        style: TextStyle(
+                          color: Quests.status(q.id) == QuestStatus.done
+                              ? const Color(0xFF88FFAA)
+                              : Colors.white60,
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(q.hint,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.right,
+                          style: const TextStyle(
+                              color: Colors.white38, fontSize: 8.5, height: 1.25)),
+                    ],
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+      // Zone enter banner
+      Positioned(
+        left: 0,
+        right: 0,
+        top: 72,
+        child: ValueListenableBuilder<String?>(
+          valueListenable: MmoFeedback.zoneTitle,
+          builder: (_, title, __) {
+            if (title == null) return const SizedBox.shrink();
+            return IgnorePointer(
+              child: Center(
+                child: AnimatedOpacity(
+                  opacity: 1,
+                  duration: const Duration(milliseconds: 300),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.55),
+                      border: Border.all(color: const Color(0xFF00FFCC).withValues(alpha: 0.35)),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(title.toUpperCase(),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                                color: Color(0xFFAAFFEE),
+                                fontSize: 14,
+                                letterSpacing: 3,
+                                fontWeight: FontWeight.bold)),
+                        ValueListenableBuilder<String?>(
+                          valueListenable: MmoFeedback.zoneBlurb,
+                          builder: (_, blurb, __) => blurb == null || blurb.isEmpty
+                              ? const SizedBox.shrink()
+                              : Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(blurb,
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
+                                          color: Colors.white54, fontSize: 10)),
+                                ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
+              ),
+            );
+          },
+        ),
+      ),
+      // Floating +XP / loot pops (center-ish)
+      Positioned(
+        left: 0,
+        right: 0,
+        bottom: 96,
+        child: ValueListenableBuilder<List<HudPop>>(
+          valueListenable: MmoFeedback.pops,
+          builder: (_, items, __) {
+            if (items.isEmpty) return const SizedBox.shrink();
+            return IgnorePointer(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (final p in items.reversed)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 3),
+                      child: Text(
+                        p.text,
+                        style: TextStyle(
+                          color: p.color,
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.8,
+                          shadows: const [
+                            Shadow(color: Colors.black87, blurRadius: 4),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            );
+          },
         ),
       ),
     ]);

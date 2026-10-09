@@ -284,6 +284,10 @@ class GlimmerStash extends GameComponent with Interactable {
 
   @override
   Future<void> onLoad() async {
+    if (opened) {
+      removeFromParent();
+      return;
+    }
     _chest = await Sprite.load('obstacles/chest_plain.png');
     final img = await Flame.images.load('obstacles/fetch_sparkle_anim.png');
     _spark = SpriteAnimation.fromFrameData(
@@ -304,6 +308,7 @@ class GlimmerStash extends GameComponent with Interactable {
     Bonds.addGlimmer(amount);
     SfxManager().playChime();
     GameToast.show('+$amount glimmer', color: const Color(0xFFFFE08A), compact: true);
+    removeFromParent();
   }
 
   @override
@@ -314,11 +319,10 @@ class GlimmerStash extends GameComponent with Interactable {
 
   @override
   void render(Canvas canvas) {
-    final paint = Paint()
-      ..filterQuality = FilterQuality.none
-      ..color = Color.fromRGBO(255, 255, 255, opened ? 0.55 : 1);
+    if (opened) return;
+    final paint = Paint()..filterQuality = FilterQuality.none;
     _chest?.render(canvas, size: size, overridePaint: paint);
-    if (!opened) _sparkT?.getSprite().render(canvas, position: Vector2(17, -2), size: Vector2.all(16), overridePaint: paint);
+    _sparkT?.getSprite().render(canvas, position: Vector2(17, -2), size: Vector2.all(16), overridePaint: paint);
     super.render(canvas);
   }
 }

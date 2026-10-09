@@ -878,6 +878,9 @@ def map1():
           id="woods_plaque", title="WEATHERED PLAQUE",
           text="\"We asked to stay.\" A second line: \"Bodies to soil. Minds to Gaia.\"",
           clue="gaia_plaque")
+    place(lv, "examine", P["spawn"][0] - 1.2, P["spawn"][1] + 1.4,
+          id="woods_mission_slate", title="FIELD BRIEF",
+          text="Kaela — talk to Gaia (green) by the crash. Collect two glowing fragments. Walk south to the City. Do not let the UEC wipe her.")
     place(lv, "examine", P["asha"][0] - 1.4, P["asha"][1] + 0.8,
           id="woods_boot", title="UEC BOOT PRINT",
           text="Fresh composite sole marks in the moss after rain.", clue="boot_print")

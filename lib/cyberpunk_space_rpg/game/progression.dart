@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../components/uec_drone.dart';
 import '../creatures/bonds.dart';
 import '../creatures/interaction.dart';
+import '../ui/mmo_feedback.dart';
 import 'save_service.dart';
 
 enum GearSlot { rifle, suit, relic }
@@ -188,7 +189,7 @@ class Progression {
     SaveService.requestAutosave();
   }
 
-  static void grantXp(int amount, {String? reason}) {
+  static void grantXp(int amount, {String? reason, bool float = true}) {
     if (amount <= 0) return;
     _d.xp += amount;
     var leveled = false;
@@ -198,7 +199,11 @@ class Progression {
       leveled = true;
     }
     _bump();
+    if (float) {
+      MmoFeedback.pushPop('+$amount XP', color: const Color(0xFFFFE08A));
+    }
     if (leveled) {
+      MmoFeedback.pushPop('LEVEL ${_d.level}!', color: const Color(0xFFFFCC66));
       GameToast.show(
         'LEVEL ${_d.level}',
         body: reason ?? '+${bonusHealth} max HP',
@@ -223,6 +228,7 @@ class Progression {
       DroneKind.swarm => 1,
     };
     Bonds.addGlimmer(glimmerGain);
+    MmoFeedback.pushPop('+$glimmerGain ◆', color: const Color(0xFF88DDFF));
     grantXp(xpGain);
 
     final drop = _rollDrop(kind);
@@ -231,6 +237,7 @@ class Progression {
 
   static void onSentinelKilled() {
     Bonds.addGlimmer(15);
+    MmoFeedback.pushPop('+15 ◆', color: const Color(0xFF88DDFF));
     grantXp(120, reason: 'The Sentinel falls. Kaela\'s neural attunement deepens.');
     _grantGear('sentinel_core');
   }
@@ -264,6 +271,10 @@ class Progression {
       _d.equipped = {...equipped, item.slot.name: id};
     }
     _bump();
+    MmoFeedback.pushPop(
+      shouldEquip ? 'Equip · ${item.name}' : 'Loot · ${item.name}',
+      color: const Color(0xFF66CCFF),
+    );
     GameToast.show(
       shouldEquip ? 'EQUIPPED' : 'LOOT',
       body: item.name,
