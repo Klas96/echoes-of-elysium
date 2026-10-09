@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../game/adventure.dart';
 import '../game/pause.dart';
+import '../game/quests.dart';
 import '../ui/equipment_ui.dart';
 import 'bonds.dart';
 import 'creature_species.dart';
@@ -556,6 +557,33 @@ class _JournalPanelState extends State<_JournalPanel> {
               Container(height: 1, color: _inkSoft.withValues(alpha: 0.35)),
               const SizedBox(height: 10),
             ],
+            const Text('JOBS',
+                style: TextStyle(color: _inkDark, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 2)),
+            const SizedBox(height: 6),
+            if (Quests.activeJobs.isEmpty && Quests.turnedInCount == 0)
+              const Text(
+                'Lantern Town\'s job board posts woods errands. Accept one, finish it in the woods, turn it in at Town.',
+                style: TextStyle(color: _inkSoft, fontSize: 12, height: 1.55),
+              )
+            else ...[
+              for (final q in Quests.catalog)
+                if (Quests.status(q.id) != QuestStatus.available)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      '· ${q.title} — ${switch (Quests.status(q.id)) {
+                        QuestStatus.accepted => 'in woods',
+                        QuestStatus.done => 'ready to turn in',
+                        QuestStatus.turnedIn => 'done',
+                        _ => '',
+                      }}',
+                      style: const TextStyle(color: _inkSoft, fontSize: 12, height: 1.4),
+                    ),
+                  ),
+            ],
+            const SizedBox(height: 10),
+            Container(height: 1, color: _inkSoft.withValues(alpha: 0.35)),
+            const SizedBox(height: 10),
             const Text('CLUE BOARD',
                 style: TextStyle(color: _inkDark, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 2)),
             const SizedBox(height: 8),

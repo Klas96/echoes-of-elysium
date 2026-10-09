@@ -246,6 +246,9 @@ class Progression {
     return _rng.nextDouble() < chance ? id : null;
   }
 
+  /// Quest / story grants (same rules as loot: duplicate → glimmer).
+  static void grantGear(String id) => _grantGear(id);
+
   static void _grantGear(String id) {
     final item = catalog[id];
     if (item == null) return;

@@ -25,6 +25,7 @@ import '../creatures/journal_ui.dart';
 import '../creatures/obstacles.dart';
 import '../ui/cutscenes.dart';
 import '../ui/equipment_ui.dart';
+import '../ui/quest_board_ui.dart';
 import '../ui/shop_ui.dart';
 import 'adventure.dart';
 import 'game_state.dart';
@@ -392,18 +393,25 @@ NpcDialogue _miraDialogue() {
     color: const Color(0xFFFFE08A),
     lines: const [
       'Lantern Town keeps its lamps lit for travellers like you. UEC patrols rarely bother us here.',
-      'I trade glimmer for gear — scrap plating, optics, charms from the old colony.',
-      'Browse the stall whenever you like. The return portal is south when you\'re ready to leave.',
+      'The job board by my stall posts woods errands — courier packs, quiet nests, moonflowers for the sick.',
+      'I trade glimmer for gear. Portal south when you\'re ready. Check the board first if you have time.',
     ],
     voicePaths: const [],
-    choices: const [
-      DialogueChoice(
+    choices: [
+      const DialogueChoice(
         label: 'ASK ABOUT THE ARCHIVE',
         discoverClue: 'mira_rumour',
         setFlag: 'asked_mira_archive',
         requireFlagUnset: 'asked_mira_archive',
         replyLines: [
           'Traders say drones avoid the old archive walls. Something in there still hums on Aetherian frequencies.',
+        ],
+      ),
+      DialogueChoice(
+        label: 'SHOW ME THE BOARD',
+        setFlag: 'mira_showed_board',
+        replyLines: const [
+          'There — chalk and string. Accept a job, do the woods work, come back to turn it in.',
         ],
       ),
     ],
@@ -485,6 +493,15 @@ Map<String, ObjectBuilder> _mapObjects(String mapId) => {
             final f = (p.others['flag'] ?? '').toString();
             return f.isEmpty ? null : f;
           }(),
+          giveItem: () {
+            final g = (p.others['give'] ?? '').toString();
+            return g.isEmpty ? null : g;
+          }(),
+          completeQuest: () {
+            final q = (p.others['quest'] ?? '').toString();
+            return q.isEmpty ? null : q;
+          }(),
+          openQuestBoard: p.others['board'] == true || p.others['board'] == 'true',
         );
       },
       'fragment': (p) {
@@ -507,6 +524,7 @@ Map<String, ObjectBuilder> _mapObjects(String mapId) => {
             p.position,
             startAngle: _numProp(p, 'startAngle'),
             kind: DroneKindParse.from((p.others['kind'] ?? '').toString()),
+            nestQuest: p.others['nest'] == true || p.others['nest'] == 'true',
           ),
       'sentinel': (p) => SaveService.data.flag('sentinelDefeated')
           ? _Gone()
@@ -948,13 +966,17 @@ void _startLevel(BonfireGameInterface game, int level) {
   Journal.open.value = false;
   Equipment.open.value = false;
   Shop.open.value = false;
+  QuestBoard.open.value = false;
   void onOverlay(bool open) {
     final g = _activeGame;
     if (g == null || _paused.value) return;
     if (open) {
       SaveService.saveNow();
       g.pauseEngine();
-    } else if (!Journal.open.value && !Equipment.open.value && !Shop.open.value) {
+    } else if (!Journal.open.value &&
+        !Equipment.open.value &&
+        !Shop.open.value &&
+        !QuestBoard.open.value) {
       g.resumeEngine();
     }
   }
@@ -962,17 +984,26 @@ void _startLevel(BonfireGameInterface game, int level) {
   Journal.onOpenChanged = onOverlay;
   Equipment.onOpenChanged = onOverlay;
   Shop.onOpenChanged = onOverlay;
+  QuestBoard.onOpenChanged = onOverlay;
   Journal.dismissOthers = () {
     Equipment.open.value = false;
     Shop.open.value = false;
+    QuestBoard.open.value = false;
   };
   Equipment.dismissOthers = () {
     Journal.open.value = false;
     Shop.open.value = false;
+    QuestBoard.open.value = false;
   };
   Shop.dismissOthers = () {
     Journal.open.value = false;
     Equipment.open.value = false;
+    QuestBoard.open.value = false;
+  };
+  QuestBoard.dismissOthers = () {
+    Journal.open.value = false;
+    Equipment.open.value = false;
+    Shop.open.value = false;
   };
   game.add(DayClock());
   game.add(InteractionManager());
@@ -1041,6 +1072,10 @@ KeyEventResult _handleDebugKey(FocusNode _, KeyEvent event) {
       Shop.hide();
       return KeyEventResult.handled;
     }
+    if (QuestBoard.open.value) {
+      QuestBoard.hide();
+      return KeyEventResult.handled;
+    }
   }
   if (event is KeyDownEvent &&
       (event.logicalKey == LogicalKeyboardKey.escape ||
@@ -1067,6 +1102,9 @@ void _setPaused(bool on) {
   }
   if (on && Shop.open.value) {
     Shop.open.value = false;
+  }
+  if (on && QuestBoard.open.value) {
+    QuestBoard.open.value = false;
   }
   _paused.value = on;
   final g = _activeGame;
@@ -1156,6 +1194,7 @@ class CustomMapGameScreen extends StatelessWidget {
           const JournalOverlay(),
           const EquipmentOverlay(),
           const ShopOverlay(),
+          const QuestBoardOverlay(),
         ]),
       ),
     );
@@ -1215,6 +1254,7 @@ class Map2GameScreen extends StatelessWidget {
           const JournalOverlay(),
           const EquipmentOverlay(),
           const ShopOverlay(),
+          const QuestBoardOverlay(),
         ]),
       ),
     );
@@ -1268,6 +1308,7 @@ class Map3GameScreen extends StatelessWidget {
           const JournalOverlay(),
           const EquipmentOverlay(),
           const ShopOverlay(),
+          const QuestBoardOverlay(),
         ]),
       ),
     );
@@ -1321,6 +1362,7 @@ class Map4GameScreen extends StatelessWidget {
           const JournalOverlay(),
           const EquipmentOverlay(),
           const ShopOverlay(),
+          const QuestBoardOverlay(),
         ]),
       ),
     );
@@ -1374,6 +1416,7 @@ class Map5GameScreen extends StatelessWidget {
           const JournalOverlay(),
           const EquipmentOverlay(),
           const ShopOverlay(),
+          const QuestBoardOverlay(),
         ]),
       ),
     );
@@ -1443,6 +1486,13 @@ class _NpcDialogueLayerState extends State<_NpcDialogueLayer> {
   void _pickChoice(DialogueChoice choice) {
     final d = _dialogue;
     if (d == null) return;
+    if (choice.setFlag == 'mira_showed_board') {
+      choice.apply();
+      SfxManager().stopVoice();
+      _closeDialogue();
+      QuestBoard.show();
+      return;
+    }
     choice.apply();
     SfxManager().stopVoice();
     if (choice.replyLines.isEmpty) {
@@ -1518,6 +1568,16 @@ class _NpcDialogueLayerState extends State<_NpcDialogueLayer> {
                     ),
                     const SizedBox(width: 8),
                     if (isLast && d.name.startsWith('MIRA')) ...[
+                      _CyberButton(
+                        label: 'BOARD',
+                        color: d.color,
+                        filled: true,
+                        onTap: () {
+                          _closeDialogue();
+                          QuestBoard.show();
+                        },
+                      ),
+                      const SizedBox(width: 8),
                       _CyberButton(
                         label: 'TRADE',
                         color: d.color,

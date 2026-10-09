@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../creatures/bonds.dart';
 import 'adventure.dart';
 import 'memories.dart';
+import 'quests.dart';
 import 'save_service.dart';
 
 /// Level state and the HUD objective line.
@@ -237,15 +238,21 @@ class GameState {
     objective.value = _text();
   }
 
+  /// Quest board / adventure hooks can refresh the HUD line without advancing steps.
+  static void refreshObjective() => _refresh();
+
   static String _text() {
+    // Optional town jobs: soft hint when story is not mid-critical beat.
+    final job = Quests.objectiveHint;
     switch (_level) {
       case 1:
         if (portalUnlocked.value || _step >= _l1Portal) {
-          return 'Slip past the UEC patrols to the portal';
+          return job ?? 'Slip past the UEC patrols to the portal';
         }
         if (_step >= _l1Fragments) {
           return 'Gather the Aetherian fragments (${fragmentsCollected.value}/$fragmentsRequired)';
         }
+        if (job != null && _step >= _l1Asha) return job;
         return _step >= _l1Asha ? 'Find Asha by the old trail' : 'Listen to Gaia';
       case 2:
         if (portalUnlocked.value || _step >= _l2Core) {
@@ -255,7 +262,7 @@ class GameState {
                   Adventure.hasClue('archivist_seal'))) {
             return 'Open the Archive (optional) — then south to the Ruins';
           }
-          return 'South portal → Ruins · Lantern Gate for gear';
+          return job ?? 'South portal → Ruins · Lantern Gate for gear';
         }
         if (_step >= _l2Quiet || SaveService.data.flag('sentinelDefeated')) {
           return 'Speak with the Archivist — then the road south opens';
@@ -278,7 +285,7 @@ class GameState {
         }
         return _step >= _l4Gaia ? 'Speak with Gaia at the dais' : 'Enter Gaia\'s Core';
       case 5:
-        return 'Browse Mira\'s stall, then take the portal when ready';
+        return job ?? 'Job board by Mira · stall · portal when ready';
     }
     return '';
   }

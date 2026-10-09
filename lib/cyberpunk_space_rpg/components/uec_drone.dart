@@ -6,6 +6,7 @@ import 'drone_bounds.dart';
 import 'enemy_bullet.dart';
 import 'explosion_effect.dart';
 import '../game/progression.dart';
+import '../game/quests.dart';
 
 enum DroneKind {
   /// Balanced melee chase — the original UEC drone.
@@ -137,6 +138,8 @@ class UECDrone extends GameDecoration {
   static final List<UECDrone> active = [];
 
   final DroneKind kind;
+  /// When true, death counts toward the Lantern Town nest job.
+  final bool nestQuest;
   final _DroneStats _stats;
   final Vector2 _origin;
   _DroneState _state = _DroneState.patrol;
@@ -157,6 +160,7 @@ class UECDrone extends GameDecoration {
     Vector2 position, {
     double startAngle = 0,
     this.kind = DroneKind.scout,
+    this.nestQuest = false,
   })  : _stats = _DroneStats.forKind(kind),
         _origin = position.clone(),
         _patrolAngle = startAngle,
@@ -232,6 +236,7 @@ class UECDrone extends GameDecoration {
       if (!_rewarded) {
         _rewarded = true;
         Progression.onDroneKilled(kind);
+        if (nestQuest) Quests.onNestDroneKilled();
       }
       gameRef.add(ExplosionEffect(position.clone()));
       removeFromParent();

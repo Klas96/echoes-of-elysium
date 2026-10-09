@@ -23,6 +23,7 @@ class ClueDef {
 const itemLabels = <String, String>{
   'uec_override': 'UEC Override Key',
   'archive_seal': 'Archive Seal',
+  'moonflower_bloom': 'Moonflower Bloom',
 };
 
 /// Branching talk options shown on the last line of an [NpcDialogue].
@@ -134,6 +135,16 @@ class Adventure {
     if (flag('asha_archive_ack') || hasClue('asha_on_archive')) {
       parts.add(
         'Asha\'s channel still echoes: carry the fear with the hope. Voss heard a people tonight — not only a lattice.');
+    }
+    // Quests.turnedInCount imported via save flags to avoid a circular import.
+    final jobs = [
+      'quest:courier_pack:turned_in',
+      'quest:drone_nest:turned_in',
+      'quest:moonflower_draft:turned_in',
+    ].where(flag).length;
+    if (jobs >= 2) {
+      parts.add(
+        'Lantern Town\'s errands followed you into the Core — courier wax, nest silence, moonflower cold. The colony still believes in small kindnesses.');
     }
     return parts.join('\n\n');
   }
@@ -264,6 +275,34 @@ class Adventure {
       body:
           'Lantern Town traders say UEC drones avoid the old archive. Something in the walls still hums on Aetherian frequencies.',
       where: 'Lantern Town · Mira',
+    ),
+    ClueDef(
+      id: 'quest_courier',
+      title: 'Courier Pack Found',
+      body:
+          'You recovered a sealed town pack on the west woods trail. Mira\'s board pays for proof that travellers still finish errands.',
+      where: 'Woods · f1 · Town board',
+    ),
+    ClueDef(
+      id: 'quest_nest',
+      title: 'Nest Cleared',
+      body:
+          'Two UEC units held the mid-trail. Their slate called it a nest until recall. Lantern Town sleeps easier with them gone.',
+      where: 'Woods · d3 · Town board',
+    ),
+    ClueDef(
+      id: 'quest_nest_slate',
+      title: 'Nest Field Slate',
+      body:
+          'UEC roster for a quiet mid-woods nest: hold until recall. Someone in Town already knew.',
+      where: 'Woods · d3',
+    ),
+    ClueDef(
+      id: 'quest_moonflower',
+      title: 'Moonflower Delivered',
+      body:
+          'A bloom from the SCENT trail, cold as glass. Mira needed it for the sick — and for the lamps that keep Town honest.',
+      where: 'Woods · moonflowers · Town board',
     ),
     ClueDef(
       id: 'shrine_note',

@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import '../audio/sfx_manager.dart';
 import '../game/adventure.dart';
 import '../game/game_state.dart';
+import '../game/quests.dart';
+import '../ui/quest_board_ui.dart';
 import 'bonds.dart';
 import 'interaction.dart';
 
@@ -18,6 +20,9 @@ class ExamineHotspot extends GameComponent with Interactable {
   final String? requiresItem;
   final bool consumeItem;
   final String? setFlag;
+  final String? giveItem;
+  final String? completeQuest;
+  final bool openQuestBoard;
   double _pulse = 0;
 
   ExamineHotspot(
@@ -29,6 +34,9 @@ class ExamineHotspot extends GameComponent with Interactable {
     this.requiresItem,
     this.consumeItem = false,
     this.setFlag,
+    this.giveItem,
+    this.completeQuest,
+    this.openQuestBoard = false,
   }) {
     this.position = position;
     size = Vector2.all(20);
@@ -45,6 +53,7 @@ class ExamineHotspot extends GameComponent with Interactable {
 
   @override
   PromptInfo get prompt {
+    if (openQuestBoard) return const PromptInfo('READ BOARD');
     if (requiresItem != null && !_hasKey && !_done) {
       final name = itemLabels[requiresItem!] ?? requiresItem!;
       return PromptInfo.note('Locked · needs $name');
@@ -58,12 +67,20 @@ class ExamineHotspot extends GameComponent with Interactable {
 
   @override
   void interact() {
+    if (openQuestBoard) {
+      QuestBoard.show();
+      return;
+    }
     if (requiresItem != null && !_hasKey && !_done) return;
     if (requiresItem != null && _hasKey && !_done && consumeItem) {
       Bonds.useItem(requiresItem!);
     }
     Adventure.setFlag('examined:$id');
     if (setFlag != null) Adventure.setFlag(setFlag!);
+    if (giveItem != null && !Bonds.hasItem(giveItem!) && !Bonds.usedItem(giveItem!)) {
+      Bonds.giveItem(giveItem!);
+    }
+    if (completeQuest != null) Quests.complete(completeQuest!);
     final loggedClue = clueId != null && Adventure.discover(clueId!);
     var reward = 0;
     if (loggedClue) {

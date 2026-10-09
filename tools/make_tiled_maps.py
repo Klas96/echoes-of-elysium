@@ -694,7 +694,10 @@ def map1():
     for (fx, fy) in ((28.5, 21.5), (24.5, 24.5), (18.5, 40.5), (11.5, 21.5), (24.5, 21.5), (30.0, 33.0),
                      (24.5, 26.5), (22.5, 27.5), (25.5, 28.5), (27.5, 29.5), (28.5, 32.5),
                      (31.5, 32.5), (28.5, 33.5), (31.5, 33.5), (12.5, 12.5), (14.5, 46.5),
-                     (26.5, 6.5), (30.5, 41.5), (29.5, 25.5), (21.5, 55.5)):
+                     (26.5, 6.5), (30.5, 41.5), (29.5, 25.5), (21.5, 55.5),
+                     # Phase A town jobs: f1 courier, d3 nest, f3 moonflower, mid sign
+                     (6.5, 10.5), (7.2, 10.0), (10.5, 24.0), (11.4, 24.6), (11.8, 24.2),
+                     (9.5, 27.5), (10.2, 27.0), (8.5, 23.5)):
         disk_carve(lv.keepout, fx, fy, 1.4); disk_carve(lv.keepout_hard, fx, fy, 1.0)
     # Scenery: ship + camp as anchors; trees on forest fringe; soft flora on path edge
     lv.stamp("crashed_ship", 2, 2) if lv.prop_fits("crashed_ship", 2, 2) else None
@@ -737,11 +740,12 @@ def map1():
     # clearings stay so the terrain is unchanged.
     for k in ("f2", "f4"): place(lv, "fragment", *P[k])
     for k in ("h1", "h2", "h3"): place(lv, "health", *P[k])
-    # calm pass: d3 (between the second health pickup and Asha) is gone; its
-    # clearing stays so the terrain is unchanged.
-    # Variety: early scout, then a sniper on the side branch.
+    # Variety: early scout, sniper on the side branch, optional nest at d3 (town job).
     place(lv, "drone", *P["d1"], startAngle=0.0, kind="scout")
     place(lv, "drone", *P["d2"], startAngle=2.1, kind="sniper")
+    # Nest sits on the h2–d3 spur, kept ≥260px from Asha's checkpoint.
+    place(lv, "drone", 10.5, 24.0, startAngle=1.2, kind="scout", nest=True)
+    place(lv, "drone", 11.4, 24.6, startAngle=3.8, kind="swarm", nest=True)
     place(lv, "portal", *P["portal"])
     # checkpoints: spawn + mid trail + gate (fewer, ~15+ tiles apart)
     place(lv, "checkpoint", *P["spawn"], label="Crash Site")
@@ -755,6 +759,24 @@ def map1():
     place(lv, "examine", P["asha"][0] - 1.4, P["asha"][1] + 0.8,
           id="woods_boot", title="UEC BOOT PRINT",
           text="Fresh composite sole marks in the moss after rain.", clue="boot_print")
+    # Phase A: town job targets in empty clearings
+    place(lv, "examine", P["f1"][0] + 0.4, P["f1"][1] - 0.3,
+          id="woods_courier_pack", title="SEALED COURIER PACK",
+          text="Lantern Town wax seal. Someone meant this for Mira's board.",
+          quest="courier_pack")
+    place(lv, "stash", P["f1"][0] - 0.8, P["f1"][1] + 0.5, glimmer=12)
+    place(lv, "examine", 11.8, 24.2,
+          id="woods_nest_slate", title="UEC FIELD SLATE",
+          text="Nest roster. Two units. 'Hold the mid-trail until recall.'",
+          clue="quest_nest_slate")
+    place(lv, "examine", P["f3"][0] + 0.5, P["f3"][1],
+          id="woods_moonflower_pick", title="MOONFLOWER CLUSTER",
+          text="A bloom cold as glass. Mira asked for one of these.",
+          give="moonflower_bloom", quest="moonflower_draft")
+    place(lv, "examine", P["h2"][0] + 0.6, P["h2"][1] + 0.4,
+          id="woods_job_sign", title="TRAIL NOTICE",
+          text="Chalk arrow toward town: 'Jobs at the Lantern board. Pay in glimmer.'")
+    place(lv, "hidden", P["f5"][0] - 0.5, P["f5"][1] + 0.6, glimmer=18)
     woods_creatures_and_secrets(lv)
     lv.write("world.tmj", "tilesets/woods.png")
     return ts
@@ -982,6 +1004,10 @@ def map5():
           id="town_stall_note", title="STALL NOTE",
           text="A chalk scribble: 'Archive walls still hum. Drones won't go near.'",
           clue="mira_rumour")
+    place(lv, "examine", P["mira"][0] - 1.4, P["mira"][1] - 0.6,
+          id="town_quest_board", title="JOB BOARD",
+          text="Chalk and string. Woods errands for travellers.",
+          board=True)
     lv.write("world5.tmj", "tilesets/city.png")
     return ts
 
