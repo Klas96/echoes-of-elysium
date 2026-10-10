@@ -1,0 +1,192 @@
+{
+ "id": "archive_library",
+ "title": "Archive library (Archive Square, opened by the Archivist's seal)",
+ "image": "archive_library.png",
+ "size": [
+  16,
+  9
+ ],
+ "tile": 32,
+ "collision": [
+  [
+   0,
+   0,
+   16,
+   3
+  ],
+  [
+   0,
+   3,
+   2,
+   6
+  ],
+  [
+   2,
+   3,
+   1,
+   2
+  ],
+  [
+   14,
+   3,
+   2,
+   6
+  ],
+  [
+   13,
+   3,
+   1,
+   2
+  ],
+  [
+   0,
+   7,
+   6,
+   2
+  ],
+  [
+   10,
+   7,
+   4,
+   2
+  ],
+  [
+   13,
+   6,
+   1,
+   1
+  ],
+  [
+   6,
+   7,
+   1,
+   1
+  ],
+  [
+   9,
+   7,
+   1,
+   1
+  ],
+  [
+   6,
+   8,
+   4,
+   1
+  ],
+  [
+   3,
+   4,
+   2,
+   2
+  ],
+  [
+   6,
+   3,
+   4,
+   3
+  ],
+  [
+   11,
+   4,
+   2,
+   2
+  ]
+ ],
+ "door": [
+  7,
+  7,
+  2,
+  1
+ ],
+ "spawn": [
+  7,
+  6
+ ],
+ "npcs": [
+  {
+   "name": "archivist",
+   "sprite": "archivist",
+   "tile": [
+    11,
+    6
+   ],
+   "role": "keeper",
+   "note": "'Few walk in here who aren't already dust. Read gently.' Free floor beside the lectern"
+  }
+ ],
+ "interact": [
+  {
+   "id": "book_choosing",
+   "rect": [
+    3,
+    2,
+    10,
+    1
+   ],
+   "kind": "lore",
+   "note": "Shelves: The Choosing. 'The Aetherians did not lose a war. They declined one.'"
+  },
+  {
+   "id": "book_lattice_keys",
+   "rect": [
+    11,
+    4,
+    2,
+    2
+   ],
+   "kind": "lore",
+   "note": "Lectern tome: Lattice Keys. 'A keystone fits only a gate that remembers it.' (Ruins gate hint)"
+  },
+  {
+   "id": "book_field_notes",
+   "rect": [
+    3,
+    4,
+    2,
+    2
+   ],
+   "kind": "clue",
+   "note": "Glyph pedestal: Field Notes, author unknown -> clue for the optional City fragment in the West Yard"
+  },
+  {
+   "id": "reading_desk",
+   "rect": [
+    6,
+    3,
+    4,
+    3
+   ],
+   "kind": "flavour",
+   "note": "'A lamp still lit. Someone was here not long ago.'"
+  },
+  {
+   "id": "archivist",
+   "rect": [
+    11,
+    6,
+    1,
+    1
+   ],
+   "kind": "npc",
+   "note": "The Archivist"
+  }
+ ],
+ "lights": [
+  {
+   "tile": [
+    9,
+    3
+   ],
+   "kind": "warm"
+  },
+  {
+   "tile": [
+    3,
+    4
+   ],
+   "kind": "cyan"
+  }
+ ],
+ "walkable_tiles": 24
+}

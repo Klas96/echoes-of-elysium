@@ -10,6 +10,7 @@ import 'creature_components.dart';
 import 'creature_species.dart';
 import 'day_cycle.dart';
 import 'interaction.dart';
+import '../interiors/room_services.dart';
 
 /// Ability-gated obstacles and the small finds they guard (M2). All of them
 /// come from the Tiled 'gameplay' layer; art is in assets/images/obstacles/
@@ -624,8 +625,9 @@ class RiverPebble extends GameComponent {
 
 /// Moonflowers: a hint trail to the hushdeer's glade. By day the plain
 /// flower; as night falls its glow (moonflower_glow.png, 2 frames ping-pong
-/// at 0.9 s) fades in on top.
-class Moonflower extends GameComponent {
+/// at 0.9 s) fades in on top. While Dao's errand (#31) is open, one can be
+/// picked for him.
+class Moonflower extends GameComponent with Interactable {
   Sprite? _plain;
   SpriteAnimationTicker? _glow;
 
@@ -650,6 +652,23 @@ class Moonflower extends GameComponent {
   void update(double dt) {
     super.update(dt);
     _glow?.update(dt);
+  }
+
+  @override
+  bool get canFocus => DaoErrand.wantsFlower;
+
+  @override
+  double get interactRadius => 30;
+
+  @override
+  PromptInfo get prompt => const PromptInfo('PICK FOR DAO');
+
+  @override
+  void interact() {
+    if (!DaoErrand.wantsFlower) return;
+    DaoErrand.pick();
+    SfxManager().playChime();
+    GameToast.show('MOONFLOWER', body: 'For Dao at the noodle shop', compact: true);
   }
 
   @override

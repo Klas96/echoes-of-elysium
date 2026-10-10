@@ -107,6 +107,8 @@ class InteractionManager extends GameComponent {
       var bestD = double.infinity;
       for (final i in Interaction.registry) {
         if (!i.isMounted || !i.canFocus) continue;
+        // Only this game's objects (a room scene runs over the paused map).
+        if (!identical(i.findGame(), findGame())) continue;
         final d = i.interactPoint.distanceTo(pc);
         if (d <= i.interactRadius && d < bestD) {
           bestD = d;

@@ -28,6 +28,8 @@ const itemLabels = <String, String>{
   // creature bond items (obstacles.dart)
   'sweetroot': 'Sweetroot',
   'pebble': 'River Pebble',
+  // Dao's daily errand (#31, interiors/room_services.dart)
+  'dao_moonflower': 'Moonflower for Dao',
 };
 
 /// Key items with Designer art under `assets/images/sprites/items/`:
@@ -44,6 +46,7 @@ const itemsWithArt = <String>{
 /// Items whose icon reuses existing world art instead of `sprites/items/`.
 const _itemIconFallback = <String, String>{
   'pebble': 'assets/images/creatures/river_pebble.png',
+  'dao_moonflower': 'assets/images/sprites/items/moonflower_bloom.png',
 };
 
 /// Flutter asset path of an item's icon ([small]: the 16px variant), or
@@ -296,6 +299,12 @@ class Adventure {
       body:
           'Terminal log: "Sympathetic AI classified for erasure. Collateral risk accepted." Voss signed the follow-up quarantine. Asha\'s name is on the desertion list.',
       where: 'City · UEC terminal',
+    ),
+    ClueDef(
+      id: 'archive_field_notes',
+      title: 'Field Notes, author unknown',
+      body: 'A fragment was carried south, toward the alleys where the drones now hum.',
+      where: 'City · Archive Library',
     ),
     ClueDef(
       id: 'archive_first_memory',
