@@ -14,6 +14,7 @@ import 'muzzle_flash.dart';
 import '../audio/music_manager.dart';
 import '../game/progression.dart';
 import '../game/well_rested.dart';
+import '../interiors/room_services.dart';
 import 'damage_number.dart';
 
 class CustomPlayer extends SimplePlayer with BlockMovementCollision {
@@ -117,7 +118,9 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision {
     WellRested.tick(dt);
     final hp = healthNotifier.value;
     // Calm regen after a quiet spell; "Well rested" trickles in even mid-fight.
-    final rate = (_sinceDamage >= regenDelay ? regenPerSecond : 0.0) +
+    // Dao's ember broth (#31): faster, and no wait after a hit.
+    final delay = Meals.skipRegenDelay ? 0.0 : regenDelay;
+    final rate = (_sinceDamage >= delay ? regenPerSecond * Meals.regenMultiplier : 0.0) +
         (WellRested.active ? WellRested.regenPerSecond : 0.0);
     if (hp <= 0 || hp >= maxHealth || rate <= 0) {
       _regenAcc = 0;
@@ -238,6 +241,8 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision {
 
   @override
   void update(double dt) {
+    speed = sizePlayer * 2.5 * Meals.speedMultiplier; // moss noodles (#31)
+    Meals.tick(dt);
     super.update(dt);
     positionNotifier.value = position.clone();
     _blockedTimer = max(0, _blockedTimer - dt);

@@ -1,0 +1,217 @@
+{
+ "id": "tea_house",
+ "title": "Tea house: the inn at Lantern Gate",
+ "image": "tea_house.png",
+ "size": [
+  16,
+  9
+ ],
+ "tile": 32,
+ "collision": [
+  [
+   0,
+   0,
+   16,
+   3
+  ],
+  [
+   0,
+   3,
+   1,
+   4
+  ],
+  [
+   15,
+   3,
+   1,
+   4
+  ],
+  [
+   0,
+   7,
+   7,
+   2
+  ],
+  [
+   9,
+   7,
+   7,
+   2
+  ],
+  [
+   1,
+   3,
+   3,
+   3
+  ],
+  [
+   1,
+   6,
+   1,
+   1
+  ],
+  [
+   7,
+   3,
+   2,
+   2
+  ],
+  [
+   7,
+   5,
+   2,
+   1
+  ],
+  [
+   10,
+   3,
+   3,
+   3
+  ],
+  [
+   13,
+   3,
+   2,
+   3
+  ],
+  [
+   12,
+   3,
+   1,
+   1
+  ],
+  [
+   14,
+   6,
+   1,
+   1
+  ]
+ ],
+ "door": [
+  7,
+  8,
+  2,
+  1
+ ],
+ "spawn": [
+  7,
+  7
+ ],
+ "npcs": [
+  {
+   "name": "wen",
+   "sprite": "wen",
+   "tile": [
+    4,
+    4
+   ],
+   "role": "host",
+   "note": "Serves tea from the brass urn on the counter; first-visit / later lines in interiors-text.md"
+  },
+  {
+   "name": "ferro",
+   "sprite": "ferro",
+   "tile": [
+    7,
+    2
+   ],
+   "role": "regular",
+   "note": "Old Ferro on the window seat (painted out of the art): one riddle or rumour per in-game day"
+  }
+ ],
+ "interact": [
+  {
+   "id": "rest_bed",
+   "rect": [
+    13,
+    3,
+    2,
+    3
+   ],
+   "kind": "rest",
+   "note": "Wen: sleep here -> save + well_rested"
+  },
+  {
+   "id": "ferro",
+   "rect": [
+    6,
+    2,
+    2,
+    1
+   ],
+   "kind": "npc",
+   "note": "Old Ferro: riddle / rumour"
+  },
+  {
+   "id": "wen",
+   "rect": [
+    4,
+    4,
+    1,
+    1
+   ],
+   "kind": "npc",
+   "note": "Wen, host"
+  },
+  {
+   "id": "window_seat",
+   "rect": [
+    8,
+    2,
+    2,
+    1
+   ],
+   "kind": "flavour",
+   "note": "'Lantern Road runs east from here. The lamps were lit by hand, every one.'"
+  },
+  {
+   "id": "tea_counter",
+   "rect": [
+    1,
+    3,
+    3,
+    3
+   ],
+   "kind": "flavour",
+   "note": "The brass urn and tea tins"
+  }
+ ],
+ "lights": [
+  {
+   "tile": [
+    3,
+    1
+   ],
+   "kind": "warm"
+  },
+  {
+   "tile": [
+    5,
+    1
+   ],
+   "kind": "warm"
+  },
+  {
+   "tile": [
+    10,
+    1
+   ],
+   "kind": "warm"
+  },
+  {
+   "tile": [
+    11,
+    1
+   ],
+   "kind": "warm"
+  },
+  {
+   "tile": [
+    12,
+    1
+   ],
+   "kind": "warm"
+  }
+ ],
+ "walkable_tiles": 28
+}

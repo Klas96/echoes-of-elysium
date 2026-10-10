@@ -36,6 +36,7 @@ flutter:
     - assets/images/creatures/
     - assets/images/obstacles/
     - assets/images/ui/
+    - assets/images/interiors/
     - assets/audio/music/
     - assets/audio/sfx/
     - assets/audio/voices/

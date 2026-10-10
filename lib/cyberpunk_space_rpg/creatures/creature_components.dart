@@ -9,6 +9,7 @@ import 'bonds.dart';
 import 'creature_species.dart';
 import 'day_cycle.dart';
 import 'interaction.dart';
+import '../interiors/room_services.dart';
 
 /// Animations from a Designer creature sheet: 288x128, 32x32 frames, rows
 /// down/up/right/left; cols 0-3 walk (8 fps), 4-5 idle (2 fps), 6-8 happy
@@ -256,7 +257,7 @@ class WildCreature extends CreatureBody with Interactable {
     _lastPlayer = pc.clone();
     final dist = pc.distanceTo(bodyCenter);
 
-    if (alpha > 0.6 && dist < seenRadius && Bonds.markSeen(species.id)) {
+    if (alpha > 0.6 && dist < seenRadius * Meals.nightSightMultiplier && Bonds.markSeen(species.id)) {
       GameToast.show('${species.name} spotted', body: 'Journal', compact: true);
     }
     if (alpha <= 0.02) return;

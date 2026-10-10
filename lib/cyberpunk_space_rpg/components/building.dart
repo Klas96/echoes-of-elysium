@@ -7,6 +7,9 @@ import '../creatures/interaction.dart';
 import '../game/adventure.dart';
 import '../game/game_state.dart';
 import '../game/story_beats.dart';
+import '../interiors/room_scene.dart';
+import '../interiors/room_services.dart';
+import '../interiors/room_text.dart';
 
 /// Sprite size, collision box and door point of a placeable building, in px
 /// from the sprite's top-left. Generated from tools/buildings/<name>.json
@@ -73,6 +76,15 @@ class Building extends GameDecorationWithCollision with Interactable {
   bool get _archiveOpen => Adventure.flag('archive_opened');
 
   @override
+  Future<void> onLoad() {
+    RoomDay.ensure();
+    return super.onLoad();
+  }
+
+  /// Locked-door line (#31, GameConcept), else the building's own.
+  String get flavour => RoomText.lockedDoors[id] ?? def.flavour;
+
+  @override
   Vector2 get interactPoint => position + Vector2(def.door.dx, def.door.dy + 8);
 
   @override
@@ -80,10 +92,8 @@ class Building extends GameDecorationWithCollision with Interactable {
 
   @override
   PromptInfo get prompt {
+    if (Interiors.canEnter(id)) return const PromptInfo('ENTER');
     if (id == 'archive_library') {
-      if (_archiveOpen) {
-        return const PromptInfo.note('Archive · Open. Dust and quiet light.');
-      }
       if (Bonds.hasItem('archive_seal')) return const PromptInfo('USE SEAL', item: 'archive_seal');
       return const PromptInfo.note('Archive · Sealed. Needs the Archivist\'s seal.', item: 'archive_seal');
     }
@@ -95,11 +105,12 @@ class Building extends GameDecorationWithCollision with Interactable {
 
   @override
   void interact() {
+    if (Interiors.canEnter(id)) {
+      Interiors.enter(this);
+      return;
+    }
     if (id == 'archive_library') {
-      if (_archiveOpen) {
-        GameToast.show('ARCHIVE', body: 'Already open.', color: const Color(0xFFFFDD44), compact: true);
-        return;
-      }
+      if (_archiveOpen) return;
       if (!Bonds.hasItem('archive_seal')) return;
       Bonds.useItem('archive_seal');
       Adventure.setFlag('archive_opened');
@@ -117,12 +128,10 @@ class Building extends GameDecorationWithCollision with Interactable {
       GameState.onShrineExamined();
       if (first) Bonds.addGlimmer(8);
       SfxManager().playChime();
-      GameToast.show('SHRINE',
-          body: first ? '+8 glimmer · clue logged' : 'Clue already logged',
-          color: const Color(0xFFCC88FF),
-          compact: true);
+      GameToast.show(first ? 'SHRINE · +8 GLIMMER · CLUE LOGGED' : 'SHRINE',
+          body: flavour, color: const Color(0xFFCC88FF));
       return;
     }
-    GameToast.show('DOOR', body: def.flavour, color: const Color(0xFFAACCEE), compact: true);
+    GameToast.show('DOOR', body: flavour, color: const Color(0xFFAACCEE));
   }
 }
