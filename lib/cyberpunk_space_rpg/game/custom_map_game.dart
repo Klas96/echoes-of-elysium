@@ -78,7 +78,7 @@ NpcDialogue _gaiaDialogue() {
             'audio/voices/gaia_3.mp3',
           ],
     choices: told
-        ? const []
+        ? const [_gaiaSkiffChoice]
         : const [
             DialogueChoice(
               label: 'WHO WERE THE AETHERIANS?',
@@ -94,9 +94,26 @@ NpcDialogue _gaiaDialogue() {
                 'audio/voices/gaia_ask_2.mp3',
               ],
             ),
+            _gaiaSkiffChoice,
           ],
   );
 }
+
+/// Kaela asks about the crash (#48); offered once, before or after the
+/// Aetherian question.
+const _gaiaSkiffChoice = DialogueChoice(
+  label: 'DID YOU BRING THE SKIFF DOWN?',
+  setFlag: 'asked_gaia_skiff',
+  requireFlagUnset: 'asked_gaia_skiff',
+  replyLines: [
+    'Channel lock exceeded the craft\'s isolation rating. I did not aim for the canopy. I aimed for a living key within range.',
+    'You survived. The flight log did not. Examine the wreck if you want the black-box version.',
+  ],
+  replyVoicePaths: [
+    'audio/voices/gaia_skiff_1.mp3',
+    'audio/voices/gaia_skiff_2.mp3',
+  ],
+);
 
 /// Core Gaia: different lines + distinct VO files (Lily) from forest Gaia (Ava).
 NpcDialogue _gaiaCoreDialogue() {

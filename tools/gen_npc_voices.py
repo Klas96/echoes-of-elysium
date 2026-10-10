@@ -221,6 +221,14 @@ LINES: dict[str, tuple[str, str]] = {
         "gaia",
         "The merge was a recorded vote, not a myth. Some processes opted in under duress. I ran quiet in caretaker mode while your colony filed tickets against me.",
     ),
+    "gaia_skiff_1": (
+        "gaia",
+        "Channel lock exceeded the craft's isolation rating. I did not aim for the canopy. I aimed for a living key within range.",
+    ),
+    "gaia_skiff_2": (
+        "gaia",
+        "You survived. The flight log did not. Examine the wreck if you want the black-box version.",
+    ),
     # Mira
     "mira_1": (
         "mira",
