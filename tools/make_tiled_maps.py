@@ -31,8 +31,19 @@ M2 (woods only): creature (species, radius in tiles, netted, gated), stump
 (glimmer), moonflower (decor), glyph (glyph id), hidden (glimmer; only found with the vine fox's
 SCENT), hiddenpath (brambles the vine fox's SCENT opens), boulder (2x2 tiles,
 pushX/pushY in tiles; needs the stone turtle's PUSH) and darkzone (a rect of
-darkness; the glowmoth's LIGHT reveals the glyph inside). Ability gates only
-guard secrets (glyph, stash, hidden, creatures marked gated).
+darkness; the glowmoth's LIGHT reveals the glyph inside). Those optional
+ability gates only guard secrets (glyph, stash, hidden, creatures marked gated).
+
+Main-route ability gates (brief-woods-befriend-gates): abilitygate objects with
+kind (grotto | bramble | boulder), gate (save id), ability, creature (species
+that opens it) and optional needs (comma list of object names the creature's
+bond needs, e.g. stump for the sweetroot). Each kind blocks the tiles its
+Designer collision covers in that state (GATE_ART, closed vs open); an object
+whose gate property names a gate (the pond fragment in the grotto mouth) is
+locked until that gate opens and is then taken from its interaction point. validate_main_gates() checks every
+opening order: each gate's creature, its items and the gate itself are
+reachable before that gate opens, all gates together complete the map's goal
+(lv.goal: fragments + unlocked exit) and no single gate can be skipped.
 
 Buildings (tools/buildings/buildings.tsj, art in assets/images/maps/buildings/)
 are Tiled tile objects named "building" with a string property building=<id>.
@@ -63,7 +74,7 @@ Buildings must stand on clear floor, must not overlap gameplay objects or each
 other, their door must be reachable, and their collision box must not cut off
 any floor that was reachable without them.
 """
-import json, math, os, shutil, sys
+import itertools, json, math, os, shutil, sys
 import xml.etree.ElementTree as ET
 from collections import deque
 import numpy as np
@@ -278,6 +289,7 @@ class Level:
         self.rings_min = 0          # validate(): minimum walkable rings (#26)
         self.mist = []              # (tx, ty) tile centres for ambient mist over water
         self.rings = []
+        self.goal = None            # main-route gates: dict(fragments=N), see validate_main_gates
 
     def obj(self, obj, x, y, w, h, **props):
         self.objects.append(dict(name=obj, x=float(x), y=float(y), w=float(w), h=float(h), props=props))
@@ -516,6 +528,7 @@ class Level:
             if not all(seen[y, x] for (x, y) in cells(o)):
                 raise SystemExit(f"{o['name']} {o['props']} not reachable from spawn")
         self.validate_secrets(ok, seen, cells, flood)
+        self.validate_main_gates(ok, cells, flood)
         self.validate_rings(ok, cells, flood)
         # UECDrone detection radius is 160 px (220 before the calm pass; centre
         # to centre) and it patrols a 70 px circle around its origin; keep
@@ -550,6 +563,8 @@ class Level:
         for o in self.objects:
             if o["name"] in ("boulder", "hiddenpath", "storygate"):
                 for (x, y) in cells(o): closed[y, x] = False
+            if o["name"] == "abilitygate":
+                for (x, y) in gate_blocked_cells(o, "closed"): closed[y, x] = False
         reach = flood(closed)
         self.rings = rings(reach)
         for g in (o for o in self.objects if o["name"] == "storygate"):
@@ -586,7 +601,8 @@ class Level:
             if not any(secret(o) for o in inside):
                 raise SystemExit(f"{g['name']} at {g['x']},{g['y']} guards no secret")
         for o in objs:
-            if o["name"] in ("drone", "sentinel", "darkzone", "boulder", "hiddenpath", "ambient", "light"):
+            if o["name"] in ("drone", "sentinel", "darkzone", "boulder", "hiddenpath", "ambient", "light",
+                             "abilitygate"):
                 continue
             if o["name"] == "creature" and o["props"]["species"] in FLYING: continue
             if secret(o): continue
@@ -604,6 +620,93 @@ class Level:
             if not any(g["name"] == "glyph" and z["x"] <= g["x"] and g["x"] + g["w"] <= z["x"] + z["w"]
                        and z["y"] <= g["y"] and g["y"] + g["h"] <= z["y"] + z["h"] for g in objs):
                 raise SystemExit(f"dark zone at {z['x']},{z['y']} hides no glyph")
+
+    def validate_main_gates(self, ok, cells, flood):
+        """Main-route ability gates: allowed as long as nothing deadlocks.
+        For every order of opening them, the next gate's creature, the
+        objects its bond needs and the gate itself must be reachable with the
+        not-yet-opened gates still closed; all gates open must complete the
+        goal, and leaving out any single gate must not (each one matters)."""
+        objs = self.objects
+        gates = [o for o in objs if o["name"] == "abilitygate"]
+        if not gates:
+            return
+        if self.goal is None:
+            raise SystemExit("abilitygate on a map without lv.goal")
+        ids = [g["props"]["gate"] for g in gates]
+        if len(set(ids)) != len(ids):
+            raise SystemExit(f"duplicate gate ids {ids}")
+        for o in objs:
+            gid = o["props"].get("gate")
+            if o["name"] != "abilitygate" and gid and gid not in ids:
+                raise SystemExit(f"{o['name']} {o['props']} names unknown gate {gid}")
+        H, W = ok.shape
+
+        by_id = {g["props"]["gate"]: g for g in gates}
+
+        def reach_with(opened):
+            m = ok.copy()
+            for g in gates:
+                state = "open" if g["props"]["gate"] in opened else "closed"
+                for (x, y) in gate_blocked_cells(g, state): m[y, x] = False
+            return flood(m)
+
+        def usable(o, reach, opened):
+            gid = o["props"].get("gate")
+            if o["name"] != "abilitygate" and gid:
+                # inside a gate (the grotto fragment): taken from the gate's
+                # interaction point once that gate is open
+                if gid not in opened: return False
+                x, y = gate_interact_cell(by_id[gid])
+                return bool(reach[y, x])
+            if o["name"] == "creature" and o["props"]["species"] in FLYING:
+                cx, cy = (o["x"] + o["w"] / 2) / T, (o["y"] + o["h"] / 2) / T
+                r = o["props"]["radius"] + 1.5
+                return any(reach[y, x] for y in range(max(0, int(cy - r)), min(H, int(cy + r) + 1))
+                           for x in range(max(0, int(cx - r)), min(W, int(cx + r) + 1))
+                           if (x + 0.5 - cx) ** 2 + (y + 0.5 - cy) ** 2 <= r * r)
+            return all(reach[y, x] for (x, y) in cells(o))
+
+        def gate_reachable(g, reach):
+            x, y = gate_interact_cell(g)
+            return 0 <= x < W and 0 <= y < H and bool(reach[y, x])
+
+        def goal_done(opened):
+            reach = reach_with(opened)
+            frags = sum(1 for o in objs if o["name"] == "fragment" and usable(o, reach, opened))
+            exits = [o for o in objs if o["name"] == "mapexit" and o["props"].get("unlock")]
+            return frags >= self.goal.get("fragments", 0) and all(
+                any(reach[y, x] for (x, y) in cells(e)) for e in exits)
+
+        def needs_of(g):
+            sp = g["props"]["creature"]
+            found = [o for o in objs if o["name"] == "creature" and o["props"]["species"] == sp]
+            if not found:
+                raise SystemExit(f"gate {g['props']['gate']}: no {sp} on this map")
+            names = [n for n in str(g["props"].get("needs", "")).split(",") if n]
+            items = [o for o in objs if o["name"] in names]
+            if len({o["name"] for o in items}) != len(names):
+                raise SystemExit(f"gate {g['props']['gate']}: missing needed object(s) {names}")
+            return found + items
+
+        for order in itertools.permutations(gates):
+            opened = set()
+            for g in order:
+                reach = reach_with(opened)
+                gid = g["props"]["gate"]
+                path = " -> ".join(o["props"]["gate"] for o in order)
+                for o in needs_of(g):
+                    if not usable(o, reach, opened):
+                        raise SystemExit(f"gate {gid}: {o['name']} {o['props'].get('species', '')} not reachable "
+                                         f"before it opens (order {path})")
+                if not gate_reachable(g, reach):
+                    raise SystemExit(f"gate {gid} itself is not reachable (order {path})")
+                opened.add(gid)
+        if not goal_done(set(ids)):
+            raise SystemExit(f"goal {self.goal} not reachable with every main gate open")
+        for gid in ids:
+            if goal_done(set(ids) - {gid}):
+                raise SystemExit(f"gate {gid} can be skipped (goal reachable without it)")
 
     def emit_ambient_fx(self):
         """Gameplay overlays for static props that should feel alive (steam, embers)."""
@@ -836,6 +939,42 @@ def place_entry(lv, side, tx, ty):
 FLYING = {"glowmoth"}
 # objects an ability gate may hide; anything else behind a boulder is an error
 SECRET_KINDS = {"glyph", "stash", "hidden", "moonflower"}
+# Main-route gate art: collision rects [x, y, w, h] in art px for each state
+# and the interaction point, from Designer's JSON (copied next to the PNGs in
+# assets/images/obstacles/: pond_grotto.json, road_boulder.json,
+# bramble_closed/open.json). test/woods_gates_test.dart keeps the game's
+# copies of these rects in sync with the JSON. A tile counts as blocked in a
+# state when one of that state's rects covers the tile centre.
+GATE_ART = {
+    "grotto": dict(size=(96, 64), interact=(46, 66),
+                   closed=[(16, 3, 19, 30), (58, 3, 19, 30), (35, 3, 23, 10), (14, 33, 65, 29), (35, 13, 23, 20)],
+                   open=[(16, 3, 19, 30), (58, 3, 19, 30), (35, 3, 23, 10), (14, 33, 65, 29)]),
+    # Designer's interaction point is the south side; on the Woods road
+    # Kaela arrives from the meadow, so the game uses the north side (48, 10)
+    "boulder": dict(size=(96, 64), interact=(48, 10),
+                    closed=[(0, 21, 96, 28)], open=[(64, 37, 29, 17)]),
+    "bramble": dict(size=(64, 64), interact=(32, 20),
+                    closed=[(5, 39, 52, 22)], open=[(1, 39, 15, 22), (48, 39, 15, 22)]),
+}
+
+def gate_blocked_cells(g, state):
+    """Map tiles the gate object [g] blocks in [state] ('closed' / 'open')."""
+    art = GATE_ART[g["props"]["kind"]]
+    kx, ky = g["w"] / art["size"][0], g["h"] / art["size"][1]
+    out = set()
+    for ty in range(int(g["y"] // T), int((g["y"] + g["h"] - 0.01) // T) + 1):
+        for tx in range(int(g["x"] // T), int((g["x"] + g["w"] - 0.01) // T) + 1):
+            cx, cy = tx * T + T / 2, ty * T + T / 2
+            for (x, y, w, h) in art[state]:
+                x0, y0 = g["x"] + x * kx, g["y"] + y * ky
+                if x0 < cx < x0 + w * kx and y0 < cy < y0 + h * ky:
+                    out.add((tx, ty)); break
+    return out
+
+def gate_interact_cell(g):
+    art = GATE_ART[g["props"]["kind"]]
+    ix, iy = art["interact"]
+    return (int((g["x"] + ix * g["w"] / art["size"][0]) // T), int((g["y"] + iy * g["h"] / art["size"][1]) // T))
 # min centre distance from a checkpoint to each enemy kind (see validate)
 CP_CLEAR = dict(drone=260, sentinel=300)
 
@@ -878,8 +1017,8 @@ def map1():
     lv = Level(ts, 56, 44, seed=11)
     lv.rings_min = 2
     P = dict(spawn=(8, 9), gaia=(11, 8), h1=(17, 12), cabin=(19.5, 7.5), ridge=(31, 6),
-             pond=(42, 10), f2=(37.5, 12.5), cross=(27, 20), d2=(34, 15.5), ebend=(36, 24),
-             egrove=(48.5, 23), f4=(50.5, 23.5), whollow=(6, 23), f1=(5.5, 21.5), hollow=(13, 19),
+             pond=(42, 10), f2=(37.41, 11.84), cross=(27, 20), d2=(34, 15.5), ebend=(36, 24),
+             egrove=(48.5, 23), f4=(51, 29.5), whollow=(6, 23), f1=(5.5, 21.5), hollow=(13, 19),
              swbend=(9, 34), nest=(4.5, 39), asha=(24, 33), h2=(23, 26), brook=(32, 35),
              meadow=(42, 36), h3=(44.5, 30.5), exit=(42, 40), f3=(15, 36), d1=(16, 33.5))
     trails = [
@@ -924,7 +1063,14 @@ def map1():
     # hidden inside the forest block between the ridge and the crossroads
     gated[8:11, 27:29] = True                         # bramble cells (+ the trail row above)
     gated[11:14, 26:30] = True                        # hidden glade
+    # Main-route SCENT gate: the east grove fragment sits in a pocket south of
+    # the grove, behind a 2x2 bramble (trail row above + bramble + pocket)
+    gated[25:28, 50:52] = True
+    gated[28:31, 49:53] = True
     wall &= ~gated
+    # Main-route PUSH gate: the south road narrows to a 3-tile neck (rows
+    # 40-41, x 40-42) that the fallen boulder fills
+    wall[40:42, 43] = True
     lv.floor = ~wall
     water = np.zeros_like(wall); rect_carve(water, 41, 7, 46, 10); water &= lv.floor
     lv.mist = [(42.5, 8.0), (44.5, 8.6)]
@@ -951,6 +1097,8 @@ def map1():
     rect_carve(lv.keepout, 16, 2, 24, 9); rect_carve(lv.keepout_hard, 16, 2, 24, 9)
     disk_carve(lv.keepout, 3.5, 30.5, 2.5); disk_carve(lv.keepout_hard, 3.5, 30.5, 2.5)
     disk_carve(lv.keepout, 44, 12.5, 3.0); disk_carve(lv.keepout_hard, 44, 12.5, 2.2)   # pond bank
+    for (x0, y0, x1, y1) in GATE_CLEAR:                # main-route gates + the ground in front of them
+        rect_carve(lv.keepout, x0, y0, x1, y1); rect_carve(lv.keepout_hard, x0, y0, x1, y1)
     for (fx, fy) in WOODS_RESERVED:
         disk_carve(lv.keepout, fx, fy, 1.4); disk_carve(lv.keepout_hard, fx, fy, 1.0)
     # landmarks: the wreck at the crash, a standing-stone circle at the
@@ -984,8 +1132,9 @@ def map1():
     place(lv, "spawn", *P["spawn"])
     place(lv, "npc", *P["gaia"], name="gaia")
     place(lv, "npc", *P["asha"], name="asha")
-    # memory fragments 1-2 (both open the road): pond glade NE and east grove
-    place(lv, "fragment", *P["f2"], was=(19.5, 16.5))
+    # memory fragments 1-2 (both open the road): pond grotto NE (LIGHT) and
+    # the east grove pocket behind the brambles (SCENT)
+    place(lv, "fragment", *P["f2"], was=(19.5, 16.5), gate="woods_grotto")
     place(lv, "fragment", *P["f4"], was=(24, 38.5))
     place(lv, "health", *P["h1"], was=(12.5, 14.5))
     place(lv, "health", *P["h2"], was=(11, 22.5))
@@ -999,7 +1148,7 @@ def map1():
     open_map_edge(lv, "south", ex, half=2)
     place_mapexit(lv, "south", ex, dest="city", entry="north", half=2, unlock=True,
                   lockedTitle="WOODS EDGE",
-                  lockedBody="Two memory fragments open the road south to the City.")
+                  lockedBody="The road south is blocked. The woods still want something from you.")
     place_entry(lv, "south", P["exit"][0], P["exit"][1] - 1.0)    # arriving back from the City
     place(lv, "checkpoint", *P["spawn"], label="Crash Site")
     place(lv, "checkpoint", P["cross"][0] - 0.5, P["cross"][1] + 3.5, label="Crossroads")
@@ -1011,8 +1160,9 @@ def map1():
           clue="gaia_plaque")
     place(lv, "examine", P["spawn"][0] - 1.2, P["spawn"][1] + 1.4,
           id="woods_mission_slate", title="FIELD BRIEF",
-          text="Kaela — talk to Gaia (green) by the crash. Collect any two glowing fragments; the trails ring round, "
-               "so every clearing has two ways in. The road to the City leaves the south-east meadow. "
+          text="Kaela — talk to Gaia (green) by the crash, then Asha at her camp: the woods need friends. Both glowing "
+               "fragments open the road; the trails ring round, so every clearing has two ways in. The road to the City "
+               "leaves the south-east meadow. "
                "Do not let the UEC wipe her.")
     place(lv, "examine", P["asha"][0] - 1.4, P["asha"][1] + 0.8,
           id="woods_boot", title="UEC BOOT PRINT",
@@ -1033,7 +1183,8 @@ def map1():
     place(lv, "examine", P["cross"][0] + 1.2, P["cross"][1] + 2.4,
           id="woods_fork_sign", title="STANDING STONES",
           text="Every trail meets here. NE: the pond. E: the grove. S: Asha's camp. W: the mossy hollow and "
-               "round to the crash. Fragments glow out there; any two open the City road from the south-east meadow.")
+               "round to the crash. Fragments glow out there (a dark grotto by the pond, thorns past the grove); a fallen boulder "
+               "blocks the City road beyond the south-east meadow.")
     place(lv, "examine", P["ridge"][0] + 1.5, P["ridge"][1] - 0.5,
           id="woods_ridge_lookout", title="CITY LIGHTS TO THE SOUTH",
           text="From the ridge, past the radio dish, the City's glow hangs over the treeline to the south-east. "
@@ -1041,7 +1192,7 @@ def map1():
     place(lv, "examine", P["h2"][0] + 1.4, P["h2"][1] + 0.4,
           id="woods_job_sign", title="TRAIL NOTICE",
           text="Chalk: once you reach the City, look EAST down the boulevard for Lantern Town — jobs and glimmer.")
-    place(lv, "examine", P["f2"][0] - 1.4, P["f2"][1] + 0.6,
+    place(lv, "examine", 36.1, 13.1,
           id="woods_glade_sign", title="SIDE PATH MARK",
           text="Trails leave the pond three ways: west along the ridge, south-west to the stones, south to the grove. "
                "You will not get stuck.")
@@ -1051,6 +1202,7 @@ def map1():
                "the Archive south-east, the Ruins road south.")
     place(lv, "hidden", 13.5, 12.5, glimmer=18, was=(13.0, 43.6))
     woods_creatures_and_secrets(lv, nooks)
+    woods_main_gates(lv)
     lv.write("world.tmj", "tilesets/woods.png")
     return ts
 
@@ -1060,9 +1212,25 @@ WOODS_RESERVED = ((47.5, 7.5), (44, 12.5), (47.5, 20.5), (13, 19), (40, 12.5), (
                   (5.5, 21.5), (6.1, 21.2), (4.9, 22.5), (4.5, 39), (6.1, 38.6), (15.5, 36),
                   (3.5, 30.5), (13.5, 12.5), (37.5, 26), (14, 38), (13, 17), (32.5, 5.5))
 
+# keep props off the main-route gates (x0, y0, x1, y1 tiles, end exclusive)
+GATE_CLEAR = ((35, 10, 40, 15), (49, 24, 53, 31), (39, 38, 44, 42))
+
+def woods_main_gates(lv):
+    """Three friends to get through the Woods (brief-woods-befriend-gates):
+    the pond fragment lies in a dark grotto (glowmoth LIGHT), the east grove
+    fragment behind brambles (vine fox SCENT, sweetroot from the stump), and a
+    fallen boulder fills the south road (stone turtle PUSH). Any order."""
+    lv.goal = dict(fragments=2)
+    lv.obj("abilitygate", 36 * T, 11 * T, 3 * T, 2 * T, kind="grotto", gate="woods_grotto",
+           ability="light", creature="glowmoth")
+    lv.obj("abilitygate", 50 * T, 26 * T, 2 * T, 2 * T, kind="bramble", gate="woods_brambles",
+           ability="scent", creature="vinefox", needs="stump")
+    lv.obj("abilitygate", 40 * T, 40 * T, 3 * T, 2 * T, kind="boulder", gate="woods_boulder",
+           ability="push", creature="stoneturtle")
+
 def woods_creatures_and_secrets(lv, nooks):
-    """M2: creatures (journal + companions) and ability-gated optional secrets.
-    Nothing on the main route needs an ability; validate() checks that."""
+    """M2: creatures (journal + companions) and ability-gated optional secrets
+    (the main-route gates are in woods_main_gates)."""
     creature(lv, "glowmoth", 47.5, 7.5, 1.4, was=(28.5, 21.5))     # over the pond, only out at night
     creature(lv, "stoneturtle", 44, 12.5, 0.6, netted=True, was=(24.5, 24.5))   # netted on the pond bank
     creature(lv, "vinefox", 47.5, 20.5, 1.2, was=(18.5, 40.5))     # east grove

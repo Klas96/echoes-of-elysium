@@ -4,6 +4,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../creatures/region_gates.dart';
+
 /// A 2D point in map pixels (top-left of the player, like Bonfire positions).
 @immutable
 class SavePoint {
@@ -32,10 +34,10 @@ class SavePoint {
 
 /// Everything a playthrough needs to resume. Serialized as versioned JSON.
 ///
-/// Schema (v1):
+/// Schema (v2):
 /// ```json
 /// {
-///   "version": 1,
+///   "version": 2,
 ///   "savedAt": "2026-10-03T09:54:00.000Z",
 ///   "playTimeSeconds": 0,
 ///   "mapId": "world",              // Tiled map file stem: world, world2, world3, world4...
@@ -57,14 +59,24 @@ class SavePoint {
 ///   "equipped": {"rifle": "pulse_optic", "suit": "scrap_plating"},
 ///   "challenges": {"riddle_old_colonist": {"done": true, "best": 41.2}},
 ///   "dayTime": 0.3,                // 0..1 fraction of the day cycle (0 = midnight)
-///   "settings": {}
+///   "settings": {},
+///   "regions": {                   // v2: region friends + main-route gates
+///     "woods": {
+///       "goalSet": true,           // Asha set "find three friends"
+///       "friends": 2,              // friends of this region (snapshot; bonds are the truth)
+///       "gates": {"woods_boulder": true},   // opened gates stay open
+///       "hints": {"woods_grotto": 2},       // times Kaela walked into it closed
+///       "farewellSeen": false      // the treeline farewell played
+///     }
+///   }
 /// }
 /// ```
+/// v1 -> v2: see [migrateGatesV1] (never strands a player behind a new gate).
 /// Unknown keys are kept in [extra] so an older build never drops data a newer
 /// build wrote. Bump [currentVersion] and add a step to [SaveService.migrate]
 /// when a field changes meaning.
 class SaveData {
-  static const currentVersion = 1;
+  static const currentVersion = 2;
   static const defaultDayTime = 0.3;
 
   int version;
@@ -90,6 +102,7 @@ class SaveData {
   Map<String, Map<String, dynamic>> challenges;
   double dayTime;
   Map<String, dynamic> settings;
+  Map<String, Map<String, dynamic>> regions;
   Map<String, dynamic> extra;
 
   SaveData({
@@ -116,6 +129,7 @@ class SaveData {
     Map<String, Map<String, dynamic>>? challenges,
     this.dayTime = defaultDayTime,
     Map<String, dynamic>? settings,
+    Map<String, Map<String, dynamic>>? regions,
     Map<String, dynamic>? extra,
   })  : savedAt = savedAt ?? DateTime.now().toUtc(),
         storyFlags = storyFlags ?? {},
@@ -126,6 +140,7 @@ class SaveData {
         equipped = equipped ?? {},
         challenges = challenges ?? {},
         settings = settings ?? {},
+        regions = regions ?? {},
         extra = extra ?? {};
 
   static const _known = {
@@ -133,7 +148,7 @@ class SaveData {
     'health', 'checkpoint', 'objectiveStep', 'fragments', 'storyFlags',
     'collected', 'bonds', 'activeCompanion', 'abilities', 'glimmer',
     'level', 'xp', 'inventory', 'equipped',
-    'challenges', 'dayTime', 'settings',
+    'challenges', 'dayTime', 'settings', 'regions',
   };
 
   bool flag(String key) => storyFlags[key] ?? false;
@@ -164,6 +179,7 @@ class SaveData {
         'challenges': challenges,
         'dayTime': dayTime,
         'settings': settings,
+        'regions': regions,
       };
 
   /// Lenient parse: a missing or malformed field falls back to its default
@@ -217,6 +233,7 @@ class SaveData {
       challenges: nested(j['challenges']),
       dayTime: asDouble(j['dayTime'], defaultDayTime),
       settings: j['settings'] is Map ? Map<String, dynamic>.from(j['settings'] as Map) : {},
+      regions: nested(j['regions']),
       extra: {
         for (final e in j.entries)
           if (!_known.contains(e.key)) e.key: e.value
@@ -290,7 +307,11 @@ class SaveService {
   /// Upgrades older save JSON to [SaveData.currentVersion], one step at a time.
   static Map<String, dynamic> migrate(Map<String, dynamic> json) {
     var v = json['version'] is num ? (json['version'] as num).toInt() : 1;
-    // Future: if (v == 1) { ...rename/convert fields...; v = 2; }
+    if (v <= 1) {
+      // v2: Woods friends + main-route gates (brief-woods-befriend-gates).
+      json = migrateGatesV1(json);
+      v = 2;
+    }
     if (v > SaveData.currentVersion) {
       // Written by a newer build: read what we understand, keep the rest.
       debugPrint('SaveService: save version $v is newer than ${SaveData.currentVersion}');

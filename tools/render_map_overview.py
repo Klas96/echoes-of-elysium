@@ -24,9 +24,10 @@ COL = dict(spawn=(0, 255, 0), portal=(0, 255, 255), npc=(255, 255, 0), fragment=
            creature=(255, 170, 255), stump=(200, 140, 60), boulder=(160, 160, 160), stash=(255, 230, 90),
            glyph=(90, 255, 255), hidden=(255, 140, 200), darkzone=(60, 60, 160), pebble=(140, 200, 255),
            moonflower=(240, 240, 255), hiddenpath=(255, 120, 200), examine=(140, 220, 255),
+           abilitygate=(255, 140, 0),
            mapexit=(255, 255, 255), entry=(255, 255, 255), storygate=(255, 80, 200), ambient=None, light=None)
 LABEL = {"npc": "name", "examine": "id", "checkpoint": "label", "mapexit": "dest", "entry": "side",
-         "creature": "species", "drone": "kind"}
+         "creature": "species", "drone": "kind", "abilitygate": "gate"}
 
 
 def font(sz):

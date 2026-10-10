@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../creatures/bonds.dart';
+import '../creatures/gates.dart';
+import '../creatures/interaction.dart';
+import '../creatures/region_gates.dart';
 import 'adventure.dart';
 import 'memories.dart';
 import 'quests.dart';
@@ -14,9 +17,40 @@ import 'save_service.dart';
 class GameState {
   static final objective = ValueNotifier<String>('');
   static final fragmentsCollected = ValueNotifier<int>(0);
-  /// Memory fragments 1-2 are in the woods; both open its portal (the
-  /// other three memories are optional, see Memories).
+  /// Memory fragments 1-2 are in the woods; both (plus the fallen boulder
+  /// pushed aside) open the road south (the other three memories are
+  /// optional, see Memories).
   static const fragmentsRequired = 2;
+
+  /// The Woods exit rule (brief-woods-befriend-gates): 2 fragments AND the
+  /// fallen boulder pushed aside. The fragments sit behind LIGHT and SCENT
+  /// gates, so all three Woods friends are needed.
+  static const woodsBoulder = 'woods_boulder';
+  static bool get woodsExitEarned =>
+      fragmentsCollected.value >= fragmentsRequired && Gates.isOpen(woodsBoulder);
+
+  static bool _wired = false;
+  static void _wire() {
+    if (_wired) return;
+    _wired = true;
+    Bonds.revision.addListener(_refresh);
+    Gates.onChanged = _refresh;
+    Gates.onOpened = (id) {
+      if (_level == 1 && id == woodsBoulder) _checkWoodsExit();
+    };
+  }
+
+  static void _checkWoodsExit() {
+    if (_level != 1 || portalUnlocked.value || !woodsExitEarned) {
+      _refresh();
+      return;
+    }
+    portalUnlocked.value = true;
+    _advance(1, _l1Portal);
+    GameToast.show('ROAD SOUTH', body: woodsGoal.exitOpens, color: const Color(0xFF66FFAA), seconds: 4);
+    _refresh();
+    _progress();
+  }
   static final portalUnlocked = ValueNotifier<bool>(false);
 
   /// Shown when the game is finished.
@@ -81,16 +115,19 @@ class GameState {
     d.objectiveStep = _step;
     d.fragments = fragmentsCollected.value;
     d.setFlag('portalUnlocked:${mapIds[_level]}', portalUnlocked.value);
+    Gates.writeTo(d);
   }
 
   /// CONTINUE: put a level back the way the save left it.
   static void restore(int level, SaveData d) {
+    _wire();
     _level = level;
     _step = d.objectiveStep;
     switch (level) {
       case 1:
         fragmentsCollected.value = d.fragments.clamp(0, fragmentsRequired);
-        portalUnlocked.value = d.flag('portalUnlocked:world') || d.fragments >= fragmentsRequired;
+        portalUnlocked.value = d.flag('portalUnlocked:world') ||
+            (d.fragments >= fragmentsRequired && Gates.isOpen(woodsBoulder));
       case 2:
         // Archivist after Sentinel. Old saves that already unlocked keep it.
         portalUnlocked.value = citySouthOpen ||
@@ -110,10 +147,22 @@ class GameState {
   static void _progress() => SaveService.requestAutosave();
 
   static void resetMap1() {
+    _wire();
     _level = 1;
-    _step = _l1Gaia;
-    fragmentsCollected.value = 0;
-    portalUnlocked.value = false;
+    // Walking back into the woods (from the City) must keep what the save
+    // already earned: fragments taken, friends made, the road south open.
+    // A fresh game has none of these, so it still starts at Gaia.
+    final d = SaveService.data;
+    final taken = d.collected.where((c) => c.startsWith('world:fragment:')).length;
+    fragmentsCollected.value = taken.clamp(0, fragmentsRequired);
+    portalUnlocked.value = d.flag('portalUnlocked:world') || woodsExitEarned;
+    _step = portalUnlocked.value
+        ? _l1Portal
+        : taken > 0 || Gates.goalSet('woods')
+            ? _l1Fragments
+            : d.flag('talked:gaia')
+                ? _l1Asha
+                : _l1Gaia;
     _refresh();
   }
 
@@ -173,13 +222,8 @@ class GameState {
     }
     final n = fragmentsCollected.value + 1;
     fragmentsCollected.value = n;
-    if (n >= fragmentsRequired) {
-      portalUnlocked.value = true;
-      _advance(1, _l1Portal);
-    } else {
-      _advance(1, _l1Fragments);
-    }
-    _refresh();
+    _advance(1, _l1Fragments);
+    _checkWoodsExit();
     _progress();
   }
 
@@ -202,6 +246,7 @@ class GameState {
           _advance(1, _l1Asha);
         }
       case 'asha':
+        if (_level == 1) Gates.setGoal('woods');
         _advance(1, _l1Fragments);
       case 'echo7':
         _advance(2, _l2Archivist);
@@ -267,9 +312,15 @@ class GameState {
           return job ??
               'Mission: take the south-east meadow road off the map to the City (Lantern Town lies east of its plaza)';
         }
-        if (_step >= _l1Fragments) {
-          return 'Mission: find any two glowing memory fragments '
-              '(${fragmentsCollected.value}/$fragmentsRequired) — then the meadow road to the City opens';
+        if (_step >= _l1Fragments || Gates.goalSet('woods')) {
+          // Friends first: while a closed gate still waits for its creature.
+          final waiting = gatesIn('woods').any((g) => !Gates.isOpen(g.id) && !Bonds.isBefriended(g.creature));
+          if (waiting) return Gates.tracker('woods');
+          if (fragmentsCollected.value < fragmentsRequired) {
+            return '${Gates.tracker('woods')} · memory fragments '
+                '${fragmentsCollected.value}/$fragmentsRequired (pond grotto, east grove)';
+          }
+          return '${Gates.tracker('woods')} · the fallen boulder on the south road';
         }
         if (job != null && _step >= _l1Asha) return job;
         return _step >= _l1Asha

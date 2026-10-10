@@ -246,7 +246,7 @@ class WildCreature extends CreatureBody with Interactable {
     super.update(dt);
     tickBody(dt);
     // The active companion walks with Kaela; its wild self is away.
-    _hidden = Bonds.active == species.id;
+    _hidden = Bonds.activeHere == species.id;
     final targetAlpha = (_hidden || !_present) ? 0.0 : 1.0;
     alpha += (targetAlpha - alpha).clamp(-dt * 1.5, dt * 1.5);
     final player = gameRef.player;
@@ -394,7 +394,21 @@ class WildCreature extends CreatureBody with Interactable {
 /// the journal changes [Bonds.active].
 class Companion extends CreatureBody {
   static Companion? current;
+
+  /// Farewell at the region's edge: the companion stops here and stays
+  /// behind (cleared on the next map).
+  static Vector2? holdAt;
   String? _id;
+  String? _lentTo;
+  double _lentFor = 0;
+
+  /// A [GateHelper] of the same species is doing the job: hide this one for
+  /// [seconds] so there aren't two of it.
+  void lend(String speciesId, double seconds) {
+    if (_id != speciesId) return;
+    _lentTo = speciesId;
+    _lentFor = seconds;
+  }
   int _loadToken = 0;
   double _emote = 0;
   double _t = 0;
@@ -432,7 +446,15 @@ class Companion extends CreatureBody {
     final player = gameRef.player;
     if (player == null) return;
     final pc = player.position + player.size / 2;
-    final want = Bonds.active;
+    // Companions only follow Kaela in their home region (Regions).
+    final want = Bonds.activeHere;
+    if (_lentFor > 0) {
+      _lentFor -= dt;
+      alpha = 0;
+      if (_lentFor <= 0) _lentTo = null;
+    } else if (alpha < 1) {
+      alpha = min(1, alpha + dt * 2);
+    }
     if (want != _id) {
       _id = want;
       sprites = null;
@@ -450,6 +472,21 @@ class Companion extends CreatureBody {
     if (!present) return;
     tickBody(dt);
 
+    final hold = holdAt;
+    if (hold != null) {
+      // stays at the treeline, watching her go
+      final d = hold - bodyCenter;
+      if (d.length > 4) {
+        final step = d.normalized() * min(d.length, 60 * dt);
+        position += step;
+        faceVector(step);
+        mode = CreatureMode.walk;
+      } else {
+        mode = CreatureMode.idle;
+        faceVector(pc - bodyCenter);
+      }
+      return;
+    }
     // follow: stay a little behind Kaela
     final dir = switch (player.lastDirection) {
       Direction.up || Direction.upLeft || Direction.upRight => Vector2(0, 1),
@@ -496,7 +533,7 @@ class Companion extends CreatureBody {
 
   @override
   void render(Canvas canvas) {
-    if (!present) return;
+    if (!present || _lentTo != null) return;
     if (species.ability == Ability.light) {
       renderGlow(canvas, const Color(0xFFE8D0FF), DayCycle.night ? 30 : 16, DayCycle.night ? 0.45 : 0.25);
     }

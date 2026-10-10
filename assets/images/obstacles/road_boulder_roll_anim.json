@@ -1,0 +1,12 @@
+{
+ "frame": [
+  96,
+  64
+ ],
+ "frames": 3,
+ "fps": 10,
+ "loop": false,
+ "from_file": "road_boulder_closed.png",
+ "to_file": "road_boulder_open.png",
+ "note": "full 96x64 frames on the same canvas as road_boulder_closed/open: show closed -> frames 0-2 once at 10 fps -> open. Swap the collision to the open state when the anim starts (or ends)."
+}

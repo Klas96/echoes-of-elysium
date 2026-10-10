@@ -131,7 +131,9 @@ class CreatureHud extends StatelessWidget {
         ValueListenableBuilder<int>(
           valueListenable: Bonds.revision,
           builder: (_, __, ___) {
-            final id = Bonds.active;
+            // Companions stay in their home region: no chip (and no ability)
+            // outside it.
+            final id = Bonds.activeHere;
             if (id == null) return const SizedBox.shrink();
             final s = creatureSpecies[id]!;
             final portrait = ClipOval(

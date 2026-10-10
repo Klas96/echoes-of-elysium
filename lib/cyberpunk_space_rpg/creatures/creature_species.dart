@@ -66,6 +66,10 @@ class CreatureSpecies {
   /// Wander speed in px/s.
   final double speed;
 
+  /// Home region id (GameState.regionIds): the creature only follows Kaela
+  /// and its ability only works there (see Regions).
+  final String region;
+
   const CreatureSpecies({
     required this.id,
     required this.name,
@@ -79,6 +83,7 @@ class CreatureSpecies {
     this.item,
     this.itemName,
     this.speed = 18,
+    this.region = 'woods',
   });
 
   String get sheet => 'creatures/${id}_sheet.png';
