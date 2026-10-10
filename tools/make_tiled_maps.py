@@ -550,7 +550,12 @@ class Level:
         for o in self.objects:
             if o["name"] in ("boulder", "hiddenpath", "storygate"):
                 for (x, y) in cells(o): closed[y, x] = False
-        self.rings = rings(flood(closed))
+        reach = flood(closed)
+        self.rings = rings(reach)
+        for g in (o for o in self.objects if o["name"] == "storygate"):
+            for o in self.objects:
+                if o["name"] == "portal" and any(reach[y, x] for (x, y) in cells(o)):
+                    raise SystemExit(f"storygate at {g['x']},{g['y']} can be walked around (portal reachable)")
         if len(self.rings) < self.rings_min:
             raise SystemExit(f"only {len(self.rings)} walkable ring(s); this map needs >= {self.rings_min}")
 
@@ -1336,63 +1341,94 @@ CITY_RESERVED = ((4.5, 25), (3.5, 27), (7.5, 25), (5.5, 27.5), (3, 23.5), (5.5, 
 
 # =============================================================== MAP 5: Lantern Town
 def map5():
-    """Peaceful colony hub off the City — vendor, rest, return travel."""
+    """Peaceful colony hub off the City — vendor, rest, return travel.
+
+    #26 light pass: the market lanes ring a central MARKET HALL block, and
+    Lantern Pond on the east green is ringed by a promenade, so the town is
+    two loops around landmarks rather than one open square. The west road
+    back to the City (edge exit) is unchanged; Mira's stall faces it."""
     ts = Tileset("city")
-    lv = Level(ts, 28, 28, seed=55)
-    P = dict(spawn=(14, 5.5), mira=(10.5, 13.5), h1=(17.5, 12.5), portal=(14, 22.5),
-             stash=(20.5, 16.5))
+    lv = Level(ts, 36, 28, seed=55)
+    lv.rings_min = 2
+    P = dict(spawn=(16, 5.5), mira=(10, 13.5), h1=(21.5, 12.5), portal=(16, 23), stash=(32.5, 21.5),
+             pond=(29, 14))
     road = np.zeros((lv.H, lv.W), bool)
-    rect_carve(road, 12, 3, 16, 25)            # market lane N-S
-    rect_carve(road, 6, 12, 22, 15)            # cross street
+    rect_carve(road, 9, 6, 23, 8)              # north lane
+    rect_carve(road, 9, 18, 23, 20)            # south lane
+    rect_carve(road, 9, 6, 11, 20)             # west lane
+    rect_carve(road, 21, 6, 23, 20)            # east lane
+    rect_carve(road, 0, 12, 9, 15)             # west road → City
     floor = np.zeros_like(road)
-    rect_carve(floor, 8, 3, 20, 25)            # main plaza
-    rect_carve(floor, 4, 10, 24, 17)           # market square
-    rect_carve(floor, 11, 20, 17, 26)          # south court
-    rect_carve(floor, 0, 11, 8, 16)            # west road → City edge
+    rect_carve(floor, 12, 2, 21, 6)            # Lantern Gate court (spawn)
+    rect_carve(floor, 8, 5, 25, 9)             # north lane + walks
+    rect_carve(floor, 8, 17, 25, 21)           # south lane + walks
+    rect_carve(floor, 8, 5, 12, 21)            # west lane + walks
+    rect_carve(floor, 20, 5, 25, 21)           # east lane + walks
+    rect_carve(floor, 0, 11, 9, 16)            # west road
+    rect_carve(floor, 12, 20, 21, 26)          # south court (Market South)
+    rect_carve(floor, 24, 6, 34, 23)           # east green around Lantern Pond
+    LOTS = [("tea_house", 3, 6, (2, 6, 8, 11)), ("greenhouse", 3, 17, (2, 17, 8, 22)),
+            ("noodle_shop", 27, 2, (26, 2, 33, 5))]
+    for _, _, _, r in LOTS:
+        rect_carve(floor, *r)
     lv.floor = floor | road
     wall = clean_walls(~lv.floor)
     lv.floor = ~wall
     road &= lv.floor
     road = clean_walls(road, border=0) & road
+    water = np.zeros_like(wall); rect_carve(water, 26, 10, 32, 18); water &= lv.floor
+    lv.mist = [(28.0, 12.0), (30.0, 15.5)]          # Lantern Pond
+    paving = lv.dilate(water, 1) & ~water & lv.floor
     sidewalk = ~road
     for y in range(lv.H):
         for x in range(lv.W):
             if wall[y, x]:
                 lv.ground[y, x] = blob(ts, "sidewalk-building", wall, x, y, lv.rng)
+            elif water[y, x]:
+                lv.ground[y, x] = blob(ts, "plaza-water", water, x, y, lv.rng)
+            elif paving[y, x]:
+                lv.ground[y, x] = 13 if (x * 5 + y * 3) % 7 else 14
             else:
                 lv.ground[y, x] = blob(ts, "road-sidewalk", sidewalk, x, y, lv.rng, exclude={4, 5, 6, 7, 8})
-    # warm plaza tiles in the market square
-    for y in range(11, 16):
-        for x in range(8, 20):
-            if not road[y, x] and not wall[y, x]:
-                lv.ground[y, x] = 12 if (x * 5 + y * 3) % 11 else 13
-    lv.keepout = road.copy()
+    lv.keepout = road | paving
     lv.keepout_hard = np.zeros_like(wall)
     for k, (x, y) in P.items():
         disk_carve(lv.keepout, x, y, 2.6); disk_carve(lv.keepout_hard, x, y, 1.5)
-    sidewalk = lv.floor & ~road
-    curb = sidewalk & lv.dilate(road, 1)
+    rect_carve(lv.keepout, 8, 5, 25, 9); rect_carve(lv.keepout, 8, 17, 25, 21)
+    rect_carve(lv.keepout, 9, 5, 11, 21); rect_carve(lv.keepout, 21, 5, 23, 21)
+    for name, tx, ty, (x0, y0, x1, y1) in LOTS:
+        d = BUILDINGS.defs[name]
+        for m in (lv.keepout, lv.keepout_hard):
+            rect_carve(m, x0, y0, x1, y1 + 1)
+            rect_carve(m, tx - 1, ty, tx + d["w"] // T + 1, ty + d["h"] // T + 1)
+    for (fx, fy) in ((8.4, 14), (11.6, 13.9), (5, 13.5), (32.5, 21.5), (21.5, 12.5), (25, 9)):
+        disk_carve(lv.keepout, fx, fy, 1.4); disk_carve(lv.keepout_hard, fx, fy, 1.0)
+    sidewalk = lv.floor & ~road & ~water
+    curb = sidewalk & lv.dilate(road, 1) & ~paving
     near_wall = sidewalk & lv.fringe(wall)
-    # Market lane asphalt is x 12-15; lamps on the flanks, spaced like posts
-    lv.line_props("street_lamp", [(11, 5), (11, 11), (11, 17), (11, 21)], step=4)
-    lv.line_props("street_lamp", [(16, 6), (16, 12), (16, 18)], step=4)
-    lv.scatter_on(["planter_small", "bench", "bollard"], 8, curb | near_wall)
-    lv.scatter_on(["trash_bin", "vending_machine", "planter_tree"], 5, near_wall)
-    lv.cluster(["bench", "planter_small", "planter_tree"], *P["mira"], 4, radius=2)
+    lv.line_props("street_lamp", [(12, 4), (20, 4)], step=4)
+    lv.line_props("street_lamp", [(24, 9), (24, 21)], step=4)
+    lv.line_props("street_lamp", [(33, 7), (33, 21)], step=4)
+    lv.line_props("street_lamp", [(12, 21), (12, 25)], step=4)
+    lv.line_props("street_lamp", [(20, 21), (20, 25)], step=4)
+    lv.scatter_on(["planter_small", "bench", "bollard"], 10, curb | near_wall)
+    lv.scatter_on(["trash_bin", "vending_machine", "planter_tree"], 6, near_wall)
+    lv.cluster(["bench", "planter_small", "planter_tree"], *P["mira"], 3, radius=2)
     lv.cluster(["bollard", "planter_small"], *P["portal"], 3, radius=2)
-    for name, tx, ty in (("tea_house", 4, 8), ("noodle_shop", 19, 8), ("greenhouse", 4, 18)):
+    interior = np.zeros_like(wall)
+    interior[1:-1, 1:-1] = (wall[1:-1, 1:-1] & wall[:-2, 1:-1] & wall[2:, 1:-1] & wall[1:-1, :-2] & wall[1:-1, 2:])
+    lv.scatter_on(["rooftop_ac", "solar_panel"], 8, interior, need_floor=False)
+    lv.scatter_on(["rooftop_vent"], 5, interior, need_floor=False)
+    for name, tx, ty, _ in LOTS:
         lv.building(name, tx, ty)
-    def reground5(x, y, w, rng):
-        if w[y, x]: return blob(ts, "sidewalk-building", w, x, y, rng)
-        return blob(ts, "road-sidewalk", ~road, x, y, rng, exclude={4, 5, 6, 7, 8})
-    lv.carve_lots(wall, [(3, 7, 9, 13), (18, 7, 24, 13), (3, 17, 9, 23)], reground5)
     place(lv, "spawn", *P["spawn"])
     place(lv, "npc", *P["mira"], name="mira", sprite="mira")
-    place(lv, "health", *P["h1"])
-    place(lv, "stash", *P["stash"], glimmer=15)
+    place(lv, "health", *P["h1"], was=(17.5, 12.5))
+    place(lv, "stash", *P["stash"], glimmer=15, was=(20.5, 16.5))
     # West road back to the City — walk off the map.
-    open_map_edge(lv, "west", int(P["mira"][1]), half=2)
-    place_mapexit(lv, "west", int(P["mira"][1]), dest="city", entry="east", half=2)
+    wy = int(P["mira"][1])
+    open_map_edge(lv, "west", wy, half=2)
+    place_mapexit(lv, "west", wy, dest="city", entry="east", half=2)
     place_entry(lv, "west", 4.5, P["mira"][1])
     place_entry(lv, "north", *P["spawn"])
     place(lv, "checkpoint", *P["spawn"], label="Lantern Gate")
@@ -1401,13 +1437,16 @@ def map5():
           id="town_stall", title="MIRA'S STALL",
           text="Salvage and colony trinkets. Pay in glimmer.",
           shop=True)
-    place(lv, "examine", P["mira"][0] - 1.4, P["mira"][1] - 0.6,
+    place(lv, "examine", P["mira"][0] - 1.6, P["mira"][1] + 0.5,
           id="town_quest_board", title="JOB BOARD",
           text="Chalk and string. Woods and city errands for travellers.",
           board=True)
     place(lv, "examine", 5.0, P["mira"][1],
           id="town_west_road", title="CITY ROAD",
-          text="West off the map returns to the City's Lantern Road.")
+          text="West off the map returns to the City's Lantern Gate.")
+    place(lv, "examine", 25.0, 9.0,
+          id="town_pond_sign", title="LANTERN POND",
+          text="Colonists float paper lanterns here on the first night of each season. The promenade rings the pond; the lanes ring the market hall.")
     lv.write("world5.tmj", "tilesets/city.png")
     return ts
 
@@ -1416,14 +1455,20 @@ def map3():
     """Ruins dungeon: hub at h2, NE key wing, SE keyed gate to Core, SW Memory 5 deep path."""
     ts = Tileset("cyberpunk")
     lv = Level(ts, 46, 46, seed=33)
+    lv.rings_min = 2
     P = dict(spawn=(5.5, 5.5), h1=(6, 13), d1=(16, 6), d2=(18, 12), h2=(17, 18), d3=(26, 5),
              h3=(31, 7), key=(39.5, 6.5), d4=(33, 19), h4=(35, 27), gate=(37.5, 33.5),
-             d5=(23, 29), d6=(12, 36), m5a=(8, 40), m5b=(4.5, 42.5), portal=(39.5, 39.5))
+             d5=(23, 29), d6=(12, 36), m5a=(8, 40), m5b=(4.5, 42.5), portal=(39.5, 39.5),
+             west=(5, 25))
     # No d5→portal shortcut: SE approach must pass the keyed gate after h4.
     edges = [("spawn", "d1"), ("spawn", "h1"), ("d1", "d2"), ("d2", "h2"), ("h1", "h2"), ("d1", "d3"),
              ("d3", "h3"), ("h3", "key"), ("h3", "d4"), ("h2", "d4"), ("d4", "h4"),
              ("h4", "gate"), ("gate", "portal"), ("h2", "d5"), ("d5", "d6"),
-             ("d6", "m5a"), ("m5a", "m5b")]
+             ("d6", "m5a"), ("m5a", "m5b"),
+             # #26: a west gallery (landing → shrine road) and a south link
+             # (shrine road → gate approach) close two more rings, so the
+             # central clearing is no longer the only way between wings
+             ("h1", "west"), ("west", "d6"), ("d5", "h4")]
     for a, b in edges: seg_carve(lv.floor, P[a], P[b], 1.9)
     for k, (x, y) in P.items():
         # Gate is a choke, not a plaza — otherwise players walk around LOCKED.
@@ -1467,6 +1512,7 @@ def map3():
             if sludge[y, x]: lv.ground[y, x] = blob(ts, "asphalt-sludge", sludge, x, y, lv.rng)
     lv.keepout = np.zeros_like(wall); lv.keepout_hard = np.zeros_like(wall)
     for a, b in edges: seg_carve(lv.keepout, P[a], P[b], 2.3)
+    seg_carve(lv.keepout, P["spawn"], (P["spawn"][0], 0.0), 2.6)   # north road to the City stays clear
     for k, (x, y) in P.items():
         disk_carve(lv.keepout, x, y, 2.8); disk_carve(lv.keepout_hard, x, y, 1.6)
     # Scenery: heavy wreckage against ruin walls; clutter in pockets; lights on path edge
@@ -1526,7 +1572,8 @@ def map3():
           clue="ruins_landing")
     place(lv, "examine", P["h2"][0] - 1.0, P["h2"][1] + 0.8,
           id="ruins_clearing_ring", title="BROKEN RING",
-          text="SE path to the Core is sealed. Go NORTH-EAST for the Aetherian Keystone, then return. SW shrine is optional.",
+          text="SE path to the Core is sealed. Go NORTH-EAST for the Aetherian Keystone, then return. "
+               "The west gallery and the shrine road loop back here; the SW shrine is optional.",
           clue="ruins_ring")
     place(lv, "stash", P["d5"][0] - 1.5, P["d5"][1] + 1.0, glimmer=20)
     place(lv, "health", P["d5"][0] + 1.5, P["d5"][1] + 0.5)
