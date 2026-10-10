@@ -46,7 +46,7 @@ void main() {
     }
     expect(itemsWithArt.every(itemLabels.containsKey), isTrue);
     expect(File(itemIconAsset('pebble')!).existsSync(), isTrue);
-    expect(itemIconAsset('sweetroot'), isNull);
+    expect(File(itemIconAsset('sweetroot')!).existsSync(), isTrue);
   });
 
   testWidgets('UEC drone sprites per kind + Sentinel (#28)', (tester) async {
