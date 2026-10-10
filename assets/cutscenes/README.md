@@ -11,9 +11,10 @@ screen and stores the story flag `cutscene:<id>` in the save when it ends or
 is skipped (`once: true` skips it if already seen).
 
 Story spine cutscenes: `awakening` (new game), `coalition` (enter City),
-`memory1`–`memory5` (flashbacks), `ending_a` / `ending_b` (Core finale).
-Ending stills reuse art from other folders via absolute `assets/cutscenes/...`
-image paths.
+`memory1`–`memory5` (flashbacks), `after_sentinel` (Sentinel down),
+`archive_ash` (Archive opened), `ending_a` / `ending_b` (Core finale). Every
+cutscene has its own stills (`<id>_pN.webp`); an `image` may still point at
+another folder with an absolute `assets/cutscenes/...` path if art is shared.
 
 Preview while authoring (any panel can be frozen for screenshots):
 
@@ -84,7 +85,9 @@ are ignored; a malformed optional field falls back to its default.
   - `"center": [0.58, 0.63], "radius": 0.22`: a soft round spot instead of
     a mask image (centre as fractions of the panel, radius as a fraction of
     its width). The shorthand `"pulse green glow on the seed (x0.58, y0.63)"`
-    does the same.
+    does the same. Spots default to `strength` 0.55; keep small ones
+    subtle, e.g. the Sentinel's visor in `after_sentinel` p1:
+    `{"type": "pulse", "color": "#FF3355", "center": [0.605, 0.505], "radius": 0.07, "strength": 0.25}`.
 - **Title card**: `"then": "title card <TEXT> over the upper sky"` (upper/sky,
   lower, otherwise centre) or explicitly
   `"titleCard": {"text": "ECHOES OF ELYSIUM", "subtitle": "", "position": [0.5, 0.3], "color": "#00FFCC", "fadeIn": 1.4, "hold": 4}`.

@@ -1,14 +1,28 @@
 {
   "id": "ending_b",
   "trigger": "Core Record activated without all five memories",
-  "size": [1280, 720],
+  "size": [
+    1280,
+    720
+  ],
   "panelDuration": 7.5,
   "crossfade": 0.9,
-  "note": "Reuses stills from other cutscenes; no new art required.",
+  "note": "Incomplete ending: dedicated stills (#27).",
   "panels": [
     {
-      "image": "assets/cutscenes/awakening/awakening_p5.webp",
-      "pan": {"from": [1.05, 0.5, 0.45], "to": [1.0, 0.5, 0.5]},
+      "image": "ending_b_p1.webp",
+      "pan": {
+        "from": [
+          1.0,
+          0.5,
+          0.55
+        ],
+        "to": [
+          1.08,
+          0.5,
+          0.42
+        ]
+      },
       "lines": [
         {
           "speaker": "N",
@@ -18,8 +32,19 @@
       ]
     },
     {
-      "image": "assets/cutscenes/coalition/coalition_p3.webp",
-      "pan": {"from": [1.0, 0.45, 0.5], "to": [1.06, 0.4, 0.45]},
+      "image": "ending_b_p2.webp",
+      "pan": {
+        "from": [
+          1.0,
+          0.5,
+          0.5
+        ],
+        "to": [
+          1.07,
+          0.38,
+          0.45
+        ]
+      },
       "lines": [
         {
           "speaker": "VOSS",
@@ -39,13 +64,24 @@
       ]
     },
     {
-      "image": "assets/cutscenes/coalition/coalition_p4.webp",
-      "pan": {"from": [1.06, 0.5, 0.45], "to": [1.0, 0.5, 0.5]},
+      "image": "ending_b_p3.webp",
+      "pan": {
+        "from": [
+          1.06,
+          0.66,
+          0.5
+        ],
+        "to": [
+          1.0,
+          0.5,
+          0.5
+        ]
+      },
       "fx": [
         {
           "type": "pulse",
           "color": "#00FF88",
-          "mask": "assets/cutscenes/coalition/coalition_p4_glow.webp"
+          "mask": "ending_b_p3_glow.webp"
         }
       ],
       "lines": [

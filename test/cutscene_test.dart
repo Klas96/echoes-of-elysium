@@ -70,17 +70,55 @@ void main() {
       }
     });
 
-    test('ending_a, ending_b, after_sentinel, archive_ash parse and reuse stills', () {
-      for (final id in ['ending_a', 'ending_b', 'after_sentinel', 'archive_ash']) {
+    test('every cutscene folder parses; images, masks and voices exist', () {
+      final dirs = Directory('assets/cutscenes').listSync().whereType<Directory>().toList();
+      final pubspec = File('pubspec.yaml').readAsStringSync();
+      expect(dirs.length, greaterThanOrEqualTo(11));
+      for (final d in dirs) {
+        final id = d.uri.pathSegments.where((x) => x.isNotEmpty).last;
+        expect(pubspec, contains('- assets/cutscenes/$id/'), reason: 'pubspec lists $id');
         final s = _asset(id);
-        expect(s.panels, isNotEmpty);
+        expect(s.id, id);
+        expect(s.panels, isNotEmpty, reason: id);
         for (final p in s.panels) {
           expect(File(p.image).existsSync(), isTrue, reason: p.image);
+          expect(p.image, endsWith('.webp'), reason: p.image);
           for (final l in p.lines) {
             expect(l.text, isNotEmpty);
+            final v = l.voice;
+            if (v != null && v.isNotEmpty) {
+              expect(File(v.startsWith('assets/') ? v : 'assets/$v').existsSync(), isTrue, reason: v);
+            }
           }
         }
+        for (final m in s.maskPaths) {
+          expect(File(m).existsSync(), isTrue, reason: m);
+        }
       }
+    });
+
+    test('#27: mid-game and ending cutscenes use their own stills', () {
+      const panels = {'after_sentinel': 3, 'archive_ash': 3, 'ending_a': 5, 'ending_b': 3};
+      for (final e in panels.entries) {
+        final s = _asset(e.key);
+        expect(s.panels, hasLength(e.value), reason: e.key);
+        for (var i = 0; i < s.panels.length; i++) {
+          expect(s.panels[i].image, 'assets/cutscenes/${e.key}/${e.key}_p${i + 1}.webp');
+        }
+      }
+      // Red pulse on the Sentinel's visor: a soft spot, not a mask.
+      final visor = _asset('after_sentinel').panels[0].effects.single;
+      expect(visor.type, 'pulse');
+      expect(visor.color, const Color(0xFFFF3355));
+      expect(visor.mask, isNull);
+      expect(visor.center, const Offset(0.605, 0.505));
+      expect(visor.radius, 0.07);
+      expect(visor.strength, 0.25);
+      expect(visor.isLocal, isTrue);
+      // Ending B glow at Kaela's temple goes through its own mask.
+      final glow = _asset('ending_b').panels[2].effects.single;
+      expect(glow.mask, 'assets/cutscenes/ending_b/ending_b_p3_glow.webp');
+      expect(glow.isLocal, isTrue);
     });
 
     test('lenient: bad fields fall back, extended keys are honoured', () {
