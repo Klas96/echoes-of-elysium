@@ -7,10 +7,10 @@
   ],
   "panelDuration": 7.0,
   "crossfade": 0.85,
-  "note": "Asha on comms reacts to the merge draft. Reuses stills; VO via ElevenLabs.",
+  "note": "Asha on comms reacts to the merge draft. Dedicated stills (#27); VO via ElevenLabs.",
   "panels": [
     {
-      "image": "assets/cutscenes/memory4/memory4_p2.webp",
+      "image": "archive_ash_p1.webp",
       "pan": {
         "from": [
           1.0,
@@ -18,9 +18,9 @@
           0.5
         ],
         "to": [
-          1.06,
-          0.48,
-          0.42
+          1.08,
+          0.42,
+          0.55
         ]
       },
       "lines": [
@@ -32,17 +32,17 @@
       ]
     },
     {
-      "image": "assets/cutscenes/coalition/coalition_p2.webp",
+      "image": "archive_ash_p2.webp",
       "pan": {
         "from": [
-          1.04,
+          1.0,
           0.5,
-          0.45
+          0.5
         ],
         "to": [
-          1.0,
-          0.52,
-          0.5
+          1.07,
+          0.42,
+          0.45
         ]
       },
       "lines": [
@@ -59,17 +59,17 @@
       ]
     },
     {
-      "image": "assets/cutscenes/coalition/coalition_p3.webp",
+      "image": "archive_ash_p3.webp",
       "pan": {
         "from": [
+          1.06,
+          0.5,
+          0.42
+        ],
+        "to": [
           1.0,
           0.5,
           0.5
-        ],
-        "to": [
-          1.05,
-          0.45,
-          0.4
         ]
       },
       "lines": [
