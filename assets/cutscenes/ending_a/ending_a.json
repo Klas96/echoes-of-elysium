@@ -1,14 +1,28 @@
 {
   "id": "ending_a",
   "trigger": "Core Record activated with all five memories",
-  "size": [1280, 720],
+  "size": [
+    1280,
+    720
+  ],
   "panelDuration": 7.5,
   "crossfade": 0.9,
-  "note": "Reuses stills from other cutscenes; no new art required. Extra Voss lines explain the stand-down (text-only where VO would mismatch).",
+  "note": "Good ending: dedicated stills (#27). Extra Voss lines explain the stand-down (text-only where VO would mismatch).",
   "panels": [
     {
-      "image": "assets/cutscenes/awakening/awakening_p5.webp",
-      "pan": {"from": [1.05, 0.5, 0.45], "to": [1.0, 0.5, 0.5]},
+      "image": "ending_a_p1.webp",
+      "pan": {
+        "from": [
+          1.0,
+          0.5,
+          0.55
+        ],
+        "to": [
+          1.08,
+          0.5,
+          0.4
+        ]
+      },
       "lines": [
         {
           "speaker": "N",
@@ -18,8 +32,19 @@
       ]
     },
     {
-      "image": "assets/cutscenes/coalition/coalition_p3.webp",
-      "pan": {"from": [1.0, 0.45, 0.5], "to": [1.06, 0.4, 0.45]},
+      "image": "ending_a_p2.webp",
+      "pan": {
+        "from": [
+          1.0,
+          0.5,
+          0.5
+        ],
+        "to": [
+          1.07,
+          0.55,
+          0.45
+        ]
+      },
       "lines": [
         {
           "speaker": "VOSS",
@@ -29,8 +54,19 @@
       ]
     },
     {
-      "image": "assets/cutscenes/memory5/memory5_p2.webp",
-      "pan": {"from": [1.0, 0.5, 0.5], "to": [1.08, 0.4, 0.4]},
+      "image": "ending_a_p3.webp",
+      "pan": {
+        "from": [
+          1.08,
+          0.5,
+          0.45
+        ],
+        "to": [
+          1.0,
+          0.5,
+          0.5
+        ]
+      },
       "lines": [
         {
           "speaker": "N",
@@ -40,8 +76,19 @@
       ]
     },
     {
-      "image": "assets/cutscenes/coalition/coalition_p3.webp",
-      "pan": {"from": [1.06, 0.4, 0.45], "to": [1.0, 0.5, 0.5]},
+      "image": "ending_a_p4.webp",
+      "pan": {
+        "from": [
+          1.0,
+          0.5,
+          0.5
+        ],
+        "to": [
+          1.07,
+          0.4,
+          0.45
+        ]
+      },
       "lines": [
         {
           "speaker": "VOSS",
@@ -66,8 +113,19 @@
       ]
     },
     {
-      "image": "assets/cutscenes/memory5/memory5_p4.webp",
-      "pan": {"from": [1.05, 0.5, 0.5], "to": [1.0, 0.5, 0.5]},
+      "image": "ending_a_p5.webp",
+      "pan": {
+        "from": [
+          1.06,
+          0.5,
+          0.6
+        ],
+        "to": [
+          1.0,
+          0.5,
+          0.5
+        ]
+      },
       "fx": "brighten green over 2 s",
       "lines": [
         {

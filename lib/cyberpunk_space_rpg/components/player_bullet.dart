@@ -5,12 +5,13 @@ import 'package:bonfire/util/collision_game_component.dart';
 import 'uec_drone.dart';
 import 'sentinel_drone.dart';
 import '../game/progression.dart';
+import '../game/well_rested.dart';
 
 class PlayerBullet extends GameDecoration {
   static const double _speed = 420;
   static const double _maxDistance = 540;
   static const int _baseDamage = 18;
-  static int get _damage => _baseDamage + Progression.bonusDamage;
+  static int get _damage => WellRested.applyDamage(_baseDamage + Progression.bonusDamage);
   /// Half-extent used when centering the spawn on Kaela.
   static const double bulletSize = 14;
   static final Vector2 spriteSize = Vector2(28, 12);

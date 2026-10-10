@@ -13,6 +13,8 @@ import 'building.dart';
 import 'muzzle_flash.dart';
 import '../audio/music_manager.dart';
 import '../game/progression.dart';
+import '../game/well_rested.dart';
+import 'damage_number.dart';
 
 class CustomPlayer extends SimplePlayer with BlockMovementCollision {
   static const double sizePlayer = 32;
@@ -74,6 +76,7 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision {
     damageFlash.value = true;
     SfxManager().playDamage();
     if (p == null) return;
+    DamageNumber.spawn(p, p.position + Vector2(p.size.x / 2, 0), amount, DamageNumberStyle.taken);
     p._sinceDamage = 0;
     p._regenAcc = 0;
     if (hp <= 0) p._startRespawn();
@@ -111,12 +114,16 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision {
 
   void _updateRegen(double dt) {
     _sinceDamage += dt;
+    WellRested.tick(dt);
     final hp = healthNotifier.value;
-    if (hp <= 0 || hp >= maxHealth || _sinceDamage < regenDelay) {
+    // Calm regen after a quiet spell; "Well rested" trickles in even mid-fight.
+    final rate = (_sinceDamage >= regenDelay ? regenPerSecond : 0.0) +
+        (WellRested.active ? WellRested.regenPerSecond : 0.0);
+    if (hp <= 0 || hp >= maxHealth || rate <= 0) {
       _regenAcc = 0;
       return;
     }
-    _regenAcc += regenPerSecond * dt;
+    _regenAcc += rate * dt;
     final whole = _regenAcc.floor();
     if (whole > 0) {
       _regenAcc -= whole;

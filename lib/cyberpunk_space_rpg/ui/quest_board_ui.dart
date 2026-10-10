@@ -92,7 +92,7 @@ class _BoardPanel extends StatelessWidget {
                       ],
                     ),
                     const Text(
-                      'Errands for travellers — woods and city. Return here to turn in.',
+                      'Errands for travellers — woods, city, ruins and core. Return here to turn in.',
                       style: TextStyle(color: Colors.white54, fontSize: 12, height: 1.4),
                     ),
                     const SizedBox(height: 14),
@@ -156,9 +156,13 @@ class _BoardPanel extends StatelessWidget {
                       style: const TextStyle(color: Colors.white54, fontSize: 11, height: 1.3)),
                   const SizedBox(height: 4),
                   Text(
-                    s == QuestStatus.accepted || s == QuestStatus.done
-                        ? q.hint
-                        : 'Reward: ${q.glimmer}◆${q.gearId != null ? ' + gear' : ''}',
+                    s == QuestStatus.locked
+                        ? q.lockedHint
+                        : s == QuestStatus.accepted && q.killTarget > 0
+                            ? '${q.hint}  ${Quests.kills(q.id)}/${q.killTarget}'
+                            : s == QuestStatus.accepted || s == QuestStatus.done
+                                ? q.hint
+                                : 'Reward: ${q.glimmer}◆${q.gearId != null ? ' + gear' : ''}',
                     style: const TextStyle(color: _amber, fontSize: 10, letterSpacing: 0.5),
                   ),
                   if (blockedTurnIn)

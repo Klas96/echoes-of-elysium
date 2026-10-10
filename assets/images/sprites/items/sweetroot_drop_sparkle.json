@@ -1,0 +1,8 @@
+{
+ "image": "sweetroot_drop_sparkle.png",
+ "frameWidth": 32,
+ "frameHeight": 32,
+ "frames": 2,
+ "stepTime": 0.4,
+ "loop": true
+}

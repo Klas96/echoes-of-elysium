@@ -2,11 +2,13 @@ import 'dart:math';
 import 'package:bonfire/bonfire.dart';
 import 'package:flutter/material.dart';
 import 'custom_player.dart';
+import 'damage_number.dart';
 import 'drone_bounds.dart';
 import 'enemy_bullet.dart';
 import 'explosion_effect.dart';
 import '../game/progression.dart';
 import '../game/quests.dart';
+import '../game/save_service.dart';
 
 enum DroneKind {
   /// Balanced melee chase — the original UEC drone.
@@ -223,13 +225,18 @@ class UECDrone extends GameDecoration {
     _shieldRegen = 0;
     _shieldRegenAcc = 0;
     if (knockbackDir != null) _applyKnockback(knockbackDir);
+    final top = position + Vector2(size.x / 2, 0);
     if (_shield > 0) {
       final absorbed = min(_shield, amount);
       _shield -= absorbed;
       amount -= absorbed;
-      if (amount <= 0) return;
+      if (amount <= 0) {
+        DamageNumber.spawn(this, top, absorbed, DamageNumberStyle.shield);
+        return;
+      }
     }
     _health -= amount;
+    DamageNumber.spawn(this, top, amount, DamageNumberStyle.dealt);
   }
 
   void _applyKnockback(Vector2 dir) {
@@ -267,6 +274,7 @@ class UECDrone extends GameDecoration {
         Progression.onDroneKilled(kind);
         final nest = nestQuestId;
         if (nest != null && nest.isNotEmpty) Quests.onNestDroneKilled(nest);
+        Quests.onDroneKilled(SaveService.data.regionId);
       }
       gameRef.add(ExplosionEffect(position.clone()));
       removeFromParent();

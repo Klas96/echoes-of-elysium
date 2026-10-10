@@ -38,6 +38,7 @@ const itemsWithArt = <String>{
   'archive_seal',
   'ruins_gate_key',
   'moonflower_bloom',
+  'sweetroot',
 };
 
 /// Items whose icon reuses existing world art instead of `sprites/items/`.
@@ -372,6 +373,41 @@ class Adventure {
       body:
           'Trader salvage from the west alley, marked for Mira\'s board. The colony still shares.',
       where: 'City · west alley · Town board',
+    ),
+    ClueDef(
+      id: 'quest_ruins_landing',
+      title: 'Paint Over Stone',
+      body:
+          '"Wipe authorized" in UEC paint on Aetherian stone, and someone\'s nails through it. Not everyone in the Coalition signed.',
+      where: 'Ruins · landing mark · Town board',
+    ),
+    ClueDef(
+      id: 'quest_ruins_sweep',
+      title: 'Lattice Swept',
+      body:
+          'Three drones down around the old lattice. The scavengers are already back with their carts.',
+      where: 'Ruins · Town board',
+    ),
+    ClueDef(
+      id: 'quest_ruins_shrine',
+      title: 'Shrine Reading',
+      body:
+          'The SW waymarker still logs an anomaly past the ruin. Mira pinned the reading next to her prices.',
+      where: 'Ruins · SW waymarker · Town board',
+    ),
+    ClueDef(
+      id: 'quest_core_static',
+      title: 'Core Quieted',
+      body:
+          'Two drones fewer in Gaia\'s halls. For a moment the Core sounded almost like breathing.',
+      where: 'Core · Town board',
+    ),
+    ClueDef(
+      id: 'quest_core_console',
+      title: 'Wipe Queue, in Writing',
+      body:
+          'The console waits on a living neural match, and a remote wipe is already queued. Mira read it twice and said nothing.',
+      where: 'Core · console · Town board',
     ),
     ClueDef(
       id: 'ruins_keystone',

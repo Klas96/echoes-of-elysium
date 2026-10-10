@@ -7,27 +7,32 @@
   ],
   "panelDuration": 7.0,
   "crossfade": 0.9,
-  "note": "Quiet beat before the Ruins. Reuses stills; VO via ElevenLabs.",
+  "note": "Quiet beat before the Ruins. Dedicated stills (#27); VO via ElevenLabs.",
   "panels": [
     {
-      "image": "assets/cutscenes/coalition/coalition_p4.webp",
+      "image": "after_sentinel_p1.webp",
       "pan": {
         "from": [
-          1.05,
-          0.5,
-          0.45
-        ],
-        "to": [
           1.0,
           0.5,
+          0.5
+        ],
+        "to": [
+          1.08,
+          0.42,
           0.5
         ]
       },
       "fx": [
         {
           "type": "pulse",
-          "color": "#00FF88",
-          "mask": "assets/cutscenes/coalition/coalition_p4_glow.webp"
+          "color": "#FF3355",
+          "center": [
+            0.605,
+            0.505
+          ],
+          "radius": 0.07,
+          "strength": 0.25
         }
       ],
       "lines": [
@@ -39,7 +44,7 @@
       ]
     },
     {
-      "image": "assets/cutscenes/coalition/coalition_p1.webp",
+      "image": "after_sentinel_p2.webp",
       "pan": {
         "from": [
           1.0,
@@ -47,9 +52,9 @@
           0.5
         ],
         "to": [
-          1.06,
+          1.08,
           0.45,
-          0.4
+          0.45
         ]
       },
       "lines": [
@@ -71,17 +76,17 @@
       ]
     },
     {
-      "image": "assets/cutscenes/memory4/memory4_p1.webp",
+      "image": "after_sentinel_p3.webp",
       "pan": {
         "from": [
+          1.08,
+          0.55,
+          0.58
+        ],
+        "to": [
           1.0,
           0.5,
           0.5
-        ],
-        "to": [
-          1.05,
-          0.5,
-          0.45
         ]
       },
       "lines": [
