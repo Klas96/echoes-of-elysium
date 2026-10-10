@@ -640,11 +640,13 @@ class Level:
     # Night light pools (#35): prop -> (kind, glow radius px, pool centre as a
     # fraction of the prop height). The game draws a cached cookie per light.
     LIGHTS = {
-        "street_lamp": ("lamp", 76, 0.75),
-        "lantern": ("lantern", 64, 0.7),
-        "campfire": ("fire", 88, 0.5),
-        "energy_brazier": ("energy", 72, 0.5),
-        "neon_streetlight": ("neon", 72, 0.75),
+        # Anchor near the prop; game shifts the drawn pool toward the ground so
+        # the NightTint cookie doesn't cover the lantern/lamp sprite.
+        "street_lamp": ("lamp", 68, 0.75),
+        "lantern": ("lantern", 56, 0.7),
+        "campfire": ("fire", 80, 0.5),
+        "energy_brazier": ("energy", 64, 0.5),
+        "neon_streetlight": ("neon", 64, 0.75),
     }
 
     # Maps whose street lamps use the cyan neon cookie (the City); elsewhere

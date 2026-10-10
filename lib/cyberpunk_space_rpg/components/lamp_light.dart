@@ -54,8 +54,17 @@ class LampLight extends GameComponent {
     this.size = size;
   }
 
-  /// Pool centre in world px.
+  /// Fixture centre in world px (Tiled light object).
   Vector2 get centre => position + size / 2;
+
+  /// Ground-biased pool centre: bright core sits at the feet, not over the prop.
+  Vector2 get poolCentre {
+    final drop = switch (kind) {
+      LightKind.lantern || LightKind.lamp || LightKind.neon => radius * 0.32,
+      LightKind.fire || LightKind.energy => radius * 0.12,
+    };
+    return centre + Vector2(0, drop);
+  }
 
   @override
   void onMount() {
@@ -109,8 +118,10 @@ class NightLights {
   static const squash = 0.78;
 
   /// Max tint removed at the centre of a pool, and max additive glow.
-  static const cutStrength = 0.65;
-  static const glowStrength = 0.6;
+  /// Glow stays very soft — NightTint sits above the game canvas, so a strong
+  /// plus-blend cookie paints over the lantern sprite itself.
+  static const cutStrength = 0.48;
+  static const glowStrength = 0.10;
 
   static List<LampLight> get lights => List.unmodifiable(_lights);
 
@@ -179,7 +190,7 @@ class NightLights {
       final cookie = art ?? procedural;
       if (cookie == null) continue;
       // Designer cookies are already an oval inside a square canvas.
-      final rect = screenRect(l.centre, l.radius, cam, zoom, screen,
+      final rect = screenRect(l.poolCentre, l.radius, cam, zoom, screen,
           squash: cookie.art ? 1 : squash);
       if (!rect.overlaps(view)) continue;
       final s = strength(darkness, l.kind, l.phase, clock);
