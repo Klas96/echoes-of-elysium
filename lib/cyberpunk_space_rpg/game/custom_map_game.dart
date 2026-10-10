@@ -18,6 +18,7 @@ import '../components/building.dart';
 import '../components/story_gate.dart';
 import '../components/ambient_prop_fx.dart';
 import '../components/lamp_light.dart';
+import 'well_rested.dart';
 import '../audio/music_manager.dart';
 import '../creatures/bonds.dart';
 import '../creatures/creature_components.dart';
@@ -1244,6 +1245,7 @@ void _startLevel(BonfireGameInterface game, int level) {
   SaveService.snapshot = _snapshot;
   // M2: day/night clock, companion and creature/obstacle interactions
   DayCycle.time.value = SaveService.data.dayTime;
+  WellRested.load();
   Bonds.revision.value++;
   Interaction.reset();
   GameToast.current.value = null;
@@ -2212,18 +2214,7 @@ class _GameHUDState extends State<_GameHUD> {
                   for (final p in items.reversed)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 3),
-                      child: Text(
-                        p.text,
-                        style: TextStyle(
-                          color: p.color,
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.8,
-                          shadows: const [
-                            Shadow(color: Colors.black87, blurRadius: 4),
-                          ],
-                        ),
-                      ),
+                      child: Text(p.text, style: MmoFeedback.popStyle(p.color)),
                     ),
                 ],
               ),

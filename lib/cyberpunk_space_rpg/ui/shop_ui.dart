@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../creatures/bonds.dart';
 import '../game/progression.dart';
+import '../game/trade.dart';
 
 bool get _isTouch =>
     defaultTargetPlatform == TargetPlatform.android ||
@@ -23,6 +24,9 @@ class Shop {
   static final open = ValueNotifier<bool>(false);
   static void Function(bool open)? onOpenChanged;
   static void Function()? dismissOthers;
+
+  /// 0 = BUY, 1 = SELL (junk, spare gear, buyback).
+  static final tab = ValueNotifier<int>(0);
 
   static const offers = <ShopOffer>[
     ShopOffer('scrap_plating', 8),
@@ -81,7 +85,8 @@ class _ShopPanel extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: AnimatedBuilder(
-                animation: Listenable.merge([Bonds.revision, Progression.revision]),
+                animation: Listenable.merge(
+                    [Bonds.revision, Progression.revision, Trade.revision, Shop.tab]),
                 builder: (_, __) => Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -110,12 +115,20 @@ class _ShopPanel extends StatelessWidget {
                         ),
                       ],
                     ),
-                    const Text(
-                      'Salvage and colony trinkets. Pay in glimmer.',
-                      style: TextStyle(color: Colors.white54, fontSize: 12, height: 1.4),
+                    Text(
+                      Shop.tab.value == 0
+                          ? 'Salvage and colony trinkets. Pay in glimmer.'
+                          : 'Mira buys drone junk and spare kit. Changed your mind? Buy it back.',
+                      style: const TextStyle(color: Colors.white54, fontSize: 12, height: 1.4),
                     ),
-                    const SizedBox(height: 14),
-                    ...Shop.offers.map(_offerRow),
+                    const SizedBox(height: 10),
+                    Row(children: [
+                      _tabButton('BUY', 0),
+                      const SizedBox(width: 8),
+                      _tabButton('SELL', 1),
+                    ]),
+                    const SizedBox(height: 12),
+                    if (Shop.tab.value == 0) ...Shop.offers.map(_offerRow) else ..._sellSection(),
                     const SizedBox(height: 8),
                     Align(
                       alignment: Alignment.centerRight,
@@ -133,6 +146,126 @@ class _ShopPanel extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _tabButton(String label, int index) {
+    final on = Shop.tab.value == index;
+    return Expanded(
+      child: TextButton(
+        onPressed: () => Shop.tab.value = index,
+        style: TextButton.styleFrom(
+          backgroundColor: _amber.withValues(alpha: on ? 0.16 : 0.03),
+          side: BorderSide(color: _amber.withValues(alpha: on ? 0.8 : 0.2)),
+          padding: const EdgeInsets.symmetric(vertical: 8),
+        ),
+        child: Text(label,
+            style: TextStyle(
+                color: on ? _amber : Colors.white38,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+                letterSpacing: 2)),
+      ),
+    );
+  }
+
+  static Widget _heading(String text) => Padding(
+        padding: const EdgeInsets.only(top: 4, bottom: 6),
+        child: Text(text,
+            style: const TextStyle(color: Colors.white38, fontSize: 10, letterSpacing: 2)),
+      );
+
+  static Widget _empty(String text) => Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: Text(text, style: const TextStyle(color: Colors.white24, fontSize: 11)),
+      );
+
+  List<Widget> _sellSection() {
+    final junk = Trade.junk;
+    final spare = Trade.spareGear;
+    final back = Trade.buyback;
+    return [
+      Row(children: [
+        Expanded(child: _heading('JUNK')),
+        if (junk.isNotEmpty)
+          TextButton(
+            onPressed: Trade.sellAllJunk,
+            child: Text('SELL ALL  +${Trade.junkValue}◆',
+                style: const TextStyle(
+                    color: _amber, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1)),
+          ),
+      ]),
+      if (junk.isEmpty) _empty('No junk. Downed drones drop salvage.'),
+      for (final e in junk.entries)
+        _tradeRow(
+          title: '${Trade.junkCatalog[e.key]!.name}  ×${e.value}',
+          blurb: Trade.junkCatalog[e.key]!.blurb,
+          button: 'SELL  ${Trade.junkCatalog[e.key]!.value}◆',
+          onPressed: () => Trade.sellJunk(e.key),
+        ),
+      _heading('SPARE GEAR'),
+      if (spare.isEmpty) _empty('Nothing spare. Equipped gear is never sold.'),
+      for (final id in spare)
+        _tradeRow(
+          title: Progression.catalog[id]!.name,
+          blurb: Progression.statsLine(Progression.catalog[id]!),
+          button: 'SELL  ${Trade.gearSellPrice(id)}◆',
+          onPressed: () => Trade.sellGear(id),
+        ),
+      _heading('BUYBACK'),
+      if (back.isEmpty) _empty('Sold items wait here for a while.'),
+      for (var i = 0; i < back.length; i++)
+        _tradeRow(
+          title: Trade.nameOf(back[i]),
+          blurb: back[i].kind == 'gear' ? 'Gear' : 'Junk',
+          button: '${back[i].price}◆',
+          onPressed: Bonds.glimmer >= back[i].price ? () => Trade.buyBack(i) : null,
+        ),
+    ];
+  }
+
+  Widget _tradeRow({
+    required String title,
+    required String blurb,
+    required String button,
+    required VoidCallback? onPressed,
+  }) {
+    final on = onPressed != null;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.04),
+          border: Border.all(color: Colors.white12),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(children: [
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(title,
+                  style: const TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+              const SizedBox(height: 2),
+              Text(blurb, style: const TextStyle(color: Colors.white54, fontSize: 10, height: 1.3)),
+            ]),
+          ),
+          const SizedBox(width: 10),
+          TextButton(
+            onPressed: onPressed,
+            style: TextButton.styleFrom(
+              backgroundColor: _amber.withValues(alpha: on ? 0.18 : 0.06),
+              side: BorderSide(color: _amber.withValues(alpha: on ? 0.8 : 0.25)),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            ),
+            child: Text(button,
+                style: TextStyle(
+                    color: on ? _amber : Colors.white24,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 11)),
+          ),
+        ]),
       ),
     );
   }

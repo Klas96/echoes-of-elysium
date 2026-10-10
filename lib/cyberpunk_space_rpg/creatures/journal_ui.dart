@@ -8,6 +8,7 @@ import '../game/memories.dart';
 import '../game/pause.dart';
 import '../game/quests.dart';
 import '../game/save_service.dart';
+import '../game/well_rested.dart';
 import '../ui/equipment_ui.dart';
 import '../ui/shop_ui.dart';
 import 'bonds.dart';
@@ -73,7 +74,16 @@ class CreatureHud extends StatelessWidget {
     return Positioned(
       top: 90,
       left: 12,
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [_hudRow(), const WellRestedChip()],
+      ),
+    );
+  }
+
+  Widget _hudRow() {
+    return Row(mainAxisSize: MainAxisSize.min, children: [
         const _PauseChip(),
         const SizedBox(width: 8),
         const JournalButton(),
@@ -146,7 +156,39 @@ class CreatureHud extends StatelessWidget {
             );
           },
         ),
-      ]),
+      ]);
+  }
+}
+
+/// "Well rested" buff chip under the HUD row, with a countdown (#32).
+class WellRestedChip extends StatelessWidget {
+  const WellRestedChip({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<double>(
+      valueListenable: WellRested.remaining,
+      builder: (_, left, __) {
+        if (left <= 0) return const SizedBox.shrink();
+        return Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: _Chip(
+            border: const Color(0xFFFFCC66).withValues(alpha: 0.7),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(Icons.bedtime_outlined, size: 11, color: Color(0xFFFFCC66)),
+              const SizedBox(width: 4),
+              Text('WELL RESTED  ${WellRested.label}',
+                  style: const TextStyle(
+                      color: Color(0xFFFFCC66),
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2)),
+              Text('  +${(WellRested.damageBonus * 100).round()}% DMG · REGEN',
+                  style: const TextStyle(color: Colors.white54, fontSize: 9, letterSpacing: 0.8)),
+            ]),
+          ),
+        );
+      },
     );
   }
 }

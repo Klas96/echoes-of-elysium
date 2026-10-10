@@ -103,6 +103,7 @@ class ExamineHotspot extends GameComponent with Interactable {
       gotItem = giveItem;
     }
     if (completeQuest != null) Quests.complete(completeQuest!);
+    Quests.onExamined(id);
     final loggedClue = clueId != null && Adventure.discover(clueId!);
     var reward = 0;
     if (loggedClue) {

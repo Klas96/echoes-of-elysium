@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:bonfire/bonfire.dart';
 import 'package:flutter/material.dart';
+import 'damage_number.dart';
 import 'custom_player.dart';
 import 'drone_bounds.dart';
 import 'explosion_effect.dart';
@@ -73,6 +74,7 @@ class SentinelDrone extends GameDecoration {
       _knockback = knockbackDir.normalized() * 70;
     }
     _health = (_health - amount).clamp(0, maxHealth);
+    DamageNumber.spawn(this, position + Vector2(size.x / 2, 0), amount, DamageNumberStyle.dealt);
     if (_health <= 0 && !_deathFired) {
       _deathFired = true;
       Progression.onSentinelKilled();

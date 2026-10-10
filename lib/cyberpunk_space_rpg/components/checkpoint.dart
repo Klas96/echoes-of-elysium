@@ -3,6 +3,7 @@ import 'package:bonfire/bonfire.dart';
 import 'package:flutter/material.dart';
 import 'custom_player.dart';
 import '../game/save_service.dart';
+import '../game/well_rested.dart';
 import '../creatures/day_cycle.dart';
 import '../creatures/interaction.dart';
 
@@ -77,9 +78,10 @@ class Checkpoint extends GameDecoration with Interactable {
     DayCycle.time.value = DayCycle.restTarget(DayCycle.time.value);
     CustomPlayer.healthNotifier.value = CustomPlayer.maxHealth;
     SaveService.data.dayTime = DayCycle.time.value;
+    WellRested.grant();
     SaveService.requestAutosave();
     GameToast.show(wasNight ? 'MORNING' : 'NIGHTFALL',
-        body: 'Rested · HP restored',
+        body: 'HP restored · Well rested (+20% DMG, regen)',
         color: wasNight ? const Color(0xFFFFD27A) : const Color(0xFFB8C4FF),
         compact: true);
   }
