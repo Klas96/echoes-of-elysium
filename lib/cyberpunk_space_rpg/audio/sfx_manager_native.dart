@@ -1,5 +1,7 @@
 import 'package:audioplayers/audioplayers.dart';
 
+import 'audio_contexts.dart';
+
 /// Desktop / mobile SFX via audioplayers (Linux, Windows, Android, iOS, macOS).
 /// just_audio has no Linux plugin — MissingPluginException on desktop.
 ///
@@ -31,7 +33,16 @@ class SfxManager {
   Future<void> init() async {
     if (_ready) return;
     try {
+      // Must not use AndroidAudioFocus.gain — that pauses MusicManager BGM.
+      final mix = GameAudioContexts.mix;
+      await AudioPlayer.global.setAudioContext(mix);
       await Future.wait([
+        _footstep.setAudioContext(mix),
+        _damage.setAudioContext(mix),
+        _portal.setAudioContext(mix),
+        _shoot.setAudioContext(mix),
+        _chime.setAudioContext(mix),
+        _voice.setAudioContext(mix),
         _footstep.setReleaseMode(ReleaseMode.stop),
         _damage.setReleaseMode(ReleaseMode.stop),
         _portal.setReleaseMode(ReleaseMode.stop),

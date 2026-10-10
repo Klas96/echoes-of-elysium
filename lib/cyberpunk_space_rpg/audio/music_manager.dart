@@ -1,6 +1,8 @@
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 
+import 'audio_contexts.dart';
+
 export 'sfx_manager.dart';
 
 class MusicManager {
@@ -15,26 +17,13 @@ class MusicManager {
   static String _asset(String path) =>
       path.startsWith('assets/') ? path.substring(7) : path;
 
-  /// Android needs an audio focus / usage context or play() can no-op silently.
   Future<void> _ensureReady() async {
     if (_ready) return;
     _ready = true;
     try {
-      await AudioPlayer.global.setAudioContext(
-        AudioContext(
-          android: const AudioContextAndroid(
-            isSpeakerphoneOn: false,
-            stayAwake: true,
-            contentType: AndroidContentType.music,
-            usageType: AndroidUsageType.game,
-            audioFocus: AndroidAudioFocus.gain,
-          ),
-          iOS: AudioContextIOS(
-            category: AVAudioSessionCategory.playback,
-            options: const {AVAudioSessionOptions.mixWithOthers},
-          ),
-        ),
-      );
+      // Default all players to mix; music opts into gain on this player only.
+      await AudioPlayer.global.setAudioContext(GameAudioContexts.mix);
+      await _player.setAudioContext(GameAudioContexts.music);
       await _player.setVolume(0.7);
       await _player.setPlayerMode(PlayerMode.mediaPlayer);
     } catch (e) {
