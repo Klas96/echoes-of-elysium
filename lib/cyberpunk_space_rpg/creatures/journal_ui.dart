@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../components/lamp_light.dart';
 import '../game/adventure.dart';
+import '../ui/hud_layout.dart';
 import '../game/memories.dart';
 import '../game/pause.dart';
 import '../game/quests.dart';
@@ -67,96 +68,94 @@ class NightTint extends StatelessWidget {
 
 /// Small HUD row: journal button, time of day, current companion.
 class CreatureHud extends StatelessWidget {
-  const CreatureHud({super.key});
+  /// Icon-only buttons (narrow screens); labels stay for wide screens.
+  final bool compact;
+  const CreatureHud({super.key, this.compact = false});
+
+  static const _gold = Color(0xFFFFE08A);
 
   @override
   Widget build(BuildContext context) {
-    return Positioned(
-      top: 90,
-      left: 12,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [_hudRow(), const WellRestedChip()],
-      ),
-    );
-  }
-
-  Widget _hudRow() {
-    return Row(mainAxisSize: MainAxisSize.min, children: [
-        const _PauseChip(),
-        const SizedBox(width: 8),
-        const JournalButton(),
-        const SizedBox(width: 8),
-        const EquipmentButton(),
-        const SizedBox(width: 8),
+    return Wrap(
+      key: const ValueKey('hud-chips'),
+      spacing: compact ? 6 : 8,
+      runSpacing: 6,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        _PauseChip(compact: compact),
+        JournalButton(compact: compact),
+        EquipmentButton(compact: compact),
         ValueListenableBuilder<int>(
           valueListenable: Bonds.revision,
           builder: (_, __, ___) => _Chip(
-            border: const Color(0xFFFFE08A).withValues(alpha: 0.45),
+            border: _gold.withValues(alpha: 0.45),
             child: Text('${Bonds.glimmer}◆',
                 style: const TextStyle(
-                    color: Color(0xFFFFE08A),
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1)),
+                    color: _gold, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
           ),
         ),
-        if (SaveService.data.mapId == 'world5') ...[
-          const SizedBox(width: 8),
+        if (SaveService.data.mapId == 'world5')
           GestureDetector(
             onTap: Shop.show,
-            child: const _Chip(
-              border: Color(0xFFFFE08A),
-              child: Text('STALL',
-                  style: TextStyle(
-                      color: Color(0xFFFFE08A),
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.5)),
+            child: _Chip(
+              border: _gold,
+              child: compact
+                  ? const Icon(Icons.storefront_outlined, size: 13, color: _gold)
+                  : const Text('STALL',
+                      style: TextStyle(
+                          color: _gold, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
             ),
           ),
-        ],
-        const SizedBox(width: 8),
         ValueListenableBuilder<double>(
           valueListenable: DayCycle.time,
           builder: (_, t, __) {
             final night = DayCycle.isNight(t);
-            return _Chip(
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Icon(night ? Icons.nightlight_round : Icons.wb_sunny_outlined,
-                    size: 11, color: night ? const Color(0xFFB8C4FF) : const Color(0xFFFFD27A)),
-                const SizedBox(width: 4),
-                Text(DayCycle.label(t),
-                    style: const TextStyle(color: Colors.white54, fontSize: 10, letterSpacing: 1.5)),
-              ]),
+            final icon = Icon(night ? Icons.nightlight_round : Icons.wb_sunny_outlined,
+                size: compact ? 13 : 11,
+                color: night ? const Color(0xFFB8C4FF) : const Color(0xFFFFD27A));
+            return Tooltip(
+              message: DayCycle.label(t),
+              child: _Chip(
+                child: compact
+                    ? icon
+                    : Row(mainAxisSize: MainAxisSize.min, children: [
+                        icon,
+                        const SizedBox(width: 4),
+                        Text(DayCycle.label(t),
+                            style: const TextStyle(color: Colors.white54, fontSize: 10, letterSpacing: 1.5)),
+                      ]),
+              ),
             );
           },
         ),
-        const SizedBox(width: 8),
         ValueListenableBuilder<int>(
           valueListenable: Bonds.revision,
           builder: (_, __, ___) {
             final id = Bonds.active;
             if (id == null) return const SizedBox.shrink();
             final s = creatureSpecies[id]!;
+            final portrait = ClipOval(
+              child: Image.asset(s.portraitAsset(''),
+                  width: 16, height: 16, fit: BoxFit.cover, filterQuality: FilterQuality.none),
+            );
             return GestureDetector(
               onTap: () => Journal.show(entry: id),
               child: _Chip(
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  ClipOval(
-                    child: Image.asset(s.portraitAsset(''),
-                        width: 16, height: 16, fit: BoxFit.cover, filterQuality: FilterQuality.none),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(s.ability?.label ?? s.name.toUpperCase(),
-                      style: const TextStyle(color: Color(0xFFE8D0FF), fontSize: 10, letterSpacing: 1.5)),
-                ]),
+                child: compact
+                    ? portrait
+                    : Row(mainAxisSize: MainAxisSize.min, children: [
+                        portrait,
+                        const SizedBox(width: 4),
+                        Text(s.ability?.label ?? s.name.toUpperCase(),
+                            style: const TextStyle(
+                                color: Color(0xFFE8D0FF), fontSize: 10, letterSpacing: 1.5)),
+                      ]),
               ),
             );
           },
         ),
-      ]);
+      ],
+    );
   }
 }
 
@@ -164,27 +163,41 @@ class CreatureHud extends StatelessWidget {
 class WellRestedChip extends StatelessWidget {
   const WellRestedChip({super.key});
 
+  static const _gold = Color(0xFFFFCC66);
+
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<double>(
       valueListenable: WellRested.remaining,
       builder: (_, left, __) {
         if (left <= 0) return const SizedBox.shrink();
+        // Narrow screens: the bonus line goes under the timer instead of
+        // beside it, so nothing has to shrink.
+        final narrow = MediaQuery.sizeOf(context).width < 440;
+        final title = Text('WELL RESTED  ${WellRested.label}',
+            style: const TextStyle(
+                color: _gold, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2));
+        final bonus = Text('+${(WellRested.damageBonus * 100).round()}% DMG · REGEN',
+            style: const TextStyle(color: Colors.white54, fontSize: 9, letterSpacing: 0.8));
         return Padding(
+          key: const ValueKey('hud-rested'),
           padding: const EdgeInsets.only(top: 6),
           child: _Chip(
-            border: const Color(0xFFFFCC66).withValues(alpha: 0.7),
+            border: _gold.withValues(alpha: 0.7),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
-              const Icon(Icons.bedtime_outlined, size: 11, color: Color(0xFFFFCC66)),
+              const Icon(Icons.bedtime_outlined, size: 11, color: _gold),
               const SizedBox(width: 4),
-              Text('WELL RESTED  ${WellRested.label}',
-                  style: const TextStyle(
-                      color: Color(0xFFFFCC66),
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.2)),
-              Text('  +${(WellRested.damageBonus * 100).round()}% DMG · REGEN',
-                  style: const TextStyle(color: Colors.white54, fontSize: 9, letterSpacing: 0.8)),
+              if (narrow)
+                Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                  title,
+                  const SizedBox(height: 1),
+                  bonus,
+                ])
+              else ...[
+                title,
+                const SizedBox(width: 8),
+                bonus,
+              ],
             ]),
           ),
         );
@@ -211,15 +224,16 @@ class _Chip extends StatelessWidget {
 }
 
 class _PauseChip extends StatelessWidget {
-  const _PauseChip();
+  final bool compact;
+  const _PauseChip({this.compact = false});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: Pause.show,
-      child: const _Chip(
-        child: Text('II  PAUSE',
-            style: TextStyle(
+      child: _Chip(
+        child: Text(compact ? 'II' : 'II  PAUSE',
+            style: const TextStyle(
                 color: Colors.white54,
                 fontSize: 10,
                 fontWeight: FontWeight.bold,
@@ -230,7 +244,8 @@ class _PauseChip extends StatelessWidget {
 }
 
 class JournalButton extends StatelessWidget {
-  const JournalButton({super.key});
+  final bool compact;
+  const JournalButton({super.key, this.compact = false});
 
   @override
   Widget build(BuildContext context) {
@@ -238,7 +253,9 @@ class JournalButton extends StatelessWidget {
       onTap: () => Journal.show(),
       child: _Chip(
         border: _teal.withValues(alpha: 0.5),
-        child: Text(_isTouch ? 'JOURNAL' : 'J  JOURNAL',
+        child: compact
+            ? const Icon(Icons.menu_book_outlined, size: 13, color: _teal)
+            : Text(_isTouch ? 'JOURNAL' : 'J  JOURNAL',
             style: const TextStyle(color: _teal, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
       ),
     );
@@ -264,14 +281,16 @@ class InteractPromptLayer extends StatelessWidget {
             Shop.open.value) {
           return const SizedBox.shrink();
         }
+        final screen = MediaQuery.sizeOf(context);
         if (!info.enabled) {
           return Positioned(
-            bottom: 80,
+            bottom: HudLayout.promptBottom(screen),
             left: 24,
             right: 24,
             child: IgnorePointer(
               child: Center(
                 child: Container(
+                  key: const ValueKey('hud-prompt'),
                   constraints: const BoxConstraints(maxWidth: 360),
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   decoration: BoxDecoration(
@@ -302,7 +321,7 @@ class InteractPromptLayer extends StatelessWidget {
         final action = hold ? 'HOLD  ${info.label}' : info.label;
         final label = _isTouch ? action : 'E  $action';
         return Positioned(
-          bottom: 80,
+          bottom: HudLayout.promptBottom(screen),
           left: 0,
           right: 0,
           child: Center(
@@ -315,6 +334,8 @@ class InteractPromptLayer extends StatelessWidget {
               onPointerUp: (_) => Interaction.touchHeld = false,
               onPointerCancel: (_) => Interaction.touchHeld = false,
               child: Container(
+                key: const ValueKey('hud-prompt'),
+                constraints: BoxConstraints(maxWidth: screen.width - 32),
                 padding: EdgeInsets.symmetric(horizontal: _isTouch ? 28 : 14, vertical: _isTouch ? 14 : 6),
                 decoration: BoxDecoration(
                   color: Colors.black.withValues(alpha: 0.7),
@@ -327,9 +348,17 @@ class InteractPromptLayer extends StatelessWidget {
                       ItemIcon(info.item!, size: _isTouch ? 24 : 16),
                       SizedBox(width: _isTouch ? 8 : 6),
                     ],
-                    Text(label,
-                        style: TextStyle(
-                            color: _teal, fontSize: _isTouch ? 16 : 12, letterSpacing: 2, fontWeight: FontWeight.bold)),
+                    Flexible(
+                      child: Text(label,
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              color: _teal,
+                              fontSize: _isTouch ? 16 : 12,
+                              letterSpacing: 2,
+                              fontWeight: FontWeight.bold)),
+                    ),
                   ]),
                   if (hold) ...[
                     const SizedBox(height: 4),
@@ -367,7 +396,7 @@ class ToastLayer extends StatelessWidget {
         }
         final compact = m.compact;
         return Positioned(
-          bottom: compact ? 118 : 108,
+          bottom: HudLayout.toastBottom(MediaQuery.sizeOf(context), compact: compact),
           left: 12,
           right: 12,
           child: AnimatedSwitcher(
@@ -376,6 +405,7 @@ class ToastLayer extends StatelessWidget {
                     key: ValueKey(m.id),
                     alignment: Alignment.bottomCenter,
                     child: GestureDetector(
+                      key: const ValueKey('hud-toast'),
                       onTap: () => GameToast.current.value = null,
                       child: Container(
                         constraints: BoxConstraints(maxWidth: compact ? 300 : 340),
