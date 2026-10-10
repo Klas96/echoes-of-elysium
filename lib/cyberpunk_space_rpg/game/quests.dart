@@ -57,8 +57,8 @@ class Quests {
       id: 'courier_pack',
       title: 'Lost Courier Pack',
       blurb:
-          'A runner dropped a sealed pack on the west trail past the ranger cabin. Bring word that it was found.',
-      hint: 'Woods · west loop from the Crossroads.',
+          'A runner dropped a sealed pack in the west hollow below the crash site. Bring word that it was found.',
+      hint: 'Woods · west hollow, on the loop below the crash site.',
       region: 'woods',
       glimmer: 25,
       clueId: 'quest_courier',
@@ -68,7 +68,7 @@ class Quests {
       title: 'Quiet the Nest',
       blurb:
           'UEC left a quiet nest mid-woods. Clear the drones and read their field slate.',
-      hint: 'Woods · west loop nest spur past the Crossroads.',
+      hint: 'Woods · nest spur off the south-west bend of the west loop.',
       region: 'woods',
       glimmer: 10,
       gearId: 'scrap_plating',
@@ -80,7 +80,7 @@ class Quests {
       title: 'Moonflower for the Sick',
       blurb:
           'Mira needs a moonflower bloom from the SCENT trail. Pick one and bring it home.',
-      hint: 'Woods · west loop hollow before Asha.',
+      hint: 'Woods · south-west trail, just west of Asha\'s camp.',
       region: 'woods',
       glimmer: 15,
       gearId: 'lantern_charm',
@@ -92,8 +92,8 @@ class Quests {
       id: 'city_east_nest',
       title: 'East Lot Nest',
       blurb:
-          'UEC parked a nest on the east lot off the avenue. Quiet it before they reinforce.',
-      hint: 'City · east lot off the main avenue.',
+          'UEC parked a nest on the east lot below the Lantern Gate. Quiet it before they reinforce.',
+      hint: 'City · east lot, south of the Lantern Gate.',
       region: 'city',
       glimmer: 18,
       gearId: 'pulse_optic',
@@ -104,8 +104,8 @@ class Quests {
       id: 'city_se_patrol',
       title: 'South Alley Sweep',
       blurb:
-          'A patrol slate went dark in the south-east alley. Find it — and whatever is watching it.',
-      hint: 'City · SE alley south of the east lot.',
+          'A patrol slate went dark in the south-east patrol alley. Find it — and whatever is watching it.',
+      hint: 'City · patrol alley, between the east lot and Sentinel plaza.',
       region: 'city',
       glimmer: 20,
       clueId: 'quest_city_se',
@@ -115,8 +115,8 @@ class Quests {
       id: 'city_west_cache',
       title: 'West Alley Cache',
       blurb:
-          'Traders stashed a cache above the west yard. Recover the marked crate.',
-      hint: 'City · west mid-alley between noodle court and the yard.',
+          'Traders stashed a cache in the west lane above Echo district. Recover the marked crate.',
+      hint: 'City · west lane between Market Row and Echo district.',
       region: 'city',
       glimmer: 22,
       gearId: 'swarm_thrusters',

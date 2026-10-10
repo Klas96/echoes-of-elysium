@@ -265,15 +265,15 @@ class GameState {
       case 1:
         if (portalUnlocked.value || _step >= _l1Portal) {
           return job ??
-              'Mission: walk south off the map to the City (look east for Lantern Town once you arrive)';
+              'Mission: take the south-east meadow road off the map to the City (Lantern Town lies east of its plaza)';
         }
         if (_step >= _l1Fragments) {
-          return 'Mission: find glowing memory fragments '
-              '(${fragmentsCollected.value}/$fragmentsRequired) — then the south road opens';
+          return 'Mission: find any two glowing memory fragments '
+              '(${fragmentsCollected.value}/$fragmentsRequired) — then the meadow road to the City opens';
         }
         if (job != null && _step >= _l1Asha) return job;
         return _step >= _l1Asha
-            ? 'Next: find Asha on the trail (south of the crossroads) — she knows the woods'
+            ? 'Next: find Asha at her camp south of the standing stones — she knows the woods'
             : 'Mission: talk to Gaia by the crash site (green figure nearby)';
       case 2:
         if (portalUnlocked.value || _step >= _l2Core) {
@@ -294,7 +294,7 @@ class GameState {
           return 'Use the Archivist\'s seal on the Archive Library';
         }
         if (_step >= _l2Archivist) return 'Seek out the Archivist';
-        return 'Arrival plaza: east → Town · west Echo-7 · south avenue · north → Woods';
+        return 'Arrival plaza: west → market & Echo-7 · south → Archive Square · east → Lantern Gate';
       case 3:
         if (Adventure.flag('ruins_gate_open')) {
           return 'Descend to Gaia\'s Core';
