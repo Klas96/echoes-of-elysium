@@ -12,6 +12,7 @@ enum _SState { idle, chase, attack, rage }
 class SentinelDrone extends GameDecoration {
   static SentinelDrone? instance;
   static const int maxHealth = 360;
+  static const double spriteSize = 64;
   static const double _detectR = 300;
   static const double _attackR = 50;
   static const double _speed = 68;
@@ -143,8 +144,16 @@ class SentinelDrone extends GameDecoration {
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14));
 
     // Sprite
+    // 64x64 art drawn at 1:1 over the 48px body so the boss reads bigger
+    // than its hitbox.
     if (_sprite != null) {
-      _sprite!.render(canvas, size: size);
+      const s = spriteSize;
+      _sprite!.render(
+        canvas,
+        position: Vector2(cx - s / 2, cy - s / 2),
+        size: Vector2.all(s),
+        overridePaint: Paint()..filterQuality = FilterQuality.none,
+      );
     }
 
     // Rage white core flash
@@ -154,7 +163,7 @@ class SentinelDrone extends GameDecoration {
     // HP bar
     const barW = 52.0, barH = 5.0;
     final barX = cx - barW / 2;
-    final barY = cy - r - 12;
+    final barY = cy - spriteSize / 2 - 8;
     canvas.drawRect(Rect.fromLTWH(barX, barY, barW, barH), Paint()..color = Colors.black54);
     canvas.drawRect(
         Rect.fromLTWH(barX, barY, barW * (_health / maxHealth).clamp(0, 1), barH),

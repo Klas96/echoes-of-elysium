@@ -52,7 +52,13 @@ class _DroneStats {
   final double size;
   final Color idleColor;
   final Color aggroColor;
+  /// Static 32x32 art (`sprites/uec_<kind>.png`). A 2-frame hover sheet
+  /// `<name>_hover.png` next to it is preferred when present.
   final String spritePath;
+
+  /// Drawn size of the sprite (centred); can exceed the hitbox [size] so
+  /// small, fast kinds stay readable.
+  final double spriteSize;
 
   const _DroneStats({
     required this.detectionRadius,
@@ -68,7 +74,10 @@ class _DroneStats {
     required this.idleColor,
     required this.aggroColor,
     required this.spritePath,
+    required this.spriteSize,
   });
+
+  String get hoverPath => spritePath.replaceFirst(RegExp(r'\.png$'), '_hover.png');
 
   static _DroneStats forKind(DroneKind kind) => switch (kind) {
         DroneKind.scout => const _DroneStats(
@@ -84,7 +93,8 @@ class _DroneStats {
             size: 24,
             idleColor: Color(0xFF6688AA),
             aggroColor: Color(0xFFFF4444),
-            spritePath: 'sprites/uec_drone.png',
+            spritePath: 'sprites/uec_scout.png',
+            spriteSize: 28,
           ),
         DroneKind.sniper => const _DroneStats(
             detectionRadius: 300,
@@ -99,7 +109,8 @@ class _DroneStats {
             size: 22,
             idleColor: Color(0xFF8866AA),
             aggroColor: Color(0xFFFF6622),
-            spritePath: 'sprites/enemy_ship.png',
+            spritePath: 'sprites/uec_sniper.png',
+            spriteSize: 28,
           ),
         DroneKind.shield => const _DroneStats(
             detectionRadius: 190,
@@ -114,7 +125,8 @@ class _DroneStats {
             size: 30,
             idleColor: Color(0xFF4488CC),
             aggroColor: Color(0xFF33AAFF),
-            spritePath: 'sprites/uec_drone.png',
+            spritePath: 'sprites/uec_shield.png',
+            spriteSize: 32,
           ),
         DroneKind.swarm => const _DroneStats(
             detectionRadius: 240,
@@ -129,7 +141,9 @@ class _DroneStats {
             size: 16,
             idleColor: Color(0xFF88AA66),
             aggroColor: Color(0xFFFFCC33),
-            spritePath: 'sprites/enemy_ship.png',
+            spritePath: 'sprites/uec_swarm.png',
+            // Three ships in one sprite: below ~24px they turn to mush.
+            spriteSize: 26,
           ),
       };
 }
@@ -170,10 +184,25 @@ class UECDrone extends GameDecoration {
   }
 
   Sprite? _sprite;
+  SpriteAnimationTicker? _hover;
 
   @override
   Future<void> onLoad() async {
     _sprite = await Sprite.load(_stats.spritePath);
+    try {
+      // Frame 2 bobs up 1px and brightens the eye (uec_*_hover.json).
+      final img = await Flame.images.load(_stats.hoverPath);
+      _hover = SpriteAnimation.fromFrameData(
+        img,
+        SpriteAnimationData.sequenced(
+          amount: max(1, img.width ~/ 32),
+          stepTime: kind == DroneKind.swarm ? 0.2 : 0.3,
+          textureSize: Vector2.all(32),
+        ),
+      ).createTicker();
+    } catch (_) {
+      _hover = null;
+    }
     active.add(this);
     add(CircleHitbox(
       radius: size.x * 0.5,
@@ -244,6 +273,7 @@ class UECDrone extends GameDecoration {
       return;
     }
     super.update(dt);
+    _hover?.update(dt);
     _pulse += dt * (kind == DroneKind.swarm ? 5.0 : 3.5);
     _attackTimer = max(0, _attackTimer - dt);
 
@@ -380,13 +410,18 @@ class UECDrone extends GameDecoration {
       );
     }
 
-    if (_sprite != null) {
-      _sprite!.render(
+    final sprite = _hover?.getSprite() ?? _sprite;
+    if (sprite != null) {
+      final s = _stats.spriteSize;
+      sprite.render(
         canvas,
-        size: size,
+        position: Vector2(cx - s / 2, cy - s / 2),
+        size: Vector2.all(s),
         overridePaint: Paint()
+          ..filterQuality = FilterQuality.none
+          // Light tint only: the per-kind art already carries the identity.
           ..colorFilter = ColorFilter.mode(
-            Color.lerp(Colors.white, col, aggro ? 0.35 : 0.15)!,
+            Color.lerp(Colors.white, col, aggro ? 0.25 : 0.0)!,
             BlendMode.modulate,
           ),
       );
@@ -396,7 +431,7 @@ class UECDrone extends GameDecoration {
     const barW = 22.0;
     const barH = 3.0;
     final barX = cx - barW / 2;
-    final barY = cy - r - 8;
+    final barY = cy - max(r, _stats.spriteSize / 2) - 6;
     canvas.drawRect(
       Rect.fromLTWH(barX, barY, barW, barH),
       Paint()..color = Colors.black54,
