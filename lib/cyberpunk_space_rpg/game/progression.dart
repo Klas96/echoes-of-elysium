@@ -8,6 +8,7 @@ import '../creatures/bonds.dart';
 import '../creatures/interaction.dart';
 import '../ui/mmo_feedback.dart';
 import 'save_service.dart';
+import 'trade.dart';
 
 enum GearSlot { rifle, suit, relic }
 
@@ -233,6 +234,7 @@ class Progression {
 
     final drop = _rollDrop(kind);
     if (drop != null) _grantGear(drop);
+    Trade.rollDroneJunk();
   }
 
   static void onSentinelKilled() {
