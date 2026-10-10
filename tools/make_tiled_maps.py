@@ -1369,7 +1369,7 @@ def map5():
         return blob(ts, "road-sidewalk", ~road, x, y, rng, exclude={4, 5, 6, 7, 8})
     lv.carve_lots(wall, [(3, 7, 9, 13), (18, 7, 24, 13), (3, 17, 9, 23)], reground5)
     place(lv, "spawn", *P["spawn"])
-    place(lv, "npc", *P["mira"], name="mira", sprite="asha")
+    place(lv, "npc", *P["mira"], name="mira", sprite="mira")
     place(lv, "health", *P["h1"])
     place(lv, "stash", *P["stash"], glimmer=15)
     # West road back to the City — walk off the map.

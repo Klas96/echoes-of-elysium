@@ -31,6 +31,8 @@ flutter:
     - assets/images/maps/buildings/
     - assets/images/sprites/
     - assets/images/sprites/fx/
+    - assets/images/sprites/items/
+    - assets/images/sprites/obstacles/
     - assets/images/creatures/
     - assets/images/obstacles/
     - assets/images/ui/

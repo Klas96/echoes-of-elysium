@@ -80,7 +80,8 @@ class WalkSheet {
   }
 }
 
-/// One-shot shoot cycle: 4 rows (down/up/right/left) × 4 frames.
+/// One-shot shoot cycle: 4 rows (down/up/right/left) × 4 frames, cols
+/// ready → aim → fire (cyan muzzle tip) → recover (kaela_shoot.png).
 /// Built from [WalkSheet] pixels so palette/outline match the walk art.
 class ShootSheet {
   static const double frameSize = 32;

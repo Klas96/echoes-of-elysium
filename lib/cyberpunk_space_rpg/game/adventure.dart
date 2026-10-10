@@ -25,7 +25,40 @@ const itemLabels = <String, String>{
   'archive_seal': 'Archive Seal',
   'moonflower_bloom': 'Moonflower Bloom',
   'ruins_gate_key': 'Aetherian Keystone',
+  // creature bond items (obstacles.dart)
+  'sweetroot': 'Sweetroot',
+  'pebble': 'River Pebble',
 };
+
+/// Key items with Designer art under `assets/images/sprites/items/`:
+/// `<id>.png` 32px, `<id>_16.png`, `<id>_drop.png` and a 2-frame
+/// `<id>_drop_sparkle.png` (64x32) for world pickups.
+const itemsWithArt = <String>{
+  'uec_override',
+  'archive_seal',
+  'ruins_gate_key',
+  'moonflower_bloom',
+};
+
+/// Items whose icon reuses existing world art instead of `sprites/items/`.
+const _itemIconFallback = <String, String>{
+  'pebble': 'assets/images/creatures/river_pebble.png',
+};
+
+/// Flutter asset path of an item's icon ([small]: the 16px variant), or
+/// null if the item has no art yet.
+String? itemIconAsset(String? id, {bool small = false}) {
+  if (id == null) return null;
+  if (itemsWithArt.contains(id)) {
+    return 'assets/images/sprites/items/$id${small ? '_16' : ''}.png';
+  }
+  return _itemIconFallback[id];
+}
+
+/// Flame image path (relative to assets/images/) of the 2-frame world-drop
+/// sparkle sheet, or null if the item has none.
+String? itemDropSparkle(String? id) =>
+    id != null && itemsWithArt.contains(id) ? 'sprites/items/${id}_drop_sparkle.png' : null;
 
 /// Branching talk options shown on the last line of an [NpcDialogue].
 @immutable

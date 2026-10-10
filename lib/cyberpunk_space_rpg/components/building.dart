@@ -84,8 +84,8 @@ class Building extends GameDecorationWithCollision with Interactable {
       if (_archiveOpen) {
         return const PromptInfo.note('Archive · Open. Dust and quiet light.');
       }
-      if (Bonds.hasItem('archive_seal')) return const PromptInfo('USE SEAL');
-      return const PromptInfo.note('Archive · Sealed. Needs the Archivist\'s seal.');
+      if (Bonds.hasItem('archive_seal')) return const PromptInfo('USE SEAL', item: 'archive_seal');
+      return const PromptInfo.note('Archive · Sealed. Needs the Archivist\'s seal.', item: 'archive_seal');
     }
     if (id == 'ruin_shrine' && !Adventure.hasClue('shrine_note')) {
       return const PromptInfo('EXAMINE');

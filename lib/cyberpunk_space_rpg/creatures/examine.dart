@@ -60,15 +60,16 @@ class ExamineHotspot extends GameComponent with Interactable {
     if (openShop) return const PromptInfo('TRADE');
     if (requiresItem != null && !_hasKey && !_done) {
       if (requiresItem == 'ruins_gate_key') {
-        return const PromptInfo.note('Sealed · keystone is in the NE wing');
+        return PromptInfo.note('Sealed · keystone is in the NE wing', item: requiresItem);
       }
       final name = itemLabels[requiresItem!] ?? requiresItem!;
-      return PromptInfo.note('Locked · needs $name');
+      return PromptInfo.note('Locked · needs $name', item: requiresItem);
     }
     if (requiresItem != null && _hasKey && !_done) {
-      return const PromptInfo('USE ITEM');
+      return PromptInfo('USE ITEM', item: requiresItem);
     }
     if (_done) return PromptInfo.note(title);
+    if (_dropVisible) return PromptInfo('EXAMINE', item: giveItem);
     return const PromptInfo('EXAMINE');
   }
 
@@ -87,7 +88,7 @@ class ExamineHotspot extends GameComponent with Interactable {
       final body = requiresItem == 'ruins_gate_key'
           ? 'Find the Aetherian Keystone in the north-east wing, then return here.'
           : 'Needs $name.';
-      GameToast.show('SEALED', body: body, color: const Color(0xFFFFAABB), compact: true);
+      GameToast.show('SEALED', body: body, color: const Color(0xFFFFAABB), compact: true, item: requiresItem);
       GameState.refreshObjective();
       return;
     }
@@ -96,8 +97,10 @@ class ExamineHotspot extends GameComponent with Interactable {
     }
     Adventure.setFlag('examined:$id');
     if (setFlag != null) Adventure.setFlag(setFlag!);
+    String? gotItem;
     if (giveItem != null && !Bonds.hasItem(giveItem!) && !Bonds.usedItem(giveItem!)) {
       Bonds.giveItem(giveItem!);
+      gotItem = giveItem;
     }
     if (completeQuest != null) Quests.complete(completeQuest!);
     final loggedClue = clueId != null && Adventure.discover(clueId!);
@@ -115,13 +118,45 @@ class ExamineHotspot extends GameComponent with Interactable {
           : text,
       color: const Color(0xFFAAEEFF),
       compact: true,
+      item: gotItem ?? (consumeItem ? requiresItem : null),
     );
+  }
+
+  /// A [giveItem] not yet picked up shows its world-drop art.
+  bool get _dropVisible =>
+      giveItem != null && !_done && !Bonds.hasItem(giveItem!) && !Bonds.usedItem(giveItem!);
+
+  SpriteAnimationTicker? _drop;
+
+  @override
+  Future<void> onLoad() async {
+    final path = itemDropSparkle(giveItem);
+    if (path != null) {
+      try {
+        // <id>_drop_sparkle.png: 2 frames of 32x32 at 0.4 s (Designer json);
+        // hold the plain drop longer than the sparkle.
+        final img = await Flame.images.load(path);
+        final n = max(1, img.width ~/ 32);
+        _drop = SpriteAnimation.fromFrameData(
+          img,
+          SpriteAnimationData.variable(
+            amount: n,
+            stepTimes: [for (var i = 0; i < n; i++) i == 0 ? 1.2 : 0.4],
+            textureSize: Vector2.all(32),
+          ),
+        ).createTicker();
+      } catch (_) {
+        _drop = null;
+      }
+    }
+    return super.onLoad();
   }
 
   @override
   void update(double dt) {
     super.update(dt);
     _pulse += dt * 2.2;
+    _drop?.update(dt);
   }
 
   @override
@@ -129,6 +164,22 @@ class ExamineHotspot extends GameComponent with Interactable {
     final cx = size.x / 2;
     final cy = size.y / 2;
     final p = sin(_pulse);
+    if (_drop != null && _dropVisible) {
+      // 32x32 drop, centred on the hotspot with a soft glow under it.
+      canvas.drawOval(
+        Rect.fromCenter(center: Offset(cx, cy + 9), width: 18, height: 6),
+        Paint()
+          ..color = const Color(0xFF88DDFF).withValues(alpha: 0.25 + p * 0.08)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
+      );
+      _drop!.getSprite().render(
+            canvas,
+            position: Vector2(cx - 16, cy - 16),
+            size: Vector2.all(32),
+            overridePaint: Paint()..filterQuality = FilterQuality.none,
+          );
+      return;
+    }
     final col = _done
         ? const Color(0xFF668899)
         : (_hasKey || requiresItem == null)

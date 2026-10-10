@@ -554,7 +554,7 @@ class SweetrootStump extends GameComponent with Interactable {
     if (_taken) return;
     Bonds.giveItem('sweetroot');
     SfxManager().playChime();
-    GameToast.show('SWEETROOT', color: const Color(0xFFFFC07A), compact: true);
+    GameToast.show('SWEETROOT', color: const Color(0xFFFFC07A), compact: true, item: 'sweetroot');
   }
 
   @override
@@ -610,7 +610,7 @@ class RiverPebble extends GameComponent {
       Bonds.markSecret(id);
       Bonds.giveItem('pebble');
       SfxManager().playChime();
-      GameToast.show('RIVER PEBBLE', color: const Color(0xFF9FD0FF), compact: true);
+      GameToast.show('RIVER PEBBLE', color: const Color(0xFF9FD0FF), compact: true, item: 'pebble');
     }
   }
 
