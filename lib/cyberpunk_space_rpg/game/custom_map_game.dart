@@ -31,6 +31,7 @@ import '../creatures/obstacles.dart';
 import '../ui/cutscenes.dart';
 import '../ui/equipment_ui.dart';
 import '../ui/hud_layout.dart';
+import '../interiors/meal_chip.dart';
 import '../ui/mmo_feedback.dart';
 import '../ui/quest_board_ui.dart';
 import '../ui/shop_ui.dart';
@@ -2224,6 +2225,7 @@ class GameHudState extends State<GameHud> {
                     child: CreatureHud(compact: HudLayout.compactChips(box.maxWidth)),
                   ),
                   const Align(alignment: Alignment.centerLeft, child: WellRestedChip()),
+                  const Align(alignment: Alignment.centerLeft, child: MealChip()),
                   const SizedBox(height: 8),
                   if (!wide) banner,
                 ],

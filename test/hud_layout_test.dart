@@ -1,3 +1,4 @@
+import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/interiors/room_services.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/components/npc_character.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/creatures/bonds.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/creatures/day_cycle.dart';
@@ -34,6 +35,8 @@ void busyState({bool talk = false}) {
   MmoFeedback.zoneTitle.value = 'Lantern Town';
   MmoFeedback.zoneBlurb.value = 'Market hub · job board · Mira\'s stall';
   WellRested.remaining.value = 178;
+  Meals.active.value = 'night_bowl';
+  Meals.remaining.value = 151;
   MmoFeedback.pops.value = const [
     HudPop(id: 1, text: '+22 XP', color: Color(0xFFFFE08A)),
     HudPop(id: 2, text: '+3 ◆', color: Color(0xFF88DDFF)),
@@ -56,6 +59,8 @@ void clearState() {
   MmoFeedback.pops.value = const [];
   MmoFeedback.zoneTitle.value = null;
   WellRested.remaining.value = 0;
+  Meals.active.value = null;
+  Meals.remaining.value = 0;
 }
 
 Future<void> pumpHud(WidgetTester tester, Size size, {bool talk = false}) async {
@@ -98,7 +103,7 @@ void main() {
 
         final screen = Offset.zero & size;
         final r = {
-          for (final k in ['hud-health', 'hud-tracker', 'hud-chips', 'hud-rested', 'hud-banner-card', 'hud-pops', 'hud-toast'])
+          for (final k in ['hud-health', 'hud-tracker', 'hud-chips', 'hud-rested', 'hud-meal', 'hud-banner-card', 'hud-pops', 'hud-toast'])
             k: rectOf(tester, k),
           'prompt': rectOf(tester, talk ? 'hud-talk-prompt' : 'hud-prompt'),
         };

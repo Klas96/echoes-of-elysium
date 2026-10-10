@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../creatures/bonds.dart';
 import '../creatures/day_cycle.dart';
 import '../game/save_service.dart';
+import 'room_text.dart';
 
 /// In-game day counter (#31): Ferro's daily rumour and Dao's daily errand.
 /// Counts each time the day clock wraps past midnight, including resting
@@ -238,5 +239,68 @@ class Stash {
     _set(0);
     Bonds.addGlimmer(n);
     return n;
+  }
+}
+
+/// Old Ferro's riddles (#31): one a day. A right answer gets the next
+/// rumour in rotation (none repeats until all are heard) + 5 glimmer and
+/// moves on to the next riddle; a wrong answer brings the same riddle back
+/// the next in-game day. Saved as `extra.ferro`.
+class Ferro {
+  Ferro._();
+  static const _key = 'ferro';
+
+  static Map<String, dynamic> get _m {
+    final v = SaveService.data.extra[_key];
+    if (v is Map<String, dynamic>) return v;
+    final m = <String, dynamic>{};
+    SaveService.data.extra[_key] = m;
+    return m;
+  }
+
+  static int _int(String k, [int d = 0]) => (_m[k] as num?)?.toInt() ?? d;
+
+  /// Riddles solved so far (index of today's riddle, mod the list).
+  static int get solved => _int('riddle');
+
+  /// Rumours told so far (next rumour, mod the list).
+  static int get rumoursTold => _int('rumour');
+
+  static bool get answeredToday => _m.containsKey('day') && _int('day') == RoomDay.today;
+  static bool get rightToday => answeredToday && _m['right'] == true;
+
+  static FerroRiddle get riddle => RoomText.ferroRiddles[solved % RoomText.ferroRiddles.length];
+
+  /// Today's rumour after a right answer.
+  static String? get rumourToday {
+    if (!rightToday) return null;
+    return RoomText.ferroRumours[_int('told') % RoomText.ferroRumours.length];
+  }
+
+  /// The three answers, shuffled per day so the right one moves around.
+  static List<String> get choices {
+    final r = riddle;
+    final all = [r.answer, ...r.wrong];
+    final shift = (RoomDay.today + solved * 2) % all.length;
+    return [...all.skip(shift), ...all.take(shift)];
+  }
+
+  /// Answer today's riddle. Returns the rumour on a right answer, null on a
+  /// wrong one (or if already answered today).
+  static String? answer(String choice) {
+    if (answeredToday) return null;
+    final right = choice == riddle.answer;
+    _m['day'] = RoomDay.today;
+    _m['right'] = right;
+    if (!right) {
+      SaveService.requestAutosave();
+      return null;
+    }
+    final told = rumoursTold;
+    _m['told'] = told;
+    _m['rumour'] = told + 1;
+    _m['riddle'] = solved + 1;
+    Bonds.addGlimmer(RoomText.ferroRewardGlimmer);
+    return RoomText.ferroRumours[told % RoomText.ferroRumours.length];
   }
 }
