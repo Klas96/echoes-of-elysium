@@ -623,7 +623,10 @@ class Level:
             cx = (x + w / 2) * T
             cy = (y + h / 2) * T
             # Top of the prop (vents vent upward; campfire/brazier glow above)
-            if kind in ("steam", "smoke"):
+            if name in self.EMITTERS:
+                px, py = self.EMITTERS[name]
+                cx, cy = x * T + px, y * T + py
+            elif kind in ("steam", "smoke"):
                 cy = (y + 0.15 * h) * T
             elif kind == "ember":
                 cy = (y + 0.25 * h) * T
@@ -635,6 +638,11 @@ class Level:
         # mist drifting over open water (ponds), set per map in tile coords
         for (tx, ty) in self.mist:
             self.obj("ambient", tx * T - 12, ty * T - 12, 24, 24, kind="mist")
+
+    # emitter point (px from the prop's top-left) where the default above misses the art
+    EMITTERS = {
+        "crashed_ship": (52, 62),      # skiff fuselage ridge behind the canopy (#47); block top is empty air
+    }
 
     CHIMNEYS = {
         "ranger_cabin": ((31, 12),),

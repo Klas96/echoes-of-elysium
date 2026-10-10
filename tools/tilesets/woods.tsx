@@ -1690,21 +1690,13 @@
  </tile>
  <tile id="218">
   <properties>
-   <property name="collides" type="bool" value="true" />
    <property name="prop" value="crashed_ship" />
   </properties>
-  <objectgroup draworder="index" id="2">
-   <object id="1" type="collision" x="20" y="22" width="12" height="10" rotation="0" />
-  </objectgroup>
  </tile>
  <tile id="219">
   <properties>
-   <property name="collides" type="bool" value="true" />
    <property name="prop" value="crashed_ship" />
   </properties>
-  <objectgroup draworder="index" id="2">
-   <object id="1" type="collision" x="0" y="20" width="9" height="12" rotation="0" />
-  </objectgroup>
  </tile>
  <tile id="220">
   <properties>
@@ -1773,12 +1765,8 @@
  </tile>
  <tile id="232">
   <properties>
-   <property name="collides" type="bool" value="true" />
    <property name="prop" value="crashed_ship" />
   </properties>
-  <objectgroup draworder="index" id="2">
-   <object id="1" type="collision" x="24" y="14" width="8" height="18" rotation="0" />
-  </objectgroup>
  </tile>
  <tile id="233">
   <properties>
@@ -1786,26 +1774,18 @@
    <property name="prop" value="crashed_ship" />
   </properties>
   <objectgroup draworder="index" id="2">
-   <object id="1" type="collision" x="0" y="12" width="32" height="20" rotation="0" />
+   <object id="1" type="collision" x="0" y="24" width="24" height="8" rotation="0" />
   </objectgroup>
  </tile>
  <tile id="234">
   <properties>
-   <property name="collides" type="bool" value="true" />
    <property name="prop" value="crashed_ship" />
   </properties>
-  <objectgroup draworder="index" id="2">
-   <object id="1" type="collision" x="0" y="0" width="32" height="32" rotation="0" />
-  </objectgroup>
  </tile>
  <tile id="235">
   <properties>
-   <property name="collides" type="bool" value="true" />
    <property name="prop" value="crashed_ship" />
   </properties>
-  <objectgroup draworder="index" id="2">
-   <object id="1" type="collision" x="0" y="0" width="6" height="11" rotation="0" />
-  </objectgroup>
  </tile>
  <tile id="245">
   <properties>
@@ -1828,7 +1808,8 @@
    <property name="prop" value="crashed_ship" />
   </properties>
   <objectgroup draworder="index" id="2">
-   <object id="1" type="collision" x="26" y="0" width="6" height="32" rotation="0" />
+   <object id="1" type="collision" x="23" y="1" width="9" height="23" rotation="0" />
+   <object id="2" type="collision" x="17" y="24" width="15" height="8" rotation="0" />
   </objectgroup>
  </tile>
  <tile id="249">
@@ -1837,7 +1818,8 @@
    <property name="prop" value="crashed_ship" />
   </properties>
   <objectgroup draworder="index" id="2">
-   <object id="1" type="collision" x="0" y="0" width="32" height="32" rotation="0" />
+   <object id="1" type="collision" x="0" y="0" width="32" height="24" rotation="0" />
+   <object id="2" type="collision" x="6" y="24" width="26" height="8" rotation="0" />
   </objectgroup>
  </tile>
  <tile id="250">
@@ -1846,13 +1828,19 @@
    <property name="prop" value="crashed_ship" />
   </properties>
   <objectgroup draworder="index" id="2">
-   <object id="1" type="collision" x="0" y="0" width="21" height="32" rotation="0" />
+   <object id="1" type="collision" x="0" y="0" width="14" height="8" rotation="0" />
+   <object id="2" type="collision" x="0" y="8" width="32" height="24" rotation="0" />
   </objectgroup>
  </tile>
  <tile id="251">
   <properties>
+   <property name="collides" type="bool" value="true" />
    <property name="prop" value="crashed_ship" />
   </properties>
+  <objectgroup draworder="index" id="2">
+   <object id="1" type="collision" x="0" y="17" width="5" height="7" rotation="0" />
+   <object id="2" type="collision" x="0" y="24" width="11" height="8" rotation="0" />
+  </objectgroup>
  </tile>
  <tile id="261">
   <properties>
@@ -1875,7 +1863,7 @@
    <property name="prop" value="crashed_ship" />
   </properties>
   <objectgroup draworder="index" id="2">
-   <object id="1" type="collision" x="27" y="0" width="5" height="6" rotation="0" />
+   <object id="1" type="collision" x="14" y="0" width="17" height="6" rotation="0" />
   </objectgroup>
  </tile>
  <tile id="265">
@@ -1884,7 +1872,7 @@
    <property name="prop" value="crashed_ship" />
   </properties>
   <objectgroup draworder="index" id="2">
-   <object id="1" type="collision" x="0" y="0" width="25" height="15" rotation="0" />
+   <object id="1" type="collision" x="6" y="0" width="26" height="7" rotation="0" />
   </objectgroup>
  </tile>
  <tile id="266">
@@ -1893,13 +1881,19 @@
    <property name="prop" value="crashed_ship" />
   </properties>
   <objectgroup draworder="index" id="2">
-   <object id="1" type="collision" x="3" y="0" width="8" height="5" rotation="0" />
+   <object id="1" type="collision" x="0" y="0" width="32" height="8" rotation="0" />
+   <object id="2" type="collision" x="15" y="8" width="17" height="8" rotation="0" />
+   <object id="3" type="collision" x="16" y="16" width="11" height="5" rotation="0" />
   </objectgroup>
  </tile>
  <tile id="267">
   <properties>
+   <property name="collides" type="bool" value="true" />
    <property name="prop" value="crashed_ship" />
   </properties>
+  <objectgroup draworder="index" id="2">
+   <object id="1" type="collision" x="0" y="0" width="18" height="16" rotation="0" />
+  </objectgroup>
  </tile>
  <wangsets>
   <wangset name="grass-path" type="mixed" tile="62">
