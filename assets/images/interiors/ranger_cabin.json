@@ -1,0 +1,177 @@
+{
+ "id": "ranger_cabin",
+ "title": "Ranger cabin in the Woods: Asha's place",
+ "image": "ranger_cabin.png",
+ "size": [
+  16,
+  9
+ ],
+ "tile": 32,
+ "collision": [
+  [
+   0,
+   0,
+   16,
+   3
+  ],
+  [
+   0,
+   3,
+   1,
+   6
+  ],
+  [
+   15,
+   3,
+   1,
+   6
+  ],
+  [
+   0,
+   7,
+   7,
+   2
+  ],
+  [
+   9,
+   7,
+   7,
+   2
+  ],
+  [
+   1,
+   3,
+   2,
+   1
+  ],
+  [
+   9,
+   3,
+   3,
+   1
+  ],
+  [
+   1,
+   4,
+   3,
+   2
+  ],
+  [
+   1,
+   6,
+   2,
+   1
+  ],
+  [
+   12,
+   4,
+   3,
+   3
+  ],
+  [
+   11,
+   6,
+   1,
+   1
+  ]
+ ],
+ "door": [
+  7,
+  8,
+  2,
+  1
+ ],
+ "spawn": [
+  7,
+  7
+ ],
+ "npcs": [],
+ "interact": [
+  {
+   "id": "stash_chest",
+   "rect": [
+    1,
+    4,
+    3,
+    2
+   ],
+   "kind": "stash",
+   "note": "Stash between trips (#32)"
+  },
+  {
+   "id": "desk_journal",
+   "rect": [
+    9,
+    2,
+    2,
+    2
+   ],
+   "kind": "journal",
+   "note": "Creature journal: 'N of 24 creatures befriended'"
+  },
+  {
+   "id": "asha_note",
+   "rect": [
+    11,
+    2,
+    1,
+    2
+   ],
+   "kind": "note",
+   "note": "'Kaela, use what you need. The chest is yours now. A.'"
+  },
+  {
+   "id": "wall_map",
+   "rect": [
+    6,
+    0,
+    3,
+    3
+   ],
+   "kind": "map",
+   "note": "Region map: 'Asha has pinned every trail she's walked. A few are still blank.'"
+  },
+  {
+   "id": "stove",
+   "rect": [
+    3,
+    0,
+    3,
+    3
+   ],
+   "kind": "flavour",
+   "note": "'Cold ashes and a kettle. It smells of pine.'"
+  }
+ ],
+ "lights": [
+  {
+   "tile": [
+    4,
+    2
+   ],
+   "kind": "fire"
+  },
+  {
+   "tile": [
+    1,
+    2
+   ],
+   "kind": "warm"
+  },
+  {
+   "tile": [
+    14,
+    2
+   ],
+   "kind": "warm"
+  },
+  {
+   "tile": [
+    11,
+    1
+   ],
+   "kind": "warm"
+  }
+ ],
+ "walkable_tiles": 34
+}
