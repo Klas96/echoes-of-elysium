@@ -83,11 +83,7 @@ void useSpot(RoomData room, RoomSpot s) {
       RoomPanel.show(RoomPanelData(
           title: 'Wen', color: _wen, pages: [_metLine('wen', RoomText.wenFirst, RoomText.wenLater)]));
     case 'tea_house/ferro':
-      final rumour = RoomText.ferroRumours[RoomDay.today % RoomText.ferroRumours.length];
-      final first = !Adventure.flag('met:ferro');
-      Adventure.setFlag('met:ferro');
-      RoomPanel.show(RoomPanelData(
-          title: 'Old Ferro', color: _ferro, pages: [if (first) RoomText.ferroFirst, rumour]));
+      _ferroTalk();
     case 'tea_house/rest_bed':
       RoomPanel.show(RoomPanelData(title: 'Wen', color: _wen, pages: const [
         RoomText.wenRest
@@ -141,6 +137,34 @@ void _flavour(String text) =>
 
 void _readBook(String title, String text) =>
     RoomPanel.show(RoomPanelData(title: title, color: _book, pages: [text], book: true));
+
+void _ferroTalk() {
+  final first = !Adventure.flag('met:ferro');
+  Adventure.setFlag('met:ferro');
+  if (Ferro.answeredToday) {
+    RoomPanel.show(RoomPanelData(
+        title: 'Old Ferro', color: _ferro, pages: [Ferro.rumourToday ?? RoomText.ferroWrong]));
+    return;
+  }
+  RoomPanel.show(RoomPanelData(
+    title: 'Old Ferro',
+    color: _ferro,
+    pages: [if (first) RoomText.ferroFirst, Ferro.riddle.question],
+    actions: [
+      for (final c in Ferro.choices)
+        RoomAction(c.toUpperCase(), () {
+          final rumour = Ferro.answer(c);
+          if (rumour != null) {
+            SfxManager().playChime();
+            GameToast.show('RIGHT ANSWER',
+                body: '+${RoomText.ferroRewardGlimmer} glimmer', color: _ferro, compact: true);
+          }
+          RoomPanel.show(RoomPanelData(
+              title: 'Old Ferro', color: _ferro, pages: [rumour ?? RoomText.ferroWrong]));
+        }),
+    ],
+  ));
+}
 
 void _daoMenu(String greeting) {
   final free = Meals.freeBowlToday;

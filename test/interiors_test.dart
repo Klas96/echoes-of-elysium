@@ -89,8 +89,12 @@ void main() {
         expect(floor, contains(r.spawn));
         expect(r.door.contains(r.spawn.$1, r.spawn.$2), isFalse, reason: 'spawn is not on the mat');
         expect(r.door.tiles.any(floor.contains), isTrue, reason: 'doormat reachable');
-        // Spawn sits right above the mat.
-        expect(r.door.contains(r.spawn.$1, r.spawn.$2 + 1), isTrue);
+        // Spawn sits just above the mat (1-2 tiles), never on it, with a
+        // floor path down to it.
+        expect([1, 2].any((k) => r.door.contains(r.spawn.$1, r.spawn.$2 + k)), isTrue);
+        for (var y = r.spawn.$2; !r.door.contains(r.spawn.$1, y); y++) {
+          expect(floor, contains((r.spawn.$1, y)), reason: 'straight walk to the mat');
+        }
         expect(floor.length, greaterThanOrEqualTo(20));
 
         for (final s in r.spots) {
@@ -122,6 +126,15 @@ void main() {
       for (final n in ['wen', 'ferro', 'dao']) {
         expect(_pngSize('assets/images/sprites/${n}_walk.png'), (192, 128));
         expect(_pngSize('assets/images/sprites/npc_$n.png'), (30, 30));
+      }
+    });
+
+    test('tea house and noodle shop spawn above the painted door (#31 follow-up)', () {
+      for (final id in ['tea_house', 'noodle_shop']) {
+        final r = _room(id);
+        expect(r.spawn, (7, 6), reason: id);
+        expect(r.door.contains(7, 7), isFalse);
+        expect(r.door.contains(7, 8), isTrue);
       }
     });
 
@@ -209,6 +222,64 @@ void main() {
       expect(Meals.isActive('moss_noodles'), isTrue);
       expect(Meals.remaining.value, closeTo(110, 1));
       expect(Meals.speedMultiplier, Meals.speedBoost);
+    });
+
+    test('only one meal at a time: a new bowl replaces the old one', () {
+      Bonds.addGlimmer(20);
+      expect(Meals.order('ember_broth'), isNull);
+      Meals.tick(30);
+      expect(Meals.order('moss_noodles'), isNull);
+      expect(Meals.active.value, 'moss_noodles');
+      expect(Meals.remaining.value, Meals.byId('moss_noodles')!.seconds, reason: 'fresh timer');
+      expect(Meals.regenMultiplier, 1, reason: 'broth bonus gone');
+      expect(Meals.speedMultiplier, Meals.speedBoost);
+    });
+
+    test('Ferro: riddle a day, right = rumour + 5 glimmer, wrong = same riddle tomorrow', () {
+      final r1 = Ferro.riddle;
+      expect(r1.question, RoomText.ferroRiddles.first.question);
+      expect(Ferro.choices.toSet(), {r1.answer, ...r1.wrong});
+      // Wrong answer: no glimmer, same riddle next day.
+      expect(Ferro.answer(r1.wrong.first), isNull);
+      expect(Ferro.answeredToday, isTrue);
+      expect(Ferro.answer(r1.answer), isNull, reason: 'one try a day');
+      expect(Bonds.glimmer, 0);
+      RoomDay.bump();
+      expect(Ferro.answeredToday, isFalse);
+      expect(Ferro.riddle.question, r1.question);
+      // Right answer.
+      expect(Ferro.answer(r1.answer), RoomText.ferroRumours[0]);
+      expect(Bonds.glimmer, RoomText.ferroRewardGlimmer);
+      expect(Ferro.rumourToday, RoomText.ferroRumours[0]);
+      // Survives a save round-trip.
+      SaveService.data = SaveData.fromJson(SaveService.data.toJson());
+      expect(Ferro.rumourToday, RoomText.ferroRumours[0]);
+      expect(Ferro.solved, 1);
+      // Rumours rotate without repeats until all are heard; riddles cycle.
+      final heard = <String>[RoomText.ferroRumours[0]];
+      for (var i = 0; i < RoomText.ferroRumours.length + 2; i++) {
+        RoomDay.bump();
+        heard.add(Ferro.answer(Ferro.riddle.answer)!);
+      }
+      final n = RoomText.ferroRumours.length;
+      expect(heard.take(n).toSet(), RoomText.ferroRumours.toSet());
+      expect(heard[n], RoomText.ferroRumours[0]);
+      expect(Ferro.riddle.question, RoomText.ferroRiddles[(n + 2 + 1) % RoomText.ferroRiddles.length].question);
+    });
+
+    test('Ferro panel: question + three choices; picking one answers', () {
+      final t = _room('tea_house');
+      useSpot(t, t.spots.firstWhere((s) => s.id == 'ferro'));
+      final d = RoomPanel.current.value!;
+      expect(d.pages, [RoomText.ferroFirst, Ferro.riddle.question]);
+      expect(d.actions, hasLength(3));
+      final right = d.actions.firstWhere((a) => a.label == Ferro.riddle.answer.toUpperCase());
+      RoomPanel.pick(right);
+      expect(RoomPanel.current.value!.pages.single, RoomText.ferroRumours[0]);
+      RoomPanel.close();
+      useSpot(t, t.spots.firstWhere((s) => s.id == 'ferro'));
+      expect(RoomPanel.current.value!.pages.single, RoomText.ferroRumours[0], reason: 'already answered today');
+      expect(RoomPanel.current.value!.actions, isEmpty);
     });
 
     test('stash banks glimmer', () {

@@ -16,6 +16,7 @@ import '../creatures/interaction.dart';
 import '../creatures/journal_ui.dart';
 import '../game/adventure.dart';
 import '../game/save_service.dart';
+import 'meal_chip.dart';
 import 'room_actions.dart';
 import 'room_data.dart';
 import 'room_panel.dart';
@@ -257,7 +258,14 @@ class _RoomScreenState extends State<RoomScreen> {
               },
             ),
             const _WarmVignette(),
-            Positioned(top: 12, left: 12, child: _RoomTitle(room.title)),
+            Positioned(
+              top: 12,
+              left: 12,
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                _RoomTitle(room.title),
+                const MealChip(), // Dao's bowl is still ticking indoors
+              ]),
+            ),
             const InteractPromptLayer(),
             const ToastLayer(),
             const RoomPanelLayer(),
