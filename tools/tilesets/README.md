@@ -12,7 +12,7 @@ Files per tileset: `<name>.png` (sheet), `<name>.tsx` (Tiled tileset with collis
 - **Core only:** two 16-tile **edge/connection sets** (wangset `type="edge"`): glowing roots and cyan conduits. These are transparent overlays for a layer above the floor. Tile = set start + bitmask (N=1, E=2, S=4, W=8).
 
 ## Woods / starter: `woods.png` / `woods.tsx`
-272 tiles (16 x 17), 166 with collision. Night forest in the neon palette. The crashed ship, the portal platform and the dock pieces are props. The dock planks don't collide, but the water tiles under them do, so leave the collision off the tiles under a dock (or build the dock on grass at the shore).
+272 tiles (16 x 17), 163 with collision. Night forest in the neon palette. The crashed ship (Kaela's diagnostic skiff, #47), the portal platform and the dock pieces are props. The skiff's collision rects are derived from its art by `prop_collision.py` (`python3 tools/tilesets/prop_collision.py --write`, then re-run `tools/make_tiled_maps.py`); its smoke emitter sits on the fuselage (`EMITTERS` in `make_tiled_maps.py`). The dock planks don't collide, but the water tiles under them do, so leave the collision off the tiles under a dock (or build the dock on grass at the shore).
 
 | ids | contents |
 |---|---|
