@@ -20,6 +20,7 @@ import 'room_actions.dart';
 import 'room_data.dart';
 import 'room_panel.dart';
 import 'room_services.dart';
+import '../ui/hud_layout.dart';
 
 /// Enterable building interiors (#31).
 ///
@@ -240,7 +241,7 @@ class _RoomScreenState extends State<RoomScreen> {
                 DayClock(),
               ],
               playerControllers: [
-                Joystick(directional: JoystickDirectional()),
+                Joystick(directional: JoystickDirectional(size: HudLayout.joystickSize, margin: HudLayout.joystickMargin)),
                 Keyboard(
                   config: KeyboardConfig(
                     directionalKeys: [KeyboardDirectionalKeys.arrows(), KeyboardDirectionalKeys.wasd()],

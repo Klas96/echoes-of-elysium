@@ -30,6 +30,7 @@ import '../creatures/journal_ui.dart';
 import '../creatures/obstacles.dart';
 import '../ui/cutscenes.dart';
 import '../ui/equipment_ui.dart';
+import '../ui/hud_layout.dart';
 import '../ui/mmo_feedback.dart';
 import '../ui/quest_board_ui.dart';
 import '../ui/shop_ui.dart';
@@ -1464,7 +1465,9 @@ void _onMapReady(BonfireGameInterface game) {
 // applies speed * dt. Only the movement keys are accepted so other keys
 // (` for debug, E to interact) still reach the rest of the app.
 List<PlayerController> _playerControllers() => [
-      Joystick(directional: JoystickDirectional()),
+      Joystick(
+          directional: JoystickDirectional(
+              size: HudLayout.joystickSize, margin: HudLayout.joystickMargin)),
       Keyboard(
         config: KeyboardConfig(
           directionalKeys: [
@@ -1517,11 +1520,10 @@ class CustomMapGameScreen extends StatelessWidget {
           )),
           const NightTint(),
           const _Vignette(),
-          const _GameHUD(),
-          const CreatureHud(),
+          const GameHud(),
           const _NpcDialogueLayer(),
           // NPC interact prompt
-          const _InteractPrompt(),
+          const TalkPrompt(),
           const InteractPromptLayer(),
           const ToastLayer(),
           const _CalmLayer(),
@@ -1573,8 +1575,7 @@ class Map2GameScreen extends StatelessWidget {
           )),
           const NightTint(),
           const _Vignette(),
-          const _GameHUD(),
-          const CreatureHud(),
+          const GameHud(),
           // AI Fragment dialogue overlay
           ValueListenableBuilder<String?>(
             valueListenable: AIFragment.activeDialogue,
@@ -1582,7 +1583,7 @@ class Map2GameScreen extends StatelessWidget {
                 text != null ? _DialogueOverlay(text: text) : const SizedBox.shrink(),
           ),
           const _NpcDialogueLayer(),
-          const _InteractPrompt(),
+          const TalkPrompt(),
           const InteractPromptLayer(),
           const ToastLayer(),
           const _CalmLayer(),
@@ -1634,10 +1635,9 @@ class Map3GameScreen extends StatelessWidget {
           ),
           const NightTint(),
           const _Vignette(),
-          const _GameHUD(),
-          const CreatureHud(),
+          const GameHud(),
           const _NpcDialogueLayer(),
-          const _InteractPrompt(),
+          const TalkPrompt(),
           const InteractPromptLayer(),
           const ToastLayer(),
           const _CalmLayer(),
@@ -1689,10 +1689,9 @@ class Map4GameScreen extends StatelessWidget {
           ),
           const NightTint(),
           const _Vignette(),
-          const _GameHUD(),
-          const CreatureHud(),
+          const GameHud(),
           const _NpcDialogueLayer(),
-          const _InteractPrompt(),
+          const TalkPrompt(),
           const InteractPromptLayer(),
           const ToastLayer(),
           const _CalmLayer(),
@@ -1744,10 +1743,9 @@ class Map5GameScreen extends StatelessWidget {
           ),
           const NightTint(),
           const _Vignette(),
-          const _GameHUD(),
-          const CreatureHud(),
+          const GameHud(),
           const _NpcDialogueLayer(),
-          const _InteractPrompt(),
+          const TalkPrompt(),
           const InteractPromptLayer(),
           const ToastLayer(),
           const _CalmLayer(),
@@ -1961,14 +1959,14 @@ class _NpcDialogueLayerState extends State<_NpcDialogueLayer> {
 // Shared UI widgets
 // ---------------------------------------------------------------------------
 
-class _GameHUD extends StatefulWidget {
-  const _GameHUD();
+class GameHud extends StatefulWidget {
+  const GameHud({super.key});
 
   @override
-  State<_GameHUD> createState() => _GameHUDState();
+  State<GameHud> createState() => GameHudState();
 }
 
-class _GameHUDState extends State<_GameHUD> {
+class GameHudState extends State<GameHud> {
   @override
   void initState() {
     super.initState();
@@ -1998,11 +1996,77 @@ class _GameHUDState extends State<_GameHUD> {
         IgnorePointer(
           child: Container(color: const Color(0xFFFF6666).withValues(alpha: 0.12)),
         ),
-      // Health bar
+      // Top HUD: health + tracker, then the chip row (wraps; icon-only on
+      // narrow screens), the well-rested chip and the zone banner, stacked
+      // so they never overlap at any phone size.
       Positioned(
-        top: 12,
-        left: 12,
-        child: ValueListenableBuilder<int>(
+        top: 0,
+        left: 0,
+        right: 0,
+        child: SafeArea(
+          bottom: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+            child: LayoutBuilder(builder: (context, box) {
+              final screen = MediaQuery.sizeOf(context);
+              final trackerWidth = HudLayout.trackerMaxWidth(box.maxWidth);
+              final maxJobs = HudLayout.trackerJobs(screen);
+              // Wide (landscape): the zone banner sits between health and
+              // tracker so it never covers the middle of the screen.
+              final wide = !HudLayout.narrow(screen);
+              final Widget banner = KeyedSubtree(key: const ValueKey('hud-banner'), child: ValueListenableBuilder<String?>(
+          valueListenable: MmoFeedback.zoneTitle,
+          builder: (_, title, __) {
+            if (title == null) return const SizedBox.shrink();
+            return IgnorePointer(
+              child: Center(
+                child: AnimatedOpacity(
+                  opacity: 1,
+                  duration: const Duration(milliseconds: 300),
+                  child: Container(
+                    key: const ValueKey('hud-banner-card'),
+                    padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.55),
+                      border: Border.all(color: const Color(0xFF00FFCC).withValues(alpha: 0.35)),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(title.toUpperCase(),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                                color: Color(0xFFAAFFEE),
+                                fontSize: 14,
+                                letterSpacing: 3,
+                                fontWeight: FontWeight.bold)),
+                        ValueListenableBuilder<String?>(
+                          valueListenable: MmoFeedback.zoneBlurb,
+                          builder: (_, blurb, __) => blurb == null || blurb.isEmpty
+                              ? const SizedBox.shrink()
+                              : Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(blurb,
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
+                                          color: Colors.white54, fontSize: 10)),
+                                ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ));
+              return Column(
+                key: const ValueKey('hud-top'),
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    KeyedSubtree(key: const ValueKey('hud-health'), child: ValueListenableBuilder<int>(
           valueListenable: CustomPlayer.healthNotifier,
           builder: (_, hp, __) {
             final pct = hp / CustomPlayer.maxHealth;
@@ -2068,33 +2132,28 @@ class _GameHUDState extends State<_GameHUD> {
                     '${Progression.bonusDamage > 0 ? '  ·  +${Progression.bonusDamage} DMG' : ''}',
                     style: const TextStyle(color: Colors.white38, fontSize: 9),
                   ),
-                  const SizedBox(height: 4),
-                  ValueListenableBuilder<int>(
-                    valueListenable: Bonds.revision,
-                    builder: (_, __, ___) => Text(
-                      '${Bonds.glimmer} ◆ glimmer',
-                      style: const TextStyle(
-                          color: Color(0xFF88DDFF), fontSize: 9, letterSpacing: 0.5),
-                    ),
-                  ),
                 ],
               ),
             );
           },
-        ),
-      ),
-      // Quest tracker (WoW-style) — story + active jobs
-      Positioned(
-        top: 12,
-        right: 12,
-        child: AnimatedBuilder(
+        )),
+                    const SizedBox(width: 12),
+                    if (wide) ...[
+                      Expanded(child: banner),
+                      const SizedBox(width: 12),
+                    ],
+                    Expanded(
+                      flex: wide ? 0 : 1,
+                      child: Align(
+                        alignment: Alignment.topRight,
+                        child: KeyedSubtree(key: const ValueKey('hud-tracker'), child: AnimatedBuilder(
           animation: Listenable.merge([GameState.objective, Quests.revision]),
           builder: (_, __) {
             final obj = GameState.objective.value;
             final jobs = Quests.activeJobs;
             if (obj.isEmpty && jobs.isEmpty) return const SizedBox.shrink();
             return ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 220),
+              constraints: BoxConstraints(maxWidth: trackerWidth),
               child: Container(
                 padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
                 decoration: BoxDecoration(
@@ -2121,7 +2180,7 @@ class _GameHUDState extends State<_GameHUD> {
                           style: const TextStyle(
                               color: Colors.white70, fontSize: 10, height: 1.3)),
                     ],
-                    for (final q in jobs) ...[
+                    for (final q in jobs.take(maxJobs)) ...[
                       const SizedBox(height: 6),
                       Text(
                         Quests.status(q.id) == QuestStatus.done
@@ -2145,88 +2204,68 @@ class _GameHUDState extends State<_GameHUD> {
                           style: const TextStyle(
                               color: Colors.white38, fontSize: 8.5, height: 1.25)),
                     ],
+                    if (jobs.length > maxJobs) ...[
+                      const SizedBox(height: 4),
+                      Text('+${jobs.length - maxJobs} more in the journal',
+                          style: const TextStyle(color: Colors.white38, fontSize: 8.5)),
+                    ],
                   ],
                 ),
               ),
             );
           },
+        )),
+                      ),
+                    ),
+                  ]),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: CreatureHud(compact: HudLayout.compactChips(box.maxWidth)),
+                  ),
+                  const Align(alignment: Alignment.centerLeft, child: WellRestedChip()),
+                  const SizedBox(height: 8),
+                  if (!wide) banner,
+                ],
+              );
+            }),
+          ),
         ),
       ),
-      // Zone enter banner
-      Positioned(
-        left: 0,
-        right: 0,
-        top: 72,
-        child: ValueListenableBuilder<String?>(
-          valueListenable: MmoFeedback.zoneTitle,
-          builder: (_, title, __) {
-            if (title == null) return const SizedBox.shrink();
-            return IgnorePointer(
-              child: Center(
-                child: AnimatedOpacity(
-                  opacity: 1,
-                  duration: const Duration(milliseconds: 300),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.55),
-                      border: Border.all(color: const Color(0xFF00FFCC).withValues(alpha: 0.35)),
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(title.toUpperCase(),
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                                color: Color(0xFFAAFFEE),
-                                fontSize: 14,
-                                letterSpacing: 3,
-                                fontWeight: FontWeight.bold)),
-                        ValueListenableBuilder<String?>(
-                          valueListenable: MmoFeedback.zoneBlurb,
-                          builder: (_, blurb, __) => blurb == null || blurb.isEmpty
-                              ? const SizedBox.shrink()
-                              : Padding(
-                                  padding: const EdgeInsets.only(top: 4),
-                                  child: Text(blurb,
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(
-                                          color: Colors.white54, fontSize: 10)),
-                                ),
+      // Floating +XP / loot pops: right column beside the joystick
+      Builder(builder: (context) {
+        final screen = MediaQuery.sizeOf(context);
+        return Positioned(
+          right: HudLayout.popsRight,
+          bottom: HudLayout.popsBottom(screen),
+          child: ValueListenableBuilder<List<HudPop>>(
+            valueListenable: MmoFeedback.pops,
+            builder: (_, items, __) {
+              if (items.isEmpty) return const SizedBox.shrink();
+              return IgnorePointer(
+                child: ConstrainedBox(
+                  key: const ValueKey('hud-pops'),
+                  constraints: BoxConstraints(maxWidth: HudLayout.popsMaxWidth(screen)),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      for (final p in items.reversed.take(4))
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 3),
+                          child: Text(p.text,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: MmoFeedback.popStyle(p.color, fontSize: 12)),
                         ),
-                      ],
-                    ),
+                    ],
                   ),
                 ),
-              ),
-            );
-          },
-        ),
-      ),
-      // Floating +XP / loot pops (center-ish)
-      Positioned(
-        left: 0,
-        right: 0,
-        bottom: 96,
-        child: ValueListenableBuilder<List<HudPop>>(
-          valueListenable: MmoFeedback.pops,
-          builder: (_, items, __) {
-            if (items.isEmpty) return const SizedBox.shrink();
-            return IgnorePointer(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  for (final p in items.reversed)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 3),
-                      child: Text(p.text, style: MmoFeedback.popStyle(p.color)),
-                    ),
-                ],
-              ),
-            );
-          },
-        ),
-      ),
+              );
+            },
+          ),
+        );
+      }),
     ]);
   }
 }
@@ -2984,8 +3023,8 @@ bool get _isTouch =>
     defaultTargetPlatform == TargetPlatform.android ||
     defaultTargetPlatform == TargetPlatform.iOS;
 
-class _InteractPrompt extends StatelessWidget {
-  const _InteractPrompt();
+class TalkPrompt extends StatelessWidget {
+  const TalkPrompt();
 
   void _interact() {
     AIFragment.nearbyFragment?.interact();
@@ -3010,12 +3049,13 @@ class _InteractPrompt extends StatelessWidget {
         final action = npc ? 'TALK' : 'INTERACT';
         final label = _isTouch ? action : 'E  $action';
         return Positioned(
-          bottom: 80, left: 0, right: 0,
+          bottom: HudLayout.promptBottom(MediaQuery.sizeOf(context)), left: 0, right: 0,
           child: Center(
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: _interact,
               child: Container(
+                key: const ValueKey('hud-talk-prompt'),
                 padding: EdgeInsets.symmetric(
                     horizontal: _isTouch ? 28 : 14, vertical: _isTouch ? 14 : 6),
                 decoration: BoxDecoration(

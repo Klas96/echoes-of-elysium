@@ -37,7 +37,8 @@ class Equipment {
 }
 
 class EquipmentButton extends StatelessWidget {
-  const EquipmentButton({super.key});
+  final bool compact;
+  const EquipmentButton({super.key, this.compact = false});
 
   @override
   Widget build(BuildContext context) {
@@ -50,15 +51,17 @@ class EquipmentButton extends StatelessWidget {
           border: Border.all(color: _amber.withValues(alpha: 0.55)),
           borderRadius: BorderRadius.circular(4),
         ),
-        child: Text(
-          _isTouch ? 'GEAR' : 'I  GEAR',
-          style: const TextStyle(
-            color: _amber,
-            fontSize: 10,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1.5,
-          ),
-        ),
+        child: compact
+            ? const Icon(Icons.shield_outlined, size: 13, color: _amber)
+            : Text(
+                _isTouch ? 'GEAR' : 'I  GEAR',
+                style: const TextStyle(
+                  color: _amber,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.5,
+                ),
+              ),
       ),
     );
   }
