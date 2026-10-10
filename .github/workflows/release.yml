@@ -2,8 +2,8 @@ name: Release
 
 # Tag push (vX.Y.Z)  -> build signed APK + web, create GitHub Release,
 #                       publish the APK to the F-Droid repo (Klas96/fdroid),
-#                       and deploy the web build to klasholmgren.se
-#                       (Klas96/portfolio-website, games/echoes-of-elysium/).
+#                       and deploy the web build to klasholmgren.se/games/
+#                       (Klas96/games, echoes-of-elysium/; single orphan commit).
 # workflow_dispatch   -> dry run by default: build + signature check + artifacts,
 #                       and an F-Droid rehearsal (fdroid update) WITHOUT commit/push.
 #                       No GitHub Release, no tag, nothing published.
@@ -352,7 +352,7 @@ jobs:
       VERSION_NAME: ${{ needs.build.outputs.version_name }}
       VERSION_CODE: ${{ needs.build.outputs.version_code }}
       BASE_HREF: /games/echoes-of-elysium/
-      SITE_PATH: games/echoes-of-elysium
+      SITE_PATH: echoes-of-elysium
     steps:
       - name: Checkout game repo
         uses: actions/checkout@v5
@@ -386,38 +386,40 @@ jobs:
           fi
           echo "Web build size: $(du -sh build/web | cut -f1)"
 
-      - name: Checkout Klas96/portfolio-website (deploy key)
+      - name: Checkout Klas96/games (deploy key)
         uses: actions/checkout@v5
         with:
-          repository: Klas96/portfolio-website
+          repository: Klas96/games
           ref: main
           path: site
-          ssh-key: ${{ secrets.WEBSITE_DEPLOY_KEY }}
+          fetch-depth: 1
+          ssh-key: ${{ secrets.GAMES_DEPLOY_KEY }}
 
-      - name: Copy build into the site
+      - name: Copy build into the games repo
         run: |
           set -euo pipefail
           mkdir -p "site/$SITE_PATH"
           rsync -a --delete game/build/web/ "site/$SITE_PATH/"
+          touch site/.nojekyll
           git -C site status --short | tail -20
 
-      - name: Commit and push to Klas96/portfolio-website
+      - name: Publish as a single orphan commit on Klas96/games main
         working-directory: site
         run: |
           set -euo pipefail
           git config user.name "echoes-of-elysium CI"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A -- "$SITE_PATH"
+          git add -A
           if git diff --cached --quiet; then
             echo "No changes to the web build - nothing to push."; exit 0
           fi
-          git commit -m "Echoes of Elysium web ${VERSION_NAME} [automated]"
-          for i in 1 2 3; do
-            git push origin HEAD:main && break
-            if [ "$i" = 3 ]; then exit 1; fi
-            git pull --rebase origin main
-          done
+          # Replace main with ONE orphan commit holding the current tree (this game's
+          # new build plus anything else already in the repo, e.g. other games), so
+          # history never accumulates. Only this job writes to Klas96/games.
+          git checkout -q --orphan publish
+          git commit -q -m "Echoes of Elysium web ${VERSION_NAME} [automated]"
+          git push --force origin publish:main
           {
             echo "### Website"
-            echo "Deployed web ${VERSION_NAME} to https://klasholmgren.se${BASE_HREF} ($(du -sh "$SITE_PATH" | cut -f1))"
+            echo "Deployed web ${VERSION_NAME} to https://klasholmgren.se${BASE_HREF} ($(du -sh "$SITE_PATH" | cut -f1)) via Klas96/games"
           } >> "$GITHUB_STEP_SUMMARY"
