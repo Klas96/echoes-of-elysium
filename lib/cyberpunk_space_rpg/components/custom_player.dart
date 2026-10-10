@@ -134,6 +134,7 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision {
     }
   }
 
+  JogSheet? _jog;
   bool isBlocked = false;
   double _blockedTimer = 0;
   bool _eWasPressed = false;
@@ -189,7 +190,8 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision {
     respawnFade.value = false;
     SfxManager().init();
     paint.filterQuality = FilterQuality.none;
-    animation = await WalkSheet.load('sprites/kaela_walk.png');
+    _jog = await JogSheet.load();
+    animation = _jog!.animation;
     _shootAnims = await ShootSheet.load('sprites/kaela_shoot.png');
     add(RectangleHitbox(
       size: Vector2(feetWidth, sizePlayer / 3),
@@ -244,6 +246,7 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision {
     speed = sizePlayer * 2.5 * Meals.speedMultiplier; // moss noodles (#31)
     Meals.tick(dt);
     super.update(dt);
+    _jog?.setSpeed(velocity.length);
     positionNotifier.value = position.clone();
     _blockedTimer = max(0, _blockedTimer - dt);
     isBlocked = _blockedTimer > 0;
