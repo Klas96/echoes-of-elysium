@@ -199,4 +199,19 @@ void main() {
       });
     });
   });
+
+  test('InstantFacing: facing follows the new velocity on the first frame', () {
+    final p = _FacingPlayer();
+    p.lastDirection = Direction.left;
+    p.moveDown();
+    expect(p.lastDirection, Direction.down);
+    p.moveRight();
+    expect(p.lastDirection, Direction.downRight);
+    p.stopMove(forceIdle: true);
+    expect(p.lastDirection, Direction.downRight);
+  });
+}
+
+class _FacingPlayer extends SimplePlayer with InstantFacing {
+  _FacingPlayer() : super(position: Vector2.zero(), size: Vector2.all(32));
 }

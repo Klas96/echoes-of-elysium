@@ -327,7 +327,7 @@ class RoomWall extends GameDecorationWithCollision {
 
 /// Kaela indoors: walks, no gun. Steps onto the doormat to leave (only after
 /// she has been off it, never on the frame she appears).
-class RoomPlayer extends SimplePlayer with BlockMovementCollision {
+class RoomPlayer extends SimplePlayer with BlockMovementCollision, InstantFacing {
   final RoomData room;
   final VoidCallback onDoormat;
   bool _armed = false;

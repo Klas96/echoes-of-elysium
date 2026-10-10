@@ -17,7 +17,7 @@ import '../game/well_rested.dart';
 import '../interiors/room_services.dart';
 import 'damage_number.dart';
 
-class CustomPlayer extends SimplePlayer with BlockMovementCollision {
+class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFacing {
   static const double sizePlayer = 32;
   /// Width of the feet hitbox that collides with the world.
   static const double feetWidth = sizePlayer * 0.5;

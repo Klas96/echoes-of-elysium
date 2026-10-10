@@ -179,6 +179,19 @@ class JogSheet {
   }
 }
 
+/// Bonfire 3.15 sets the joystick/keyboard velocity *after* Movement has
+/// updated `lastDirection` for the frame, so the first moving frame plays
+/// the run of the old facing (a one-frame flash of e.g. jog-left when
+/// starting to move down from a left idle). Update the facing as soon as the
+/// velocity is set instead.
+mixin InstantFacing on Movement {
+  @override
+  void setVelocityAxis({double? x, double? y}) {
+    super.setVelocityAxis(x: x, y: y);
+    if (!velocity.isZero()) velocity = velocity.clone();
+  }
+}
+
 /// One-shot shoot cycle: 4 rows (down/up/right/left) × 4 frames, cols
 /// ready → aim → fire (cyan muzzle tip) → recover (kaela_shoot.png).
 /// Built from [WalkSheet] pixels so palette/outline match the walk art.
