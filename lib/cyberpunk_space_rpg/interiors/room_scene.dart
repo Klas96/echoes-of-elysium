@@ -327,12 +327,13 @@ class RoomWall extends GameDecorationWithCollision {
 
 /// Kaela indoors: walks, no gun. Steps onto the doormat to leave (only after
 /// she has been off it, never on the frame she appears).
-class RoomPlayer extends SimplePlayer with BlockMovementCollision {
+class RoomPlayer extends SimplePlayer with BlockMovementCollision, InstantFacing {
   final RoomData room;
   final VoidCallback onDoormat;
   bool _armed = false;
   bool _left = false;
   double _step = 0;
+  JogSheet? _jog;
 
   static const baseSpeed = CustomPlayer.sizePlayer * 2.5;
 
@@ -355,7 +356,8 @@ class RoomPlayer extends SimplePlayer with BlockMovementCollision {
   @override
   Future<void> onLoad() async {
     paint.filterQuality = FilterQuality.none;
-    animation = await WalkSheet.load('sprites/kaela_walk.png');
+    _jog = await JogSheet.load();
+    animation = _jog!.animation;
     add(RectangleHitbox(
       size: Vector2(CustomPlayer.feetWidth, CustomPlayer.sizePlayer / 3),
       position: Vector2(CustomPlayer.sizePlayer * 0.25, CustomPlayer.sizePlayer * 0.65),
@@ -367,6 +369,7 @@ class RoomPlayer extends SimplePlayer with BlockMovementCollision {
   void update(double dt) {
     speed = baseSpeed * Meals.speedMultiplier;
     super.update(dt);
+    _jog?.setSpeed(velocity.length);
     Meals.tick(dt);
     final (tx, ty) = tile;
     final onMat = room.door.contains(tx, ty);
