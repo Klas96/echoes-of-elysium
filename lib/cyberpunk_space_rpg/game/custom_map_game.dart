@@ -17,6 +17,7 @@ import '../components/checkpoint.dart';
 import '../components/building.dart';
 import '../components/story_gate.dart';
 import '../components/ambient_prop_fx.dart';
+import '../components/lamp_light.dart';
 import '../audio/music_manager.dart';
 import '../creatures/bonds.dart';
 import '../creatures/creature_components.dart';
@@ -719,6 +720,13 @@ Map<String, ObjectBuilder> _mapObjects(String mapId) => {
             p.position,
             p.size,
             openFlag: (p.others['flag'] ?? 'ruins_gate_open').toString(),
+          ),
+      'light': (p) => LampLight(
+            p.position,
+            p.size,
+            kind: LightKindStyle.parse((p.others['kind'] ?? 'lamp').toString()),
+            radius: _numProp(p, 'radius', 80),
+            style: (p.others['style'] ?? '').toString(),
           ),
       'ambient': (p) => AmbientPropFx(
             p.position,
