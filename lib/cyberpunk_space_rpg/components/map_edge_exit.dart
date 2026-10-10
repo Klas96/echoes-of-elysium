@@ -12,7 +12,11 @@ class MapEdgeExit extends GameComponent {
   final bool Function() canExit;
   final String lockedTitle;
   final String lockedBody;
+
+  /// A beat to play before leaving (the region farewell); null = none now.
+  final Future<void> Function()? Function()? beforeExit;
   bool _fired = false;
+  bool _beat = false;
   bool _lockedHint = false;
 
   MapEdgeExit(
@@ -23,6 +27,7 @@ class MapEdgeExit extends GameComponent {
     bool Function()? canExit,
     this.lockedTitle = 'PATH CLOSED',
     this.lockedBody = 'Not yet.',
+    this.beforeExit,
   })  : canExit = canExit ?? (() => true) {
     this.position = position;
     this.size = size;
@@ -32,7 +37,7 @@ class MapEdgeExit extends GameComponent {
   void update(double dt) {
     super.update(dt);
     final player = gameRef.player;
-    if (player == null) return;
+    if (player == null || _beat) return;
     final pc = player.position + player.size / 2;
     final inside = pc.x >= position.x &&
         pc.x <= position.x + size.x &&
@@ -55,6 +60,19 @@ class MapEdgeExit extends GameComponent {
     }
 
     _fired = true;
+    final beat = beforeExit?.call();
+    if (beat != null) {
+      _beat = true;
+      beat().then((_) {
+        _beat = false;
+        if (isMounted) _travel();
+      });
+      return;
+    }
+    _travel();
+  }
+
+  void _travel() {
     Travel.requestEdge(destLevel, entrySide: entrySide);
     if (!gameRef.overlays.isActive('edgeTravel')) {
       gameRef.overlays.add('edgeTravel');

@@ -1,0 +1,45 @@
+{
+ "name": "bramble_open",
+ "file": "bramble_open.png",
+ "size_px": [
+  64,
+  64
+ ],
+ "tiles": [
+  2,
+  2
+ ],
+ "ability": "SCENT",
+ "collision": [
+  [
+   1,
+   39,
+   15,
+   22
+  ],
+  [
+   48,
+   39,
+   15,
+   22
+  ]
+ ],
+ "interaction": {
+  "x": 32,
+  "y": 63,
+  "radius": 24
+ },
+ "state": "open",
+ "closed_file": "bramble_closed.png",
+ "open_file": "bramble_open.png",
+ "passage": {
+  "x": 16,
+  "w": 32
+ },
+ "visual_gap_x": [
+  23,
+  39
+ ],
+ "anim": "bramble_open_motes_anim.png",
+ "note": "both 64x64 on one canvas/palette: swap image + collision in place. Open: the side clumps collide on x<16 and x>=48, so the middle tile (x 16-48) is walkable; the foliage overlaps that tile visually by a few px on each side (the visible gap is ~16 px), which reads fine with a feet-sized hitbox"
+}

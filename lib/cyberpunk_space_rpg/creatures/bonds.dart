@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../game/save_service.dart';
 import 'creature_species.dart';
+import 'regions.dart';
 
 /// Creature bonds, items, companion and ability-gated secrets, all stored in
 /// the live save ([SaveService.data]):
@@ -72,12 +73,25 @@ class Bonds {
     _changed(now: true);
   }
 
-  static Ability? get activeAbility {
+  /// The chosen companion if it lives in the region on screen; companions
+  /// wait at home elsewhere (Regions).
+  static String? get activeHere {
     final id = active;
+    return id != null && Regions.followsIn(id, Regions.current) ? id : null;
+  }
+
+  /// The ability of the companion walking with Kaela right now (none outside
+  /// its home region).
+  static Ability? get activeAbility {
+    final id = activeHere;
     return id == null ? null : creatureSpecies[id]?.ability;
   }
 
   static bool has(Ability a) => activeAbility == a;
+
+  /// Befriended creatures whose home is [region].
+  static List<String> friendsIn(String region) =>
+      [for (final id in creatureOrder) if (isBefriended(id) && Regions.homeOf(id) == region) id];
   static bool unlocked(Ability a) => _d.abilities.contains(a.saveKey);
 
   // --- items ---------------------------------------------------------------

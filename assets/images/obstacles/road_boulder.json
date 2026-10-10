@@ -1,0 +1,74 @@
+{
+ "name": "road_boulder",
+ "file": "road_boulder_closed.png",
+ "size_px": [
+  96,
+  64
+ ],
+ "tiles": [
+  3,
+  2
+ ],
+ "ability": "PUSH",
+ "interaction": {
+  "x": 60,
+  "y": 56,
+  "radius": 24,
+  "note": "south (bottom) side, facing north; the push rolls the boulder east to its resting spot"
+ },
+ "closed_file": "road_boulder_closed.png",
+ "open_file": "road_boulder_open.png",
+ "roll_anim": "road_boulder_roll_anim.json",
+ "collision": [
+  [
+   0,
+   21,
+   96,
+   28
+  ]
+ ],
+ "closed": {
+  "file": "road_boulder_closed.png",
+  "collision": [
+   [
+    0,
+    21,
+    96,
+    28
+   ]
+  ],
+  "boulder_bbox": [
+   33,
+   2,
+   87,
+   50
+  ]
+ },
+ "open": {
+  "file": "road_boulder_open.png",
+  "collision": [
+   [
+    64,
+    37,
+    29,
+    17
+   ]
+  ],
+  "passage": [
+   0,
+   64
+  ],
+  "boulder_bbox": [
+   62,
+   28,
+   94,
+   55
+  ]
+ },
+ "passage": [
+  0,
+  64
+ ],
+ "ground_decal": true,
+ "note": "place on a 3-tile-wide dirt road (both 96x64, one scale/palette, bottom-aligned; swap image + collision). `collision` = closed state (full road width, all 3 tiles). Open: only the resting boulder at the right edge collides, passage = x 0-64 (the left two tiles). The dirt patch is a soft decal (woods dirt palette, alpha 0.8 in the middle fading to 0 toward its edges and the canvas border) so it blends into the road; the stones are opaque with outline + shadow. The open-state boulder is smaller than the closed one (as drawn in the source)"
+}

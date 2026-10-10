@@ -25,6 +25,10 @@ import '../creatures/creature_components.dart';
 import '../creatures/creature_species.dart';
 import '../creatures/day_cycle.dart';
 import '../creatures/examine.dart';
+import '../creatures/gate_components.dart';
+import '../creatures/gates.dart';
+import '../creatures/region_gates.dart';
+import '../creatures/regions.dart';
 import '../creatures/interaction.dart';
 import '../creatures/journal_ui.dart';
 import '../creatures/obstacles.dart';
@@ -180,6 +184,12 @@ NpcDialogue _ashaDialogue() {
     );
   }
   final hasKey = Bonds.hasItem('uec_override') || Bonds.usedItem('uec_override');
+  // The Woods goal (brief-woods-befriend-gates): Asha sets it at her camp
+  // until the woods have let Kaela through. Last line, so the voice lines
+  // above keep their order.
+  final woodsGoalLine = [
+    if (GameState.level == 1 && !GameState.portalUnlocked.value && !Gates.allOpen('woods')) woodsGoal.goalLine,
+  ];
   return NpcDialogue(
     name: 'ASHA  ·  EX-UEC',
     color: const Color(0xFFFFAA00),
@@ -187,11 +197,13 @@ NpcDialogue _ashaDialogue() {
         ? [
             'You\'ve got the override. Find a UEC field terminal if you want the real Station Seven orders.',
             'I\'m still watching. Trust Gaia if you must — but keep your eyes open.',
+            ...woodsGoalLine,
           ]
         : [
             'Keep moving. Name\'s Asha — ex-UEC. I deserted after they ordered me to erase a "sympathetic" AI on Station Seven.',
             'Three hundred colonists went dark when that lattice woke. Voss still carries their names. That\'s why he hunts Gaia.',
             'I kept one UEC override key. If Gaia turns out to be a lie, I can still cut her signal. Don\'t make me use it.',
+            ...woodsGoalLine,
           ],
     voicePaths: hasKey
         ? const [
@@ -641,6 +653,11 @@ Map<String, ObjectBuilder> _mapObjects(String mapId) => {
           lockedBody: (p.others['lockedBody'] ??
                   'Something still holds this road. Check your objective.')
               .toString(),
+          beforeExit: () {
+            final region = GameState.regionIds[GameState.levelForMap(mapId)] ?? '';
+            if (!Gates.wantsFarewell(region)) return null;
+            return () => _regionFarewell(region);
+          },
         );
       },
       'portal': (p) {
@@ -699,7 +716,13 @@ Map<String, ObjectBuilder> _mapObjects(String mapId) => {
       'fragment': (p) {
         final id = _pickupId(mapId, 'fragment', p);
         if (SaveService.data.collected.contains(id)) return _Gone();
-        return FragmentPickup(p.position, onCollected: () {
+        // Inside a main-route gate (the pond grotto): hidden until it opens,
+        // then taken from the bank across the water.
+        final gate = (p.others['gate'] ?? '').toString();
+        return FragmentPickup(p.position,
+            hidden: gate.isEmpty ? null : () => !Gates.isOpen(gate),
+            collectRadius: gate.isEmpty ? FragmentPickup.defaultCollectRadius : 48,
+            onCollected: () {
           SaveService.data.collected.add(id);
           Memories.onFragmentPicked();
         });
@@ -767,6 +790,8 @@ Map<String, ObjectBuilder> _mapObjects(String mapId) => {
       'hidden': (p) => BuriedItem(p.position,
           id: _pickupId(mapId, 'hidden', p), amount: _numProp(p, 'glimmer', 10).round()),
       'hiddenpath': (p) => HiddenPath(p.position, p.size, id: _pickupId(mapId, 'hiddenpath', p)),
+      // Main-route ability gates (brief-woods-befriend-gates)
+      'abilitygate': (p) => buildAbilityGate((p.others['gate'] ?? '').toString(), p.position, p.size) ?? _Gone(),
       'stump': (p) => SweetrootStump(p.position, p.size),
       'pebble': (p) => RiverPebble(p.position, id: _pickupId(mapId, 'pebble', p)),
       'moonflower': (p) => Moonflower(p.position),
@@ -901,7 +926,7 @@ class IntroScreen extends StatelessWidget {
       'really is: the surviving minds of an ancient people.\n\n'
       'First steps in the woods:\n'
       '1. Talk to Gaia by the crash site\n'
-      '2. Find two glowing memory fragments\n'
+      '2. Make three friends in the woods and find two glowing memory fragments\n'
       '3. Walk south to the City before the UEC locks the road';
 
   @override
@@ -1225,9 +1250,29 @@ void _snapshot(SaveData d) {
   }
 }
 
+/// The first time Kaela leaves [region] with its friends: they stop at the
+/// treeline (the companion stays behind), Gaia and Kaela say goodbye.
+Future<void> _regionFarewell(String region) async {
+  final goal = regionGoals[region];
+  if (goal == null) return;
+  Gates.markFarewell(region);
+  final c = Companion.current;
+  if (c != null && c.present) Companion.holdAt = c.bodyCenter.clone();
+  GameToast.show('GAIA',
+      body: goal.farewellGaia,
+      color: const Color(0xFF00FF88),
+      portrait: 'assets/images/sprites/npc_gaia.png',
+      seconds: 3.4);
+  await Future<void>.delayed(const Duration(milliseconds: 3400));
+  GameToast.show('KAELA', body: goal.farewellKaela, color: const Color(0xFF66DDFF), seconds: 2.4);
+  await Future<void>.delayed(const Duration(milliseconds: 2400));
+  await SaveService.saveNow();
+}
+
 /// Leaving the current map (portal, main menu, ending): save, then stop
 /// treating the old map as live.
 Future<void> _leaveMap({String? nextMapId}) async {
+  Regions.previous = SaveService.data.regionId;
   await SaveService.saveNow();
   _activeGame = null;
   _placedPlayer = null;
@@ -1250,6 +1295,12 @@ Future<void> _leaveMap({String? nextMapId}) async {
 void _startLevel(BonfireGameInterface game, int level) {
   _onMapReady(game);
   SaveService.snapshot = _snapshot;
+  // Companions stay home: the region on screen decides who follows.
+  final arrivedFrom = Regions.previous;
+  Regions.previous = '';
+  Regions.current = GameState.regionIds[level] ?? 'woods';
+  Bonds.revision.value++; // HUD companion chip follows the region rule
+  Companion.holdAt = null;
   // M2: day/night clock, companion and creature/obstacle interactions
   DayCycle.time.value = SaveService.data.dayTime;
   WellRested.load();
@@ -1314,6 +1365,11 @@ void _startLevel(BonfireGameInterface game, int level) {
     MmoFeedback.enterZone(dest.title, blurb: dest.blurb);
   }
   final d = SaveService.data;
+  if (Gates.wantsReturnLine(Regions.current, from: arrivedFrom)) {
+    Future.delayed(const Duration(milliseconds: 1200), () {
+      GameToast.show('FRIENDS', body: regionGoals[Regions.current]!.returnLine, color: const Color(0xFF66FFAA));
+    });
+  }
   if (SaveService.resumeObjective && d.mapId == GameState.mapIds[level]) {
     SaveService.resumeObjective = false;
     GameState.restore(level, d);
@@ -1343,8 +1399,8 @@ void _startLevel(BonfireGameInterface game, int level) {
         'YOUR MISSION',
         body:
             '1) Talk to Gaia (green figure by the crash)\n'
-            '2) Collect 2 glowing memory fragments\n'
-            '3) Walk south to the City\n\n'
+            '2) Find Asha at her camp: the woods need friends\n'
+            '3) Collect 2 glowing memory fragments, then walk south to the City\n\n'
             'Objective stays on the right TRACKER.',
         color: const Color(0xFF00FFCC),
         seconds: 9,

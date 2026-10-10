@@ -1,5 +1,6 @@
 import 'package:bonfire/bonfire.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/components/npc_character.dart';
+import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/creatures/gates.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/game/adventure.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/game/game_state.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/game/memories.dart';
@@ -95,12 +96,14 @@ void main() {
     expect(Adventure.endingCoda, contains('archive draft'));
   });
 
-  test('woods: two fragments open the portal; city fragments never do', () {
+  test('woods: two fragments + the boulder open the road; city fragments never do', () {
     GameState.resetMap1();
     GameState.onFragmentCollected();
     expect(GameState.portalUnlocked.value, isFalse);
-    expect(GameState.objective.value, contains('(1/2)'));
+    expect(GameState.objective.value, contains('Friends of the Woods 0/3'));
     GameState.onFragmentCollected();
+    expect(GameState.portalUnlocked.value, isFalse, reason: 'the fallen boulder still blocks the road');
+    Gates.open('woods_boulder');
     expect(GameState.portalUnlocked.value, isTrue);
 
     GameState.resetMap2();
