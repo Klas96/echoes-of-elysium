@@ -20,8 +20,11 @@ class PromptInfo {
   /// Clue shown instead of an action when [enabled] is false.
   final String note;
 
-  const PromptInfo(this.label, {this.hold = 0}) : enabled = true, note = '';
-  const PromptInfo.note(this.note) : label = '', hold = 0, enabled = false;
+  /// Key item id whose icon is shown beside the prompt (see ItemIcon).
+  final String? item;
+
+  const PromptInfo(this.label, {this.hold = 0, this.item}) : enabled = true, note = '';
+  const PromptInfo.note(this.note, {this.item}) : label = '', hold = 0, enabled = false;
 
   @override
   bool operator ==(Object other) =>
@@ -29,10 +32,11 @@ class PromptInfo {
       other.label == label &&
       other.hold == hold &&
       other.enabled == enabled &&
-      other.note == note;
+      other.note == note &&
+      other.item == item;
 
   @override
-  int get hashCode => Object.hash(label, hold, enabled, note);
+  int get hashCode => Object.hash(label, hold, enabled, note, item);
 }
 
 /// Something in the world the player can interact with (creatures, rest
@@ -154,7 +158,11 @@ class ToastMessage {
   final String? portrait;
   final int id;
   final bool compact;
-  const ToastMessage(this.title, this.body, this.color, this.portrait, this.id, {this.compact = false});
+
+  /// Key item id whose icon is shown (even on compact toasts).
+  final String? item;
+  const ToastMessage(this.title, this.body, this.color, this.portrait, this.id,
+      {this.compact = false, this.item});
 }
 
 class GameToast {
@@ -169,6 +177,7 @@ class GameToast {
     String? portrait,
     double seconds = 2.8,
     bool compact = false,
+    String? item,
   }) {
     var b = body.trim();
     if (compact) {
@@ -178,7 +187,7 @@ class GameToast {
     } else if (b.length > 120) {
       b = '${b.substring(0, 118)}…';
     }
-    final m = ToastMessage(title, b, color, portrait, ++_n, compact: compact);
+    final m = ToastMessage(title, b, color, portrait, ++_n, compact: compact, item: item);
     current.value = m;
     Future.delayed(Duration(milliseconds: (seconds * 1000).round()), () {
       if (current.value?.id == m.id) current.value = null;

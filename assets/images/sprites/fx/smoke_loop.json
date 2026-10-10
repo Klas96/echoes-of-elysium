@@ -1,0 +1,8 @@
+{
+ "image": "smoke_loop.png",
+ "frameWidth": 32,
+ "frameHeight": 32,
+ "frames": 6,
+ "stepTime": 0.14,
+ "loop": true
+}

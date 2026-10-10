@@ -237,12 +237,20 @@ class InteractPromptLayer extends StatelessWidget {
                     border: Border.all(color: Colors.white12),
                     borderRadius: BorderRadius.circular(4),
                   ),
-                  child: Text(info.note,
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          color: Colors.white54, fontSize: 10, fontStyle: FontStyle.italic, height: 1.3)),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    if (itemIconAsset(info.item) != null) ...[
+                      ItemIcon(info.item!, size: 16, dim: true),
+                      const SizedBox(width: 6),
+                    ],
+                    Flexible(
+                      child: Text(info.note,
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              color: Colors.white54, fontSize: 10, fontStyle: FontStyle.italic, height: 1.3)),
+                    ),
+                  ]),
                 ),
               ),
             ),
@@ -272,9 +280,15 @@ class InteractPromptLayer extends StatelessWidget {
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  Text(label,
-                      style: TextStyle(
-                          color: _teal, fontSize: _isTouch ? 16 : 12, letterSpacing: 2, fontWeight: FontWeight.bold)),
+                  Row(mainAxisSize: MainAxisSize.min, children: [
+                    if (itemIconAsset(info.item) != null) ...[
+                      ItemIcon(info.item!, size: _isTouch ? 24 : 16),
+                      SizedBox(width: _isTouch ? 8 : 6),
+                    ],
+                    Text(label,
+                        style: TextStyle(
+                            color: _teal, fontSize: _isTouch ? 16 : 12, letterSpacing: 2, fontWeight: FontWeight.bold)),
+                  ]),
                   if (hold) ...[
                     const SizedBox(height: 4),
                     SizedBox(
@@ -331,6 +345,10 @@ class ToastLayer extends StatelessWidget {
                           borderRadius: BorderRadius.circular(compact ? 6 : 8),
                         ),
                         child: Row(mainAxisSize: MainAxisSize.min, children: [
+                          if (m.portrait == null && itemIconAsset(m.item) != null) ...[
+                            ItemIcon(m.item!, size: compact ? 16 : 32),
+                            SizedBox(width: compact ? 6 : 10),
+                          ],
                           if (m.portrait != null) ...[
                             ClipRRect(
                               borderRadius: BorderRadius.circular(6),
@@ -586,8 +604,20 @@ class _JournalPanelState extends State<_JournalPanel> {
               for (final id in items)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 6),
-                  child: Text('· ${itemLabels[id] ?? id}',
-                      style: const TextStyle(color: _inkSoft, fontSize: 12, height: 1.4)),
+                  child: Row(children: [
+                    SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: itemIconAsset(id) == null
+                          ? const Center(child: Text('·', style: TextStyle(color: _inkSoft, fontSize: 12)))
+                          : ItemIcon(id, size: 24),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(itemLabels[id] ?? id,
+                          style: const TextStyle(color: _inkSoft, fontSize: 12, height: 1.4)),
+                    ),
+                  ]),
                 ),
               const SizedBox(height: 10),
               Container(height: 1, color: _inkSoft.withValues(alpha: 0.35)),
@@ -917,5 +947,31 @@ class _Detail extends StatelessWidget {
                 style: TextStyle(color: _inkGreen, fontSize: 12, fontWeight: FontWeight.w600)),
         ]),
     ]);
+  }
+}
+
+/// Pixel-art key item icon (`sprites/items/<id>.png`, see [itemIconAsset]).
+/// Uses the 16px variant when drawn at 20px or smaller. Draws an empty box
+/// for items without art.
+class ItemIcon extends StatelessWidget {
+  final String id;
+  final double size;
+  final bool dim;
+
+  const ItemIcon(this.id, {super.key, this.size = 32, this.dim = false});
+
+  @override
+  Widget build(BuildContext context) {
+    final path = itemIconAsset(id, small: size <= 20);
+    if (path == null) return SizedBox(width: size, height: size);
+    return Opacity(
+      opacity: dim ? 0.7 : 1,
+      child: Image.asset(path,
+          width: size,
+          height: size,
+          fit: BoxFit.contain,
+          filterQuality: FilterQuality.none,
+          errorBuilder: (_, __, ___) => SizedBox(width: size, height: size)),
+    );
   }
 }

@@ -731,6 +731,8 @@ Map<String, ObjectBuilder> _mapObjects(String mapId) => {
       'ambient': (p) => AmbientPropFx(
             p.position,
             kind: (p.others['kind'] ?? 'steam').toString(),
+            // The city's rooftop vents breathe neon-cyan steam.
+            cyan: mapId == 'world2',
           ),
       'sentinel': (p) => SaveService.data.flag('sentinelDefeated')
           ? _Gone()
@@ -1816,6 +1818,11 @@ class _NpcDialogueLayerState extends State<_NpcDialogueLayer> {
   void _pickChoice(DialogueChoice choice) {
     final d = _dialogue;
     if (d == null) return;
+    final gift = choice.giveItem;
+    if (gift != null && !Bonds.hasItem(gift) && !Bonds.usedItem(gift)) {
+      GameToast.show((itemLabels[gift] ?? gift).toUpperCase(),
+          body: 'Key item · Journal → Clues', color: const Color(0xFFFFE08A), compact: true, item: gift);
+    }
     if (choice.setFlag == 'mira_showed_board') {
       choice.apply();
       SfxManager().stopVoice();
