@@ -316,7 +316,7 @@ class Adventure {
       id: 'quest_city_east',
       title: 'East Lot Cleared',
       body:
-          'The east lot nest is quiet. Town sleeps easier knowing the avenue\'s flank is clear.',
+          'The east lot nest is quiet. Town sleeps easier knowing the road from the Lantern Gate is clear.',
       where: 'City · east lot · Town board',
     ),
     ClueDef(

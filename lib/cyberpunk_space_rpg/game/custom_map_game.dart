@@ -275,7 +275,7 @@ NpcDialogue _echo7Dialogue() {
         setFlag: 'asked_echo_street',
         requireFlagUnset: 'asked_echo_street',
         replyLines: [
-          'South is the avenue — Archivist, Sentinel, Voss. East from the arrival plaza an amber gate opens to Lantern Town: Mira\'s board, glimmer, and rest. The east ring loops back if you keep walking.',
+          'The Archivist keeps to the square east of here. Any street will take you. From the arrival plaza the boulevard runs east to the Lantern Gate and Lantern Town: Mira\'s board, glimmer, and rest.',
         ],
       ),
     ],
@@ -575,9 +575,14 @@ double _numProp(TiledObjectProperties p, String key, [double fallback = 0]) {
 /// Builders keyed by object name in the map's "gameplay" object layer.
 /// Object x/y is the component's top-left corner in map pixels (except for
 /// buildings, which are bottom-left anchored tile objects).
-/// Stable id for a one-time pickup, from its map and Tiled position.
-String _pickupId(String mapId, String kind, Vector2 pos) =>
-    '$mapId:$kind:${pos.x.round()}_${pos.y.round()}';
+/// Stable id for a one-time pickup, from its map and Tiled position. An
+/// object the generator moved (#26 layout pass) carries its old position as
+/// property `pid`, so saves made before the move still find it.
+String _pickupId(String mapId, String kind, TiledObjectProperties p) {
+  final pid = (p.others['pid'] ?? '').toString();
+  final at = pid.isNotEmpty ? pid : '${p.position.x.round()}_${p.position.y.round()}';
+  return '$mapId:$kind:$at';
+}
 
 int? _destLevel(String raw) {
   switch (raw.trim().toLowerCase()) {
@@ -656,7 +661,7 @@ Map<String, ObjectBuilder> _mapObjects(String mapId) => {
             npcKey: name);
       },
       'examine': (p) {
-        final id = (p.others['id'] ?? _pickupId(mapId, 'examine', p.position)).toString();
+        final id = (p.others['id'] ?? _pickupId(mapId, 'examine', p)).toString();
         return ExamineHotspot(
           p.position,
           id: id,
@@ -688,7 +693,7 @@ Map<String, ObjectBuilder> _mapObjects(String mapId) => {
         );
       },
       'fragment': (p) {
-        final id = _pickupId(mapId, 'fragment', p.position);
+        final id = _pickupId(mapId, 'fragment', p);
         if (SaveService.data.collected.contains(id)) return _Gone();
         return FragmentPickup(p.position, onCollected: () {
           SaveService.data.collected.add(id);
@@ -696,7 +701,7 @@ Map<String, ObjectBuilder> _mapObjects(String mapId) => {
         });
       },
       'health': (p) {
-        final id = _pickupId(mapId, 'health', p.position);
+        final id = _pickupId(mapId, 'health', p);
         if (SaveService.data.collected.contains(id)) return _Gone();
         return HealthPickup(p.position, onCollected: () {
           SaveService.data.collected.add(id);
@@ -734,23 +739,23 @@ Map<String, ObjectBuilder> _mapObjects(String mapId) => {
         final species = creatureSpecies[id];
         if (species == null) return _Gone(); // retired/unknown species: skip
         return WildCreature(species, p.position,
-            objectId: _pickupId(mapId, 'creature', p.position),
+            objectId: _pickupId(mapId, 'creature', p),
             radiusTiles: _numProp(p, 'radius', 1),
             netted: p.others['netted'] == true);
       },
       'boulder': (p) => Boulder(p.position, p.size,
-          id: _pickupId(mapId, 'boulder', p.position),
+          id: _pickupId(mapId, 'boulder', p),
           push: Vector2(_numProp(p, 'pushX'), _numProp(p, 'pushY')) * 32),
-      'darkzone': (p) => DarkZone(p.position, p.size, id: _pickupId(mapId, 'darkzone', p.position)),
+      'darkzone': (p) => DarkZone(p.position, p.size, id: _pickupId(mapId, 'darkzone', p)),
       'glyph': (p) => GlyphTablet(p.position,
-          id: _pickupId(mapId, 'glyph', p.position), glyph: (p.others['glyph'] ?? '').toString()),
+          id: _pickupId(mapId, 'glyph', p), glyph: (p.others['glyph'] ?? '').toString()),
       'stash': (p) => GlimmerStash(p.position,
-          id: _pickupId(mapId, 'stash', p.position), amount: _numProp(p, 'glimmer', 10).round()),
+          id: _pickupId(mapId, 'stash', p), amount: _numProp(p, 'glimmer', 10).round()),
       'hidden': (p) => BuriedItem(p.position,
-          id: _pickupId(mapId, 'hidden', p.position), amount: _numProp(p, 'glimmer', 10).round()),
-      'hiddenpath': (p) => HiddenPath(p.position, p.size, id: _pickupId(mapId, 'hiddenpath', p.position)),
+          id: _pickupId(mapId, 'hidden', p), amount: _numProp(p, 'glimmer', 10).round()),
+      'hiddenpath': (p) => HiddenPath(p.position, p.size, id: _pickupId(mapId, 'hiddenpath', p)),
       'stump': (p) => SweetrootStump(p.position, p.size),
-      'pebble': (p) => RiverPebble(p.position, id: _pickupId(mapId, 'pebble', p.position)),
+      'pebble': (p) => RiverPebble(p.position, id: _pickupId(mapId, 'pebble', p)),
       'moonflower': (p) => Moonflower(p.position),
       // Tile objects: Tiled anchors them bottom-left, so x/y is the sprite's
       // bottom-left corner.
