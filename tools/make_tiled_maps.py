@@ -276,6 +276,7 @@ class Level:
         self.buildings = []         # dicts: name, tx, ty (sprite top-left in tiles)
         self.seed = seed
         self.rings_min = 0          # validate(): minimum walkable rings (#26)
+        self.mist = []              # (tx, ty) tile centres for ambient mist over water
         self.rings = []
 
     def obj(self, obj, x, y, w, h, **props):
@@ -483,6 +484,7 @@ class Level:
                 if not ok[y, x] or self.props[y, x] >= 0:
                     raise SystemExit(f"building {b['name']} sprite covers wall/prop at tile {x},{y}")
             for o in self.objects:
+                if o["name"] in ("ambient", "light"): continue    # overlays (chimney smoke, lamp glow)
                 if overlap(spr, (o["x"], o["y"], o["w"], o["h"])):
                     raise SystemExit(f"building {b['name']} overlaps {o['name']} {o['props']}")
             for (n2, s2) in sprites:
@@ -603,7 +605,7 @@ class Level:
         kinds = {
             "steam_vent": "steam",
             "rooftop_vent": "steam",
-            "crashed_ship": "steam",
+            "crashed_ship": "smoke",       # the wreck still smoulders
             "campfire": "ember",
             "energy_brazier": "ember",
             "fountain": "mist",
@@ -616,11 +618,24 @@ class Level:
             cx = (x + w / 2) * T
             cy = (y + h / 2) * T
             # Top of the prop (vents vent upward; campfire/brazier glow above)
-            if kind == "steam":
+            if kind in ("steam", "smoke"):
                 cy = (y + 0.15 * h) * T
             elif kind == "ember":
                 cy = (y + 0.25 * h) * T
             self.obj("ambient", cx - 12, cy - 12, 24, 24, kind=kind)
+        # chimney / kitchen smoke over buildings (px from the sprite top-left)
+        for bd in self.buildings:
+            for (px, py) in self.CHIMNEYS.get(bd["name"], ()):
+                self.obj("ambient", bd["tx"] * T + px - 12, bd["ty"] * T + py - 12, 24, 24, kind="smoke")
+        # mist drifting over open water (ponds), set per map in tile coords
+        for (tx, ty) in self.mist:
+            self.obj("ambient", tx * T - 12, ty * T - 12, 24, 24, kind="mist")
+
+    CHIMNEYS = {
+        "ranger_cabin": ((31, 12),),
+        "apartment_block": ((19, 4),),
+        "noodle_shop": ((36, 12),),
+    }
 
     # Night light pools (#35): prop -> (kind, glow radius px, pool centre as a
     # fraction of the prop height). The game draws a cached cookie per light.
@@ -897,6 +912,7 @@ def map1():
     wall &= ~gated
     lv.floor = ~wall
     water = np.zeros_like(wall); rect_carve(water, 41, 7, 46, 10); water &= lv.floor
+    lv.mist = [(42.5, 8.0), (44.5, 8.6)]
     path = np.zeros_like(wall)
     for r in trails:
         carve_route(lv, route_pts(r), 1.1, path)
