@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 
+import '../components/lamp_light.dart';
 import '../game/adventure.dart';
 import '../game/memories.dart';
 import '../game/pause.dart';
@@ -48,16 +49,16 @@ class Journal {
   static void toggle() => open.value ? hide() : show();
 }
 
-/// Subtle day/night tint over the game view (under the HUD).
+/// Subtle day/night tint over the game view (under the HUD). At night lamps,
+/// lanterns and fires cut warm pools into it (see [NightTintPainter]).
 class NightTint extends StatelessWidget {
   const NightTint({super.key});
 
   @override
   Widget build(BuildContext context) {
     return IgnorePointer(
-      child: ValueListenableBuilder<double>(
-        valueListenable: DayCycle.time,
-        builder: (_, t, __) => Container(color: DayCycle.tint(t)),
+      child: RepaintBoundary(
+        child: CustomPaint(painter: NightTintPainter(), size: Size.infinite),
       ),
     );
   }

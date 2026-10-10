@@ -439,7 +439,7 @@ class Level:
             return a[0] < b[0] + b[2] and b[0] < a[0] + a[2] and a[1] < b[1] + b[3] and b[1] < a[1] + a[3]
         def floorless(o):
             # mapexit / entry sit on border openings punched after clean_walls
-            return o["name"] in ("darkzone", "ambient", "mapexit") or (
+            return o["name"] in ("darkzone", "ambient", "light", "mapexit") or (
                 o["name"] == "creature" and o["props"].get("species") in FLYING)
         for o in self.objects:
             if floorless(o): continue
@@ -549,7 +549,7 @@ class Level:
             if not any(secret(o) for o in inside):
                 raise SystemExit(f"{g['name']} at {g['x']},{g['y']} guards no secret")
         for o in objs:
-            if o["name"] in ("drone", "sentinel", "darkzone", "boulder", "hiddenpath", "ambient"):
+            if o["name"] in ("drone", "sentinel", "darkzone", "boulder", "hiddenpath", "ambient", "light"):
                 continue
             if o["name"] == "creature" and o["props"]["species"] in FLYING: continue
             if secret(o): continue
@@ -592,8 +592,35 @@ class Level:
                 cy = (y + 0.25 * h) * T
             self.obj("ambient", cx - 12, cy - 12, 24, 24, kind=kind)
 
+    # Night light pools (#35): prop -> (kind, glow radius px, pool centre as a
+    # fraction of the prop height). The game draws a cached cookie per light.
+    LIGHTS = {
+        "street_lamp": ("lamp", 76, 0.75),
+        "lantern": ("lantern", 64, 0.7),
+        "campfire": ("fire", 88, 0.5),
+        "energy_brazier": ("energy", 72, 0.5),
+        "neon_streetlight": ("neon", 72, 0.75),
+    }
+
+    # Maps whose street lamps use the cyan neon cookie (the City); elsewhere
+    # lamps are warm amber.
+    NEON_LAMP_MAPS = ("world2.tmj",)
+
+    def emit_lights(self, fname):
+        """A small `light` object (kind, radius[, style]) centred under each lamp-like prop."""
+        for name, x, y in self.instances:
+            spec = self.LIGHTS.get(name)
+            if not spec:
+                continue
+            kind, radius, fy = spec
+            w, h, _ = self.ts.props[name]
+            cx, cy = (x + w / 2) * T, (y + h * fy) * T
+            extra = {"style": "neon"} if kind == "lamp" and fname in self.NEON_LAMP_MAPS else {}
+            self.obj("light", cx - 8, cy - 8, 16, 16, kind=kind, radius=float(radius), **extra)
+
     def write(self, fname, image_rel):
         self.emit_ambient_fx()
+        self.emit_lights(fname)
         ok, seen = self.validate()
         ts = self.ts
         def lay(i, name, arr):
@@ -652,7 +679,7 @@ class Level:
             d.rectangle([bc[0], bc[1], bc[0] + bc[2], bc[1] + bc[3]], outline=(255, 60, 160), width=2)
             d.ellipse([door[0] - 3, door[1] - 3, door[0] + 3, door[1] + 3], fill=(255, 230, 0))
         for o in self.objects:
-            d.rectangle([o["x"], o["y"], o["x"] + o["w"], o["y"] + o["h"]], outline=col[o["name"]], width=2)
+            d.rectangle([o["x"], o["y"], o["x"] + o["w"], o["y"] + o["h"]], outline=col.get(o["name"], (255, 255, 255)), width=2)
         os.makedirs(PREVIEW, exist_ok=True)
         im.convert("RGB").resize((self.W * 16, self.H * 16)).save(os.path.join(PREVIEW, "preview_" + fname.replace(".tmj", ".png")))
         n_col = int((~ok).sum())
