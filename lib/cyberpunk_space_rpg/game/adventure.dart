@@ -38,6 +38,7 @@ const itemsWithArt = <String>{
   'archive_seal',
   'ruins_gate_key',
   'moonflower_bloom',
+  'sweetroot',
 };
 
 /// Items whose icon reuses existing world art instead of `sprites/items/`.
