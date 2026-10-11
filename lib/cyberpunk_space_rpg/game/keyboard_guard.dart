@@ -33,15 +33,21 @@ class KeyboardGuard {
               LogicalKeyboardKey(data.logical);
       final kb = HardwareKeyboard.instance;
 
-      if (data.type == ui.KeyEventType.down && kb.isPhysicalKeyPressed(physical)) {
+      // Linux key-repeat often arrives as another down (or a repeat) while the
+      // key is already pressed — that asserts and can kill the whole channel.
+      final isDownOrRepeat = data.type == ui.KeyEventType.down ||
+          data.type == ui.KeyEventType.repeat;
+      if (isDownOrRepeat && kb.isPhysicalKeyPressed(physical)) {
         // Escape: swallow duplicate downs. Synthesizing a KeyUp here races the
         // real Esc up from the pause menu and floods assert errors that kill
         // the whole key channel (WASD stops working).
         if (_isEscape(physical, logical)) return true;
 
-        // Duplicate down (Linux key-repeat / focus steal): release then let the
-        // normal handler see a fresh down so Bonfire's Keyboard re-arms WASD
-        // after map travel (a swallowed KeyRepeat leaves movement IDLE).
+        // Repeat while already down: ignore (Flutter already tracks the key).
+        if (data.type == ui.KeyEventType.repeat) return true;
+
+        // Duplicate down (focus steal): release then let the normal handler see
+        // a fresh down so Bonfire's Keyboard re-arms WASD.
         try {
           kb.handleKeyEvent(KeyUpEvent(
             physicalKey: physical,

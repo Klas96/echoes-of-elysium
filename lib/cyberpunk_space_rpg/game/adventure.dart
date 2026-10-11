@@ -152,8 +152,9 @@ class Adventure {
   static bool get readUecOrders => hasClue('uec_orders') || flag('read_uec_orders');
 
   /// Opened the Archive Library with the seal.
-  static bool get openedArchive =>
-      hasClue('archive_first_memory') || flag('archive_opened');
+  /// True once Kaela takes the First Memory Draft inside the Archive stacks
+  /// (door unlock is the separate `archive_opened` flag).
+  static bool get openedArchive => hasClue('archive_first_memory');
 
   /// Extra victory paragraphs when key clues shaped the ending.
   static String get endingCoda {

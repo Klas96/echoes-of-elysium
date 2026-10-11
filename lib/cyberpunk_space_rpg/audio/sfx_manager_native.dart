@@ -158,19 +158,41 @@ class SfxManager {
   /// Dialogue / cutscene VO — always on; ignores SFX mute and volume.
   Future<void> playVoice(String assetPath) async {
     if (!_ready) await init();
-    _voice ??= AudioPlayer();
-    final p = _voice!;
     final token = ++_voiceToken;
     final src = _asset(assetPath);
     try {
-      await p.stop();
-      if (token != _voiceToken) return;
+      // Fresh player each line — Linux/GStreamer often stays silent after
+      // stop()+replay on the same short-clip player.
+      final old = _voice;
+      _voice = AudioPlayer();
+      final p = _voice!;
+      try {
+        await old?.stop();
+      } catch (_) {}
+      try {
+        await old?.dispose();
+      } catch (_) {}
+      if (token != _voiceToken) {
+        try {
+          await p.dispose();
+        } catch (_) {}
+        return;
+      }
+      await _safeContext(p, GameAudioContexts.mix);
+      if (token != _voiceToken) {
+        try {
+          await p.dispose();
+        } catch (_) {}
+        return;
+      }
       await p.setReleaseMode(ReleaseMode.stop);
       await p.setVolume(_baseVoice);
+      await p.setPlayerMode(PlayerMode.mediaPlayer);
       await p.play(AssetSource(src));
       if (token != _voiceToken) {
-        await p.stop();
-        return;
+        try {
+          await p.stop();
+        } catch (_) {}
       }
     } catch (e) {
       debugPrint('SfxManager playVoice($src): $e');
@@ -179,8 +201,13 @@ class SfxManager {
 
   Future<void> stopVoice() async {
     _voiceToken++;
+    final p = _voice;
+    _voice = null;
     try {
-      await _voice?.stop();
+      await p?.stop();
+    } catch (_) {}
+    try {
+      await p?.dispose();
     } catch (_) {}
   }
 }

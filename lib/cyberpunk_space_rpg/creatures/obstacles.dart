@@ -9,6 +9,7 @@ import 'bonds.dart';
 import 'creature_components.dart';
 import 'creature_species.dart';
 import 'day_cycle.dart';
+import 'gate_components.dart';
 import 'interaction.dart';
 import '../interiors/room_services.dart';
 
@@ -27,72 +28,117 @@ Vector2 _playerCenter(BonfireGameInterface g) {
   return p == null ? Vector2.all(-9999) : p.position + p.size / 2;
 }
 
-/// PUSH: a heavy 2x2 boulder plugging a nook. With the stone turtle along,
-/// hold E to shove it [push] (in pixels); otherwise it just blocks.
+/// PUSH: nook choke using the same road-boulder art / roll / open passage as
+/// the Woods south exit ([FallenBoulderGate]). Stone turtle must be following.
+/// Opens in place (no slide): closed plugs the 3×2; open leaves a west passage.
 class Boulder extends GameComponent with Interactable, PointOfInterest {
   final String id;
+  /// Kept for older maps; nook boulders open in place like the south exit.
   final Vector2 push;
-  Sprite? _sprite;
-  SpriteAnimation? _dust;
-  SpriteAnimationTicker? _dustTicker;
-  Vector2? _from;
-  double _t = 0;
-  static const _moveSeconds = 0.5;
+  Sprite? _closed;
+  Sprite? _open;
+  SpriteAnimationTicker? _roll;
+  final _hits = <RectangleHitbox>[];
+  double _openT;
+  bool _opening = false;
 
-  Boulder(Vector2 position, Vector2 size, {required this.id, required this.push}) {
-    this.position = position + (Bonds.secretDone(id) ? push : Vector2.zero());
+  Boulder(Vector2 position, Vector2 size, {required this.id, required this.push})
+      : _openT = Bonds.secretDone(id) ? 1 : 0 {
+    this.position = position;
     this.size = size;
   }
 
   bool get pushed => Bonds.secretDone(id);
 
+  double get _k => size.x / 96;
+
+  void _setColliders(List<Rect> rects) {
+    for (final h in _hits) {
+      h.removeFromParent();
+    }
+    _hits.clear();
+    final k = _k;
+    for (final r in rects) {
+      final h = RectangleHitbox(
+        position: Vector2(r.left * k, r.top * k),
+        size: Vector2(r.width * k, r.height * k),
+        isSolid: true,
+        collisionType: CollisionType.active,
+      );
+      _hits.add(h);
+      add(h);
+    }
+  }
+
   @override
   Future<void> onLoad() async {
-    // Solid before sprite await (add() needs gameRef — not in constructor).
-    add(RectangleHitbox(
-      size: size.clone(),
-      isSolid: true,
-      collisionType: CollisionType.active,
-    ));
-    _sprite = await Sprite.load(
-        size.x > 40 ? 'obstacles/boulder_2x2.png' : 'obstacles/boulder.png');
-    try {
-      final img = await Flame.images.load('obstacles/boulder_push_anim.png');
-      _dust = SpriteAnimation.fromFrameData(
-          img,
-          SpriteAnimationData.sequenced(
-              amount: 3, stepTime: 0.1, textureSize: Vector2(48, 40), loop: false));
-    } catch (_) {}
+    _openT = pushed ? 1 : 0;
+    _setColliders(pushed ? GateArt.boulderOpenColliders : GateArt.boulderClosedColliders);
+    _closed = await Sprite.load(GateArt.boulderClosed);
+    _open = await Sprite.load(GateArt.boulderOpen);
+    _openT = pushed ? 1 : 0;
+    _setColliders(pushed ? GateArt.boulderOpenColliders : GateArt.boulderClosedColliders);
     return super.onLoad();
   }
 
   @override
-  int get priority =>
-      LayerPriority.getComponentPriority((position.y + size.y * 0.85).floor());
+  int get priority {
+    final foot = pushed ? size.y * (GateArt.boulderOpenFoot / GateArt.boulderArtHeight) : size.y * 0.92;
+    return LayerPriority.getComponentPriority((position.y + foot).floor());
+  }
 
   @override
   Ability get poiAbility => Ability.push;
   @override
   bool get poiPending => !pushed;
   @override
-  bool get canFocus => !pushed;
+  bool get canFocus => !pushed && !_opening;
+
+  /// West-tunnel stand (south exit uses [GateArt.boulderInteract] from the north).
   @override
-  double get interactRadius => size.x * 0.5 + 30;
+  Vector2 get interactPoint => absolutePosition + Vector2(10, 40) * _k;
+  @override
+  double get interactRadius => 46;
 
   @override
   PromptInfo get prompt => Bonds.has(Ability.push)
       ? const PromptInfo('PUSH', hold: 0.5)
       : PromptInfo.note(Bonds.unlocked(Ability.push)
-          ? 'A boulder with a carved handprint. The stone turtle could shove it.'
-          : 'A heavy boulder with a carved handprint. Too heavy to move alone.');
+          ? 'Walk with the Stone Turtle — it has to be with you to shove this.'
+          : 'A heavy boulder blocks the way. Too heavy to move alone.');
 
   @override
   void interact() {
-    if (pushed || !Bonds.has(Ability.push)) return;
+    if (pushed || _opening || !Bonds.has(Ability.push)) return;
+    _opening = true;
+    final species = creatureSpecies['stoneturtle']!;
+    final player = gameRef.player;
+    final from = player == null ? interactPoint : player.position + player.size / 2;
+    Companion.current?.lend(species.id, 2.6);
+    gameRef.add(GateHelper(species, from, interactPoint - Vector2(0, 14), onArrive: _openNow));
+  }
+
+  void _openNow() {
     Bonds.markSecret(id);
-    _from = position.clone();
-    _t = 0;
-    _dustTicker = _dust?.createTicker();
+    Flame.images.load(GateArt.boulderRoll).then((img) {
+      _roll = SpriteAnimation.fromFrameData(
+              img,
+              SpriteAnimationData.sequenced(
+                  amount: GateArt.boulderRollFrames,
+                  stepTime: 1 / GateArt.boulderRollFps,
+                  textureSize: Vector2(96, 64),
+                  loop: false))
+          .createTicker();
+      _openT = 0;
+    }).catchError((_) {
+      _openT = 1;
+    });
+    _setColliders(GateArt.boulderOpenColliders);
+    _opening = false;
+    if (hasGameRef) {
+      final g = gameRef;
+      if (g is BonfireGame) g.requestUpdatePriority();
+    }
     SfxManager().playChime();
     GameToast.show('PUSH', body: 'Boulder moved', compact: true);
   }
@@ -100,26 +146,35 @@ class Boulder extends GameComponent with Interactable, PointOfInterest {
   @override
   void update(double dt) {
     super.update(dt);
-    final from = _from;
-    if (from != null) {
-      _t += dt;
-      final k = Curves.easeOut.transform((_t / _moveSeconds).clamp(0.0, 1.0));
-      position = from + push * k;
-      _dustTicker?.update(dt);
-      if (_t >= _moveSeconds) _from = null;
+    final r = _roll;
+    if (r != null) {
+      r.update(dt);
+      if (r.done()) {
+        _roll = null;
+        _openT = 1;
+      } else {
+        _openT = 0;
+      }
+    } else if (pushed) {
+      _openT = min(1, _openT + dt * 1.5);
     }
   }
 
   @override
   void render(Canvas canvas) {
     final paint = Paint()..filterQuality = FilterQuality.none;
-    _sprite?.render(canvas, size: size, overridePaint: paint);
-    if (_from != null && _dustTicker != null) {
-      final scale = size.x / 32;
-      _dustTicker!.getSprite().render(canvas,
-          position: Vector2(-8, -4) * scale,
-          size: Vector2(48, 40) * scale,
-          overridePaint: paint);
+    final r = _roll;
+    if (r != null) {
+      r.getSprite().render(canvas, size: size, overridePaint: paint);
+      return;
+    }
+    if (_openT < 1) {
+      paint.color = Color.fromRGBO(255, 255, 255, 1 - _openT);
+      _closed?.render(canvas, size: size, overridePaint: paint);
+    }
+    if (_openT > 0) {
+      paint.color = Color.fromRGBO(255, 255, 255, _openT);
+      _open?.render(canvas, size: size, overridePaint: paint);
     }
     super.render(canvas);
   }
@@ -410,11 +465,11 @@ class BuriedItem extends GameComponent with Interactable, PointOfInterest {
   }
 }
 
-/// TRAIL: Designer's 2x2 bramble (bramble_closed / bramble_open, 64x64,
-/// swapped in place) plugging the path into the hushdeer's glade. With the
-/// hushdeer along, hold E to open the old trail; the open bramble keeps only
-/// its side clumps solid, leaving a north-south passage ([passage], x 16-48
-/// px) that Kaela's feet hitbox fits through.
+/// SCENT: Designer's 2x2 bramble (bramble_closed / bramble_open, 64x64,
+/// swapped in place) plugging the path into the hushdeer's moonflower glade.
+/// With the vine fox along, hold E to nose through; the open bramble keeps
+/// only its side clumps solid, leaving a north-south passage ([passage],
+/// x 16-48 px) that Kaela's feet hitbox fits through.
 class HiddenPath extends GameComponent with Interactable, PointOfInterest {
   final String id;
 
@@ -434,6 +489,7 @@ class HiddenPath extends GameComponent with Interactable, PointOfInterest {
   SpriteAnimationTicker? _shimmer;
   final _hits = <RectangleHitbox>[];
   double _open;
+  bool _opening = false;
 
   HiddenPath(Vector2 position, Vector2 size, {required this.id}) : _open = Bonds.secretDone(id) ? 1 : 0 {
     this.position = position;
@@ -490,7 +546,7 @@ class HiddenPath extends GameComponent with Interactable, PointOfInterest {
   }
 
   @override
-  Ability get poiAbility => Ability.trail;
+  Ability get poiAbility => Ability.scent;
   @override
   bool get poiPending => !revealed;
 
@@ -503,27 +559,38 @@ class HiddenPath extends GameComponent with Interactable, PointOfInterest {
   @override
   double get interactRadius => 46;
   @override
-  bool get canFocus => !revealed;
+  bool get canFocus => !revealed && !_opening;
 
+  // Same copy as woods_brambles (east-grove memory fragment) — one fox verb.
   @override
-  PromptInfo get prompt => Bonds.has(Ability.trail)
-      ? const PromptInfo('FOLLOW THE TRAIL', hold: 0.6)
-      : PromptInfo.note(Bonds.unlocked(Ability.trail)
-          ? 'Thick brambles. Walk with the hushdeer to open the old path.'
-          : 'Thick brambles. Moonflowers hint at a path beyond.');
+  PromptInfo get prompt => Bonds.has(Ability.scent)
+      ? const PromptInfo('SNIFF A WAY THROUGH', hold: 0.5)
+      : PromptInfo.note(Bonds.unlocked(Ability.scent)
+          ? 'Thorns. Walk with the vine fox — it can sniff a way through.'
+          : 'Thorns. Something with a good nose could find a way through.');
 
   @override
   void interact() {
-    if (revealed || !Bonds.has(Ability.trail)) return;
+    if (revealed || _opening || !Bonds.has(Ability.scent)) return;
+    _opening = true;
+    final species = creatureSpecies['vinefox']!;
+    final player = gameRef.player;
+    final from = player == null ? interactPoint : player.position + player.size / 2;
+    Companion.current?.lend(species.id, 2.6);
+    gameRef.add(GateHelper(species, from, interactPoint - Vector2(0, 14), onArrive: _openNow));
+  }
+
+  void _openNow() {
     Bonds.markSecret(id);
     _setColliders(openColliders);
     _open = max(_open, 0.05); // kick the swap so it doesn't look still shut
+    _opening = false;
     if (hasGameRef) {
       final g = gameRef;
       if (g is BonfireGame) g.requestUpdatePriority();
     }
     SfxManager().playChime();
-    GameToast.show('TRAIL', body: 'Path opens', compact: true);
+    GameToast.show('SNIFF', body: 'Path found', compact: true);
   }
 
   @override
@@ -545,8 +612,8 @@ class HiddenPath extends GameComponent with Interactable, PointOfInterest {
       paint.color = Color.fromRGBO(255, 255, 255, _open.toDouble());
       _openSprite?.render(canvas, size: size, overridePaint: paint);
       _motes?.getSprite().render(canvas, size: size, overridePaint: paint);
-    } else if (Bonds.has(Ability.trail)) {
-      // the hushdeer remembers the moonflower path under the thorns
+    } else if (Bonds.has(Ability.scent)) {
+      // the vine fox smells the moonflower path under the thorns
       paint.color = const Color(0xCCFFFFFF);
       _shimmer?.getSprite().render(canvas, size: size, overridePaint: paint);
     }

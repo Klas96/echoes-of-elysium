@@ -7,10 +7,11 @@ import '../game/well_rested.dart';
 import '../creatures/day_cycle.dart';
 import '../creatures/interaction.dart';
 
-/// A respawn point placed in Tiled ("checkpoint" objects in the gameplay
-/// layer: one at the spawn plus one per area entrance). Walking over it makes
-/// it the place Gaia pulls Kaela back to at 0 HP. Drawn as a soft Aetherian
-/// ring that blooms green once active (placeholder until Designer art).
+/// A respawn / rest point placed in Tiled ("checkpoint" objects in the
+/// gameplay layer). One per stage, at the map spawn (Woods crash site, City
+/// plaza, etc.) — no mid-stage backups. Walking over it makes it the place
+/// Gaia pulls Kaela back to at 0 HP. Drawn as a soft Aetherian ring that
+/// blooms green once active (placeholder until Designer art).
 ///
 /// It is also a rest spot: once active, REST skips to nightfall (by day) or
 /// morning (by night) and restores health, so night-only creatures are

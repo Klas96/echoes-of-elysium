@@ -35,7 +35,7 @@ class GateDef {
   final GateKind kind;
   final Ability ability;
 
-  /// Species that opens it (any befriended one of these, whoever follows).
+  /// Species that must be walking with Kaela to open it.
   final String creature;
 
   /// Toast title + level-2 hint (walking into the closed gate).

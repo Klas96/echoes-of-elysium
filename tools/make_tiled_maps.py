@@ -29,7 +29,7 @@ world px, width/height = component size (same coords the code used before).
 M2 (woods only): creature (species, radius in tiles, netted, gated), stump
 (the vine fox's sweetroot), pebble (the brookling's river pebble), stash
 (glimmer), moonflower (decor), glyph (glyph id), hidden (glimmer; brookling DIG),
-hiddenpath (brambles the hushdeer's TRAIL opens), boulder (2x2 tiles,
+hiddenpath (brambles the vine fox's SCENT opens), boulder (2x2 tiles,
 pushX/pushY in tiles; needs the stone turtle's PUSH) and darkzone (a rect of
 darkness; the glowmoth's LIGHT reveals the glyph inside). Those optional
 ability gates only guard secrets (glyph, stash, hidden, creatures marked gated).
@@ -1021,8 +1021,9 @@ SECRET_KINDS = {"glyph", "stash", "hidden", "moonflower"}
 # state when one of that state's rects covers the tile centre.
 GATE_ART = {
     "grotto": dict(size=(96, 64), interact=(46, 66),
+                   # Façade stays solid lit or dark; cave entry is ENTER (#57).
                    closed=[(16, 3, 19, 30), (58, 3, 19, 30), (35, 3, 23, 10), (14, 33, 65, 29), (35, 13, 23, 20)],
-                   open=[(16, 3, 19, 30), (58, 3, 19, 30), (35, 3, 23, 10), (14, 33, 65, 29)]),
+                   open=[(16, 3, 19, 30), (58, 3, 19, 30), (35, 3, 23, 10), (14, 33, 65, 29), (35, 13, 23, 20)]),
     # Designer's interaction point is the south side; on the Woods road
     # Kaela arrives from the meadow, so the game uses the north side (48, 10)
     "boulder": dict(size=(96, 64), interact=(48, 10),
@@ -1128,12 +1129,14 @@ def map1():
     wall = clean_walls(~lv.floor)
     lv.floor = ~wall
     # ---- ability-gated nooks, carved through solid forest after clean_walls
-    nooks = [(50, 8), (12, 26)]                       # boulder top-left; tunnel enters from the west
+    # Mouth top-left of a 3×2 road boulder (same art as the south exit).
+    nooks = [(49, 8), (11, 26)]
     gated = np.zeros_like(wall)
     for (bx, by) in nooks:
-        gated[by:by + 2, bx - 4:bx] = True            # tunnel from the trail (+ its mouth)
-        gated[by - 2:by + 4, bx:bx + 4] = True        # 4x6 nook
-    # SCENT bramble: ridge trail → 2x2 bramble → hushdeer glade below,
+        gated[by:by + 2, bx - 3:bx] = True            # tunnel from the west
+        gated[by:by + 2, bx:bx + 3] = True            # 3-wide mouth under the boulder
+        gated[by - 2:by + 4, bx + 3:bx + 7] = True    # nook east of the boulder
+    # SCENT side-bramble: ridge + moonflowers → 2x2 thorns → hushdeer glade,
     # hidden inside the forest block between the ridge and the crossroads
     gated[8:11, 27:29] = True                         # bramble cells (+ the trail row above)
     gated[11:14, 26:30] = True                        # hidden glade
@@ -1142,6 +1145,11 @@ def map1():
     gated[25:28, 50:52] = True
     gated[28:31, 49:53] = True
     wall &= ~gated
+    # Nook mouths: seal above/below the 3-wide plug so you cannot walk around
+    # the road boulder without PUSH (same idea as the south meadow neck).
+    for (bx, by) in nooks:
+        wall[by - 1, bx:bx + 3] = True
+        wall[by + 2, bx:bx + 3] = True
     # Egrove's clearing disk opens flanks around the thorns; seal both sides
     # (and the pocket corners) so the fragment is only entered through the gate.
     wall[26:29, 49] = True
@@ -1187,7 +1195,7 @@ def map1():
                        ("standing_stone", 24, 22), ("standing_stone", 30, 22),
                        ("tent", 26, 30), ("campfire", 21, 31), ("radio_dish", 30, 3),
                        ("signpost", 14, 10), ("signpost", 37, 21), ("signpost", 7, 31),
-                       ("signpost", 33, 33), ("signpost", 45, 15), ("portal_platform", 41, 37)):
+                       ("signpost", 33, 33), ("signpost", 45, 15)):
         landmark(lv, name, x, y)
     # Decor: authored lanterns (colliding — random scatter can seal secret paths),
     # spaced forest wall, path-verge soft props, story-clearing vignettes.
@@ -1247,10 +1255,8 @@ def map1():
                   lockedTitle="WOODS EDGE",
                   lockedBody="The road south is blocked. The woods still want something from you.")
     place_entry(lv, "south", P["exit"][0], P["exit"][1] - 1.0)    # arriving back from the City
+    # One backup per stage: spawn only (no mid-woods rings).
     place(lv, "checkpoint", *P["spawn"], label="Crash Site")
-    place(lv, "checkpoint", P["cross"][0] - 0.5, P["cross"][1] + 3.5, label="Crossroads")
-    place(lv, "checkpoint", P["asha"][0] + 1.5, P["asha"][1] + 1.6, label="Asha's Camp")
-    place(lv, "checkpoint", P["meadow"][0] - 2.5, P["meadow"][1] - 1.0, label="South Meadow")
     # Kaela's diagnostic skiff (landmark crashed_ship at 2,4) — lore on the
     # walkable scar edge toward spawn, not on the prop footprint.
     place(lv, "examine", 6.5, 8.2,
@@ -1313,7 +1319,7 @@ def map1():
     return ts
 
 # tiles that later get creatures / moonflowers / secrets / quest props (no props there)
-WOODS_RESERVED = ((47.5, 7.5), (44, 12.5), (47.5, 20.5), (13, 19), (40, 12.5), (28, 12.5),
+WOODS_RESERVED = ((43.5, 8.5), (44, 12.5), (47.5, 20.5), (13, 19), (40, 12.5), (28, 12.5),
                   (24.5, 7.5), (26.5, 8), (29.5, 8.2), (26.5, 11.5), (29.5, 11.5), (27, 13.5),
                   (5.5, 21.5), (6.1, 21.2), (4.9, 22.5), (4.5, 39), (6.1, 38.6), (15.5, 36),
                   (3.5, 30.5), (13.5, 12.5), (37.5, 26), (14, 38), (13, 17), (32.5, 5.5))
@@ -1337,25 +1343,27 @@ def woods_main_gates(lv):
 def woods_creatures_and_secrets(lv, nooks):
     """M2: creatures (journal + companions) and ability-gated optional secrets
     (the main-route gates are in woods_main_gates)."""
-    creature(lv, "glowmoth", 47.5, 7.5, 1.4, was=(28.5, 21.5))     # over the pond, only out at night
+    # Centre of the NE pond (water tiles ~41–45, 7–9). Flying — no floor needed.
+    creature(lv, "glowmoth", 43.5, 8.5, 1.0, was=(28.5, 21.5))
     creature(lv, "stoneturtle", 44, 12.5, 0.6, netted=True, was=(24.5, 24.5))   # netted on the pond bank
     creature(lv, "vinefox", 47.5, 20.5, 1.2, was=(18.5, 40.5))     # east grove
     creature(lv, "puffcap", 13, 19, 0.0, was=(11.5, 21.5))         # mossy hollow off the west loop
-    creature(lv, "brookling", 40, 12.5, 0.6, was=(24.5, 21.5))     # otter on the pond bank
-    creature(lv, "hushdeer", 28, 12.5, 0.8, gated=True, was=(30.0, 33.0))   # hidden glade, night only
+    creature(lv, "brookling", 15, 26, 0.6, was=(24.5, 21.5))       # west nook (behind PUSH boulder)
+    # Night-only inside the glade (vine fox SCENT opens the thorns above).
+    creature(lv, "hushdeer", 28, 12.5, 0.8, gated=True, was=(30.0, 33.0))
     place(lv, "pebble", 42.5, 11.5, was=(24.5, 26.5))               # pond shallows, south bank
-    # TRAIL (hushdeer): bramble plugging the gap into the moonflower glade
+    # SCENT (vine fox): bramble plugging the gap into the moonflower glade
     lv.obj("hiddenpath", 27 * T, 9 * T, 2 * T, 2 * T, pid=f"{29 * T}_{30 * T}")
     for (fx, fy) in ((24.5, 7.5), (26.5, 8), (29.5, 8.2), (26.5, 11.5), (29.5, 11.5), (27, 13.5)):
         place(lv, "moonflower", fx, fy)
     # the vine fox's sweetroot, under a 2x2 stump in the mossy hollow
     lv.obj("stump", 12 * T, 16 * T, 2 * T, 2 * T)
-    # PUSH: boulders in the nook mouths, pushed one tile east
+    # PUSH: 3×2 road boulders (exit stone). Open in place — pushX unused.
     (b1x, b1y), (b2x, b2y) = nooks
-    boulder(lv, b1x, b1y, 1, 0, was=(24, 4))
-    place(lv, "stash", b1x + 2.5, b1y + 3.5, glimmer=25, was=(26.5, 6.5))
-    boulder(lv, b2x, b2y, 1, 0, was=(29, 38))
-    place(lv, "glyph", b2x + 2.5, b2y + 3.5, glyph="woods_nook", was=(30.5, 41.5))
+    boulder(lv, b1x, b1y, 0, 0)
+    place(lv, "stash", b1x + 4.5, b1y + 3.5, glimmer=25, was=(26.5, 6.5))
+    boulder(lv, b2x, b2y, 0, 0)
+    place(lv, "glyph", b2x + 4.5, b2y + 3.5, glyph="woods_nook", was=(30.5, 41.5))
     # LIGHT: dark zones with a glyph inside, off the main trails
     darkzone(lv, 40, 11, 41, 13, was=(27, 26))                     # pond's west bank, under the reeds
     place(lv, "glyph", 40.5, 11.5, glyph="woods_pond", was=(28.5, 27.5))
@@ -1408,10 +1416,10 @@ def creature(lv, species, tx, ty, radius, **props):
     place(lv, "creature", tx, ty, species=species, radius=float(radius), **props)
 
 def boulder(lv, tx, ty, push_x, push_y, was=None):
-    """2x2-tile boulder with its top-left at tile (tx, ty); PUSH moves it by
-    (push_x, push_y) tiles"""
+    """3x2 road boulder (same art as the south exit) at tile (tx, ty).
+    Opens in place; pushX/pushY kept for Tiled compat (unused by runtime)."""
     extra = {"pid": f"{was[0] * T}_{was[1] * T}"} if was else {}
-    lv.obj("boulder", tx * T, ty * T, 2 * T, 2 * T, pushX=int(push_x), pushY=int(push_y), **extra)
+    lv.obj("boulder", tx * T, ty * T, 3 * T, 2 * T, pushX=int(push_x), pushY=int(push_y), **extra)
 
 def darkzone(lv, x0, y0, x1, y1, was=None):
     """darkness over tiles x0..x1, y0..y1 (inclusive), with a half-tile fringe"""
@@ -1611,10 +1619,6 @@ def map2():
     place_entry(lv, "south", P["gate"][0], P["gate"][1] - 0.5)
     place_entry(lv, "east", *P["town"])
     place(lv, "checkpoint", *P["spawn"], label="Arrival Plaza")
-    place(lv, "checkpoint", P["echo7"][0] + 1.5, P["echo7"][1] - 2.5, label="Echo District")
-    place(lv, "checkpoint", 21.5, 14.0, label="Archive Square")
-    place(lv, "checkpoint", P["gate"][0] + 2.0, P["gate"][1] + 0.5, label="South Gate")
-    place(lv, "checkpoint", P["town"][0] - 3.5, P["town"][1] + 1.5, label="Lantern Road")
     place(lv, "examine", P["spawn"][0] + 2.0, P["spawn"][1] + 1.2,
           id="city_arrival_post", title="PLAZA POST",
           text="WEST: market and Echo-7. SOUTH: the Archive Square. EAST: Lantern Gate and the road to Town. "
@@ -1764,7 +1768,6 @@ def map5():
     place_entry(lv, "west", 4.5, P["mira"][1])
     place_entry(lv, "north", *P["spawn"])
     place(lv, "checkpoint", *P["spawn"], label="Lantern Gate")
-    place(lv, "checkpoint", *P["portal"], label="Market South")
     place(lv, "examine", P["mira"][0] + 1.6, P["mira"][1] + 0.4,
           id="town_stall", title="MIRA'S STALL",
           text="Salvage and colony trinkets. Pay in glimmer.",
@@ -1904,8 +1907,6 @@ def map3():
     place_entry(lv, "north", *P["spawn"])
     place(lv, "portal", *P["portal"])
     place(lv, "checkpoint", *P["spawn"], label="Ruined Landing")
-    place(lv, "checkpoint", P["h2"][0], P["h2"][1], label="Central Clearing")
-    place(lv, "checkpoint", P["portal"][0] - 2.5, P["portal"][1] - 2.5, label="Extraction Approach")
     place(lv, "examine", P["spawn"][0] + 1.5, P["spawn"][1] + 1.0,
           id="ruins_landing_mark", title="LANDING MARK",
           text="UEC paint over Aetherian stone: \"Wipe authorized.\" Someone scratched it out. North walks back to the City.",
@@ -1998,7 +1999,6 @@ def map4():
     place(lv, "drone", *P["d3"], startAngle=2.5, kind="shield")
     place(lv, "portal", *P["portal"])
     place(lv, "checkpoint", *P["spawn"], label="Core Threshold")
-    place(lv, "checkpoint", *P["gaia"], label="Core Record")
     place(lv, "examine", P["spawn"][0] + 1.5, P["spawn"][1] + 1.2,
           id="core_console", title="CORE CONSOLE",
           text="Activation waits on a living neural match. A remote wipe is already queued.",

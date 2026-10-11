@@ -43,6 +43,7 @@ import '../ui/quest_board_ui.dart';
 import '../ui/shop_ui.dart';
 import 'adventure.dart';
 import 'game_debug.dart';
+import 'game_input.dart';
 import 'game_state.dart';
 import 'pause.dart';
 import 'progression.dart';
@@ -92,6 +93,10 @@ NpcDialogue _gaiaDialogue() {
                 'Channel lock exceeded the craft\'s isolation rating. I did not aim for the canopy. I aimed for a living key within range.',
                 'You survived. The flight log did not. Examine the wreck if you want the black-box version.',
               ],
+              replyVoicePaths: [
+                'audio/voices/gaia_skiff_1.mp3',
+                'audio/voices/gaia_skiff_2.mp3',
+              ],
             ),
           ]
         : const [
@@ -117,6 +122,10 @@ NpcDialogue _gaiaDialogue() {
               replyLines: [
                 'Channel lock exceeded the craft\'s isolation rating. I did not aim for the canopy. I aimed for a living key within range.',
                 'You survived. The flight log did not. Examine the wreck if you want the black-box version.',
+              ],
+              replyVoicePaths: [
+                'audio/voices/gaia_skiff_1.mp3',
+                'audio/voices/gaia_skiff_2.mp3',
               ],
             ),
           ],
@@ -745,12 +754,12 @@ Map<String, ObjectBuilder> _mapObjects(String mapId) => {
       'fragment': (p) {
         final id = _pickupId(mapId, 'fragment', p);
         if (SaveService.data.collected.contains(id)) return _Gone();
-        // Inside a main-route gate (the pond grotto): hidden until it opens,
-        // then taken from the bank across the water.
+        // Pond grotto fragment lives inside the cave room (ENTER when lit).
         final gate = (p.others['gate'] ?? '').toString();
+        if (gate == 'woods_grotto') return _Gone();
         return FragmentPickup(p.position,
             hidden: gate.isEmpty ? null : () => !Gates.isOpen(gate),
-            collectRadius: gate.isEmpty ? FragmentPickup.defaultCollectRadius : 48,
+            collectRadius: gate.isEmpty ? FragmentPickup.defaultCollectRadius : 40,
             onCollected: () {
           SaveService.data.collected.add(id);
           Memories.onFragmentPicked();
@@ -1040,8 +1049,8 @@ class IntroScreen extends StatelessWidget {
               Text(_isTouch
                       ? 'Joystick to move · tap TALK to interact · tap to shoot'
                       : kDebugMode
-                          ? 'WASD / Arrow keys · E to interact · Esc menu · J journal · I gear · ` to debug'
-                          : 'WASD / Arrow keys · E to interact · Esc menu · J journal · I gear',
+                          ? 'Click move/attack · WASD optional · E interact · Esc menu · J journal · I gear · `'
+                          : 'Click move/attack · WASD optional · E interact · Esc menu · J journal · I gear',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.white24, fontSize: 11, letterSpacing: 1.2)),
             ],
@@ -1541,12 +1550,8 @@ void _setPaused(bool on) {
     g.pauseEngine();
   } else {
     g.resumeEngine();
-    // Sliders/buttons steal focus; give keys back to the game Focus + Bonfire.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      FocusManager.instance.primaryFocus?.unfocus();
-      final p = g.player;
-      if (p is CustomPlayer) p.syncMovementFromKeyboard();
-    });
+    // Sliders/buttons steal focus; put WASD back on Bonfire's FocusNode.
+    GameInput.reclaim(releaseKeys: false);
   }
 }
 
@@ -1557,13 +1562,9 @@ void _onMapReady(BonfireGameInterface game) {
   Memories.attach(game);
   StoryBeats.attach(game);
   _paused.value = false;
-  // Do NOT KeyboardGuard.releaseAll() here: walking off a map while holding
-  // WASD would drop Flutter's pressed set while the OS key is still down, and
-  // the new Bonfire Keyboard never saw the original KeyDown. Re-sync instead.
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    final p = game.player;
-    if (p is CustomPlayer) p.syncMovementFromKeyboard();
-  });
+  // Do NOT releaseAll here: walking off a map while holding WASD would drop
+  // Flutter's pressed set while the OS key is still down. Reclaim focus + sync.
+  GameInput.reclaim(releaseKeys: false);
 }
 
 // Joystick + keyboard (WASD and arrows) both feed Bonfire's movement, which
@@ -1594,8 +1595,10 @@ class CustomMapGameScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     CustomPlayer.healthNotifier.value = CustomPlayer.maxHealth;
+    // Do not autofocus: Bonfire owns [GameInput.focusNode]. An autofocus
+    // parent steals primary focus after cutscenes and kills WASD.
     return Focus(
-      autofocus: true,
+      canRequestFocus: false,
       onKeyEvent: _handleDebugKey,
       child: Scaffold(
         backgroundColor: Colors.black,
@@ -1605,10 +1608,11 @@ class CustomMapGameScreen extends StatelessWidget {
             onTapDown: (d) {
               if (NpcCharacter.activeDialogue.value != null) return;
               if (AIFragment.activeDialogue.value != null) return;
-              CustomPlayer.pendingShot.value =
+              CustomPlayer.pendingClick.value =
                   Vector2(d.localPosition.dx, d.localPosition.dy);
             },
             child: BonfireWidget(
+              focusNode: GameInput.focusNode,
             playerControllers: _playerControllers(),
             player: CustomPlayer(Vector2.zero()),
             map: CustomMap('maps/world.tmj', objectsBuilder: _mapObjects('world')),
@@ -1652,17 +1656,20 @@ class Map2GameScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Do not autofocus: Bonfire owns [GameInput.focusNode]. An autofocus
+    // parent steals primary focus after cutscenes and kills WASD.
     return Focus(
-      autofocus: true,
+      canRequestFocus: false,
       onKeyEvent: _handleDebugKey,
       child: Scaffold(
         backgroundColor: Colors.black,
         body: Stack(children: [
           GestureDetector(
             behavior: HitTestBehavior.translucent,
-            onTapDown: (d) => CustomPlayer.pendingShot.value =
+            onTapDown: (d) => CustomPlayer.pendingClick.value =
                 Vector2(d.localPosition.dx, d.localPosition.dy),
             child: BonfireWidget(
+              focusNode: GameInput.focusNode,
             playerControllers: _playerControllers(),
             player: CustomPlayer(Vector2.zero()),
             map: CustomMap('maps/world2.tmj', objectsBuilder: _mapObjects('world2')),
@@ -1712,17 +1719,20 @@ class Map3GameScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Do not autofocus: Bonfire owns [GameInput.focusNode]. An autofocus
+    // parent steals primary focus after cutscenes and kills WASD.
     return Focus(
-      autofocus: true,
+      canRequestFocus: false,
       onKeyEvent: _handleDebugKey,
       child: Scaffold(
         backgroundColor: Colors.black,
         body: Stack(children: [
           GestureDetector(
             behavior: HitTestBehavior.translucent,
-            onTapDown: (d) => CustomPlayer.pendingShot.value =
+            onTapDown: (d) => CustomPlayer.pendingClick.value =
                 Vector2(d.localPosition.dx, d.localPosition.dy),
             child: BonfireWidget(
+              focusNode: GameInput.focusNode,
               playerControllers: _playerControllers(),
               player: CustomPlayer(Vector2.zero()),
               map: CustomMap('maps/world3.tmj', objectsBuilder: _mapObjects('world3')),
@@ -1766,17 +1776,20 @@ class Map4GameScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Do not autofocus: Bonfire owns [GameInput.focusNode]. An autofocus
+    // parent steals primary focus after cutscenes and kills WASD.
     return Focus(
-      autofocus: true,
+      canRequestFocus: false,
       onKeyEvent: _handleDebugKey,
       child: Scaffold(
         backgroundColor: Colors.black,
         body: Stack(children: [
           GestureDetector(
             behavior: HitTestBehavior.translucent,
-            onTapDown: (d) => CustomPlayer.pendingShot.value =
+            onTapDown: (d) => CustomPlayer.pendingClick.value =
                 Vector2(d.localPosition.dx, d.localPosition.dy),
             child: BonfireWidget(
+              focusNode: GameInput.focusNode,
               playerControllers: _playerControllers(),
               player: CustomPlayer(Vector2.zero()),
               map: CustomMap('maps/world4.tmj', objectsBuilder: _mapObjects('world4')),
@@ -1820,17 +1833,20 @@ class Map5GameScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Do not autofocus: Bonfire owns [GameInput.focusNode]. An autofocus
+    // parent steals primary focus after cutscenes and kills WASD.
     return Focus(
-      autofocus: true,
+      canRequestFocus: false,
       onKeyEvent: _handleDebugKey,
       child: Scaffold(
         backgroundColor: Colors.black,
         body: Stack(children: [
           GestureDetector(
             behavior: HitTestBehavior.translucent,
-            onTapDown: (d) => CustomPlayer.pendingShot.value =
+            onTapDown: (d) => CustomPlayer.pendingClick.value =
                 Vector2(d.localPosition.dx, d.localPosition.dy),
             child: BonfireWidget(
+              focusNode: GameInput.focusNode,
               playerControllers: _playerControllers(),
               player: CustomPlayer(Vector2.zero()),
               map: CustomMap('maps/world5.tmj', objectsBuilder: _mapObjects('world5')),
@@ -1921,6 +1937,8 @@ class _NpcDialogueLayerState extends State<_NpcDialogueLayer> {
       if (next < d.voicePaths.length) {
         MusicManager().setVolume(0.2);
         SfxManager().playVoice(d.voicePaths[next]);
+      } else {
+        SfxManager().stopVoice();
       }
     }
   }
@@ -1948,7 +1966,6 @@ class _NpcDialogueLayerState extends State<_NpcDialogueLayer> {
       return;
     }
     choice.apply();
-    SfxManager().stopVoice();
     if (choice.replyLines.isEmpty) {
       _closeDialogue();
       return;
@@ -1959,6 +1976,8 @@ class _NpcDialogueLayerState extends State<_NpcDialogueLayer> {
       lines: choice.replyLines,
       voicePaths: choice.replyVoicePaths,
     );
+    // Listener plays voicePaths[0]; avoid stopVoice() here — a prior stop
+    // raced the new play and left reply lines silent on Linux.
     NpcCharacter.activeDialogue.value = reply;
     setState(() {
       _dialogue = reply;

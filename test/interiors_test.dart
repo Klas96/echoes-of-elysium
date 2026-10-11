@@ -119,7 +119,8 @@ void main() {
       expect(_room('tea_house').spots.map((s) => s.kind), contains('rest'));
       expect(_room('noodle_shop').npcs.single.sprite, 'dao');
       expect(_room('archive_library').npcs.single.sprite, 'archivist');
-      expect(_room('archive_library').spots.where((s) => s.kind == 'lore' || s.kind == 'clue'), hasLength(3));
+      expect(_room('archive_library').spots.where((s) => s.kind == 'lore' || s.kind == 'clue'), hasLength(4));
+      expect(_room('archive_library').spots.map((s) => s.id), contains('merge_draft'));
       expect(_room('ranger_cabin').npcs, isEmpty);
       expect(_room('ranger_cabin').spots.map((s) => s.kind).toSet(),
           containsAll(['note', 'stash', 'journal', 'map']));
@@ -312,6 +313,13 @@ void main() {
       expect(Interiors.canEnter('archive_library'), isFalse);
       Adventure.setFlag('archive_opened');
       expect(Interiors.canEnter('archive_library'), isTrue);
+      Adventure.setFlag('archive_opened', false);
+      expect(Interiors.canEnter('archive_library'), isFalse);
+      Adventure.discover('archive_first_memory');
+      expect(Interiors.canEnter('archive_library'), isTrue,
+          reason: 'draft clue still unlocks the door on older saves');
+      expect(Adventure.openedArchive, isTrue);
+      expect(Interiors.canEnter('pond_grotto'), isFalse);
       for (final id in ['apartment_block', 'greenhouse', 'ruin_shrine']) {
         expect(Interiors.canEnter(id), isFalse);
         expect(RoomText.lockedDoors[id], isNotEmpty);

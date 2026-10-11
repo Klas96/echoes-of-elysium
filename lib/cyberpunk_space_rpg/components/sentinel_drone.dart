@@ -39,6 +39,8 @@ class SentinelDrone extends GameDecoration {
   Vector2 _knockback = Vector2.zero();
   /// Puffcap HUSH: seconds left calmed (no chase / attack).
   double _hushed = 0;
+  /// Seconds of failed chase steps — triggers a hard unstick.
+  double _stuckFor = 0;
   late final Vector2 _origin;
   final VoidCallback onDefeated;
 
@@ -94,17 +96,55 @@ class SentinelDrone extends GameDecoration {
     super.onRemove();
   }
 
-  static const double _leash = 220;
+  /// Idle patrol near spawn; chase stretches so Kaela can't park it on a corner.
+  double get _leash {
+    if (_state == _SState.idle) return 260;
+    if (_state == _SState.rage) return 520;
+    return 420;
+  }
 
   void _move(Vector2 delta) {
-    final ok = DroneBounds.moveBy(
+    final before = position.clone();
+    final ok = DroneBounds.chaseStep(
       this,
       delta,
       origin: _origin,
       leash: _leash,
-      pad: 32,
+      pad: 28,
     );
-    if (!ok) _knockback.setZero();
+    if (!ok) {
+      _knockback.setZero();
+      return;
+    }
+    if ((position - (before + delta)).length2 > 1) {
+      _knockback.setZero();
+    }
+  }
+
+  /// If chase has been blocked for a beat, hop to the nearest free spot toward
+  /// the player so the boss can't be farmed while wedged on geometry.
+  void _unstuckToward(Vector2 toPlayer) {
+    if (toPlayer.length2 < 1e-6) return;
+    final dir = toPlayer.normalized();
+    final centre = position + size / 2;
+    for (final dist in [48.0, 80.0, 120.0]) {
+      for (final angle in [0.0, 0.55, -0.55, 1.1, -1.1, 1.7, -1.7]) {
+        final c = cos(angle);
+        final s = sin(angle);
+        final step = Vector2(dir.x * c - dir.y * s, dir.x * s + dir.y * c) * dist;
+        final next = centre + step - size / 2;
+        if (DroneBounds.moveBy(
+          this,
+          next - position,
+          origin: _origin,
+          leash: _leash,
+          pad: 28,
+        )) {
+          _stuckFor = 0;
+          return;
+        }
+      }
+    }
   }
 
   void takeDamage(int amount, {Vector2? knockbackDir}) {
@@ -154,13 +194,22 @@ class SentinelDrone extends GameDecoration {
 
     final spd = (rage && _state != _SState.idle) ? _rageSpeed : _speed;
 
-    DroneBounds.rescue(this, origin: _origin, leash: _leash, pad: 32);
+    DroneBounds.rescue(this, origin: _origin, leash: _leash, pad: 28);
 
     if (!isHushed &&
         _knockback.length < 40 &&
         (_state == _SState.chase || _state == _SState.rage) &&
         dist > _attackR) {
+      final before = position.clone();
       _move(toPlayer.normalized() * spd * dt);
+      if ((position - before).length2 < 0.25) {
+        _stuckFor += dt;
+        if (_stuckFor > 0.35) _unstuckToward(toPlayer);
+      } else {
+        _stuckFor = 0;
+      }
+    } else {
+      _stuckFor = 0;
     }
     if (_knockback.length2 > 0.25) {
       _move(_knockback * dt);

@@ -10,7 +10,7 @@ enum Ability { light, scent, push, dig, trail, hush }
 extension AbilityInfo on Ability {
   String get label => switch (this) {
         Ability.light => 'LIGHT',
-        Ability.scent => 'SCENT',
+        Ability.scent => 'SNIFF',
         Ability.push => 'PUSH',
         Ability.dig => 'DIG',
         Ability.trail => 'TRAIL',
@@ -19,10 +19,10 @@ extension AbilityInfo on Ability {
 
   String get description => switch (this) {
         Ability.light => 'Brightens dark places and wakes sleeping glyphs.',
-        Ability.scent => 'Noses a way through the main bramble thickets.',
+        Ability.scent => 'Noses a way through bramble thickets.',
         Ability.push => 'Moves heavy boulders.',
         Ability.dig => 'Finds buried glimmer under the soil.',
-        Ability.trail => 'Opens overgrown side paths into hidden glades.',
+        Ability.trail => 'A calm presence in hidden glades after dark.',
         Ability.hush => 'Spores calm nearby UEC drones for a few seconds.',
       };
 

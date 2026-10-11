@@ -1,6 +1,6 @@
 {
   "id": "archive_ash",
-  "trigger": "Opened the City Archive Library with the seal",
+  "trigger": "Took the First Memory Draft from the Archive reading desk (merge_draft)",
   "size": [
     1280,
     720

@@ -12,9 +12,12 @@ import '../components/lamp_light.dart';
 import '../components/npc_character.dart';
 import '../components/walk_sheet.dart';
 import '../creatures/creature_components.dart' show DayClock;
+import '../creatures/gates.dart';
 import '../creatures/interaction.dart';
 import '../creatures/journal_ui.dart';
 import '../game/adventure.dart';
+import '../game/game_input.dart';
+import '../game/keyboard_guard.dart';
 import '../game/save_service.dart';
 import 'meal_chip.dart';
 import 'room_actions.dart';
@@ -36,12 +39,35 @@ import '../ui/hud_layout.dart';
 class Interiors {
   Interiors._();
 
-  static const rooms = ['tea_house', 'noodle_shop', 'archive_library', 'ranger_cabin'];
+  /// Bonfire focus inside a room (separate from [GameInput.focusNode]).
+  static final roomFocus = FocusNode(debugLabel: 'roomInput');
 
-  /// The archive opens only after the Archivist's seal.
+  static const rooms = [
+    'tea_house',
+    'noodle_shop',
+    'archive_library',
+    'ranger_cabin',
+    'pond_grotto',
+  ];
+
+  static void _reclaimRoomKeys() {
+    KeyboardGuard.releaseAll();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (roomFocus.context != null && roomFocus.canRequestFocus) {
+        roomFocus.requestFocus();
+      }
+    });
+  }
+
+  /// The archive opens only after the Archivist's seal; the pond grotto only
+  /// after LIGHT (`woods_grotto`).
   static bool canEnter(String buildingId) {
     if (!rooms.contains(buildingId)) return false;
-    if (buildingId == 'archive_library') return Adventure.flag('archive_opened');
+    // Door unlock (seal) or already read the draft on an older save.
+    if (buildingId == 'archive_library') {
+      return Adventure.flag('archive_opened') || Adventure.openedArchive;
+    }
+    if (buildingId == 'pond_grotto') return Gates.isOpen('woods_grotto');
     return true;
   }
 
@@ -84,6 +110,7 @@ class Interiors {
   static Future<void> enterAt(BonfireGameInterface game, String id, Vector2 front) async {
     if (_busy || !canEnter(id)) return;
     _busy = true;
+    const fade = Duration(milliseconds: 650);
     try {
       final room = await load(id);
       final context = game.context;
@@ -96,7 +123,8 @@ class Interiors {
       // Saved in front of the door: CONTINUE from inside resumes there.
       await SaveService.saveNow();
       final wasPaused = game.paused;
-      if (!wasPaused) game.pauseEngine();
+      final wePaused = !wasPaused;
+      if (wePaused) game.pauseEngine();
       Interaction.reset();
 
       // Overlays opened inside (journal) must pause the room, not resume the
@@ -108,9 +136,13 @@ class Interiors {
       };
       SfxManager().playFootstep();
       current.value = room;
+      GameInput.overworldKeysEnabled = false;
+      GameInput.reclaimAlternate = _reclaimRoomKeys;
       try {
         if (!context.mounted) return;
-        await Navigator.of(context).push(_route(room));
+        await Navigator.of(context).push(_route(room, fade));
+        // Room Focus still mounted through the reverse fade.
+        await Future<void>.delayed(fade);
       } finally {
         current.value = null;
         _leaveRoom = null;
@@ -120,20 +152,27 @@ class Interiors {
         RoomPanel.close();
         Interaction.reset();
         _placeOutside(outside, front);
+        GameInput.overworldKeysEnabled = true;
+        GameInput.reclaimAlternate = null;
         if (game.context.mounted) {
           if (outside != null && outside.isMounted) game.camera.moveToPlayer();
-          if (!wasPaused) game.resumeEngine();
+          // Always unpause if we paused on the way in (a memory played inside
+          // may have left the overworld paused).
+          if (wePaused) game.resumeEngine();
+          GameInput.reclaim();
         }
         SaveService.requestAutosave();
       }
     } finally {
+      GameInput.overworldKeysEnabled = true;
+      GameInput.reclaimAlternate = null;
       _busy = false;
     }
   }
 
-  static PageRoute<void> _route(RoomData room) => PageRouteBuilder<void>(
-        transitionDuration: const Duration(milliseconds: 650),
-        reverseTransitionDuration: const Duration(milliseconds: 650),
+  static PageRoute<void> _route(RoomData room, Duration fade) => PageRouteBuilder<void>(
+        transitionDuration: fade,
+        reverseTransitionDuration: fade,
         pageBuilder: (_, __, ___) => RoomScreen(room: room),
         // Fade the overworld to black, then the room in (and back on exit).
         transitionsBuilder: (_, anim, __, child) => Stack(fit: StackFit.expand, children: [
@@ -218,7 +257,7 @@ class _RoomScreenState extends State<RoomScreen> {
   @override
   Widget build(BuildContext context) {
     return Focus(
-      autofocus: true,
+      canRequestFocus: false,
       onKeyEvent: _onKey,
       child: Scaffold(
         backgroundColor: Colors.black,
@@ -229,6 +268,8 @@ class _RoomScreenState extends State<RoomScreen> {
           final zoom = fit.clamp(1.5, 3.0).toDouble();
           return Stack(children: [
             BonfireWidget(
+              focusNode: Interiors.roomFocus,
+              autofocus: true,
               map: EmptyWorldMap(size: Vector2(room.widthPx - 1, room.heightPx - 1)),
               player: RoomPlayer(room, onDoormat: _leave),
               components: [

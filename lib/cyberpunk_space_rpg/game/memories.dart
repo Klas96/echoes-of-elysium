@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:bonfire/bonfire.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../components/ai_fragment.dart';
 import '../components/custom_player.dart';
@@ -10,8 +9,8 @@ import '../components/npc_character.dart';
 import '../ui/cutscene_player.dart';
 import '../ui/cutscenes.dart';
 import 'adventure.dart';
+import 'game_input.dart';
 import 'game_state.dart';
-import 'keyboard_guard.dart';
 import 'pause.dart';
 import 'save_service.dart';
 
@@ -203,39 +202,29 @@ class Memories {
     final wasPaused = game.paused;
     if (!wasPaused) game.pauseEngine();
     // Not opaque: the paused game stays mounted (and untouched) underneath.
+    const fade = Duration(milliseconds: 450);
     await Navigator.of(game.context).push(PageRouteBuilder<void>(
       opaque: false,
-      transitionDuration: const Duration(milliseconds: 450),
-      reverseTransitionDuration: const Duration(milliseconds: 450),
+      transitionDuration: fade,
+      reverseTransitionDuration: fade,
       pageBuilder: (context, _, __) => _MemoryPage(id: idFor(n)),
       transitionsBuilder: (context, anim, _, child) => FadeTransition(opacity: anim, child: child),
     ));
-    _settleControls(game);
-    if (!wasPaused || fromTalk) game.resumeEngine();
-  }
-
-  /// Keys released and fingers lifted while the flashback had focus never
-  /// reached the game: stop the player unless a movement key is still down.
-  static void _settleControls(BonfireGameInterface game) {
+    // push() resolves when pop is called; the cutscene Focus is still
+    // mounted through the reverse fade — wait it out before reclaiming WASD.
+    await Future<void>.delayed(fade);
+    if (!game.context.mounted) return;
     CustomPlayer.pendingShot.value = null;
-    KeyboardGuard.releaseAll();
-    final player = game.player;
-    if (player is! CustomPlayer) return;
-    final held =
-        HardwareKeyboard.instance.logicalKeysPressed.any(_movementKeys.contains);
-    if (held) {
-      player.syncMovementFromKeyboard();
-    } else {
-      player.haltMovement();
+    // Inside a room (pond grotto fragment): keep overworld paused and give
+    // keys back to the room — do not resume/reclaim the map underneath.
+    if (!GameInput.overworldKeysEnabled) {
+      GameInput.reclaim();
+      return;
     }
+    GameInput.reclaim();
+    if (!wasPaused || fromTalk) game.resumeEngine();
+    GameInput.reclaim(releaseKeys: false);
   }
-
-  static final _movementKeys = {
-    LogicalKeyboardKey.arrowUp, LogicalKeyboardKey.arrowDown,
-    LogicalKeyboardKey.arrowLeft, LogicalKeyboardKey.arrowRight,
-    LogicalKeyboardKey.keyW, LogicalKeyboardKey.keyA,
-    LogicalKeyboardKey.keyS, LogicalKeyboardKey.keyD,
-  };
 
   // ------------------------------------------------------------- ending
 

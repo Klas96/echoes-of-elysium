@@ -1,5 +1,6 @@
 import '../game/save_service.dart';
 import 'bonds.dart';
+import 'creature_species.dart';
 import 'region_gates.dart';
 import 'regions.dart';
 
@@ -42,14 +43,23 @@ class Gates {
         (SaveService.data.regions[d.region]!['gates'] as Map)[id] == true;
   }
 
-  /// Its creature is a friend and Kaela is in the gate's (and creature's)
-  /// home region, whoever is following her.
+  /// Its creature is walking with Kaela in the gate's home region.
+  /// Befriended-but-elsewhere is not enough — swap them in the journal first.
   static bool canOpen(String id) {
     final d = gateDefs[id];
     if (d == null || isOpen(id)) return false;
-    return Bonds.isBefriended(d.creature) &&
-        Regions.current == d.region &&
-        Regions.abilityWorksIn(d.creature, Regions.current);
+    return Bonds.activeHere == d.creature && Regions.current == d.region;
+  }
+
+  /// Closed-gate toast / prompt note: generic block, or "bring the friend".
+  static String closedNote(String id) {
+    final d = gateDefs[id];
+    if (d == null) return '';
+    if (Bonds.isBefriended(d.creature) && Bonds.activeHere != d.creature) {
+      final name = creatureSpecies[d.creature]?.name ?? d.creature;
+      return 'Walk with the $name — it has to be with you.';
+    }
+    return d.blockedHint;
   }
 
   static void open(String id) {

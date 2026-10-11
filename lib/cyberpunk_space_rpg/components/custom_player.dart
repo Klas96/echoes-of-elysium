@@ -29,11 +29,21 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
   static final ValueNotifier<Vector2> positionNotifier = ValueNotifier(Vector2.zero());
   static final ValueNotifier<int> healthNotifier = ValueNotifier(baseMaxHealth);
   static final ValueNotifier<bool> damageFlash = ValueNotifier(false);
-  static final ValueNotifier<Vector2?> pendingShot = ValueNotifier(null);
+  /// Screen-space click/tap (League-style: ground = move, foe = attack).
+  static final ValueNotifier<Vector2?> pendingClick = ValueNotifier(null);
+
+  /// Legacy alias — some call sites still clear this on pause/cutscene.
+  static ValueNotifier<Vector2?> get pendingShot => pendingClick;
+
   /// Shots fired so far and where the last one left from: creatures listen
   /// for noise (quiet approach).
   static int shotCount = 0;
   static Vector2? lastShotFrom;
+
+  /// Auto-attack range (world px) — close mid-range like a LoL marksman.
+  static const double attackRange = 170;
+  static const double clickArrive = 10;
+  static const double clickEnemyRadius = 36;
 
   // --- Calm gameplay: no game over, gentle regen -------------------------
   /// Seconds without taking damage before health starts coming back.
@@ -151,6 +161,11 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
   /// Visual-only knockback after a shot (does not move the hitbox).
   double _shootKickT = 0;
   Vector2 _shootKick = Vector2.zero();
+
+  /// Click-to-move destination (world). Cleared on arrive / WASD / new order.
+  Vector2? _moveGoal;
+  /// Locked auto-attack target (drone / Sentinel). Chase then AA in range.
+  GameComponent? _attackTarget;
 
   CustomPlayer(Vector2 position) : super(
     position: position,
@@ -288,7 +303,7 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
     _updateRegen(dt);
     _checkInteraction();
     _updateFootsteps(dt);
-    _handleShooting(dt);
+    _tickLeagueCombat(dt);
     if (_shootKickT > 0) _shootKickT = max(0, _shootKickT - dt);
   }
 
@@ -310,16 +325,26 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
   void _reconcileKeyboardMovement() {
     if (_touchStick) return;
     if (_moveKeysHeld) {
+      // WASD overrides League click-orders (like canceling a move command).
+      _clearClickOrders(keepAttack: false);
       syncMovementFromKeyboard();
       return;
     }
+    // Click-move / chase owns the stick while active.
+    if (_moveGoal != null || _attackTarget != null) return;
     if (_keyboardStick || _joystickMoving) {
       haltMovement();
     }
   }
 
+  void _clearClickOrders({bool keepAttack = false}) {
+    _moveGoal = null;
+    if (!keepAttack) _attackTarget = null;
+  }
+
   /// Hard stop — clears stick flags and Bonfire velocity (menus / lost keys).
   void haltMovement() {
+    _clearClickOrders(keepAttack: false);
     _touchStick = false;
     _keyboardStick = false;
     _joystickMoving = false;
@@ -341,35 +366,135 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
     _eWasPressed = ePressed;
   }
 
-  void _handleShooting(double dt) {
+  /// League-lite: click ground to move, click a foe to chase + auto-attack.
+  /// WASD / virtual stick still work and cancel click-move.
+  void _tickLeagueCombat(double dt) {
     _shootCooldown = max(0, _shootCooldown - dt);
-    final shot = pendingShot.value;
-    if (shot == null) return;
-    pendingShot.value = null;
-    if (_shootCooldown > 0) return;
+    final tap = pendingClick.value;
+    if (tap != null) {
+      pendingClick.value = null;
+      _issueClick(tap);
+    }
 
+    if (_attackTarget != null && !_targetAlive(_attackTarget!)) {
+      _attackTarget = null;
+    }
+
+    // Manual move wins over click orders.
+    if (_moveKeysHeld || _touchStick) return;
+
+    final origin = position + size / 2;
+
+    if (_attackTarget != null) {
+      final tc = _targetCenter(_attackTarget!);
+      final dist = origin.distanceTo(tc);
+      if (dist > attackRange) {
+        _moveGoal = tc;
+        _steerToward(tc);
+      } else {
+        _moveGoal = null;
+        _steerToward(null); // stop for AA
+        _tryAutoAttack(origin, tc);
+      }
+      return;
+    }
+
+    final goal = _moveGoal;
+    if (goal == null) return;
+    final to = goal - origin;
+    if (to.length <= clickArrive) {
+      _moveGoal = null;
+      _steerToward(null);
+    } else {
+      _steerToward(goal);
+    }
+  }
+
+  void _issueClick(Vector2 screenPos) {
+    if (!hasGameRef) return;
+    final world = _screenToWorld(screenPos);
+    final foe = _hostileNear(world, clickEnemyRadius);
+    if (foe != null) {
+      _attackTarget = foe;
+      _moveGoal = _targetCenter(foe);
+      return;
+    }
+    // Ground click: move, cancel attack (LoL right-click empty ground).
+    _attackTarget = null;
+    _moveGoal = world;
+  }
+
+  Vector2 _screenToWorld(Vector2 screen) {
     final camCenter = gameRef.camera.viewfinder.position;
     final screenCenter = gameRef.size / 2;
     final zoom = gameRef.camera.viewfinder.zoom;
-    final worldPos = camCenter + (shot - screenCenter) / zoom;
+    return camCenter + (screen - screenCenter) / zoom;
+  }
 
+  void _steerToward(Vector2? worldTarget) {
+    if (worldTarget == null) {
+      onJoystickChangeDirectional(JoystickDirectionalEvent(
+        directional: JoystickMoveDirectional.IDLE,
+        intensity: 0,
+        isKeyboard: true,
+      ));
+      return;
+    }
     final origin = position + size / 2;
-    final dir = _lockShotDirection(origin, worldPos);
-    if (dir == null) return;
+    final d = worldTarget - origin;
+    if (d.length < 1) {
+      _steerToward(null);
+      return;
+    }
+    // 8-way stick so Bonfire's MovementByJoystick stays happy.
+    final n = d.normalized();
+    final JoystickMoveDirectional dir;
+    if (n.y < -0.4 && n.x < -0.4) {
+      dir = JoystickMoveDirectional.MOVE_UP_LEFT;
+    } else if (n.y < -0.4 && n.x > 0.4) {
+      dir = JoystickMoveDirectional.MOVE_UP_RIGHT;
+    } else if (n.y > 0.4 && n.x < -0.4) {
+      dir = JoystickMoveDirectional.MOVE_DOWN_LEFT;
+    } else if (n.y > 0.4 && n.x > 0.4) {
+      dir = JoystickMoveDirectional.MOVE_DOWN_RIGHT;
+    } else if (n.y < -0.4) {
+      dir = JoystickMoveDirectional.MOVE_UP;
+    } else if (n.y > 0.4) {
+      dir = JoystickMoveDirectional.MOVE_DOWN;
+    } else if (n.x < -0.4) {
+      dir = JoystickMoveDirectional.MOVE_LEFT;
+    } else if (n.x > 0.4) {
+      dir = JoystickMoveDirectional.MOVE_RIGHT;
+    } else if (n.y.abs() >= n.x.abs()) {
+      dir = n.y < 0 ? JoystickMoveDirectional.MOVE_UP : JoystickMoveDirectional.MOVE_DOWN;
+    } else {
+      dir = n.x < 0 ? JoystickMoveDirectional.MOVE_LEFT : JoystickMoveDirectional.MOVE_RIGHT;
+    }
+    onJoystickChangeDirectional(JoystickDirectionalEvent(
+      directional: dir,
+      intensity: 1,
+      isKeyboard: true,
+    ));
+  }
 
+  void _tryAutoAttack(Vector2 origin, Vector2 target) {
+    if (_shootCooldown > 0) return;
+    final dir = (target - origin);
+    if (dir.length < 1) return;
+    final n = dir.normalized();
     gameRef.add(PlayerBullet(
       origin - PlayerBullet.spriteSize / 2,
-      dir,
+      n,
     ));
-    gameRef.add(MuzzleFlash(origin + dir * 12, dir));
+    gameRef.add(MuzzleFlash(origin + n * 12, n));
     SfxManager().playShoot();
     shotCount++;
     lastShotFrom = origin;
-    _shootCooldown = 0.28 * Progression.fireCooldownMult;
-    lastDirection = WalkSheet.facingVector(dir);
-    _shootKick = -dir.normalized() * 1.5;
+    _shootCooldown = 0.32 * Progression.fireCooldownMult;
+    lastDirection = WalkSheet.facingVector(n);
+    _shootKick = -n * 1.5;
     _shootKickT = 0.08;
-    _playShootAnim(dir);
+    _playShootAnim(n);
   }
 
   void _playShootAnim(Vector2 dir) {
@@ -380,68 +505,30 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
     animation!.playOnce(anim.clone(), runToTheEnd: true);
   }
 
-  /// Soft aim assist: snap toward a drone near the tap, or inside the aim cone.
-  Vector2? _lockShotDirection(Vector2 origin, Vector2 worldAim) {
-    var aim = worldAim - origin;
-    if (aim.length < 1) {
-      // Tap on Kaela: fire toward the nearest foe in range, else face forward.
-      final nearest = _nearestHostile(origin, maxRange: 280);
-      if (nearest != null) return (nearest - origin).normalized();
-      return Vector2(1, 0);
-    }
-    final aimDir = aim.normalized();
-
-    Vector2? best;
-    var bestScore = double.infinity;
-    const lockAimRadius = 88.0;
-    const lockRange = 460.0;
-    const coneDot = 0.72; // ~44° either side of the aim line
-
-    void consider(Vector2 center) {
-      final to = center - origin;
-      final dist = to.length;
-      if (dist < 10 || dist > lockRange) return;
-      final aimDist = center.distanceTo(worldAim);
-      final aligned = aimDir.dot(to.normalized()) >= coneDot;
-      if (aimDist > lockAimRadius && !aligned) return;
-      // Prefer the foe under the finger; break ties by distance.
-      final score = aimDist * 1.6 + dist * 0.25;
-      if (score < bestScore) {
-        bestScore = score;
-        best = center;
-      }
-    }
-
-    for (final d in UECDrone.active) {
-      if (!d.isMounted || d.isDead) continue;
-      consider(d.position + d.size / 2);
-    }
-    final s = SentinelDrone.instance;
-    if (s != null && s.isMounted && !s.isDead) {
-      consider(s.position + s.size / 2);
-    }
-
-    if (best != null) return (best! - origin).normalized();
-    return aimDir;
+  bool _targetAlive(GameComponent t) {
+    if (!t.isMounted) return false;
+    if (t is UECDrone) return !t.isDead;
+    if (t is SentinelDrone) return !t.isDead;
+    return false;
   }
 
-  Vector2? _nearestHostile(Vector2 origin, {required double maxRange}) {
-    Vector2? best;
-    var bestD = maxRange;
+  Vector2 _targetCenter(GameComponent t) => t.position + t.size / 2;
+
+  GameComponent? _hostileNear(Vector2 world, double radius) {
+    GameComponent? best;
+    var bestD = radius;
     for (final d in UECDrone.active) {
       if (!d.isMounted || d.isDead) continue;
-      final c = d.position + d.size / 2;
-      final dist = c.distanceTo(origin);
+      final dist = (d.position + d.size / 2).distanceTo(world);
       if (dist < bestD) {
         bestD = dist;
-        best = c;
+        best = d;
       }
     }
     final s = SentinelDrone.instance;
     if (s != null && s.isMounted && !s.isDead) {
-      final c = s.position + s.size / 2;
-      final dist = c.distanceTo(origin);
-      if (dist < bestD) best = c;
+      final dist = (s.position + s.size / 2).distanceTo(world);
+      if (dist < bestD) best = s;
     }
     return best;
   }
@@ -457,8 +544,12 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
       _keyboardStick = moving;
       if (moving) _touchStick = false;
     } else {
+      // On-screen stick: cancel League click-move like WASD.
+      if (moving) {
+        _clearClickOrders(keepAttack: false);
+        _keyboardStick = false;
+      }
       _touchStick = moving;
-      if (moving) _keyboardStick = false;
     }
     _joystickMoving = moving;
     super.onJoystickChangeDirectional(event);

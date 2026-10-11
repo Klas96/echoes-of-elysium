@@ -25,7 +25,7 @@
         {
           "speaker": "N",
           "text": "Elysium Colony. Year 2387. A diagnostic skiff hangs over the Whispering Woods.",
-          "voice": ""
+          "voice": "audio/voices/cut_awakening_p1_l1.mp3"
         }
       ]
     },
@@ -46,8 +46,8 @@
       "lines": [
         {
           "speaker": "N",
-          "text": "Dr. Kaela Osei was only meant to run a routine orbital pass on Gaia — the planet's caretaker system.",
-          "voice": ""
+          "text": "Dr. Kaela Osei was only meant to run a routine orbital pass on Gaia \u2014 the planet's caretaker system.",
+          "voice": "audio/voices/cut_awakening_p2_l1.mp3"
         }
       ]
     },
@@ -113,13 +113,13 @@
       "lines": [
         {
           "speaker": "N",
-          "text": "The channel flared. Instruments died. The skiff tore through the canopy — and Kaela woke in the wreckage, Gaia already waiting in the trees.",
-          "voice": ""
+          "text": "The channel flared. Instruments died. The skiff tore through the canopy \u2014 and Kaela woke in the wreckage, Gaia already waiting in the trees.",
+          "voice": "audio/voices/cut_awakening_p5_l1.mp3"
         },
         {
           "speaker": "N",
-          "text": "Far above, the United Earth Coalition noticed too — and they mean to erase Gaia. Talk to her. Find two glowing memory fragments. Walk south to the City. Do not let them wipe her record.",
-          "voice": ""
+          "text": "The United Earth Coalition noticed the flare \u2014 and they mean to erase Gaia. Talk to her. Find two glowing memory fragments. Walk south to the City. Do not let them wipe her record.",
+          "voice": "audio/voices/cut_awakening_p5_l2.mp3"
         }
       ],
       "then": "title card ECHOES OF ELYSIUM over the upper sky, fade into the Woods"

@@ -330,7 +330,9 @@ class WildCreature extends CreatureBody with Interactable {
     _idleFor -= dt;
     if (_idleFor <= 0 && radius > 0) {
       final a = _rng.nextDouble() * pi * 2;
-      final r = _rng.nextDouble() * radius;
+      // Flyers stay near home (e.g. glowmoth over open water); ground critters
+      // may pick the full wander disk.
+      final r = _rng.nextDouble() * (species.flying ? radius * 0.85 : radius);
       _target = home + Vector2(cos(a), sin(a)) * r;
     }
   }

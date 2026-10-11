@@ -342,16 +342,8 @@ class UECDrone extends GameDecoration {
 
   void _move(Vector2 delta) {
     final before = position.clone();
-    var ok = DroneBounds.moveBy(this, delta, origin: _origin, leash: _leash);
-    if (!ok && delta.length2 > 1e-8) {
-      // Head-on into a prop/corner: step sideways so chase doesn't hard-stop.
-      final n = delta.normalized();
-      final len = delta.length;
-      final left = Vector2(-n.y, n.x) * len;
-      final right = Vector2(n.y, -n.x) * len;
-      ok = DroneBounds.moveBy(this, left, origin: _origin, leash: _leash) ||
-          DroneBounds.moveBy(this, right, origin: _origin, leash: _leash);
-    }
+    final ok =
+        DroneBounds.chaseStep(this, delta, origin: _origin, leash: _leash);
     if (!ok) {
       _knockback.setZero();
       return;

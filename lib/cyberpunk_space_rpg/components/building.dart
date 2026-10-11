@@ -6,7 +6,6 @@ import '../creatures/bonds.dart';
 import '../creatures/interaction.dart';
 import '../game/adventure.dart';
 import '../game/game_state.dart';
-import '../game/story_beats.dart';
 import '../interiors/room_scene.dart';
 import '../interiors/room_services.dart';
 import '../interiors/room_text.dart';
@@ -80,8 +79,6 @@ class Building extends GameDecorationWithCollision with Interactable {
         (position.y + def.collision.bottom).floor(),
       );
 
-  bool get _archiveOpen => Adventure.flag('archive_opened');
-
   @override
   Future<void> onLoad() {
     RoomDay.ensure();
@@ -95,7 +92,7 @@ class Building extends GameDecorationWithCollision with Interactable {
   Vector2 get interactPoint => position + Vector2(def.door.dx, def.door.dy + 8);
 
   @override
-  double get interactRadius => 28;
+  double get interactRadius => id == 'archive_library' ? 36 : 28;
 
   @override
   PromptInfo get prompt {
@@ -112,22 +109,22 @@ class Building extends GameDecorationWithCollision with Interactable {
 
   @override
   void interact() {
+    // Already unlocked rooms (tea house, open archive, ranger cabin, …).
     if (Interiors.canEnter(id)) {
       Interiors.enter(this);
       return;
     }
     if (id == 'archive_library') {
-      if (_archiveOpen) return;
+      // Seal → unlock → walk in. The Asha cutscene waits on the draft inside.
       if (!Bonds.hasItem('archive_seal')) return;
       Bonds.useItem('archive_seal');
       Adventure.setFlag('archive_opened');
-      Adventure.discover('archive_first_memory');
-      Adventure.discover('asha_on_archive');
-      Bonds.addGlimmer(12);
       SfxManager().playChime();
-      GameToast.show('ARCHIVE OPENED', body: '+12 glimmer · clue logged',
-          color: const Color(0xFFFFDD44), compact: true);
-      StoryBeats.onArchiveOpened();
+      GameToast.show('ARCHIVE UNLOCKED',
+          body: 'The seal accepts. The stacks are open.',
+          color: const Color(0xFFFFDD44),
+          compact: true);
+      Interiors.enter(this);
       return;
     }
     if (id == 'ruin_shrine') {

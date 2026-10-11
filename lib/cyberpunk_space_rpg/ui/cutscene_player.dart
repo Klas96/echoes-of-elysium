@@ -364,8 +364,14 @@ class _CutscenePlayerState extends State<CutscenePlayer> with SingleTickerProvid
       return;
     }
     final line = p.currentLine;
-    final voice = line?.voice;
-    if (voice == null || voice.isEmpty) return;
+    // Delay between lines: keep the previous VO running; don't touch players.
+    if (line == null) return;
+    final voice = line.voice;
+    if (voice == null || voice.isEmpty) {
+      // Unvoiced subtitle — stop any prior line so it doesn't bleed under text.
+      if (_voiceKey != null) _stopVoice();
+      return;
+    }
     final key = '${p.panelIndex}:${p.lineIndex}:$voice';
     if (key == _voiceKey) return;
     _voiceKey = key;
@@ -374,10 +380,10 @@ class _CutscenePlayerState extends State<CutscenePlayer> with SingleTickerProvid
   }
 
   void _stopVoice() {
-    if (_voiceKey == null) {
-      SfxManager().stopVoice();
-      return;
-    }
+    // Only stop when we actually started a line. Calling stopVoice() every
+    // outro tick (when _voiceKey was already null) bumped the VO token and
+    // cancelled in-flight playVoice() — whole lines went silent.
+    if (_voiceKey == null) return;
     _voiceKey = null;
     SfxManager().stopVoice();
     MusicManager().setVolume(1.0);
@@ -388,6 +394,9 @@ class _CutscenePlayerState extends State<CutscenePlayer> with SingleTickerProvid
     _finished = true;
     if (_ticker.isActive) _ticker.stop();
     _stopVoice();
+    // Drop cutscene focus before pop so the overworld can reclaim WASD.
+    _focus.unfocus();
+    KeyboardGuard.releaseAll();
     // Called from inside a tick/build: defer to the next frame.
     SchedulerBinding.instance.addPostFrameCallback((_) => widget.onFinished());
     SchedulerBinding.instance.scheduleFrame();
@@ -396,6 +405,7 @@ class _CutscenePlayerState extends State<CutscenePlayer> with SingleTickerProvid
   @override
   void dispose() {
     _ticker.dispose();
+    if (_focus.hasFocus) _focus.unfocus();
     _focus.dispose();
     _stopVoice();
     if (widget.playback == null) _playback?.dispose();

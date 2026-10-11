@@ -37,6 +37,40 @@ class DroneBounds {
     return false;
   }
 
+  /// Chase step: axis slide, then sideways / diagonal slips so bosses and
+  /// drones don't hard-stop on corners, building feet, or the leash rim.
+  static bool chaseStep(
+    GameDecoration drone,
+    Vector2 delta, {
+    required Vector2 origin,
+    required double leash,
+    double pad = 24,
+  }) {
+    if (moveBy(drone, delta, origin: origin, leash: leash, pad: pad)) {
+      return true;
+    }
+    if (delta.length2 < 1e-10) return false;
+    final n = delta.normalized();
+    final len = delta.length;
+    final left = Vector2(-n.y, n.x);
+    final right = Vector2(n.y, -n.x);
+    for (final scale in [1.0, 1.7, 2.4]) {
+      for (final side in [left, right]) {
+        if (moveBy(drone, side * (len * scale),
+            origin: origin, leash: leash, pad: pad)) {
+          return true;
+        }
+      }
+    }
+    for (final side in [left, right]) {
+      final slip = (n * 0.55 + side).normalized() * len;
+      if (moveBy(drone, slip, origin: origin, leash: leash, pad: pad)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   /// Pull back onto the map / leash if somehow already invalid.
   static void rescue(
     GameDecoration drone, {

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../game/keyboard_guard.dart';
+import '../game/game_input.dart';
 import '../game/save_service.dart';
 import 'cutscene_player.dart';
 
@@ -73,8 +73,10 @@ class _CutsceneScreenState extends State<CutsceneScreen> {
     _leaving = true;
     final nav = Navigator.of(context);
     await Cutscenes.markSeen(widget.id);
-    KeyboardGuard.releaseAll();
+    // New map's BonfireWidget mounts with [GameInput.focusNode]; reclaim after
+    // the route swap so a disposing cutscene Focus cannot keep primary focus.
     nav.pushReplacement(Cutscenes._fade(widget.then));
+    GameInput.reclaim();
   }
 
   @override

@@ -175,7 +175,7 @@ void main() {
       Bonds.befriend('vinefox');
       Bonds.befriend('brookling');
       Bonds.setActive('brookling');
-      Bonds.markSecret('world:boulder:768_128');
+      Bonds.markSecret('world:boulder:1600_256');
       Bonds.markSecret('world:hiddenpath:928_960');
       Bonds.addGlimmer(25);
       SaveService.data.dayTime = 0.9;
@@ -190,7 +190,7 @@ void main() {
       expect(Bonds.unlocked(Ability.scent), isTrue);
       expect(Bonds.unlocked(Ability.dig), isTrue);
       expect(Bonds.has(Ability.dig), isTrue, reason: 'brookling is active');
-      expect(Bonds.secretDone('world:boulder:768_128'), isTrue);
+      expect(Bonds.secretDone('world:boulder:1600_256'), isTrue);
       expect(Bonds.secretDone('world:hiddenpath:928_960'), isTrue);
       expect(Bonds.secretDone('world:glyph:0_0'), isFalse);
       expect(Bonds.glimmer, 25);

@@ -1,14 +1,13 @@
 import 'package:bonfire/bonfire.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../components/ai_fragment.dart';
 import '../components/custom_player.dart';
 import '../components/npc_character.dart';
 import '../ui/cutscene_player.dart';
 import '../ui/cutscenes.dart';
+import 'game_input.dart';
 import 'game_state.dart';
-import 'keyboard_guard.dart';
 import 'pause.dart';
 
 /// Mid-game story moments played over a live map (like Memories).
@@ -54,43 +53,31 @@ class StoryBeats {
     Pause.dismissDialogueForStory();
     final wasPaused = game.paused;
     if (!wasPaused) game.pauseEngine();
+    const fade = Duration(milliseconds: 450);
     try {
       await Navigator.of(game.context).push(PageRouteBuilder<void>(
         opaque: false,
-        transitionDuration: const Duration(milliseconds: 450),
-        reverseTransitionDuration: const Duration(milliseconds: 450),
+        transitionDuration: fade,
+        reverseTransitionDuration: fade,
         pageBuilder: (context, _, __) => _BeatPage(id: id),
         transitionsBuilder: (context, anim, _, child) =>
             FadeTransition(opacity: anim, child: child),
       ));
+      await Future<void>.delayed(fade);
     } finally {
       CustomPlayer.pendingShot.value = null;
-      KeyboardGuard.releaseAll();
-      final player = game.player;
-      if (player is CustomPlayer) {
-        final held =
-            HardwareKeyboard.instance.logicalKeysPressed.any(_move.contains);
-        if (held) {
-          player.syncMovementFromKeyboard();
+      if (game.context.mounted) {
+        if (!GameInput.overworldKeysEnabled) {
+          GameInput.reclaim();
         } else {
-          player.haltMovement();
+          GameInput.reclaim();
+          if (!wasPaused || fromTalk) game.resumeEngine();
+          GameInput.reclaim(releaseKeys: false);
         }
       }
-      if (!wasPaused || fromTalk) game.resumeEngine();
       _busy = false;
     }
   }
-
-  static final _move = {
-    LogicalKeyboardKey.arrowUp,
-    LogicalKeyboardKey.arrowDown,
-    LogicalKeyboardKey.arrowLeft,
-    LogicalKeyboardKey.arrowRight,
-    LogicalKeyboardKey.keyW,
-    LogicalKeyboardKey.keyA,
-    LogicalKeyboardKey.keyS,
-    LogicalKeyboardKey.keyD,
-  };
 }
 
 class _BeatPage extends StatefulWidget {

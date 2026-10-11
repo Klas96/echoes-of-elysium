@@ -5,6 +5,8 @@ import 'package:bonfire/bonfire.dart';
 import 'package:flutter/material.dart';
 
 import '../audio/sfx_manager.dart';
+import '../components/custom_player.dart';
+import '../interiors/room_scene.dart';
 import 'creature_components.dart';
 import 'creature_species.dart';
 import 'gates.dart';
@@ -23,17 +25,21 @@ class GateArt {
   static const grottoClosed = 'obstacles/pond_grotto_dark.png';
   static const grottoOpen = 'obstacles/pond_grotto_lit.png';
 
-  /// Left rock, right rock, arch, pond (both states) + mouth_rect (dark only).
+  /// Left rock, right rock, arch, pond, mouth. Lit or dark the façade stays
+  /// solid — entry is ENTER into the cave room (like a house), not walking
+  /// through the sprite.
   static const grottoLitColliders = [
     Rect.fromLTWH(16, 3, 19, 30),
     Rect.fromLTWH(58, 3, 19, 30),
     Rect.fromLTWH(35, 3, 23, 10),
     Rect.fromLTWH(14, 33, 65, 29),
+    Rect.fromLTWH(35, 13, 23, 20),
   ];
-  static const grottoDarkColliders = [...grottoLitColliders, Rect.fromLTWH(35, 13, 23, 20)];
+  static const grottoPondCollider = Rect.fromLTWH(14, 33, 65, 29);
+  static const grottoMouthCollider = Rect.fromLTWH(35, 13, 23, 20);
+  static const grottoDarkColliders = grottoLitColliders;
 
-  /// The fragment just inside the mouth, and the south bank Kaela takes it
-  /// from (the pond stays between them).
+  /// Fragment just inside the mouth; LIGHT is used from the south bank.
   static const grottoFragmentPoint = Offset(45, 27);
   static const grottoInteract = Offset(46, 66);
 
@@ -155,7 +161,8 @@ abstract class AbilityGate extends GameComponent with Interactable {
   bool get canFocus => !isOpen && !_opening;
 
   @override
-  PromptInfo get prompt => Gates.canOpen(def.id) ? PromptInfo(def.action, hold: 0.5) : PromptInfo.note(def.blockedHint);
+  PromptInfo get prompt =>
+      Gates.canOpen(def.id) ? PromptInfo(def.action, hold: 0.5) : PromptInfo.note(Gates.closedNote(def.id));
 
   @override
   void interact() {
@@ -222,12 +229,13 @@ abstract class AbilityGate extends GameComponent with Interactable {
   }
 }
 
-/// LIGHT: the dark grotto by the pond (pond_grotto_dark / _lit). Dark, a
-/// pool of shadow hides the fragment in its mouth; lit, Kaela takes it from
-/// the south bank (the pond stays in between).
+/// LIGHT: the dark grotto by the pond (pond_grotto_dark / _lit). Dark, the
+/// mouth is sealed; lit, E shows ENTER and loads the cave room (#57).
 class GrottoGate extends AbilityGate {
   double _t = 0;
   GrottoGate(super.def, super.position, super.size);
+
+  static const roomId = 'pond_grotto';
 
   @override
   String get closedArt => GateArt.grottoClosed;
@@ -240,8 +248,40 @@ class GrottoGate extends AbilityGate {
   @override
   Offset get interactArt => GateArt.grottoInteract;
 
+  /// One step in front of the mouth (south bank), top-left for a 32 px Kaela.
+  Vector2 get mouthFront =>
+      absolutePosition +
+      Vector2(
+        interactArt.dx * _k - CustomPlayer.sizePlayer / 2,
+        interactArt.dy * _k - 8,
+      );
+
   /// The grotto still hides the object at [p] (world px).
   bool hides(Vector2 p) => !isOpen && toRect().inflate(8).contains(Offset(p.x, p.y));
+
+  @override
+  bool get canFocus =>
+      (!_opening && !isOpen) || (isOpen && Interiors.canEnter(roomId));
+
+  @override
+  PromptInfo get prompt {
+    if (isOpen && Interiors.canEnter(roomId)) return const PromptInfo('ENTER');
+    return super.prompt;
+  }
+
+  @override
+  void interact() {
+    if (isOpen && Interiors.canEnter(roomId)) {
+      Interiors.enterAt(gameRef, roomId, mouthFront);
+      return;
+    }
+    super.interact();
+  }
+
+  // Façade foot — Kaela stays in front of the rock, never drawn inside it.
+  @override
+  int get priority =>
+      LayerPriority.getComponentPriority((position.y + size.y * 0.92).floor());
 
   @override
   void update(double dt) {
@@ -426,7 +466,9 @@ class GateHelper extends CreatureBody {
         position = dest;
         onArrive();
       }
-      mode = CreatureMode.happy;
+      // Vine fox "happy" frames read as digging (head down, pawing dirt).
+      // For SCENT/SNIFF, hold an idle nose-down pose instead.
+      mode = species.ability == Ability.scent ? CreatureMode.idle : CreatureMode.happy;
       row = 0;
     } else {
       alpha = max(0, alpha - dt / fade);

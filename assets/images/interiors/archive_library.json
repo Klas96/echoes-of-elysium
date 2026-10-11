@@ -150,12 +150,23 @@
    "note": "Glyph pedestal: Field Notes, author unknown -> clue for the optional City fragment in the West Yard"
   },
   {
-   "id": "reading_desk",
+   "id": "merge_draft",
    "rect": [
     6,
     3,
     4,
     3
+   ],
+   "kind": "clue",
+   "note": "First Memory Draft on the reading desk — the whisper-vote. TAKE triggers archive_ash."
+  },
+  {
+   "id": "reading_lamp",
+   "rect": [
+    9,
+    3,
+    1,
+    1
    ],
    "kind": "flavour",
    "note": "'A lamp still lit. Someone was here not long ago.'"

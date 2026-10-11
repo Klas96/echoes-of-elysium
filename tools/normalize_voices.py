@@ -3,8 +3,13 @@
 
 Target: -16 LUFS integrated, -1.5 dB true peak (speech / game dialogue).
 
-Uses single-pass loudnorm (two-pass linear mode crushes short ElevenLabs
-clips). If a file is still far below target, applies a peak-safe makeup gain.
+Short ElevenLabs clips are often peaky: one syllable hits the ceiling while
+the body stays quiet, so plain loudnorm (or peak-capped makeup gain) leaves
+them soft. Pipeline:
+
+  1. Mild acompressor — raise speech body vs peaks
+  2. Iterative volume toward -16 LUFS
+  3. Hard alimiter at ~-1.5 dB so nothing clips
 
     python3 tools/normalize_voices.py              # all assets/audio/voices/*.mp3
     python3 tools/normalize_voices.py path.mp3     # one file in place
@@ -23,9 +28,11 @@ ROOT = Path(__file__).resolve().parents[1]
 VOICES = ROOT / "assets" / "audio" / "voices"
 
 I, TP, LRA = -16.0, -1.5, 11.0
-# After loudnorm, re-boost if still quieter than this (short clips).
-MIN_OK_LUFS = -19.0
-MAX_PEAK_DB = -1.5
+# Acceptable band after normalize (integrated LUFS).
+OK_LO, OK_HI = -17.5, -14.5
+# alimiter limit≈10^(-1.5/20)
+LIMIT = 0.84
+MAX_ITERS = 5
 
 
 def _ffmpeg(*args: str) -> subprocess.CompletedProcess[str]:
@@ -60,51 +67,64 @@ def _measure(path: Path) -> dict[str, float]:
     }
 
 
-def _encode(path: Path, af: str) -> None:
-    with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as tmp:
-        out = Path(tmp.name)
-    try:
-        r = _ffmpeg(
-            "-i",
-            str(path),
-            "-af",
-            af,
-            "-c:a",
-            "libmp3lame",
-            "-b:a",
-            "128k",
-            str(out),
-        )
-        if r.returncode != 0 or not out.exists() or out.stat().st_size < 400:
-            raise RuntimeError(f"encode failed for {path.name}: {r.stderr[-400:]}")
-        out.replace(path)
-    finally:
-        if out.exists() and out != path:
-            out.unlink(missing_ok=True)
+def _encode(src: Path, dst: Path, af: str) -> None:
+    r = _ffmpeg(
+        "-i",
+        str(src),
+        "-af",
+        af,
+        "-ar",
+        "44100",
+        "-c:a",
+        "libmp3lame",
+        "-b:a",
+        "128k",
+        str(dst),
+    )
+    if r.returncode != 0 or not dst.exists() or dst.stat().st_size < 400:
+        raise RuntimeError(f"encode failed for {src.name}: {r.stderr[-400:]}")
 
 
 def normalize_file(path: Path) -> None:
-    """Normalize [path] in place to ~-16 LUFS."""
+    """Normalize [path] in place to ~-16 LUFS with speech-friendly dynamics."""
     path = path.resolve()
     if not path.is_file():
         raise FileNotFoundError(path)
 
-    # Single-pass loudnorm — stable on short VO.
-    _encode(path, f"loudnorm=I={I}:TP={TP}:LRA={LRA}")
+    with tempfile.TemporaryDirectory(prefix="norm_vo_") as td:
+        td_path = Path(td)
+        work = td_path / "a.mp3"
+        # Body up, peaks down — fixes short peaky cutscene lines.
+        _encode(
+            path,
+            work,
+            "acompressor=threshold=-18dB:ratio=3:attack=8:release=80:makeup=2:knee=6",
+        )
 
-    m = _measure(path)
-    if m["i"] >= MIN_OK_LUFS:
-        return
+        for n in range(MAX_ITERS):
+            m = _measure(work)
+            err = I - m["i"]
+            out = td_path / f"b{n}.mp3"
+            if abs(err) <= 1.0:
+                # Final peak safety even when level is already close.
+                _encode(
+                    work,
+                    out,
+                    f"alimiter=limit={LIMIT}:attack=5:release=50:level_out={LIMIT}",
+                )
+                work = out
+                break
+            if err > 0:
+                af = (
+                    f"volume={err:.2f}dB,"
+                    f"alimiter=limit={LIMIT}:attack=5:release=50:level_out={LIMIT}"
+                )
+            else:
+                af = f"volume={err:.2f}dB"
+            _encode(work, out, af)
+            work = out
 
-    # Short / sparse clips: loudnorm under-shoots. Makeup gain capped by peak.
-    gain = I - m["i"]
-    headroom = MAX_PEAK_DB - m["tp"]
-    if headroom < 0.25:
-        return  # already near peak ceiling
-    gain = min(gain, headroom)
-    if gain < 0.5:
-        return
-    _encode(path, f"volume={gain:.2f}dB")
+        work.replace(path)
 
 
 def main(argv: list[str]) -> int:
@@ -116,16 +136,27 @@ def main(argv: list[str]) -> int:
         print("No mp3s to normalize", file=sys.stderr)
         return 1
     fails: list[str] = []
+    bad: list[str] = []
     for p in paths:
         try:
             before = _measure(p)["i"]
             normalize_file(p)
-            after = _measure(p)["i"]
-            print(f"OK {p.name:40s}  {before:7.2f} → {after:7.2f} LUFS")
+            after = _measure(p)
+            mark = "OK"
+            if not (OK_LO <= after["i"] <= OK_HI):
+                mark = "WIDE"
+                bad.append(p.name)
+            if after["tp"] > -0.5:
+                mark = "CLIP"
+                bad.append(p.name)
+            print(
+                f"{mark} {p.name:40s}  {before:7.2f} → {after['i']:7.2f} LUFS  "
+                f"tp={after['tp']:5.2f}"
+            )
         except Exception as e:
             print(f"FAIL {p.name}: {e}", file=sys.stderr)
             fails.append(p.name)
-    print(f"Done. {len(paths) - len(fails)}/{len(paths)} ok.")
+    print(f"Done. {len(paths) - len(fails)}/{len(paths)} ok; {len(set(bad))} outside band.")
     return 1 if fails else 0
 
 
