@@ -8,6 +8,7 @@ import '../components/npc_character.dart';
 import '../ui/cutscene_player.dart';
 import '../ui/cutscenes.dart';
 import 'game_state.dart';
+import 'keyboard_guard.dart';
 import 'pause.dart';
 
 /// Mid-game story moments played over a live map (like Memories).
@@ -64,12 +65,15 @@ class StoryBeats {
       ));
     } finally {
       CustomPlayer.pendingShot.value = null;
-      final held = HardwareKeyboard.instance.logicalKeysPressed.any(_move.contains);
-      if (!held) {
-        final player = game.player;
-        if (player is CustomPlayer) {
-          player.onJoystickChangeDirectional(
-              JoystickDirectionalEvent(directional: JoystickMoveDirectional.IDLE));
+      KeyboardGuard.releaseAll();
+      final player = game.player;
+      if (player is CustomPlayer) {
+        final held =
+            HardwareKeyboard.instance.logicalKeysPressed.any(_move.contains);
+        if (held) {
+          player.syncMovementFromKeyboard();
+        } else {
+          player.haltMovement();
         }
       }
       if (!wasPaused || fromTalk) game.resumeEngine();

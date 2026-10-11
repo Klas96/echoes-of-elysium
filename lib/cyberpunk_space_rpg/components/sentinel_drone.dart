@@ -5,6 +5,8 @@ import 'damage_number.dart';
 import 'custom_player.dart';
 import 'drone_bounds.dart';
 import 'explosion_effect.dart';
+import 'uec_drone.dart';
+import '../game/game_debug.dart';
 import '../game/game_state.dart';
 import '../game/progression.dart';
 
@@ -12,7 +14,8 @@ enum _SState { idle, chase, attack, rage }
 
 class SentinelDrone extends GameDecoration {
   static SentinelDrone? instance;
-  static const int maxHealth = 360;
+  static const int baseMaxHealth = 360;
+  static const int baseLevel = 7;
   static const double spriteSize = 64;
   static const double _detectR = 300;
   static const double _attackR = 50;
@@ -20,22 +23,60 @@ class SentinelDrone extends GameDecoration {
   static const double _rageSpeed = 105;
   static const double _cooldown = 1.0;
   static const double _rageCooldown = 0.55;
-  static const int _damage = 18;
-  static const int _rageDamage = 28;
+  static const int _baseDamage = 18;
+  static const int _baseRageDamage = 28;
 
-  int _health = maxHealth;
+  final int enemyLevel;
+  final int maxHealth;
+  final int _damage;
+  final int _rageDamage;
+  late int _health;
   bool get isDead => _health <= 0;
   _SState _state = _SState.idle;
   double _attackTimer = 0;
   double _pulse = 0;
   bool _deathFired = false;
   Vector2 _knockback = Vector2.zero();
+  /// Puffcap HUSH: seconds left calmed (no chase / attack).
+  double _hushed = 0;
   late final Vector2 _origin;
   final VoidCallback onDefeated;
 
-  SentinelDrone(Vector2 position, {required this.onDefeated})
-      : _origin = position.clone(),
-        super(position: position, size: Vector2.all(48));
+  bool get isHushed => _hushed > 0;
+
+  void applyHush(double seconds) {
+    if (isDead) return;
+    _hushed = max(_hushed, seconds);
+    _state = _SState.idle;
+  }
+
+  factory SentinelDrone(Vector2 position,
+      {required VoidCallback onDefeated, int? level}) {
+    final lv = level ?? EnemyLevels.forSentinel();
+    final s = EnemyLevels.scale(lv, baseLevel);
+    return SentinelDrone._(
+      position,
+      onDefeated: onDefeated,
+      enemyLevel: lv,
+      maxHealth: max(1, (baseMaxHealth * s).round()),
+      damage: max(1, (_baseDamage * s).round()),
+      rageDamage: max(1, (_baseRageDamage * s).round()),
+    );
+  }
+
+  SentinelDrone._(
+    Vector2 position, {
+    required this.onDefeated,
+    required this.enemyLevel,
+    required this.maxHealth,
+    required int damage,
+    required int rageDamage,
+  })  : _damage = damage,
+        _rageDamage = rageDamage,
+        _origin = position.clone(),
+        super(position: position, size: Vector2.all(48)) {
+    _health = maxHealth;
+  }
 
   Sprite? _sprite;
 
@@ -77,7 +118,7 @@ class SentinelDrone extends GameDecoration {
     DamageNumber.spawn(this, position + Vector2(size.x / 2, 0), amount, DamageNumberStyle.dealt);
     if (_health <= 0 && !_deathFired) {
       _deathFired = true;
-      Progression.onSentinelKilled();
+      Progression.onSentinelKilled(enemyLevel: enemyLevel);
       gameRef.add(ExplosionEffect(position.clone()));
       Future.microtask(onDefeated);
       removeFromParent();
@@ -90,6 +131,7 @@ class SentinelDrone extends GameDecoration {
     super.update(dt);
     _pulse += dt * 4.5;
     _attackTimer = max(0, _attackTimer - dt);
+    _hushed = max(0, _hushed - dt);
 
     final player = gameRef.player;
     if (player == null) return;
@@ -100,7 +142,9 @@ class SentinelDrone extends GameDecoration {
     final dist = toPlayer.length;
     final rage = _health < maxHealth * 0.3;
 
-    if (dist < _attackR) {
+    if (isHushed) {
+      _state = _SState.idle;
+    } else if (dist < _attackR) {
       _state = rage ? _SState.rage : _SState.attack;
     } else if (dist < _detectR) {
       _state = rage ? _SState.rage : _SState.chase;
@@ -112,7 +156,8 @@ class SentinelDrone extends GameDecoration {
 
     DroneBounds.rescue(this, origin: _origin, leash: _leash, pad: 32);
 
-    if (_knockback.length < 40 &&
+    if (!isHushed &&
+        _knockback.length < 40 &&
         (_state == _SState.chase || _state == _SState.rage) &&
         dist > _attackR) {
       _move(toPlayer.normalized() * spd * dt);
@@ -122,7 +167,7 @@ class SentinelDrone extends GameDecoration {
       _knockback.scale(exp(-12 * dt));
       if (_knockback.length2 < 4) _knockback.setZero();
     }
-    if (dist < _attackR * 1.5 && _attackTimer <= 0) {
+    if (!isHushed && dist < _attackR * 1.5 && _attackTimer <= 0) {
       final dmg = rage ? _rageDamage : _damage;
       CustomPlayer.applyDamage(dmg);
       _attackTimer = rage ? _rageCooldown : _cooldown;
@@ -162,7 +207,7 @@ class SentinelDrone extends GameDecoration {
     if (rage) canvas.drawCircle(Offset(cx, cy), r * 0.1,
         Paint()..color = Colors.white.withOpacity(0.5 + p * 0.3));
 
-    // HP bar
+    // Level + HP bar
     const barW = 52.0, barH = 5.0;
     final barX = cx - barW / 2;
     final barY = cy - spriteSize / 2 - 8;
@@ -177,7 +222,30 @@ class SentinelDrone extends GameDecoration {
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1.0);
 
-    // "SENTINEL" label
-    // (can't draw text in Canvas here without TextPainter; skip label)
+    final lvTp = TextPainter(
+      text: TextSpan(
+        text: 'LV$enemyLevel',
+        style: TextStyle(
+          color: Colors.white.withOpacity(0.95),
+          fontSize: 9,
+          fontWeight: FontWeight.w700,
+          shadows: const [
+            Shadow(color: Colors.black87, blurRadius: 2, offset: Offset(0, 1)),
+          ],
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    lvTp.paint(canvas, Offset(cx - lvTp.width / 2, barY - lvTp.height - 2));
+
+    if (GameDebug.isOn) {
+      final tileX = (absolutePosition.x / 32).toStringAsFixed(0);
+      final tileY = (absolutePosition.y / 32).toStringAsFixed(0);
+      GameDebug.paintLabel(
+        canvas,
+        'sentinel @$tileX,$tileY',
+        Offset(cx, barY - lvTp.height - 13),
+      );
+    }
   }
 }

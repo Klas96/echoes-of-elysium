@@ -48,17 +48,27 @@ class Boulder extends GameComponent with Interactable, PointOfInterest {
 
   @override
   Future<void> onLoad() async {
-    _sprite = await Sprite.load(size.x > 40 ? 'obstacles/boulder_2x2.png' : 'obstacles/boulder.png');
+    // Solid before sprite await (add() needs gameRef — not in constructor).
+    add(RectangleHitbox(
+      size: size.clone(),
+      isSolid: true,
+      collisionType: CollisionType.active,
+    ));
+    _sprite = await Sprite.load(
+        size.x > 40 ? 'obstacles/boulder_2x2.png' : 'obstacles/boulder.png');
     try {
       final img = await Flame.images.load('obstacles/boulder_push_anim.png');
       _dust = SpriteAnimation.fromFrameData(
-          img, SpriteAnimationData.sequenced(amount: 3, stepTime: 0.1, textureSize: Vector2(48, 40), loop: false));
+          img,
+          SpriteAnimationData.sequenced(
+              amount: 3, stepTime: 0.1, textureSize: Vector2(48, 40), loop: false));
     } catch (_) {}
-    // Solid across the whole tunnel (the art's own rect leaves a gap at the
-    // top that Kaela's feet could slip through).
-    add(RectangleHitbox(position: Vector2(2, 4), size: size - Vector2(4, 6), isSolid: true));
     return super.onLoad();
   }
+
+  @override
+  int get priority =>
+      LayerPriority.getComponentPriority((position.y + size.y * 0.85).floor());
 
   @override
   Ability get poiAbility => Ability.push;
@@ -107,7 +117,9 @@ class Boulder extends GameComponent with Interactable, PointOfInterest {
     if (_from != null && _dustTicker != null) {
       final scale = size.x / 32;
       _dustTicker!.getSprite().render(canvas,
-          position: Vector2(-8, -4) * scale, size: Vector2(48, 40) * scale, overridePaint: paint);
+          position: Vector2(-8, -4) * scale,
+          size: Vector2(48, 40) * scale,
+          overridePaint: paint);
     }
     super.render(canvas);
   }
@@ -328,7 +340,7 @@ class GlimmerStash extends GameComponent with Interactable {
   }
 }
 
-/// SCENT: something buried. Invisible until the vine fox is along and close;
+/// DIG: something buried. Invisible until the brookling is along and close;
 /// then a shimmer marks the spot and DIG finds glimmer.
 class BuriedItem extends GameComponent with Interactable, PointOfInterest {
   final String id;
@@ -352,10 +364,10 @@ class BuriedItem extends GameComponent with Interactable, PointOfInterest {
     return super.onLoad();
   }
 
-  bool get _sniffed => Bonds.has(Ability.scent) && _playerCenter(gameRef).distanceTo(absoluteCenter) < 110;
+  bool get _sensed => Bonds.has(Ability.dig) && _playerCenter(gameRef).distanceTo(absoluteCenter) < 110;
 
   @override
-  Ability get poiAbility => Ability.scent;
+  Ability get poiAbility => Ability.dig;
   @override
   bool get poiPending => !found;
   @override
@@ -363,11 +375,15 @@ class BuriedItem extends GameComponent with Interactable, PointOfInterest {
   @override
   double get interactRadius => 40;
   @override
-  PromptInfo get prompt => const PromptInfo('DIG', hold: 0.6);
+  PromptInfo get prompt => Bonds.has(Ability.dig)
+      ? const PromptInfo('DIG', hold: 0.6)
+      : PromptInfo.note(Bonds.unlocked(Ability.dig)
+          ? 'Something buried. Walk with the brookling to dig it up.'
+          : 'Disturbed earth. Something small might know what lies under.');
 
   @override
   void interact() {
-    if (found) return;
+    if (found || !Bonds.has(Ability.dig)) return;
     Bonds.markSecret(id);
     Bonds.addGlimmer(amount);
     SfxManager().playChime();
@@ -378,7 +394,7 @@ class BuriedItem extends GameComponent with Interactable, PointOfInterest {
   void update(double dt) {
     super.update(dt);
     _shimmer?.update(dt);
-    final want = !found && _sniffed ? 1.0 : 0.0;
+    final want = !found && _sensed ? 1.0 : 0.0;
     _show += (want - _show).clamp(-dt * 2, dt * 2);
   }
 
@@ -394,17 +410,19 @@ class BuriedItem extends GameComponent with Interactable, PointOfInterest {
   }
 }
 
-/// SCENT: Designer's 2x2 bramble (bramble_closed / bramble_open, 64x64,
-/// swapped in place) plugging the trail into the hushdeer's glade. With the
-/// vine fox along, hold E to have it nose a way through; the open bramble
-/// keeps only its side clumps solid, leaving a north-south passage
-/// ([passage], x 16-48 px) that Kaela's feet hitbox fits through.
+/// TRAIL: Designer's 2x2 bramble (bramble_closed / bramble_open, 64x64,
+/// swapped in place) plugging the path into the hushdeer's glade. With the
+/// hushdeer along, hold E to open the old trail; the open bramble keeps only
+/// its side clumps solid, leaving a north-south passage ([passage], x 16-48
+/// px) that Kaela's feet hitbox fits through.
 class HiddenPath extends GameComponent with Interactable, PointOfInterest {
   final String id;
 
   /// Solid rects (x, y, w, h in the 64x64 art) from bramble_closed.json /
   /// bramble_open.json.
-  static const closedColliders = [Rect.fromLTWH(5, 39, 52, 22)];
+  // Closed: plug from mid-north through the south row. A feet-only strip at
+  // y=39 let Kaela walk through the foliage (approach is from the north).
+  static const closedColliders = [Rect.fromLTWH(4, 16, 56, 46)];
   static const openColliders = [Rect.fromLTWH(1, 39, 15, 22), Rect.fromLTWH(48, 39, 15, 22)];
 
   /// The walkable middle of the open bramble ('passage' x 16, w 32).
@@ -424,8 +442,20 @@ class HiddenPath extends GameComponent with Interactable, PointOfInterest {
 
   bool get revealed => Bonds.secretDone(id);
 
+  // Default GameComponent sorts on rectCollision.bottom — open side-clumps
+  // sit on the south edge, so Kaela walking the N→S gap drew under the
+  // foliage. Open: sort as a low bush; closed: south thicket edge.
+  @override
+  int get priority {
+    final foot = revealed ? size.y * 0.22 : size.y * 0.92;
+    return LayerPriority.getComponentPriority((position.y + foot).floor());
+  }
+
   @override
   Future<void> onLoad() async {
+    // Solid before art awaits (add() needs gameRef — not safe in constructor).
+    _open = revealed ? 1 : 0;
+    _setColliders(revealed ? openColliders : closedColliders);
     _closed = await Sprite.load('obstacles/bramble_closed.png');
     _openSprite = await Sprite.load('obstacles/bramble_open.png');
     final motes = await Flame.images.load('obstacles/bramble_open_motes_anim.png');
@@ -436,6 +466,7 @@ class HiddenPath extends GameComponent with Interactable, PointOfInterest {
     _shimmer = SpriteAnimation.fromFrameData(
             shimmer, SpriteAnimationData.sequenced(amount: 4, stepTime: 1 / 6, textureSize: Vector2.all(64)))
         .createTicker();
+    _open = revealed ? 1 : 0;
     _setColliders(revealed ? openColliders : closedColliders);
     return super.onLoad();
   }
@@ -448,37 +479,51 @@ class HiddenPath extends GameComponent with Interactable, PointOfInterest {
     final k = size.x / 64; // art is 64 px; the object is 2x2 tiles
     for (final r in rects) {
       final h = RectangleHitbox(
-          position: Vector2(r.left * k, r.top * k), size: Vector2(r.width * k, r.height * k), isSolid: true);
+        position: Vector2(r.left * k, r.top * k),
+        size: Vector2(r.width * k, r.height * k),
+        isSolid: true,
+        collisionType: CollisionType.active,
+      );
       _hits.add(h);
       add(h);
     }
   }
 
   @override
-  Ability get poiAbility => Ability.scent;
+  Ability get poiAbility => Ability.trail;
   @override
   bool get poiPending => !revealed;
 
-  // Reachable from either side: the middle of the thorny band.
+  // North trail approach (ridge → thorns → glade). A south interact point
+  // sat behind the closed collider after the plug was thickened, so E never
+  // focused. Matches the main-route bramble's stand point.
   @override
-  Vector2 get interactPoint => absolutePosition + Vector2(size.x / 2, size.y * 50 / 64);
+  Vector2 get interactPoint =>
+      absolutePosition + Vector2(size.x / 2, size.y * 20 / 64);
   @override
-  double get interactRadius => 40;
+  double get interactRadius => 46;
   @override
   bool get canFocus => !revealed;
 
   @override
-  PromptInfo get prompt => Bonds.has(Ability.scent)
-      ? const PromptInfo('SNIFF A WAY THROUGH', hold: 0.6)
-      : const PromptInfo.note('Thick brambles. Something sweet-smelling lies beyond.');
+  PromptInfo get prompt => Bonds.has(Ability.trail)
+      ? const PromptInfo('FOLLOW THE TRAIL', hold: 0.6)
+      : PromptInfo.note(Bonds.unlocked(Ability.trail)
+          ? 'Thick brambles. Walk with the hushdeer to open the old path.'
+          : 'Thick brambles. Moonflowers hint at a path beyond.');
 
   @override
   void interact() {
-    if (revealed || !Bonds.has(Ability.scent)) return;
+    if (revealed || !Bonds.has(Ability.trail)) return;
     Bonds.markSecret(id);
     _setColliders(openColliders);
+    _open = max(_open, 0.05); // kick the swap so it doesn't look still shut
+    if (hasGameRef) {
+      final g = gameRef;
+      if (g is BonfireGame) g.requestUpdatePriority();
+    }
     SfxManager().playChime();
-    GameToast.show('SCENT', body: 'Path found', compact: true);
+    GameToast.show('TRAIL', body: 'Path opens', compact: true);
   }
 
   @override
@@ -500,8 +545,8 @@ class HiddenPath extends GameComponent with Interactable, PointOfInterest {
       paint.color = Color.fromRGBO(255, 255, 255, _open.toDouble());
       _openSprite?.render(canvas, size: size, overridePaint: paint);
       _motes?.getSprite().render(canvas, size: size, overridePaint: paint);
-    } else if (Bonds.has(Ability.scent)) {
-      // the vine fox can smell the old path under the thorns
+    } else if (Bonds.has(Ability.trail)) {
+      // the hushdeer remembers the moonflower path under the thorns
       paint.color = const Color(0xCCFFFFFF);
       _shimmer?.getSprite().render(canvas, size: size, overridePaint: paint);
     }
@@ -536,9 +581,11 @@ class SweetrootStump extends GameComponent with Interactable {
     _full = await Sprite.load('obstacles/sweetroot_stump.png');
     _plain = await Sprite.load('obstacles/sweetroot_stump_plain.png');
     add(RectangleHitbox(
-        position: Vector2(collider.left, collider.top) * _k,
-        size: Vector2(collider.width, collider.height) * _k,
-        isSolid: true));
+      position: Vector2(collider.left, collider.top) * _k,
+      size: Vector2(collider.width, collider.height) * _k,
+      isSolid: true,
+      collisionType: CollisionType.passive,
+    ));
     return super.onLoad();
   }
 

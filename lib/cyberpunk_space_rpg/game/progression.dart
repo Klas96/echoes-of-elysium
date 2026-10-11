@@ -215,19 +215,31 @@ class Progression {
   }
 
   /// Called when a UEC drone is destroyed.
-  static void onDroneKilled(DroneKind kind) {
-    final xpGain = switch (kind) {
-      DroneKind.scout => 15,
-      DroneKind.sniper => 22,
-      DroneKind.shield => 30,
-      DroneKind.swarm => 10,
-    };
-    final glimmerGain = switch (kind) {
-      DroneKind.scout => 2,
-      DroneKind.sniper => 3,
-      DroneKind.shield => 4,
-      DroneKind.swarm => 1,
-    };
+  static void onDroneKilled(DroneKind kind, {int? enemyLevel}) {
+    final level = enemyLevel ?? kind.baseLevel;
+    final scale = EnemyLevels.scale(level, kind.baseLevel);
+    final xpGain = max(
+      1,
+      ((switch (kind) {
+                DroneKind.scout => 15,
+                DroneKind.sniper => 22,
+                DroneKind.shield => 30,
+                DroneKind.swarm => 10,
+              }) *
+              scale)
+          .round(),
+    );
+    final glimmerGain = max(
+      1,
+      ((switch (kind) {
+                DroneKind.scout => 2,
+                DroneKind.sniper => 3,
+                DroneKind.shield => 4,
+                DroneKind.swarm => 1,
+              }) *
+              scale)
+          .round(),
+    );
     Bonds.addGlimmer(glimmerGain);
     MmoFeedback.pushPop('+$glimmerGain ◆', color: const Color(0xFF88DDFF));
     grantXp(xpGain);
@@ -237,10 +249,14 @@ class Progression {
     Trade.rollDroneJunk();
   }
 
-  static void onSentinelKilled() {
-    Bonds.addGlimmer(15);
-    MmoFeedback.pushPop('+15 ◆', color: const Color(0xFF88DDFF));
-    grantXp(120, reason: 'The Sentinel falls. Kaela\'s neural attunement deepens.');
+  static void onSentinelKilled({int? enemyLevel}) {
+    final level = enemyLevel ?? EnemyLevels.forSentinel();
+    final scale = EnemyLevels.scale(level, 7);
+    final glimmerGain = max(1, (15 * scale).round());
+    final xpGain = max(1, (120 * scale).round());
+    Bonds.addGlimmer(glimmerGain);
+    MmoFeedback.pushPop('+$glimmerGain ◆', color: const Color(0xFF88DDFF));
+    grantXp(xpGain, reason: 'The Sentinel falls. Kaela\'s neural attunement deepens.');
     _grantGear('sentinel_core');
   }
 

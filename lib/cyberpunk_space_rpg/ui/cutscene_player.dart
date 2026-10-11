@@ -2,11 +2,14 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 
 import '../audio/music_manager.dart';
+import '../game/game_debug.dart';
+import '../game/keyboard_guard.dart';
 import 'cutscene_data.dart';
 
 export 'cutscene_data.dart';
@@ -396,11 +399,18 @@ class _CutscenePlayerState extends State<CutscenePlayer> with SingleTickerProvid
     _focus.dispose();
     _stopVoice();
     if (widget.playback == null) _playback?.dispose();
+    // Space/Enter held through skip/fade leaves keys stuck; release without
+    // HardwareKeyboard.clearState (that also drops handlers).
+    KeyboardGuard.releaseAll();
     super.dispose();
   }
 
   KeyEventResult _onKey(FocusNode _, KeyEvent e) {
     final p = _playback;
+    if (e is KeyDownEvent && kDebugMode && e.logicalKey == LogicalKeyboardKey.backquote) {
+      GameDebug.toggle();
+      return KeyEventResult.handled;
+    }
     if (p == null || e is! KeyDownEvent) return KeyEventResult.ignored;
     final k = e.logicalKey;
     if (k == LogicalKeyboardKey.escape) {
@@ -611,6 +621,18 @@ class _CutsceneView extends StatelessWidget {
             right: padding.right + 12,
             child: _SkipButton(onTap: onSkip, compact: size.shortestSide < 500),
           ),
+
+        if (kDebugMode)
+          Positioned(
+            left: padding.left + 12,
+            bottom: padding.bottom + 12,
+            child: ValueListenableBuilder<bool>(
+              valueListenable: GameDebug.enabled,
+              builder: (_, on, __) => on
+                  ? _CutsceneDebugHud(playback: p)
+                  : const SizedBox.shrink(),
+            ),
+          ),
       ],
     );
   }
@@ -664,6 +686,46 @@ class _CutsceneView extends StatelessWidget {
     }
     if (!fx.isLocal) return filtered;
     return Stack(children: [child, _LocalMask(fx: fx, child: filtered)]);
+  }
+}
+
+/// Bottom-left chip: cutscene id, panel index, and the image filename so you
+/// can point at art without digging through JSON.
+class _CutsceneDebugHud extends StatelessWidget {
+  const _CutsceneDebugHud({required this.playback});
+  final CutscenePlayback playback;
+
+  static String _fileName(String path) {
+    final i = path.lastIndexOf('/');
+    return i < 0 ? path : path.substring(i + 1);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scene = playback.scene;
+    final i = playback.panelIndex;
+    final n = scene.panels.length;
+    final image = scene.panels[i].image;
+    final id = scene.id.isEmpty ? '?' : scene.id;
+    return IgnorePointer(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.75),
+          border: Border.all(color: const Color(0xFF00FF88)),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Text(
+          '$id  ·  panel ${i + 1}/$n  ·  ${_fileName(image)}',
+          style: const TextStyle(
+            color: Color(0xFF00FF88),
+            fontSize: 12,
+            fontFamily: 'monospace',
+            letterSpacing: 0.5,
+          ),
+        ),
+      ),
+    );
   }
 }
 

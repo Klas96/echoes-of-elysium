@@ -43,6 +43,13 @@ class AmbientPropFx extends GameComponent {
         _ => 'steam',
       };
 
+  // Campfires / braziers are dynamicAbove decorations; default GameComponent
+  // priority left the loop under the prop so flames read as "behind" the fire.
+  @override
+  int get priority => LayerPriority.getComponentPriority(
+        (position.y + size.y).floor() + 2,
+      );
+
   @override
   Future<void> onLoad() async {
     try {
@@ -98,15 +105,17 @@ class AmbientPropFx extends GameComponent {
     final cy = size.y * 0.7;
     final loop = _loop;
     if (loop != null) {
-      // Plumes and flames rise from the frame's bottom edge, anchored where
-      // the wisps used to start; mist is a single sheet centred on the prop.
+      // Plumes rise from the frame's bottom edge. Smoke sits on the emitter
+      // (chimney / wreck); steam stays a touch higher on vent lids.
       final left = cx - _frame.x / 2;
-      final top = switch (_wispKind) {
+      // Fire sheet base sits in the bowl (not north of the prop). Other
+      // plumes still rise from the emitter edge.
+      final top = switch (kind) {
         'mist' => size.y / 2 - _frame.y / 2,
-        // the ambient object sits on the vent's lid; the plume's source is
-        // the frame's bottom rows
-        'steam' => size.y * 0.45 - _frame.y,
-        _ => cy + 4 - _frame.y, // fire: in the bowl
+        'smoke' => size.y * 0.92 - _frame.y,
+        'steam' => size.y * 0.55 - _frame.y,
+        'ember' || 'fire' => size.y * 0.9 - _frame.y + 6,
+        _ => size.y * 0.55 - _frame.y,
       };
       loop.getSprite().render(
             canvas,

@@ -90,10 +90,13 @@ class DroneBounds {
       if (!hit.isSolid) continue;
       final parent = hit.hitboxParent;
       if (identical(parent, drone)) continue;
-      // Tile walls, collision objects, buildings / props — not other drones.
+      // Tile walls, collision objects, buildings — not other drones.
+      // Skip tiny ground clutter (1-tile props): they made chase stutter when
+      // dynamicAbove decorations filled the map with solid boxes.
       final wall = parent is TileWithCollision ||
           parent is CollisionMapComponent ||
-          parent is GameDecorationWithCollision;
+          (parent is GameDecorationWithCollision &&
+              (parent.size.x >= 40 || parent.size.y >= 40));
       if (!wall) continue;
       final aabb = hit.aabb;
       final hr = Rect.fromLTRB(aabb.min.x, aabb.min.y, aabb.max.x, aabb.max.y);

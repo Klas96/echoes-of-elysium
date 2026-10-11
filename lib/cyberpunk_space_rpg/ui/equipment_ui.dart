@@ -1,12 +1,7 @@
-import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 
 import '../creatures/bonds.dart';
 import '../game/progression.dart';
-
-bool get _isTouch =>
-    defaultTargetPlatform == TargetPlatform.android ||
-    defaultTargetPlatform == TargetPlatform.iOS;
 
 const _teal = Color(0xFF00FFCC);
 const _amber = Color(0xFFFFE08A);
@@ -34,37 +29,6 @@ class Equipment {
   }
 
   static void toggle() => open.value ? hide() : show();
-}
-
-class EquipmentButton extends StatelessWidget {
-  final bool compact;
-  const EquipmentButton({super.key, this.compact = false});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: Equipment.show,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.6),
-          border: Border.all(color: _amber.withValues(alpha: 0.55)),
-          borderRadius: BorderRadius.circular(4),
-        ),
-        child: compact
-            ? const Icon(Icons.shield_outlined, size: 13, color: _amber)
-            : Text(
-                _isTouch ? 'GEAR' : 'I  GEAR',
-                style: const TextStyle(
-                  color: _amber,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.5,
-                ),
-              ),
-      ),
-    );
-  }
 }
 
 class EquipmentOverlay extends StatelessWidget {

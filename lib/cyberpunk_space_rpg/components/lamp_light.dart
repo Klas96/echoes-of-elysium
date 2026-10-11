@@ -54,17 +54,9 @@ class LampLight extends GameComponent {
     this.size = size;
   }
 
-  /// Fixture centre in world px (Tiled light object).
+  /// Fixture centre in world px (Tiled light object) — pool is drawn here so
+  /// the light reads as coming from the lantern/lamp, not south of it.
   Vector2 get centre => position + size / 2;
-
-  /// Ground-biased pool centre: bright core sits at the feet, not over the prop.
-  Vector2 get poolCentre {
-    final drop = switch (kind) {
-      LightKind.lantern || LightKind.lamp || LightKind.neon => radius * 0.32,
-      LightKind.fire || LightKind.energy => radius * 0.12,
-    };
-    return centre + Vector2(0, drop);
-  }
 
   @override
   void onMount() {
@@ -190,7 +182,7 @@ class NightLights {
       final cookie = art ?? procedural;
       if (cookie == null) continue;
       // Designer cookies are already an oval inside a square canvas.
-      final rect = screenRect(l.poolCentre, l.radius, cam, zoom, screen,
+      final rect = screenRect(l.centre, l.radius, cam, zoom, screen,
           squash: cookie.art ? 1 : squash);
       if (!rect.overlaps(view)) continue;
       final s = strength(darkness, l.kind, l.phase, clock);

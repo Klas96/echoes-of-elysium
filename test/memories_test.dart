@@ -51,8 +51,12 @@ void main() {
 
   test('memories are claimed in story order and counted from the save flags', () {
     expect(Memories.found, 0);
+    expect(Memories.collected, isEmpty);
     expect(Memories.next, 1);
     expect(Memories.claimNext(), 1);
+    expect(Memories.has(1), isTrue);
+    expect(Memories.collected, [1]);
+    expect(Memories.titleFor(1), isNotEmpty);
     expect(SaveService.data.flag('cutscene:memory1'), isTrue);
     // Order never depends on which fragment: the gap is filled first.
     SaveService.data.setFlag('cutscene:memory3');

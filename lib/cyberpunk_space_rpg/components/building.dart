@@ -73,6 +73,13 @@ class Building extends GameDecorationWithCollision with Interactable {
     paint.filterQuality = FilterQuality.none;
   }
 
+  /// Sort on the wall foot-line so Kaela in front of the door draws over the
+  /// facade (default hitbox fold can leave her under the lower wall art).
+  @override
+  int get priority => LayerPriority.getComponentPriority(
+        (position.y + def.collision.bottom).floor(),
+      );
+
   bool get _archiveOpen => Adventure.flag('archive_opened');
 
   @override

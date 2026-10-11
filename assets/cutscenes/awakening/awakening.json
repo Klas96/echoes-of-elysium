@@ -24,8 +24,8 @@
       "lines": [
         {
           "speaker": "N",
-          "text": "Elysium Colony. Year 2387.",
-          "voice": "audio/voices/cut_awakening_p1_l1.mp3"
+          "text": "Elysium Colony. Year 2387. A diagnostic skiff hangs over the Whispering Woods.",
+          "voice": ""
         }
       ]
     },
@@ -46,8 +46,8 @@
       "lines": [
         {
           "speaker": "N",
-          "text": "Dr. Kaela Osei was only meant to run a routine diagnostic on Gaia, the planet's caretaker system.",
-          "voice": "audio/voices/cut_awakening_p2_l1.mp3"
+          "text": "Dr. Kaela Osei was only meant to run a routine orbital pass on Gaia — the planet's caretaker system.",
+          "voice": ""
         }
       ]
     },
@@ -113,12 +113,12 @@
       "lines": [
         {
           "speaker": "N",
-          "text": "Far above, the United Earth Coalition noticed too — and they mean to erase Gaia.",
-          "voice": "audio/voices/cut_awakening_p5_l1.mp3"
+          "text": "The channel flared. Instruments died. The skiff tore through the canopy — and Kaela woke in the wreckage, Gaia already waiting in the trees.",
+          "voice": ""
         },
         {
           "speaker": "N",
-          "text": "Your mission: talk to Gaia in the woods, find two glowing memory fragments, then walk south to the City. Do not let the UEC wipe her record.",
+          "text": "Far above, the United Earth Coalition noticed too — and they mean to erase Gaia. Talk to her. Find two glowing memory fragments. Walk south to the City. Do not let them wipe her record.",
           "voice": ""
         }
       ],

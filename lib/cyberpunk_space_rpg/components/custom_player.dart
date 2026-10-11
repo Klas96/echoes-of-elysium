@@ -20,7 +20,9 @@ import 'damage_number.dart';
 class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFacing {
   static const double sizePlayer = 32;
   /// Width of the feet hitbox that collides with the world.
-  static const double feetWidth = sizePlayer * 0.5;
+  /// Kept a bit narrower/shorter than half the sprite so Kaela can stand
+  /// closer to walls (full-tile wall boxes are a tileset/designer concern).
+  static const double feetWidth = sizePlayer * 0.38;
   static const int baseMaxHealth = 100;
   /// Base HP plus level/gear bonuses (Runescape-lite progression).
   static int get maxHealth => baseMaxHealth + Progression.bonusHealth;
@@ -140,6 +142,10 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
   bool _eWasPressed = false;
   double _footstepTimer = 0;
   bool _joystickMoving = false;
+  /// On-screen stick (not WASD). While true we leave Bonfire's direction alone.
+  bool _touchStick = false;
+  /// Last keyboard directional was non-IDLE (may desync if a KeyUp is lost).
+  bool _keyboardStick = false;
   double _shootCooldown = 0;
   Map<Direction, SpriteAnimation>? _shootAnims;
   /// Visual-only knockback after a shot (does not move the hitbox).
@@ -152,8 +158,20 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
     speed: sizePlayer * 2.5,
     life: 100,
     initDirection: Direction.down,
-  ) {
-    priority = 1000;
+  );
+
+  double _lastSortY = -1e9;
+
+  /// Depth sort by feet (not a fixed priority). Fixed `priority = 1000` made
+  /// Kaela draw under southern props once she walked past that Y band.
+  @override
+  int get priority {
+    if (renderAboveComponents && hasGameRef) {
+      return LayerPriority.getAbovePriority(gameRef.highestPriority);
+    }
+    return LayerPriority.getComponentPriority(
+      (position.y + size.y * 0.94).floor(),
+    );
   }
 
   @override
@@ -194,8 +212,8 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
     animation = _jog!.animation;
     _shootAnims = await ShootSheet.load('sprites/kaela_shoot.png');
     add(RectangleHitbox(
-      size: Vector2(feetWidth, sizePlayer / 3),
-      position: Vector2(sizePlayer * 0.25, sizePlayer * 0.65),
+      size: Vector2(feetWidth, sizePlayer * 0.22),
+      position: Vector2((sizePlayer - feetWidth) / 2, sizePlayer * 0.72),
     ));
     return super.onLoad();
   }
@@ -245,9 +263,20 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
   void update(double dt) {
     speed = sizePlayer * 2.5 * Meals.speedMultiplier; // moss noodles (#31)
     Meals.tick(dt);
+    // Before Bonfire applies velocity: clear stale WASD if Flutter lost a KeyUp
+    // (focus steal / Esc / cutscene), or re-arm keys after a new map Keyboard.
+    if (!isRespawning) _reconcileKeyboardMovement();
     super.update(dt);
     _jog?.setSpeed(velocity.length);
     positionNotifier.value = position.clone();
+    // Bonfire only rebalances depth on vertical move; also refresh after
+    // teleports / pure horizontal walks past tall props.
+    final sortY = position.y + size.y * 0.94;
+    if ((sortY - _lastSortY).abs() >= 1 && hasGameRef) {
+      _lastSortY = sortY;
+      final g = gameRef;
+      if (g is BonfireGame) g.requestUpdatePriority();
+    }
     _blockedTimer = max(0, _blockedTimer - dt);
     isBlocked = _blockedTimer > 0;
     _grace = max(0, _grace - dt);
@@ -264,16 +293,7 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
   }
 
   void _updateFootsteps(double dt) {
-    final keys = HardwareKeyboard.instance.logicalKeysPressed;
-    final keyboardMoving = keys.contains(LogicalKeyboardKey.keyW) ||
-        keys.contains(LogicalKeyboardKey.keyS) ||
-        keys.contains(LogicalKeyboardKey.keyA) ||
-        keys.contains(LogicalKeyboardKey.keyD) ||
-        keys.contains(LogicalKeyboardKey.arrowUp) ||
-        keys.contains(LogicalKeyboardKey.arrowDown) ||
-        keys.contains(LogicalKeyboardKey.arrowLeft) ||
-        keys.contains(LogicalKeyboardKey.arrowRight);
-    final moving = keyboardMoving || _joystickMoving;
+    final moving = _moveKeysHeld || _touchStick || _joystickMoving;
     if (moving && !isBlocked) {
       _footstepTimer -= dt;
       if (_footstepTimer <= 0) {
@@ -283,6 +303,32 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
     } else {
       _footstepTimer = 0;
     }
+  }
+
+  /// Keep Bonfire's keyboard direction in lockstep with Flutter's pressed set.
+  /// Lost KeyUps used to leave Kaela sliding forever in one direction.
+  void _reconcileKeyboardMovement() {
+    if (_touchStick) return;
+    if (_moveKeysHeld) {
+      syncMovementFromKeyboard();
+      return;
+    }
+    if (_keyboardStick || _joystickMoving) {
+      haltMovement();
+    }
+  }
+
+  /// Hard stop — clears stick flags and Bonfire velocity (menus / lost keys).
+  void haltMovement() {
+    _touchStick = false;
+    _keyboardStick = false;
+    _joystickMoving = false;
+    onJoystickChangeDirectional(JoystickDirectionalEvent(
+      directional: JoystickMoveDirectional.IDLE,
+      intensity: 0,
+      isKeyboard: true,
+    ));
+    stopMove(forceIdle: true);
   }
 
   void _checkInteraction() {
@@ -406,7 +452,67 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
   // often the joystick fires.
   @override
   void onJoystickChangeDirectional(JoystickDirectionalEvent event) {
-    _joystickMoving = event.directional != JoystickMoveDirectional.IDLE;
+    final moving = event.directional != JoystickMoveDirectional.IDLE;
+    if (event.isKeyboard) {
+      _keyboardStick = moving;
+      if (moving) _touchStick = false;
+    } else {
+      _touchStick = moving;
+      if (moving) _keyboardStick = false;
+    }
+    _joystickMoving = moving;
     super.onJoystickChangeDirectional(event);
+  }
+
+  static bool get _moveKeysHeld {
+    final keys = HardwareKeyboard.instance.logicalKeysPressed;
+    return keys.contains(LogicalKeyboardKey.keyW) ||
+        keys.contains(LogicalKeyboardKey.keyS) ||
+        keys.contains(LogicalKeyboardKey.keyA) ||
+        keys.contains(LogicalKeyboardKey.keyD) ||
+        keys.contains(LogicalKeyboardKey.arrowUp) ||
+        keys.contains(LogicalKeyboardKey.arrowDown) ||
+        keys.contains(LogicalKeyboardKey.arrowLeft) ||
+        keys.contains(LogicalKeyboardKey.arrowRight);
+  }
+
+  /// Re-apply Bonfire velocity from keys still held (new map / focus return).
+  void syncMovementFromKeyboard() {
+    final keys = HardwareKeyboard.instance.logicalKeysPressed;
+    final up = keys.contains(LogicalKeyboardKey.keyW) ||
+        keys.contains(LogicalKeyboardKey.arrowUp);
+    final down = keys.contains(LogicalKeyboardKey.keyS) ||
+        keys.contains(LogicalKeyboardKey.arrowDown);
+    final left = keys.contains(LogicalKeyboardKey.keyA) ||
+        keys.contains(LogicalKeyboardKey.arrowLeft);
+    final right = keys.contains(LogicalKeyboardKey.keyD) ||
+        keys.contains(LogicalKeyboardKey.arrowRight);
+
+    final JoystickMoveDirectional dir;
+    if (up && left) {
+      dir = JoystickMoveDirectional.MOVE_UP_LEFT;
+    } else if (up && right) {
+      dir = JoystickMoveDirectional.MOVE_UP_RIGHT;
+    } else if (down && left) {
+      dir = JoystickMoveDirectional.MOVE_DOWN_LEFT;
+    } else if (down && right) {
+      dir = JoystickMoveDirectional.MOVE_DOWN_RIGHT;
+    } else if (up) {
+      dir = JoystickMoveDirectional.MOVE_UP;
+    } else if (down) {
+      dir = JoystickMoveDirectional.MOVE_DOWN;
+    } else if (left) {
+      dir = JoystickMoveDirectional.MOVE_LEFT;
+    } else if (right) {
+      dir = JoystickMoveDirectional.MOVE_RIGHT;
+    } else {
+      dir = JoystickMoveDirectional.IDLE;
+    }
+
+    onJoystickChangeDirectional(JoystickDirectionalEvent(
+      directional: dir,
+      intensity: dir == JoystickMoveDirectional.IDLE ? 0.0 : 1.0,
+      isKeyboard: true,
+    ));
   }
 }

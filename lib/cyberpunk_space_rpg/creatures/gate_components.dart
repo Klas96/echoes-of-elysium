@@ -45,10 +45,17 @@ class GateArt {
   static const boulderRollFrames = 3;
   static const boulderRollFps = 10.0;
 
-  /// Closed: all 3 road tiles; open: only the resting boulder on the right
-  /// (passage x 0-64).
-  static const boulderClosedColliders = [Rect.fromLTWH(0, 21, 96, 28)];
-  static const boulderOpenColliders = [Rect.fromLTWH(64, 37, 29, 17)];
+  /// Closed: plug from below the north interact stand through the south row
+  /// (a thin mid strip left gaps). Open: full resting stone on the right
+  /// (matches opaque pixels of road_boulder_open.png — a smaller pad let
+  /// feet walk through the rock).
+  static const boulderClosedColliders = [Rect.fromLTWH(0, 18, 96, 42)];
+  // Right-hand resting stone (a>180 ≈ x58–95); leave left two tiles as passage.
+  static const boulderOpenColliders = [Rect.fromLTWH(58, 16, 38, 48)];
+
+  /// Open-state resting stone (art px); used for depth sort.
+  static const boulderOpenFoot = 64.0;
+  static const boulderArtHeight = 64.0;
 
   /// road_boulder.json puts the interaction on the south side; on the Woods
   /// road Kaela arrives from the meadow, so she pushes from the north.
@@ -91,8 +98,14 @@ abstract class AbilityGate extends GameComponent with Interactable {
 
   @override
   Future<void> onLoad() async {
+    // Hitboxes first (before sprite awaits) so the gate is solid while art loads.
+    // Cannot add() in the constructor — Bonfire needs gameRef for hitboxes.
+    openT = isOpen ? 1 : 0;
+    _setColliders(isOpen ? openColliders : closedColliders);
     _closed = await Sprite.load(closedArt);
     _open = await Sprite.load(openArt);
+    // Save may finish loading after the first sync; refresh state + colliders.
+    openT = isOpen ? 1 : 0;
     _setColliders(isOpen ? openColliders : closedColliders);
     return super.onLoad();
   }
@@ -116,8 +129,14 @@ abstract class AbilityGate extends GameComponent with Interactable {
     _hits.clear();
     final k = _k;
     for (final r in rects) {
+      // Active + solid (StoryGate / buildings). Passive-only boxes were easy
+      // to miss against the player's feet hitbox on this choke.
       final h = RectangleHitbox(
-          position: Vector2(r.left * k, r.top * k), size: Vector2(r.width * k, r.height * k), isSolid: true);
+        position: Vector2(r.left * k, r.top * k),
+        size: Vector2(r.width * k, r.height * k),
+        isSolid: true,
+        collisionType: CollisionType.active,
+      );
       _hits.add(h);
       add(h);
     }
@@ -157,6 +176,10 @@ abstract class AbilityGate extends GameComponent with Interactable {
     Gates.open(def.id);
     _setColliders(openColliders);
     _opening = false;
+    if (hasGameRef) {
+      final g = gameRef;
+      if (g is BonfireGame) g.requestUpdatePriority();
+    }
     SfxManager().playChime();
     GameToast.show(def.ability.label, body: def.openedToast, compact: true);
   }
@@ -271,6 +294,14 @@ class BrambleGate extends AbilityGate {
   Offset get interactArt => GateArt.brambleInteract;
   @override
   double get interactRadius => 40;
+
+  // Open side-clumps collide on the south row; default sort put Kaela under
+  // the foliage in the passage. Open: low bush; closed: thicket foot.
+  @override
+  int get priority {
+    final foot = isOpen ? size.y * 0.22 : size.y * 0.92;
+    return LayerPriority.getComponentPriority((position.y + foot).floor());
+  }
 }
 
 /// PUSH: the fallen boulder across the south road (road_boulder_*); the
@@ -289,6 +320,17 @@ class FallenBoulderGate extends AbilityGate {
   List<Rect> get openColliders => GateArt.boulderOpenColliders;
   @override
   Offset get interactArt => GateArt.boulderInteract;
+
+  // Closed: sort on the plug's south foot. Open: on the resting stone's base
+  // (default rectCollision used the tiny old pad and drew the whole sprite
+  // over Kaela when she stood beside it in the passage).
+  @override
+  int get priority {
+    final foot = isOpen
+        ? size.y * (GateArt.boulderOpenFoot / GateArt.boulderArtHeight)
+        : size.y * 0.92;
+    return LayerPriority.getComponentPriority((position.y + foot).floor());
+  }
 
   @override
   void onOpening() {

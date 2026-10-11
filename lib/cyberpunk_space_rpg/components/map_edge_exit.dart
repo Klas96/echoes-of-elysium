@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:bonfire/bonfire.dart';
 import 'package:flutter/material.dart';
 
@@ -6,6 +8,9 @@ import '../game/travel.dart';
 
 /// Invisible strip on a map border: walk into it to leave for [destLevel].
 /// No portal glow — adjacent maps should feel like roads, not warp pads.
+///
+/// While [canExit] is false the strip is a solid thicket so the punched map
+/// edge does not look (or play) like an open road.
 class MapEdgeExit extends GameComponent {
   final int destLevel;
   final String entrySide;
@@ -18,6 +23,8 @@ class MapEdgeExit extends GameComponent {
   bool _fired = false;
   bool _beat = false;
   bool _lockedHint = false;
+  bool? _sealed;
+  RectangleHitbox? _block;
 
   MapEdgeExit(
     Vector2 position,
@@ -34,15 +41,44 @@ class MapEdgeExit extends GameComponent {
   }
 
   @override
+  int get priority =>
+      LayerPriority.getComponentPriority((position.y + size.y * 0.85).floor());
+
+  void _syncSeal() {
+    final sealed = !canExit();
+    if (_sealed == sealed) return;
+    _sealed = sealed;
+    if (sealed) {
+      if (_block == null) {
+        add(_block = RectangleHitbox(size: size, isSolid: true));
+      }
+    } else {
+      _block?.removeFromParent();
+      _block = null;
+    }
+  }
+
+  @override
+  Future<void> onLoad() async {
+    _syncSeal();
+    return super.onLoad();
+  }
+
+  @override
   void update(double dt) {
     super.update(dt);
+    _syncSeal();
     final player = gameRef.player;
     if (player == null || _beat) return;
     final pc = player.position + player.size / 2;
-    final inside = pc.x >= position.x &&
-        pc.x <= position.x + size.x &&
-        pc.y >= position.y &&
-        pc.y <= position.y + size.y;
+    // Slightly taller than the strip so a sealed hitbox still triggers the hint.
+    final zone = Rect.fromLTWH(
+      position.x,
+      position.y - 28,
+      size.x,
+      size.y + 28,
+    );
+    final inside = zone.contains(Offset(pc.x, pc.y));
 
     if (!inside) {
       _fired = false;
@@ -54,10 +90,18 @@ class MapEdgeExit extends GameComponent {
     if (!canExit()) {
       if (!_lockedHint) {
         _lockedHint = true;
-        GameToast.show(lockedTitle, body: lockedBody, color: const Color(0xFFFFAABB), compact: true);
+        GameToast.show(lockedTitle,
+            body: lockedBody, color: const Color(0xFFFFAABB), compact: true);
       }
       return;
     }
+
+    // Must stand in the real exit strip to leave (not only the hint pad).
+    final inStrip = pc.x >= position.x &&
+        pc.x <= position.x + size.x &&
+        pc.y >= position.y &&
+        pc.y <= position.y + size.y;
+    if (!inStrip) return;
 
     _fired = true;
     final beat = beforeExit?.call();
@@ -81,11 +125,54 @@ class MapEdgeExit extends GameComponent {
 
   @override
   void render(Canvas canvas) {
+    if (_sealed ?? !canExit()) {
+      _paintThicket(canvas);
+      return;
+    }
     // Soft dust line so the opening reads as a road, not a void.
     final midY = size.y * 0.55;
     canvas.drawRect(
       Rect.fromLTWH(2, midY, size.x - 4, 2),
       Paint()..color = const Color(0xFF88AACC).withValues(alpha: 0.18),
+    );
+  }
+
+  /// Dense treeline so a locked south road does not read as walkable grass.
+  void _paintThicket(Canvas canvas) {
+    final rng = math.Random(destLevel * 97 + size.x.toInt());
+    canvas.drawRect(
+      Rect.fromLTWH(0, size.y * 0.12, size.x, size.y * 0.88),
+      Paint()..color = const Color(0xFF0A140C).withValues(alpha: 0.92),
+    );
+
+    final dark = Paint()..color = const Color(0xFF142818);
+    final mid = Paint()..color = const Color(0xFF1E3A24);
+    final tip = Paint()..color = const Color(0xFF2A4E30).withValues(alpha: 0.85);
+    for (var i = 0; i < 9; i++) {
+      final cx = size.x * (0.06 + i * 0.11) + (rng.nextDouble() - 0.5) * 6;
+      final base = size.y * (0.72 + rng.nextDouble() * 0.12);
+      final h = size.y * (0.55 + rng.nextDouble() * 0.35);
+      final w = 10.0 + rng.nextDouble() * 14;
+      final path = Path()
+        ..moveTo(cx - w * 0.55, base)
+        ..lineTo(cx, base - h)
+        ..lineTo(cx + w * 0.55, base)
+        ..close();
+      canvas.drawPath(path, i.isEven ? dark : mid);
+      canvas.drawCircle(Offset(cx, base - h * 0.35), w * 0.42, tip);
+    }
+    // Soft vignette so it blends into the bordering forest tiles.
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, size.x, size.y * 0.2),
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            const Color(0xFF0A140C).withValues(alpha: 0),
+            const Color(0xFF0A140C).withValues(alpha: 0.55),
+          ],
+        ).createShader(Rect.fromLTWH(0, 0, size.x, size.y * 0.2)),
     );
   }
 }

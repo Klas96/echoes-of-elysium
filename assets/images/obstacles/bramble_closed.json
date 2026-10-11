@@ -12,15 +12,15 @@
  "ability": "SCENT",
  "collision": [
   [
-   5,
-   39,
-   52,
-   22
+   4,
+   16,
+   56,
+   46
   ]
  ],
  "interaction": {
   "x": 32,
-  "y": 63,
+  "y": 20,
   "radius": 24
  },
  "state": "closed",
@@ -29,5 +29,5 @@
  "passage": null,
  "visual_gap_x": null,
  "anim": null,
- "note": "both 64x64 on one canvas/palette: swap image + collision in place. Open: the side clumps collide on x<16 and x>=48, so the middle tile (x 16-48) is walkable; the foliage overlaps that tile visually by a few px on each side (the visible gap is ~16 px), which reads fine with a feet-sized hitbox"
+ "note": "Closed: solid from mid-north through the south row so the north trail can still stand at the interact point, but cannot step through into the fragment pocket (the old y=39 feet strip was walkable from above). Open: side clumps only (see bramble_open.json)."
 }

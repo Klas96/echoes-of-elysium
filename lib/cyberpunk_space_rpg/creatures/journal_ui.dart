@@ -66,7 +66,7 @@ class NightTint extends StatelessWidget {
   }
 }
 
-/// Small HUD row: journal button, time of day, current companion.
+/// Small HUD row: menu, glimmer, time of day, current companion.
 class CreatureHud extends StatelessWidget {
   /// Icon-only buttons (narrow screens); labels stay for wide screens.
   final bool compact;
@@ -82,9 +82,7 @@ class CreatureHud extends StatelessWidget {
       runSpacing: 6,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        _PauseChip(compact: compact),
-        JournalButton(compact: compact),
-        EquipmentButton(compact: compact),
+        _MenuChip(compact: compact),
         ValueListenableBuilder<int>(
           valueListenable: Bonds.revision,
           builder: (_, __, ___) => _Chip(
@@ -225,40 +223,25 @@ class _Chip extends StatelessWidget {
       );
 }
 
-class _PauseChip extends StatelessWidget {
+/// Single entry for pause / journal / gear (opens the pause menu).
+class _MenuChip extends StatelessWidget {
   final bool compact;
-  const _PauseChip({this.compact = false});
+  const _MenuChip({this.compact = false});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: Pause.show,
       child: _Chip(
-        child: Text(compact ? 'II' : 'II  PAUSE',
-            style: const TextStyle(
-                color: Colors.white54,
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.5)),
-      ),
-    );
-  }
-}
-
-class JournalButton extends StatelessWidget {
-  final bool compact;
-  const JournalButton({super.key, this.compact = false});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => Journal.show(),
-      child: _Chip(
-        border: _teal.withValues(alpha: 0.5),
+        border: _teal.withValues(alpha: 0.45),
         child: compact
-            ? const Icon(Icons.menu_book_outlined, size: 13, color: _teal)
-            : Text(_isTouch ? 'JOURNAL' : 'J  JOURNAL',
-            style: const TextStyle(color: _teal, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
+            ? const Icon(Icons.menu, size: 13, color: _teal)
+            : Text(_isTouch ? 'MENU' : 'Esc  MENU',
+                style: const TextStyle(
+                    color: _teal,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.5)),
       ),
     );
   }

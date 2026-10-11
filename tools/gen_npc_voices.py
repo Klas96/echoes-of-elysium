@@ -102,6 +102,49 @@ LINES: dict[str, tuple[str, str]] = {
         "archivist",
         "The vote was a whisper. Let your waking of Gaia be louder — and kinder.",
     ),
+
+    # Asha — first meeting (legacy VO; regenerate when rewriting again)
+    "asha_1": (
+        "asha",
+        "Keep moving. Name's Asha — ex-UEC. I've seen what they do to people who find what you're looking for.",
+    ),
+    "asha_2": (
+        "asha",
+        "The portal leads to the old ruins. That's where Gaia's core memory is stored.",
+    ),
+    "asha_3": (
+        "asha",
+        "Watch yourself. Commander Voss personally authorized this hunt. You've already found something that scares them.",
+    ),
+    "asha_archive_1": (
+        "asha",
+        "I caught your Archive spike. A whisper of a vote — people becoming a world because the sun was dying.",
+    ),
+    "asha_archive_2": (
+        "asha",
+        "That is not the clean miracle Voss wants to erase, and not the weapon he fears. It is both. Carry that into the Core.",
+    ),
+    "asha_archive_3": (
+        "asha",
+        "Keep the override if you still have it. I deserted for a sympathetic AI. You may be walking toward a civilization.",
+    ),
+    "asha_archive_ack": (
+        "asha",
+        "Then we're still on the same side. Go. Make him hear a people — not a ghost story.",
+    ),
+    # Voss — first meeting (legacy VO)
+    "voss_1": (
+        "voss",
+        "Doctor Kaela Osei. You've caused considerable trouble. I'm giving you one final chance to walk away.",
+    ),
+    "voss_2": (
+        "voss",
+        'Whatever this "Gaia" has told you is fabrication. Alien interference in planetary governance cannot be permitted.',
+    ),
+    "voss_3": (
+        "voss",
+        "The Aetherians are a data corruption. Nothing more. Stand down — or be classified as a hostile element.",
+    ),
     # Asha — override held / orders read
     "asha_key_1": (
         "asha",
@@ -274,6 +317,12 @@ def synthesize(api_key: str, voice_id: str, text: str, dest: Path) -> None:
     if len(data) < 800:
         raise RuntimeError(f"short response for {dest.name}: {data[:200]!r}")
     dest.write_bytes(data)
+    try:
+        from normalize_voices import normalize_file
+
+        normalize_file(dest)
+    except Exception as e:
+        print(f"WARN normalize {dest.name}: {e}", file=sys.stderr)
 
 
 def main() -> int:

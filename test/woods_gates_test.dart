@@ -109,7 +109,7 @@ void main() {
       expect(GameState.objective.value, 'Friends of the Woods 0/3');
       Bonds.befriend('vinefox');
       expect(GameState.objective.value, 'Friends of the Woods 1/3');
-      Bonds.befriend('puffcap'); // optional, journal only
+      Bonds.befriend('puffcap'); // optional friend (HUSH), not a main-route gate
       expect(GameState.objective.value, 'Friends of the Woods 1/3');
       Bonds.befriend('glowmoth');
       Bonds.befriend('stoneturtle');

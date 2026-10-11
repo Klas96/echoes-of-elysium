@@ -38,14 +38,10 @@ class DayCycle {
     return 1 - ramp(0.18, 0.3, t);
   }
 
-  /// Screen tint: subtle blue at night, a warm hint at dawn and dusk.
+  /// Screen tint: cool blue at night only (no amber dawn/dusk wash).
   static Color tint(double t) {
     final n = darkness(t);
-    final warm = (1 - (n - 0.5).abs() * 2).clamp(0.0, 1.0) * (n > 0 ? 1 : 0);
-    const nightCol = Color(0xFF0A1236);
-    const duskCol = Color(0xFFFF8A4C);
-    final a = 0.46 * n;
-    final c = Color.lerp(nightCol, duskCol, warm * 0.55)!;
-    return c.withValues(alpha: (a + warm * 0.06).clamp(0.0, 0.5));
+    if (n <= 0) return const Color(0x00000000);
+    return const Color(0xFF0A1236).withValues(alpha: (0.46 * n).clamp(0.0, 0.5));
   }
 }

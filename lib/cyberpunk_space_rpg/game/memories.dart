@@ -11,6 +11,7 @@ import '../ui/cutscene_player.dart';
 import '../ui/cutscenes.dart';
 import 'adventure.dart';
 import 'game_state.dart';
+import 'keyboard_guard.dart';
 import 'pause.dart';
 import 'save_service.dart';
 
@@ -37,13 +38,26 @@ class Memories {
   /// Story flag for the Archivist's gift (fragment 4's source).
   static const archivistGiftFlag = 'archivistGift';
 
+  /// Short titles for the pause-menu collection browser.
+  static const titles = <int, String>{
+    1: 'The Edge of War',
+    2: 'Into the Lattice',
+    3: 'One Who Remembers',
+    4: 'Ships Across the Dark',
+    5: 'The Lost Child',
+  };
+
   static String idFor(int n) => 'memory$n';
+
+  static bool has(int n) => n >= 1 && n <= total && Cutscenes.seen(idFor(n));
+
+  static String titleFor(int n) => titles[n] ?? 'Memory $n';
 
   /// Memories found in this save (0..5), from the `cutscene:memoryN` flags.
   static int get found {
     var n = 0;
     for (var i = 1; i <= total; i++) {
-      if (Cutscenes.seen(idFor(i))) n++;
+      if (has(i)) n++;
     }
     return n;
   }
@@ -51,6 +65,12 @@ class Memories {
   static bool get allFound => found >= total;
 
   static String get progressLabel => '$found/$total';
+
+  /// Story-order list of memories already claimed (for the menu browser).
+  static List<int> get collected => [
+        for (var i = 1; i <= total; i++)
+          if (has(i)) i,
+      ];
 
   /// High-level where-to-look lines for memories still missing (Core warn UI).
   static List<String> get missingHints {
@@ -164,6 +184,14 @@ class Memories {
     }
   }
 
+  /// Replay a memory already in the collection (pause menu). No-op if missing
+  /// or no map is attached.
+  static Future<void> replay(int n) async {
+    final game = _game;
+    if (game == null || !has(n) || !game.context.mounted) return;
+    await play(game, n);
+  }
+
   /// Plays memory [n] over the running game: pauses the engine, closes any
   /// open dialogue, then resumes with the player standing still.
   static Future<void> play(BonfireGameInterface game, int n) async {
@@ -190,12 +218,15 @@ class Memories {
   /// reached the game: stop the player unless a movement key is still down.
   static void _settleControls(BonfireGameInterface game) {
     CustomPlayer.pendingShot.value = null;
-    final held = HardwareKeyboard.instance.logicalKeysPressed.any(_movementKeys.contains);
-    if (held) return;
+    KeyboardGuard.releaseAll();
     final player = game.player;
-    if (player is CustomPlayer) {
-      player.onJoystickChangeDirectional(
-          JoystickDirectionalEvent(directional: JoystickMoveDirectional.IDLE));
+    if (player is! CustomPlayer) return;
+    final held =
+        HardwareKeyboard.instance.logicalKeysPressed.any(_movementKeys.contains);
+    if (held) {
+      player.syncMovementFromKeyboard();
+    } else {
+      player.haltMovement();
     }
   }
 

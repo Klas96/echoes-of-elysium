@@ -22,6 +22,21 @@ void main() {
 
   CreatureSpecies sp(String id) => creatureSpecies[id]!;
 
+  group('abilities', () {
+    test('every woods creature has a distinct ability', () {
+      expect(sp('glowmoth').ability, Ability.light);
+      expect(sp('vinefox').ability, Ability.scent);
+      expect(sp('stoneturtle').ability, Ability.push);
+      expect(sp('brookling').ability, Ability.dig);
+      expect(sp('hushdeer').ability, Ability.trail);
+      expect(sp('puffcap').ability, Ability.hush);
+      expect(Ability.scent.description, contains('bramble'));
+      expect(Ability.dig.description, contains('buried'));
+      expect(Ability.trail.description, contains('glade'));
+      expect(Ability.hush.description, contains('drone'));
+    });
+  });
+
   group('bond conditions', () {
     test('glowmoth: night and a quiet approach', () {
       expect(checkBond(sp('glowmoth'), const BondContext(isNight: false)).ok, isFalse);
@@ -131,11 +146,12 @@ void main() {
       expect(Bonds.markSeen('glowmoth'), isFalse);
       Bonds.befriend('puffcap');
       expect(Bonds.active, 'puffcap', reason: 'first friend comes along');
+      expect(Bonds.has(Ability.hush), isTrue);
       Bonds.befriend('glowmoth');
-      expect(Bonds.active, 'glowmoth', reason: 'a friend with an ability replaces one without');
-      expect(Bonds.has(Ability.light), isTrue);
+      expect(Bonds.active, 'puffcap', reason: 'no auto swap between ability friends');
+      expect(Bonds.unlocked(Ability.light), isTrue);
       Bonds.befriend('stoneturtle');
-      expect(Bonds.active, 'glowmoth', reason: 'no auto swap between ability friends');
+      expect(Bonds.active, 'puffcap');
       expect(Bonds.unlocked(Ability.push), isTrue);
       expect(Bonds.has(Ability.push), isFalse);
       Bonds.setActive('stoneturtle');
@@ -143,7 +159,7 @@ void main() {
       Bonds.setActive('hushdeer'); // not befriended: ignored
       expect(Bonds.active, 'stoneturtle');
       expect(Bonds.befriendedCount, 3);
-      expect(SaveService.data.abilities, {'light', 'push'});
+      expect(SaveService.data.abilities, {'hush', 'light', 'push'});
     });
 
     test('items are carried, then given away', () {
@@ -172,6 +188,8 @@ void main() {
       expect(Bonds.isBefriended('vinefox'), isTrue);
       expect(Bonds.active, 'brookling');
       expect(Bonds.unlocked(Ability.scent), isTrue);
+      expect(Bonds.unlocked(Ability.dig), isTrue);
+      expect(Bonds.has(Ability.dig), isTrue, reason: 'brookling is active');
       expect(Bonds.secretDone('world:boulder:768_128'), isTrue);
       expect(Bonds.secretDone('world:hiddenpath:928_960'), isTrue);
       expect(Bonds.secretDone('world:glyph:0_0'), isFalse);
