@@ -1,9 +1,7 @@
 import 'package:bonfire/bonfire.dart';
 import 'package:flutter/material.dart';
 
-import '../components/ai_fragment.dart';
 import '../components/custom_player.dart';
-import '../components/npc_character.dart';
 import '../ui/cutscene_player.dart';
 import '../ui/cutscenes.dart';
 import 'game_input.dart';
@@ -48,11 +46,8 @@ class StoryBeats {
     if (_busy || Cutscenes.seen(id)) return;
     _busy = true;
     CustomPlayer.pendingShot.value = null;
-    final fromTalk = NpcCharacter.activeDialogue.value != null ||
-        AIFragment.activeDialogue.value != null;
     Pause.dismissDialogueForStory();
-    final wasPaused = game.paused;
-    if (!wasPaused) game.pauseEngine();
+    if (!game.paused) game.pauseEngine();
     const fade = Duration(milliseconds: 450);
     try {
       await Navigator.of(game.context).push(PageRouteBuilder<void>(
@@ -68,10 +63,13 @@ class StoryBeats {
       CustomPlayer.pendingShot.value = null;
       if (game.context.mounted) {
         if (!GameInput.overworldKeysEnabled) {
+          // archive_ash / memories inside a building — restore room WASD.
           GameInput.reclaim();
         } else {
+          // Always unpause the overworld after a story beat (wasPaused can
+          // stay true after nested pauses and leave Kaela frozen).
+          if (game.paused) game.resumeEngine();
           GameInput.reclaim();
-          if (!wasPaused || fromTalk) game.resumeEngine();
           GameInput.reclaim(releaseKeys: false);
         }
       }

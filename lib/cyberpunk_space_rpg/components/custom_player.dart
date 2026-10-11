@@ -12,6 +12,7 @@ import 'walk_sheet.dart';
 import 'building.dart';
 import 'muzzle_flash.dart';
 import '../audio/music_manager.dart';
+import '../creatures/interaction.dart';
 import '../game/progression.dart';
 import '../game/well_rested.dart';
 import '../interiors/room_services.dart';
@@ -166,6 +167,8 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
   Vector2? _moveGoal;
   /// Locked auto-attack target (drone / Sentinel). Chase then AA in range.
   GameComponent? _attackTarget;
+  /// Clicked talk/examine/use target — walk into range, then interact once.
+  _ClickUse? _useTarget;
 
   CustomPlayer(Vector2 position) : super(
     position: position,
@@ -339,6 +342,7 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
 
   void _clearClickOrders({bool keepAttack = false}) {
     _moveGoal = null;
+    _useTarget = null;
     if (!keepAttack) _attackTarget = null;
   }
 
@@ -366,7 +370,7 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
     _eWasPressed = ePressed;
   }
 
-  /// League-lite: click ground to move, click a foe to chase + auto-attack.
+  /// League-lite: click ground to move, foe to attack, person/object to use.
   /// WASD / virtual stick still work and cancel click-move.
   void _tickLeagueCombat(double dt) {
     _shootCooldown = max(0, _shootCooldown - dt);
@@ -378,6 +382,9 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
 
     if (_attackTarget != null && !_targetAlive(_attackTarget!)) {
       _attackTarget = null;
+    }
+    if (_useTarget != null && !_useTarget!.alive()) {
+      _useTarget = null;
     }
 
     // Manual move wins over click orders.
@@ -399,6 +406,22 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
       return;
     }
 
+    final use = _useTarget;
+    if (use != null) {
+      final dest = use.point();
+      final dist = origin.distanceTo(dest);
+      if (dist > use.radius) {
+        _moveGoal = dest;
+        _steerToward(dest);
+      } else {
+        _moveGoal = null;
+        _steerToward(null);
+        _useTarget = null;
+        use.run();
+      }
+      return;
+    }
+
     final goal = _moveGoal;
     if (goal == null) return;
     final to = goal - origin;
@@ -415,13 +438,91 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
     final world = _screenToWorld(screenPos);
     final foe = _hostileNear(world, clickEnemyRadius);
     if (foe != null) {
+      _useTarget = null;
       _attackTarget = foe;
       _moveGoal = _targetCenter(foe);
       return;
     }
-    // Ground click: move, cancel attack (LoL right-click empty ground).
+    final use = _useNear(world);
+    if (use != null) {
+      _attackTarget = null;
+      _useTarget = use;
+      _moveGoal = use.point();
+      return;
+    }
+    // Ground click: move, cancel attack/use.
     _attackTarget = null;
+    _useTarget = null;
     _moveGoal = world;
+  }
+
+  _ClickUse? _useNear(Vector2 world) {
+    if (!hasGameRef) return null;
+
+    // Interactables (examine, doors, gates, creatures, glyphs…).
+    final flame = findGame();
+    if (flame == null) return null;
+    final hit = Interaction.atWorld(world, game: flame, clickRadius: 42);
+    if (hit != null) {
+      final p = hit.prompt;
+      if (!p.enabled) {
+        // Still walk over so the note/prompt can show.
+        return _ClickUse(
+          point: () => hit.interactPoint,
+          radius: hit.interactRadius * 0.85,
+          alive: () => hit.isMounted,
+          run: () {},
+        );
+      }
+      return _ClickUse(
+        point: () => hit.interactPoint,
+        radius: hit.interactRadius * 0.85,
+        alive: () => hit.isMounted,
+        run: hit.interact,
+      );
+    }
+
+    // NPCs / AI fragments use their own nearby system (not Interactable).
+    NpcCharacter? bestNpc;
+    var bestD = 42.0;
+    for (final n in gameRef.query<NpcCharacter>()) {
+      if (!n.isMounted) continue;
+      final d = (n.position + n.size / 2).distanceTo(world);
+      if (d < bestD) {
+        bestD = d;
+        bestNpc = n;
+      }
+    }
+    if (bestNpc != null) {
+      final npc = bestNpc;
+      return _ClickUse(
+        point: () => npc.position + npc.size / 2,
+        radius: 56,
+        alive: () => npc.isMounted,
+        run: npc.interact,
+      );
+    }
+
+    AIFragment? bestFrag;
+    bestD = 42;
+    for (final f in gameRef.query<AIFragment>()) {
+      if (!f.isMounted) continue;
+      final d = (f.position + f.size / 2).distanceTo(world);
+      if (d < bestD) {
+        bestD = d;
+        bestFrag = f;
+      }
+    }
+    if (bestFrag != null) {
+      final frag = bestFrag;
+      return _ClickUse(
+        point: () => frag.position + frag.size / 2,
+        radius: 40,
+        alive: () => frag.isMounted,
+        run: frag.interact,
+      );
+    }
+    return null;
   }
 
   Vector2 _screenToWorld(Vector2 screen) {
@@ -606,4 +707,19 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
       isKeyboard: true,
     ));
   }
+}
+
+/// Pending click-to-talk / examine / use order.
+class _ClickUse {
+  _ClickUse({
+    required this.point,
+    required this.radius,
+    required this.alive,
+    required this.run,
+  });
+
+  final Vector2 Function() point;
+  final double radius;
+  final bool Function() alive;
+  final void Function() run;
 }

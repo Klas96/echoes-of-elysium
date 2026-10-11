@@ -1049,8 +1049,8 @@ class IntroScreen extends StatelessWidget {
               Text(_isTouch
                       ? 'Joystick to move · tap TALK to interact · tap to shoot'
                       : kDebugMode
-                          ? 'Click move/attack · WASD optional · E interact · Esc menu · J journal · I gear · `'
-                          : 'Click move/attack · WASD optional · E interact · Esc menu · J journal · I gear',
+                          ? 'Click move/talk/examine · WASD optional · Esc menu · J journal · I gear · `'
+                          : 'Click move/talk/examine · WASD optional · Esc menu · J journal · I gear',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.white24, fontSize: 11, letterSpacing: 1.2)),
             ],

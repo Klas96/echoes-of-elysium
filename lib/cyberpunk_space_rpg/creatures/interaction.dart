@@ -84,6 +84,36 @@ class Interaction {
     touchHeld = false;
     touchTapped = false;
   }
+
+  /// Nearest mounted interactable under a world-space click (League-style).
+  ///
+  /// Uses [canFocus] only as a soft filter when true candidates exist; if the
+  /// click is on something that is merely out of E-range (room facing, etc.),
+  /// still return it so click-to-approach can walk Kaela over.
+  static Interactable? atWorld(
+    Vector2 world, {
+    required Object game,
+    double clickRadius = 40,
+  }) {
+    Interactable? bestFocus;
+    Interactable? bestAny;
+    var bestFocusD = clickRadius;
+    var bestAnyD = clickRadius;
+    for (final i in registry) {
+      if (!i.isMounted) continue;
+      if (!identical(i.findGame(), game)) continue;
+      final d = i.interactPoint.distanceTo(world);
+      if (d <= bestAnyD) {
+        bestAnyD = d;
+        bestAny = i;
+      }
+      if (i.canFocus && d <= bestFocusD) {
+        bestFocusD = d;
+        bestFocus = i;
+      }
+    }
+    return bestFocus ?? bestAny;
+  }
 }
 
 /// Picks the focused interactable each frame and runs tap/hold input

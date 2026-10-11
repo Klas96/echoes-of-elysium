@@ -8,7 +8,7 @@ import 'keyboard_guard.dart';
 ///
 /// Bonfire only dispatches keys while its [FocusNode] has primary focus;
 /// cutscenes/rooms steal that. [reclaim] asks for focus back; [_onKey] still
-/// drives Kaela from [HardwareKeyboard] when the overworld is live.
+/// drives movement from [HardwareKeyboard] when focus is wrong.
 class GameInput {
   GameInput._();
 
@@ -16,12 +16,15 @@ class GameInput {
 
   static bool _installed = false;
 
-  /// False while an interior room owns the screen — do not steer the
-  /// paused overworld player or steal focus from the room Bonfire.
+  /// False while an interior room owns the screen — steer the room player
+  /// via [syncAlternateKeys] instead of the paused overworld Kaela.
   static bool overworldKeysEnabled = true;
 
-  /// Set by [Interiors] so memory cutscenes can return keys to the room.
+  /// Set by [Interiors] so cutscenes can return keys to the room Bonfire.
   static void Function()? reclaimAlternate;
+
+  /// WASD sync for the active room player (no Bonfire focus required).
+  static void Function()? syncAlternateKeys;
 
   static final _moveKeys = {
     LogicalKeyboardKey.arrowUp,
@@ -47,8 +50,11 @@ class GameInput {
       HardwareKeyboard.instance.logicalKeysPressed.any(_isMove);
 
   static bool _onKey(KeyEvent event) {
-    if (!overworldKeysEnabled) return false;
     if (!_isMove(event.logicalKey)) return false;
+    if (!overworldKeysEnabled) {
+      syncAlternateKeys?.call();
+      return false;
+    }
     final player = CustomPlayer.current;
     if (player == null || !player.isMounted || player.isRespawning) return false;
     // Sync stick from keys only — never haltMovement() here (that cancels

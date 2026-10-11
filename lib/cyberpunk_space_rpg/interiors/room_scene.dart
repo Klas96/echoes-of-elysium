@@ -42,6 +42,9 @@ class Interiors {
   /// Bonfire focus inside a room (separate from [GameInput.focusNode]).
   static final roomFocus = FocusNode(debugLabel: 'roomInput');
 
+  /// Live room Bonfire (for resume after archive_ash / memory overlays).
+  static BonfireGameInterface? roomGame;
+
   static const rooms = [
     'tea_house',
     'noodle_shop',
@@ -50,12 +53,66 @@ class Interiors {
     'pond_grotto',
   ];
 
+  /// Click talk/examine indoors (spots + NPCs). Walks Kaela over if needed.
+  static void handleRoomClick(BonfireGameInterface game, Vector2 screen) {
+    final player = RoomPlayer.current;
+    if (player == null || !player.isMounted || !player.hasGameRef) return;
+    final cam = game.camera.viewfinder.position;
+    final center = game.size / 2;
+    final zoom = game.camera.viewfinder.zoom;
+    final world = cam + (screen - center) / zoom;
+    final flame = player.findGame();
+    if (flame == null) return;
+    final hit = Interaction.atWorld(world, game: flame, clickRadius: 48);
+    if (hit != null && hit.prompt.enabled) {
+      final dist = player.position.distanceTo(hit.interactPoint - player.size / 2);
+      // Close enough: use now. Otherwise nudge toward the spot (simple step).
+      if (dist <= hit.interactRadius + 8) {
+        hit.interact();
+      } else {
+        // Walk a bit toward it; user can click again — rooms are small.
+        final dest = hit.interactPoint - player.size / 2;
+        final step = (dest - player.position);
+        if (step.length > 1) {
+          player.position += step.normalized() * min(48, step.length);
+        }
+        if (player.position.distanceTo(dest) <= hit.interactRadius) {
+          hit.interact();
+        }
+      }
+      return;
+    }
+    for (final n in player.gameRef.query<RoomNpcSprite>()) {
+      if (!n.isMounted) continue;
+      final c = n.position + n.size / 2;
+      if (c.distanceTo(world) > 40) continue;
+      n.interact();
+      return;
+    }
+  }
+
   static void _reclaimRoomKeys() {
     KeyboardGuard.releaseAll();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    void apply() {
       if (roomFocus.context != null && roomFocus.canRequestFocus) {
         roomFocus.requestFocus();
       }
+      final g = roomGame;
+      // Cutscenes leave the room paused under an open panel; if nothing is
+      // holding it, start ticking again so WASD can move Kaela.
+      if (g != null && g.paused && !RoomPanel.isOpen && !Journal.open.value) {
+        g.resumeEngine();
+      }
+      RoomPlayer.current?.syncMovementFromKeyboard();
+    }
+
+    apply();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      apply();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        apply();
+        Future<void>.delayed(const Duration(milliseconds: 500), apply);
+      });
     });
   }
 
@@ -138,6 +195,7 @@ class Interiors {
       current.value = room;
       GameInput.overworldKeysEnabled = false;
       GameInput.reclaimAlternate = _reclaimRoomKeys;
+      GameInput.syncAlternateKeys = () => RoomPlayer.current?.syncMovementFromKeyboard();
       try {
         if (!context.mounted) return;
         await Navigator.of(context).push(_route(room, fade));
@@ -152,8 +210,10 @@ class Interiors {
         RoomPanel.close();
         Interaction.reset();
         _placeOutside(outside, front);
+        roomGame = null;
         GameInput.overworldKeysEnabled = true;
         GameInput.reclaimAlternate = null;
+        GameInput.syncAlternateKeys = null;
         if (game.context.mounted) {
           if (outside != null && outside.isMounted) game.camera.moveToPlayer();
           // Always unpause if we paused on the way in (a memory played inside
@@ -164,8 +224,10 @@ class Interiors {
         SaveService.requestAutosave();
       }
     } finally {
+      roomGame = null;
       GameInput.overworldKeysEnabled = true;
       GameInput.reclaimAlternate = null;
+      GameInput.syncAlternateKeys = null;
       _busy = false;
     }
   }
@@ -267,7 +329,15 @@ class _RoomScreenState extends State<RoomScreen> {
           final fit = min(box.maxWidth / room.widthPx, box.maxHeight / room.heightPx);
           final zoom = fit.clamp(1.5, 3.0).toDouble();
           return Stack(children: [
-            BonfireWidget(
+            GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTapDown: (d) {
+                if (RoomPanel.isOpen || Journal.open.value) return;
+                final g = _game;
+                if (g == null) return;
+                Interiors.handleRoomClick(g, Vector2(d.localPosition.dx, d.localPosition.dy));
+              },
+              child: BonfireWidget(
               focusNode: Interiors.roomFocus,
               autofocus: true,
               map: EmptyWorldMap(size: Vector2(room.widthPx - 1, room.heightPx - 1)),
@@ -295,9 +365,10 @@ class _RoomScreenState extends State<RoomScreen> {
               cameraConfig: CameraConfig(moveOnlyMapArea: true, zoom: zoom),
               onReady: (g) {
                 _game = g;
+                Interiors.roomGame = g;
                 g.camera.moveToPlayer();
               },
-            ),
+            )),
             const _WarmVignette(),
             Positioned(
               top: 12,
@@ -376,6 +447,9 @@ class RoomPlayer extends SimplePlayer with BlockMovementCollision, InstantFacing
   double _step = 0;
   JogSheet? _jog;
 
+  /// Indoors Kaela — [GameInput] steers her when Bonfire loses focus.
+  static RoomPlayer? current;
+
   static const baseSpeed = CustomPlayer.sizePlayer * 2.5;
 
   RoomPlayer(this.room, {required this.onDoormat})
@@ -396,6 +470,7 @@ class RoomPlayer extends SimplePlayer with BlockMovementCollision, InstantFacing
 
   @override
   Future<void> onLoad() async {
+    current = this;
     paint.filterQuality = FilterQuality.none;
     _jog = await JogSheet.load();
     animation = _jog!.animation;
@@ -407,8 +482,58 @@ class RoomPlayer extends SimplePlayer with BlockMovementCollision, InstantFacing
   }
 
   @override
+  void onRemove() {
+    if (identical(current, this)) current = null;
+    super.onRemove();
+  }
+
+  /// Focus-independent WASD (same mapping as overworld [CustomPlayer]).
+  void syncMovementFromKeyboard() {
+    final keys = HardwareKeyboard.instance.logicalKeysPressed;
+    final up = keys.contains(LogicalKeyboardKey.keyW) ||
+        keys.contains(LogicalKeyboardKey.arrowUp);
+    final down = keys.contains(LogicalKeyboardKey.keyS) ||
+        keys.contains(LogicalKeyboardKey.arrowDown);
+    final left = keys.contains(LogicalKeyboardKey.keyA) ||
+        keys.contains(LogicalKeyboardKey.arrowLeft);
+    final right = keys.contains(LogicalKeyboardKey.keyD) ||
+        keys.contains(LogicalKeyboardKey.arrowRight);
+
+    final JoystickMoveDirectional dir;
+    if (up && left) {
+      dir = JoystickMoveDirectional.MOVE_UP_LEFT;
+    } else if (up && right) {
+      dir = JoystickMoveDirectional.MOVE_UP_RIGHT;
+    } else if (down && left) {
+      dir = JoystickMoveDirectional.MOVE_DOWN_LEFT;
+    } else if (down && right) {
+      dir = JoystickMoveDirectional.MOVE_DOWN_RIGHT;
+    } else if (up) {
+      dir = JoystickMoveDirectional.MOVE_UP;
+    } else if (down) {
+      dir = JoystickMoveDirectional.MOVE_DOWN;
+    } else if (left) {
+      dir = JoystickMoveDirectional.MOVE_LEFT;
+    } else if (right) {
+      dir = JoystickMoveDirectional.MOVE_RIGHT;
+    } else {
+      dir = JoystickMoveDirectional.IDLE;
+    }
+
+    onJoystickChangeDirectional(JoystickDirectionalEvent(
+      directional: dir,
+      intensity: dir == JoystickMoveDirectional.IDLE ? 0.0 : 1.0,
+      isKeyboard: true,
+    ));
+  }
+
+  @override
   void update(double dt) {
     speed = baseSpeed * Meals.speedMultiplier;
+    // Cutscenes steal Bonfire focus; keep stick locked to held keys.
+    if (!RoomPanel.isOpen && !Journal.open.value) {
+      syncMovementFromKeyboard();
+    }
     super.update(dt);
     _jog?.setSpeed(velocity.length);
     Meals.tick(dt);
@@ -434,8 +559,9 @@ class RoomPlayer extends SimplePlayer with BlockMovementCollision, InstantFacing
 
 /// A room NPC standing idle (faces Kaela when she is close).
 class RoomNpcSprite extends SimpleNpc {
+  final RoomData room;
   final RoomNpc npc;
-  RoomNpcSprite(RoomData room, this.npc)
+  RoomNpcSprite(this.room, this.npc)
       : super(
           position: room.tilePx(npc.tx, npc.ty),
           size: Vector2.all(NpcCharacter.npcSize),
@@ -466,6 +592,23 @@ class RoomNpcSprite extends SimpleNpc {
       lastDirection = d;
       if (d == Direction.left || d == Direction.right) lastDirectionHorizontal = d;
       idle();
+    }
+  }
+
+  /// Click-to-talk: run the matching interact spot (id = name / role).
+  void interact() {
+    if (RoomPanel.isOpen) return;
+    for (final s in room.spots) {
+      if (s.id == npc.name || s.id == npc.role) {
+        useSpot(room, s);
+        return;
+      }
+    }
+    for (final s in room.spots) {
+      if (s.kind == 'npc' || s.kind == 'errand') {
+        useSpot(room, s);
+        return;
+      }
     }
   }
 }
@@ -543,21 +686,12 @@ class RoomSpotComponent extends GameComponent with Interactable {
 
   @override
   bool get canFocus {
-    final p = _player;
-    if (p == null || RoomPanel.isOpen) return false;
-    final (tx, ty) = p.tile;
-    final step = room.stepInto(spot.rect, tx, ty);
-    return step != null && facing(p.lastDirection, step);
+    // Distance is handled by InteractionManager / click radius — no facing gate.
+    return _player != null && !RoomPanel.isOpen;
   }
 
-  /// Closest point of the rect to Kaela, so the nearest spot wins.
   @override
-  Vector2 get interactPoint {
-    final p = _player;
-    if (p == null) return absoluteCenter;
-    final f = p.position + p.size / 2;
-    return Vector2(f.x.clamp(position.x, position.x + size.x), f.y.clamp(position.y, position.y + size.y));
-  }
+  Vector2 get interactPoint => absoluteCenter;
 
   @override
   double get interactRadius => room.tile * 2.0;
