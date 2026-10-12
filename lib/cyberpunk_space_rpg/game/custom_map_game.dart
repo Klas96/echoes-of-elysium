@@ -42,6 +42,8 @@ import '../ui/mmo_feedback.dart';
 import '../ui/quest_board_ui.dart';
 import '../ui/shop_ui.dart';
 import 'adventure.dart';
+import 'click_pathfinder.dart';
+import 'debug_walk_grid.dart';
 import 'game_debug.dart';
 import 'game_input.dart';
 import 'game_state.dart';
@@ -1047,10 +1049,10 @@ class IntroScreen extends StatelessWidget {
               ),
               SizedBox(height: compact ? 12 : 20),
               Text(_isTouch
-                      ? 'Joystick to move · tap TALK to interact · tap to shoot'
+                      ? 'Tap to move · tap to talk/examine · WASD optional'
                       : kDebugMode
-                          ? 'Click move/talk/examine · WASD optional · Esc menu · J journal · I gear · `'
-                          : 'Click move/talk/examine · WASD optional · Esc menu · J journal · I gear',
+                          ? 'Click pathfind/talk · WASD · Esc menu · J journal · I gear · `'
+                          : 'Click pathfind/talk · WASD · Esc menu · J journal · I gear',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.white24, fontSize: 11, letterSpacing: 1.2)),
             ],
@@ -1335,8 +1337,20 @@ Future<void> _leaveMap({String? nextMapId}) async {
 
 /// onReady for every map: restore the objective on CONTINUE, otherwise start
 /// the level fresh and save the transition.
-void _startLevel(BonfireGameInterface game, int level) {
+/// Tiled map asset for pathfinding wall primes (see [ClickPathfinder.primeFromAsset]).
+String _mapAssetForLevel(int level) => switch (level) {
+      1 => 'maps/world.tmj',
+      2 => 'maps/world2.tmj',
+      3 => 'maps/world3.tmj',
+      4 => 'maps/world4.tmj',
+      5 => 'maps/world5.tmj',
+      _ => 'maps/world.tmj',
+    };
+
+Future<void> _startLevel(BonfireGameInterface game, int level) async {
   _onMapReady(game);
+  // Walls from TMJ (complete) so click-paths go around forests, not through.
+  await ClickPathfinder.primeFromAsset(_mapAssetForLevel(level));
   SaveService.snapshot = _snapshot;
   // Companions stay home: the region on screen decides who follows.
   final arrivedFrom = Regions.previous;
@@ -1565,15 +1579,16 @@ void _onMapReady(BonfireGameInterface game) {
   // Do NOT releaseAll here: walking off a map while holding WASD would drop
   // Flutter's pressed set while the OS key is still down. Reclaim focus + sync.
   GameInput.reclaim(releaseKeys: false);
+  // Pathfinding walk grid (visible only while DEBUG is on).
+  for (final g in game.query<DebugWalkGrid>()) {
+    g.removeFromParent();
+  }
+  game.add(DebugWalkGrid());
 }
 
-// Joystick + keyboard (WASD and arrows) both feed Bonfire's movement, which
-// applies speed * dt. Only the movement keys are accepted so other keys
-// (` for debug, E to interact) still reach the rest of the app.
+// Keyboard (WASD / arrows) only — click/tap pathfinding is the pointer move.
+// Accepted keys stay empty so E / ` / Esc still reach the app.
 List<PlayerController> _playerControllers() => [
-      Joystick(
-          directional: JoystickDirectional(
-              size: HudLayout.joystickSize, margin: HudLayout.joystickMargin)),
       Keyboard(
         config: KeyboardConfig(
           directionalKeys: [
@@ -1622,8 +1637,8 @@ class CustomMapGameScreen extends StatelessWidget {
                   _PortalOverlay(game: game, fromLevel: 1),
               'edgeTravel': (ctx, game) => _EdgeTravelOverlay(game: game),
             },
-            onReady: (game) {
-              _startLevel(game, 1);
+            onReady: (game) async {
+              await _startLevel(game, 1);
               MusicManager().play('assets/audio/music/Whispering_Pines.mp3');
             },
           )),
@@ -1680,8 +1695,8 @@ class Map2GameScreen extends StatelessWidget {
               'portalTown': (ctx, game) => _TownPortalOverlay(game: game),
               'edgeTravel': (ctx, game) => _EdgeTravelOverlay(game: game),
             },
-            onReady: (game) {
-              _startLevel(game, 2);
+            onReady: (game) async {
+              await _startLevel(game, 2);
               MusicManager().play('assets/audio/music/Neon_Shadows.mp3');
             },
           )),
@@ -1742,8 +1757,8 @@ class Map3GameScreen extends StatelessWidget {
                     _PortalOverlay(game: game, fromLevel: 3),
                 'edgeTravel': (ctx, game) => _EdgeTravelOverlay(game: game),
               },
-              onReady: (game) {
-                _startLevel(game, 3);
+              onReady: (game) async {
+                await _startLevel(game, 3);
                 MusicManager().play('assets/audio/music/Neon_Mirage.mp3');
               },
             ),
@@ -1799,8 +1814,8 @@ class Map4GameScreen extends StatelessWidget {
                     _PortalOverlay(game: game, fromLevel: 4),
                 'edgeTravel': (ctx, game) => _EdgeTravelOverlay(game: game),
               },
-              onReady: (game) {
-                _startLevel(game, 4);
+              onReady: (game) async {
+                await _startLevel(game, 4);
                 MusicManager().play('assets/audio/music/Echoes_of_the Deep_Mine.mp3');
               },
             ),
@@ -1856,8 +1871,8 @@ class Map5GameScreen extends StatelessWidget {
                     _PortalOverlay(game: game, fromLevel: 5),
                 'edgeTravel': (ctx, game) => _EdgeTravelOverlay(game: game),
               },
-              onReady: (game) {
-                _startLevel(game, 5);
+              onReady: (game) async {
+                await _startLevel(game, 5);
                 MusicManager().play('assets/audio/music/Neon_Mirage.mp3');
               },
             ),

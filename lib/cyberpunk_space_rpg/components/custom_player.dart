@@ -1,7 +1,7 @@
 import 'package:bonfire/bonfire.dart';
+import 'package:bonfire/util/collision_game_component.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:bonfire/util/collision_game_component.dart';
 import 'dart:math';
 import 'ai_fragment.dart';
 import 'npc_character.dart';
@@ -13,6 +13,9 @@ import 'building.dart';
 import 'muzzle_flash.dart';
 import '../audio/music_manager.dart';
 import '../creatures/interaction.dart';
+import '../game/click_pathfinder.dart';
+import '../game/debug_path_line.dart';
+import '../game/game_debug.dart';
 import '../game/progression.dart';
 import '../game/well_rested.dart';
 import '../interiors/room_services.dart';
@@ -43,7 +46,9 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
 
   /// Auto-attack range (world px) — close mid-range like a LoL marksman.
   static const double attackRange = 170;
-  static const double clickArrive = 10;
+  /// Arrive radius — a bit generous so wall-adjacent waypoint centers that
+  /// feet can't quite reach don't grind forever.
+  static const double clickArrive = 14;
   static const double clickEnemyRadius = 36;
 
   // --- Calm gameplay: no game over, gentle regen -------------------------
@@ -169,6 +174,19 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
   GameComponent? _attackTarget;
   /// Clicked talk/examine/use target — walk into range, then interact once.
   _ClickUse? _useTarget;
+  /// Repath timer while chasing a moving foe / use target (seconds).
+  double _pathRepathT = 0;
+  /// True when click-move fell back to straight steer (no A* path).
+  bool _steerFallback = false;
+  /// A* waypoints (tile centers). We walk these ourselves — Bonfire's
+  /// [PathFinding] mixin often fails to stop (stopMove no-ops when idle).
+  final List<Vector2> _waypoints = [];
+  int _wpIndex = 0;
+  DebugPathLine? _pathLine;
+  bool get _isPathing => _waypoints.isNotEmpty;
+  /// Progress watchdog: distance to current waypoint last frame / time stuck.
+  double _wpLastDist = double.infinity;
+  double _wpStuckT = 0;
 
   CustomPlayer(Vector2 position) : super(
     position: position,
@@ -264,9 +282,18 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
     super.onBlockedMovement(other, collisionData);
     // After super, velocity is what's left once the into-wall part is
     // removed: near zero means we're pushing straight into the wall.
+    final jammed = velocity.length < speed * 0.2;
     if ((other is TileWithCollision || other is CollisionMapComponent || other is Building) &&
-        velocity.length < speed * 0.2) {
+        jammed) {
       _blockedTimer = 0.1;
+    }
+    // Sliding along a wall is normal (WASD does it). Only bail if we've
+    // been jammed on the *same* waypoint with no progress — the follow
+    // watchdog handles that; here just nudge to the next point.
+    if (jammed && _isPathing && _wpIndex < _waypoints.length - 1) {
+      _wpIndex++;
+      _wpStuckT = 0;
+      _wpLastDist = double.infinity;
     }
   }
 
@@ -311,7 +338,8 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
   }
 
   void _updateFootsteps(double dt) {
-    final moving = _moveKeysHeld || _touchStick || _joystickMoving;
+    final moving =
+        _moveKeysHeld || _touchStick || _joystickMoving || _isPathing;
     if (moving && !isBlocked) {
       _footstepTimer -= dt;
       if (_footstepTimer <= 0) {
@@ -333,17 +361,60 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
       syncMovementFromKeyboard();
       return;
     }
-    // Click-move / chase owns the stick while active.
-    if (_moveGoal != null || _attackTarget != null) return;
+    // Click-move / chase / A* path owns locomotion while active.
+    if (_moveGoal != null ||
+        _attackTarget != null ||
+        _useTarget != null ||
+        _isPathing) {
+      return;
+    }
     if (_keyboardStick || _joystickMoving) {
       haltMovement();
     }
   }
 
   void _clearClickOrders({bool keepAttack = false}) {
+    _clearPath(stop: false);
     _moveGoal = null;
     _useTarget = null;
+    _steerFallback = false;
+    _pathRepathT = 0;
     if (!keepAttack) _attackTarget = null;
+  }
+
+  void _clearPath({bool stop = true}) {
+    _waypoints.clear();
+    _wpIndex = 0;
+    _wpStuckT = 0;
+    _wpLastDist = double.infinity;
+    _removePathLine();
+    if (stop) _steerToward(null);
+  }
+
+  void _removePathLine() {
+    _pathLine?.removeFromParent();
+    _pathLine = null;
+  }
+
+  /// Cyan route while [GameDebug] is on (includes steer-fallback straight line).
+  void _showDebugPath(List<Vector2> points) {
+    _removePathLine();
+    if (!GameDebug.isOn || !hasGameRef) return;
+    if (points.isEmpty) return;
+    gameRef.add(
+      _pathLine = DebugPathLine(
+        points: List<Vector2>.from(points),
+        origin: () => rectCollision.centerVector2,
+      ),
+    );
+  }
+
+  /// End click-move cleanly — zero velocity + idle anim (no leftover jog).
+  void _finishClickMove() {
+    _clearPath(stop: true);
+    _moveGoal = null;
+    _steerFallback = false;
+    stopMove(forceIdle: true);
   }
 
   /// Hard stop — clears stick flags and Bonfire velocity (menus / lost keys).
@@ -370,10 +441,11 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
     _eWasPressed = ePressed;
   }
 
-  /// League-lite: click ground to move, foe to attack, person/object to use.
-  /// WASD / virtual stick still work and cancel click-move.
+  /// League-lite: click/tap ground to move (A* around walls), foe to attack,
+  /// person/object to use. WASD cancels click-move.
   void _tickLeagueCombat(double dt) {
     _shootCooldown = max(0, _shootCooldown - dt);
+    _pathRepathT = max(0, _pathRepathT - dt);
     final tap = pendingClick.value;
     if (tap != null) {
       pendingClick.value = null;
@@ -382,9 +454,11 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
 
     if (_attackTarget != null && !_targetAlive(_attackTarget!)) {
       _attackTarget = null;
+      _clearPath();
     }
     if (_useTarget != null && !_useTarget!.alive()) {
       _useTarget = null;
+      _clearPath();
     }
 
     // Manual move wins over click orders.
@@ -393,14 +467,27 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
     final origin = position + size / 2;
 
     if (_attackTarget != null) {
-      final tc = _targetCenter(_attackTarget!);
+      final foe = _attackTarget!;
+      final tc = _targetCenter(foe);
       final dist = origin.distanceTo(tc);
       if (dist > attackRange) {
         _moveGoal = tc;
-        _steerToward(tc);
+        if (_steerFallback) {
+          _steerToward(tc);
+        } else if (!_isPathing ||
+            _pathRepathT <= 0 ||
+            (_moveGoal != null && _moveGoal!.distanceTo(tc) > 48)) {
+          _pathRepathT = 0.7;
+          _pathTo(tc);
+        } else {
+          _followWaypoints(origin, dt);
+        }
       } else {
+        _clearPath();
         _moveGoal = null;
-        _steerToward(null); // stop for AA
+        _steerFallback = false;
+        _steerToward(null);
+        stopMove(forceIdle: true);
         _tryAutoAttack(origin, tc);
       }
       return;
@@ -412,10 +499,20 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
       final dist = origin.distanceTo(dest);
       if (dist > use.radius) {
         _moveGoal = dest;
-        _steerToward(dest);
+        if (_steerFallback) {
+          _steerToward(dest);
+        } else if (!_isPathing || _pathRepathT <= 0) {
+          _pathRepathT = 0.8;
+          _pathTo(dest);
+        } else {
+          _followWaypoints(origin, dt);
+        }
       } else {
+        _clearPath();
         _moveGoal = null;
+        _steerFallback = false;
         _steerToward(null);
+        stopMove(forceIdle: true);
         _useTarget = null;
         use.run();
       }
@@ -426,10 +523,14 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
     if (goal == null) return;
     final to = goal - origin;
     if (to.length <= clickArrive) {
-      _moveGoal = null;
-      _steerToward(null);
-    } else {
+      _finishClickMove();
+    } else if (_steerFallback) {
       _steerToward(goal);
+    } else if (_isPathing) {
+      _followWaypoints(origin, dt);
+    } else {
+      // Path drained without arrive — hard stop so she doesn't jog forever.
+      _finishClickMove();
     }
   }
 
@@ -438,22 +539,147 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
     final world = _screenToWorld(screenPos);
     final foe = _hostileNear(world, clickEnemyRadius);
     if (foe != null) {
+      _clearPath(stop: false);
       _useTarget = null;
+      _steerFallback = false;
       _attackTarget = foe;
       _moveGoal = _targetCenter(foe);
+      _pathRepathT = 0;
+      _pathTo(_moveGoal!);
       return;
     }
     final use = _useNear(world);
     if (use != null) {
+      _clearPath(stop: false);
       _attackTarget = null;
+      _steerFallback = false;
       _useTarget = use;
       _moveGoal = use.point();
+      _pathRepathT = 0;
+      _pathTo(_moveGoal!);
       return;
     }
-    // Ground click: move, cancel attack/use.
+    // Ground click: A* move, cancel attack/use.
     _attackTarget = null;
     _useTarget = null;
+    _steerFallback = false;
     _moveGoal = world;
+    _pathRepathT = 0;
+    _pathTo(world);
+  }
+
+  /// A* around collisions (LoL): off-screen walls count. Unreachable /
+  /// in-wall clicks walk to the closest reachable spot — never shove into
+  /// the obstacle.
+  void _pathTo(Vector2 world) {
+    if (!hasGameRef) return;
+    _clearPath(stop: false);
+    _moveGoal = world;
+    final origin = rectCollision.centerVector2;
+    final path = ClickPathfinder.find(gameRef, from: origin, to: world);
+    if (path.isEmpty) {
+      // Nowhere closer — stay put (LoL does not walk into the wall).
+      _steerFallback = false;
+      _moveGoal = null;
+      stopMove(forceIdle: true);
+      return;
+    }
+    _steerFallback = false;
+    // Actual stop point may be nearer than the raw click (wall / sealed).
+    _moveGoal = path.last;
+    _waypoints
+      ..clear()
+      ..addAll(path);
+    _wpIndex = _firstForwardWaypoint(origin);
+    // Remaining waypoints from current index (what she will actually walk).
+    _showDebugPath(_waypoints.sublist(_wpIndex));
+  }
+
+  /// Skip waypoints already near Kaela or behind her travel direction so the
+  /// first step faces the destination (not the start-tile center).
+  int _firstForwardWaypoint(Vector2 origin) {
+    if (_waypoints.isEmpty) return 0;
+    final goal = _waypoints.last;
+    final toGoal = goal - origin;
+    var i = 0;
+    while (i < _waypoints.length - 1) {
+      final toWp = _waypoints[i] - origin;
+      if (toWp.length <= clickArrive * 2.5) {
+        i++;
+        continue;
+      }
+      if (toGoal.length > 1 && toWp.dot(toGoal) < 0) {
+        i++;
+        continue;
+      }
+      break;
+    }
+    return i;
+  }
+
+  /// Step along [_waypoints]; hard-stops when the list is done.
+  void _followWaypoints(Vector2 origin, double dt) {
+    while (_wpIndex < _waypoints.length &&
+        origin.distanceTo(_waypoints[_wpIndex]) <= clickArrive) {
+      _wpIndex++;
+      _wpStuckT = 0;
+      _wpLastDist = double.infinity;
+    }
+    // If the current target slipped behind (repath / slide), advance.
+    if (_wpIndex < _waypoints.length - 1) {
+      final toWp = _waypoints[_wpIndex] - origin;
+      final toGoal = _waypoints.last - origin;
+      if (toGoal.length > 1 &&
+          toWp.length > clickArrive &&
+          toWp.dot(toGoal) < 0) {
+        _wpIndex++;
+        _wpStuckT = 0;
+        _wpLastDist = double.infinity;
+      }
+    }
+    if (_wpIndex >= _waypoints.length) {
+      if (_attackTarget != null || _useTarget != null) {
+        _clearPath();
+        _steerToward(null);
+        stopMove(forceIdle: true);
+      } else {
+        _finishClickMove();
+      }
+      return;
+    }
+    final dest = _waypoints[_wpIndex];
+    final dist = origin.distanceTo(dest);
+    // Not closing on this waypoint (wall in the way) — skip or stop.
+    if (dist >= _wpLastDist - 0.5) {
+      _wpStuckT += dt;
+    } else {
+      _wpStuckT = 0;
+    }
+    _wpLastDist = dist;
+    if (_wpStuckT > 0.35) {
+      if (_wpIndex < _waypoints.length - 1) {
+        _wpIndex++;
+        _wpStuckT = 0;
+        _wpLastDist = double.infinity;
+      } else {
+        _finishClickMove();
+        return;
+      }
+    }
+    if (_wpIndex >= _waypoints.length) {
+      _finishClickMove();
+      return;
+    }
+    _steerToward(_waypoints[_wpIndex]);
+    if (_pathLine != null) {
+      if (!GameDebug.isOn) {
+        _removePathLine();
+      } else {
+        _pathLine!.points = _waypoints.sublist(_wpIndex);
+      }
+    } else if (GameDebug.isOn && _isPathing) {
+      _showDebugPath(_waypoints.sublist(_wpIndex));
+    }
   }
 
   _ClickUse? _useNear(Vector2 world) {
@@ -645,7 +871,7 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
       _keyboardStick = moving;
       if (moving) _touchStick = false;
     } else {
-      // On-screen stick: cancel League click-move like WASD.
+      // Legacy on-screen stick (removed from HUD) — still cancel click-move.
       if (moving) {
         _clearClickOrders(keepAttack: false);
         _keyboardStick = false;

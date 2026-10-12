@@ -199,8 +199,13 @@ class WildCreature extends CreatureBody with Interactable {
 
   bool get _present => !species.nightOnly || DayCycle.night;
 
+  /// Wild befriend, or invite a befriended friend who isn't walking with you.
+  bool get _canInvite =>
+      Bonds.isBefriended(species.id) && Bonds.active != species.id;
+
   @override
-  bool get canFocus => !_hidden && alpha > 0.6 && !Bonds.isBefriended(species.id);
+  bool get canFocus =>
+      !_hidden && alpha > 0.6 && (!Bonds.isBefriended(species.id) || _canInvite);
 
   @override
   double get interactRadius => 46;
@@ -218,6 +223,7 @@ class WildCreature extends CreatureBody with Interactable {
 
   @override
   PromptInfo get prompt {
+    if (_canInvite) return const PromptInfo('SET AS COMPANION');
     final c = _check();
     if (!c.ok) return PromptInfo.note(c.note);
     return PromptInfo(c.label, hold: species.rule == BondRule.freeFromNet ? 1.4 : 1.0);
@@ -225,6 +231,20 @@ class WildCreature extends CreatureBody with Interactable {
 
   @override
   void interact() {
+    if (_canInvite) {
+      Bonds.setActive(species.id);
+      _happyFor = 1.6;
+      _target = null;
+      SfxManager().playChime();
+      final ab = species.ability;
+      GameToast.show(
+        'COMPANION · ${species.name}',
+        body: ab != null ? '${ab.label} · Walking with you' : 'Walking with you',
+        portrait: species.portraitAsset(''),
+        compact: true,
+      );
+      return;
+    }
     final c = _check();
     if (!c.ok || Bonds.isBefriended(species.id)) return;
     if (species.rule == BondRule.offerItem) Bonds.useItem(species.item!);

@@ -51,11 +51,12 @@ class GateArt {
   static const boulderRollFrames = 3;
   static const boulderRollFps = 10.0;
 
-  /// Closed: plug from below the north interact stand through the south row
-  /// (a thin mid strip left gaps). Open: full resting stone on the right
-  /// (matches opaque pixels of road_boulder_open.png — a smaller pad let
-  /// feet walk through the rock).
-  static const boulderClosedColliders = [Rect.fromLTWH(0, 18, 96, 42)];
+  /// Closed: solid plug across the art (y starts low enough that tile-row
+  /// under the rock, e.g. nook ~50,8, is not a free path corridor through
+  /// the sprite). Leave a thin north lip (~8px) for the south-exit push
+  /// stand. Open: full resting stone on the right (matches opaque pixels
+  /// of road_boulder_open.png — a smaller pad let feet walk through).
+  static const boulderClosedColliders = [Rect.fromLTWH(0, 8, 96, 52)];
   // Right-hand resting stone (a>180 ≈ x58–95); leave left two tiles as passage.
   static const boulderOpenColliders = [Rect.fromLTWH(58, 16, 38, 48)];
 
