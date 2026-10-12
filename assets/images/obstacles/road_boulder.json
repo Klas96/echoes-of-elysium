@@ -22,9 +22,9 @@
  "collision": [
   [
    0,
-   18,
+   8,
    96,
-   42
+   52
   ]
  ],
  "closed": {
@@ -32,9 +32,9 @@
   "collision": [
    [
     0,
-    18,
+    8,
     96,
-    42
+    52
    ]
   ],
   "boulder_bbox": [
@@ -44,14 +44,14 @@
    50
   ]
  },
-  "open": {
+ "open": {
   "file": "road_boulder_open.png",
   "collision": [
    [
-    58,
-    16,
-    38,
-    48
+    64,
+    30,
+    28,
+    26
    ]
   ],
   "passage": [
@@ -59,10 +59,10 @@
    64
   ],
   "boulder_bbox": [
-   58,
-   16,
-   96,
-   64
+   64,
+   30,
+   92,
+   56
   ]
  },
  "passage": [
@@ -70,5 +70,5 @@
   64
  ],
  "ground_decal": true,
- "note": "place on a 3-tile-wide dirt road (both 96x64, one scale/palette, bottom-aligned; swap image + collision). `collision` = closed state (full road width, all 3 tiles). Open: resting boulder matches boulder_bbox (was a smaller pad that let feet walk through the stone), passage = x 0-64 (the left two tiles). The dirt patch is a soft decal (woods dirt palette, alpha 0.8 in the middle fading to 0 toward its edges and the canvas border) so it blends into the road; the stones are opaque with outline + shadow. The open-state boulder is smaller than the closed one (as drawn in the source)"
+ "note": "place on a 3-tile-wide dirt road (both 96x64, one scale/palette, bottom-aligned; swap image + collision). `collision` = closed state (full road width, all 3 tiles). Open: turned-over resting stone foot only (opaque core \u2248 x64\u201392,y30\u201356) so the left two tiles stay a clear passage for feet/A*; the previous pad (58,16,38\u00d748) pinched that lane. Dirt patch is a soft decal; stones are opaque with outline + shadow."
 }

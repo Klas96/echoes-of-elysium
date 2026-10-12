@@ -54,11 +54,12 @@ class GateArt {
   /// Closed: solid plug across the art (y starts low enough that tile-row
   /// under the rock, e.g. nook ~50,8, is not a free path corridor through
   /// the sprite). Leave a thin north lip (~8px) for the south-exit push
-  /// stand. Open: full resting stone on the right (matches opaque pixels
-  /// of road_boulder_open.png — a smaller pad let feet walk through).
+  /// stand. Open: turned-over resting stone only (opaque core of
+  /// road_boulder_open.png) — the old pad (58,16,38×48) ate the left-lane
+  /// passage and made A* grind around the road.
   static const boulderClosedColliders = [Rect.fromLTWH(0, 8, 96, 52)];
-  // Right-hand resting stone (a>180 ≈ x58–95); leave left two tiles as passage.
-  static const boulderOpenColliders = [Rect.fromLTWH(58, 16, 38, 48)];
+  // Main turned stone foot (a>180 ≈ x61–94,y27–54); left two tiles stay open.
+  static const boulderOpenColliders = [Rect.fromLTWH(64, 30, 28, 26)];
 
   /// Open-state resting stone (art px); used for depth sort.
   static const boulderOpenFoot = 64.0;

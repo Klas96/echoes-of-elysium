@@ -27,6 +27,9 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
   /// Kept a bit narrower/shorter than half the sprite so Kaela can stand
   /// closer to walls (full-tile wall boxes are a tileset/designer concern).
   static const double feetWidth = sizePlayer * 0.38;
+  /// Local Y of the feet hitbox top (must match [onLoad] RectangleHitbox).
+  static const double feetTop = sizePlayer * 0.72;
+  static const double feetHeight = sizePlayer * 0.22;
   static const int baseMaxHealth = 100;
   /// Base HP plus level/gear bonuses (Runescape-lite progression).
   static int get maxHealth => baseMaxHealth + Progression.bonusHealth;
@@ -248,8 +251,8 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
     animation = _jog!.animation;
     _shootAnims = await ShootSheet.load('sprites/kaela_shoot.png');
     add(RectangleHitbox(
-      size: Vector2(feetWidth, sizePlayer * 0.22),
-      position: Vector2((sizePlayer - feetWidth) / 2, sizePlayer * 0.72),
+      size: Vector2(feetWidth, feetHeight),
+      position: Vector2((sizePlayer - feetWidth) / 2, feetTop),
     ));
     return super.onLoad();
   }
@@ -287,14 +290,9 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
         jammed) {
       _blockedTimer = 0.1;
     }
-    // Sliding along a wall is normal (WASD does it). Only bail if we've
-    // been jammed on the *same* waypoint with no progress — the follow
-    // watchdog handles that; here just nudge to the next point.
-    if (jammed && _isPathing && _wpIndex < _waypoints.length - 1) {
-      _wpIndex++;
-      _wpStuckT = 0;
-      _wpLastDist = double.infinity;
-    }
+    // Do NOT skip waypoints here. Narrow lanes scrape walls every frame;
+    // advancing on jam aborted the whole A* path while WASD still slid
+    // through. The follow watchdog + repath handle true dead-ends.
   }
 
   @override
@@ -464,7 +462,9 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
     // Manual move wins over click orders.
     if (_moveKeysHeld || _touchStick) return;
 
-    final origin = position + size / 2;
+    // Path agent is the feet hitbox, not the sprite center — A* clearance
+    // tests cell centers for feet, and the feet sit ~10px below mid-sprite.
+    final origin = _feetCenter;
 
     if (_attackTarget != null) {
       final foe = _attackTarget!;
@@ -534,6 +534,9 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
     }
   }
 
+  /// World-space center of the feet collision box (pathfinding agent).
+  Vector2 get _feetCenter => rectCollision.centerVector2;
+
   void _issueClick(Vector2 screenPos) {
     if (!hasGameRef) return;
     final world = _screenToWorld(screenPos);
@@ -575,7 +578,7 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
     if (!hasGameRef) return;
     _clearPath(stop: false);
     _moveGoal = world;
-    final origin = rectCollision.centerVector2;
+    final origin = _feetCenter;
     final path = ClickPathfinder.find(gameRef, from: origin, to: world);
     if (path.isEmpty) {
       // Nowhere closer — stay put (LoL does not walk into the wall).
@@ -625,7 +628,7 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
       _wpStuckT = 0;
       _wpLastDist = double.infinity;
     }
-    // If the current target slipped behind (repath / slide), advance.
+    // Passed this waypoint along the path (common when sliding in a lane).
     if (_wpIndex < _waypoints.length - 1) {
       final toWp = _waypoints[_wpIndex] - origin;
       final toGoal = _waypoints.last - origin;
@@ -649,26 +652,36 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
     }
     final dest = _waypoints[_wpIndex];
     final dist = origin.distanceTo(dest);
-    // Not closing on this waypoint (wall in the way) — skip or stop.
-    if (dist >= _wpLastDist - 0.5) {
+    // Still closing in, or sliding with leftover speed — keep patience.
+    final closing = dist < _wpLastDist - 0.35;
+    final sliding = velocity.length > speed * 0.15;
+    if (!closing && !sliding) {
       _wpStuckT += dt;
     } else {
       _wpStuckT = 0;
     }
     _wpLastDist = dist;
-    if (_wpStuckT > 0.35) {
-      if (_wpIndex < _waypoints.length - 1) {
-        _wpIndex++;
-        _wpStuckT = 0;
-        _wpLastDist = double.infinity;
-      } else {
+    // True dead-end: repath from here (narrow scrapes used to skip every
+    // waypoint and abort). Only give up after a failed repath.
+    if (_wpStuckT > 0.7) {
+      _wpStuckT = 0;
+      _wpLastDist = double.infinity;
+      final goal = _moveGoal ?? _waypoints.last;
+      final path = ClickPathfinder.find(gameRef, from: origin, to: goal);
+      if (path.isEmpty) {
         _finishClickMove();
         return;
       }
-    }
-    if (_wpIndex >= _waypoints.length) {
-      _finishClickMove();
-      return;
+      _waypoints
+        ..clear()
+        ..addAll(path);
+      _wpIndex = _firstForwardWaypoint(origin);
+      _moveGoal = path.last;
+      _showDebugPath(_waypoints.sublist(_wpIndex));
+      if (_wpIndex >= _waypoints.length) {
+        _finishClickMove();
+        return;
+      }
     }
     _steerToward(_waypoints[_wpIndex]);
     if (_pathLine != null) {
@@ -767,7 +780,9 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
       ));
       return;
     }
-    final origin = position + size / 2;
+    // Steer by feet error so narrow-lane waypoints (feet-tested) are tracked
+    // by the hitbox that actually collides — not the sprite mid-point.
+    final origin = _feetCenter;
     final d = worldTarget - origin;
     if (d.length < 1) {
       _steerToward(null);

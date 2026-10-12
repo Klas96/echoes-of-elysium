@@ -21,10 +21,14 @@ class ClickPathfinder {
   /// Path cells per map tile edge (2 → 16px on a 32px tileset).
   static const int subdivisions = 2;
 
-  /// Exact [CustomPlayer] feet hitbox — must match WASD collision so click
-  /// paths can use the same gaps the keyboard can walk.
+  /// Must match [CustomPlayer.feetWidth] / feetHeight. Path agent is the
+  /// feet hitbox center (not sprite mid) — see CustomPlayer._feetCenter.
   static const double _clearW = 32 * 0.38;
   static const double _clearH = 32 * 0.22;
+
+  /// Exposed for tests — keep in sync with CustomPlayer feet hitbox.
+  static double get clearWidth => _clearW;
+  static double get clearHeight => _clearH;
 
   static GameMap? _cachedMap;
   static double _cell = 16;
@@ -330,11 +334,23 @@ class ClickPathfinder {
   }
 
   /// Collapse collinear / same-diagonal runs — only when the chord stays clear.
+  /// Also keep waypoints that sit next to a wall so shortcuts cannot clip a
+  /// stump/cliff corner that the grid path had stepped around.
   static List<(int, int)> _simplify(
     List<(int, int)> path,
     Set<(int, int)> barriers,
   ) {
     if (path.length <= 2) return path;
+    bool nearWall((int, int) c) {
+      for (var dy = -1; dy <= 1; dy++) {
+        for (var dx = -1; dx <= 1; dx++) {
+          if (dx == 0 && dy == 0) continue;
+          if (barriers.contains((c.$1 + dx, c.$2 + dy))) return true;
+        }
+      }
+      return false;
+    }
+
     final out = <(int, int)>[path.first];
     for (var i = 1; i < path.length - 1; i++) {
       final prev = out.last;
@@ -345,7 +361,7 @@ class ClickPathfinder {
       final dx2 = next.$1 - cur.$1;
       final dy2 = next.$2 - cur.$2;
       final sameDir = dx1 == dx2 && dy1 == dy2;
-      if (!sameDir || !_lineClear(prev, next, barriers)) {
+      if (!sameDir || nearWall(cur) || !_lineClear(prev, next, barriers)) {
         out.add(cur);
       }
     }
@@ -540,7 +556,11 @@ class ClickPathfinder {
       addHits(h.children.whereType<ShapeHitbox>());
     }
     for (final s in game.query<SweetrootStump>(onlyVisible: false)) {
-      addHits(s.children.whereType<ShapeHitbox>());
+      // Inflate a hair so A* does not hug the trunk edge and jam on physics.
+      for (final h in s.children.whereType<ShapeHitbox>()) {
+        if (!h.isSolid) continue;
+        _rasterizeRect(h.toAbsoluteRect().inflate(2), barriers);
+      }
     }
   }
 
@@ -612,36 +632,22 @@ class ClickPathfinder {
   }
 
   static void _rasterizeRect(Rect rect, Set<(int, int)> barriers) {
-    // Slimmer probe than full physics feet: half-cells that only graze a
-    // solid (and still look like walkable grass in the art) stay open for
-    // pathing. WASD still uses the full hitbox.
-    const probeW = _clearW * 0.55;
-    const probeH = _clearH * 0.55;
-    final hw = probeW * 0.5;
-    final hh = probeH * 0.5;
+    // Exact Kaela feet — A* must not route through a gap WASD cannot walk
+    // (slim probes opened the stump cliff lane, then click-move jammed).
+    const hw = _clearW * 0.5;
+    const hh = _clearH * 0.5;
     final x0 = ((rect.left - hw) / _cell).floor().clamp(0, _cols - 1);
     final y0 = ((rect.top - hh) / _cell).floor().clamp(0, _rows - 1);
     final x1 = ((rect.right + hw - 0.01) / _cell).floor().clamp(0, _cols - 1);
     final y1 = ((rect.bottom + hh - 0.01) / _cell).floor().clamp(0, _rows - 1);
     for (var y = y0; y <= y1; y++) {
       for (var x = x0; x <= x1; x++) {
-        final cx = (x + 0.5) * _cell;
-        final cy = (y + 0.5) * _cell;
-        // Prefer art: if the half-tile's center is free grass, keep it green
-        // unless a meaningful chunk of Kaela's feet would sit on the solid.
-        if (rect.contains(Offset(cx, cy))) {
-          barriers.add((x, y));
-          continue;
-        }
         final feet = Rect.fromCenter(
-          center: Offset(cx, cy),
-          width: probeW,
-          height: probeH,
+          center: Offset((x + 0.5) * _cell, (y + 0.5) * _cell),
+          width: _clearW,
+          height: _clearH,
         );
-        final o = feet.intersect(rect);
-        if (o.isEmpty) continue;
-        // Ignore hairline grazes that painted neighbor half-cells red.
-        if (o.width * o.height >= probeW * probeH * 0.28) {
+        if (feet.overlaps(rect)) {
           barriers.add((x, y));
         }
       }
@@ -662,7 +668,7 @@ class ClickPathfinder {
       Vector2((c.$1 + 0.5) * _cell, (c.$2 + 0.5) * _cell);
 
   /// Cell center nudged away from blocked neighbors so feet can actually
-  /// arrive (raw centers on wall-adjacent cells were physically unreachable).
+  /// arrive. Opposite walls cancel (narrow corridor → stay centered).
   static Vector2 _worldCenterAwayFromWalls(
     (int, int) c,
     Set<(int, int)> barriers,
@@ -677,9 +683,11 @@ class ClickPathfinder {
         ny -= d.$2;
       }
     }
+    // Mild nudge only — 0.3*cell shoved waypoints into the far wall of a
+    // one-cell lane and the follower never arrived.
     if (nx != 0 || ny != 0) {
       final len = sqrt(nx * nx + ny * ny);
-      p += Vector2(nx / len, ny / len) * (_cell * 0.3);
+      p += Vector2(nx / len, ny / len) * (_cell * 0.12);
     }
     return p;
   }
