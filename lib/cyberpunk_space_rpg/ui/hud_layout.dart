@@ -17,16 +17,19 @@ class HudLayout {
   /// Bottom offset of the TALK / INTERACT / hold prompts.
   static double promptBottom(Size screen) => narrow(screen) ? 24 : 80;
 
-  /// Toasts: above the prompt in portrait; in landscape along the bottom
-  /// edge under the prompt, so they never cover Kaela in the middle.
-  static double toastBottom(Size screen, {bool compact = false}) =>
-      narrow(screen) ? promptBottom(screen) + 100 : 12;
-
-  /// +XP / loot pops: bottom-right in portrait and landscape.
-  static double popsBottom(Size screen) => narrow(screen) ? 24 : 12;
+  /// +XP / loot pops: right column just above the prompt in portrait
+  /// (prompt spans nearly full width, so same bottom overlaps); corner in
+  /// landscape.
+  static double popsBottom(Size screen) =>
+      narrow(screen) ? promptBottom(screen) + 92 : 12;
   static const popsRight = 16.0;
   static double popsMaxWidth(Size screen) =>
       min(220, screen.width - popsRight - 32);
+
+  /// Toasts: above pops in portrait; bottom edge in landscape under the
+  /// (higher) prompt so they never cover Kaela in the middle.
+  static double toastBottom(Size screen, {bool compact = false}) =>
+      narrow(screen) ? popsBottom(screen) + 68 : 12;
 
   /// Max width of the quest tracker (top right) next to the health block.
   static double trackerMaxWidth(double width) => min(220, max(140, (width - 24) * 0.48));

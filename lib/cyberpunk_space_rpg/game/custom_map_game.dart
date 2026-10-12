@@ -2372,7 +2372,7 @@ class GameHudState extends State<GameHud> {
           ),
         ),
       ),
-      // Floating +XP / loot pops: right column beside the joystick
+      // Floating +XP / loot pops: right column above the interact prompt
       Builder(builder: (context) {
         final screen = MediaQuery.sizeOf(context);
         return Positioned(
