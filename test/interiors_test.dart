@@ -378,5 +378,9 @@ void main() {
     expect(kaela.position, front);
     expect(kaela.lastDirection, Direction.down);
     expect(Interiors.current.value, isNull);
+    // Drain autosave debounce + GameInput.reclaim delayed apply so the
+    // widget test does not fail on pending timers.
+    await SaveService.saveNow(takeSnapshot: false);
+    await tester.pump(const Duration(milliseconds: 600));
   });
 }
