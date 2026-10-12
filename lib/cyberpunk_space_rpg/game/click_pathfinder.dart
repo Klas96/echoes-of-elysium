@@ -57,8 +57,8 @@ class ClickPathfinder {
     _rows = max(1, (mh * th / _cell).ceil());
     _cachedMap = null; // force size re-check against live GameMap later
 
-    // tileset local id → collision rects in tile-local px
-    final coll = <int, List<Rect>>{};
+    // tileset gid → (collision rects in tile-local px, optional prop id)
+    final coll = <int, (List<Rect>, String?)>{};
     for (final ts in (data['tilesets'] as List? ?? const [])) {
       if (ts is! Map) continue;
       final firstGid = (ts['firstgid'] as num?)?.toInt() ?? 1;
@@ -83,7 +83,15 @@ class ClickPathfinder {
             h,
           ));
         }
-        if (rects.isNotEmpty) coll[firstGid + id] = rects;
+        if (rects.isEmpty) continue;
+        String? prop;
+        for (final p in (tile['properties'] as List? ?? const [])) {
+          if (p is Map && p['name'] == 'prop') {
+            prop = p['value']?.toString();
+            break;
+          }
+        }
+        coll[firstGid + id] = (rects, prop);
       }
     }
 
@@ -92,22 +100,29 @@ class ClickPathfinder {
       if (layer is! Map || layer['type'] != 'tilelayer') continue;
       final grid = layer['data'];
       if (grid is! List) continue;
+      final isProps = layer['name'] == 'props';
       final lw = (layer['width'] as num?)?.toInt() ?? mw;
       for (var i = 0; i < grid.length; i++) {
         final gid = (grid[i] as num?)?.toInt() ?? 0;
         // Clear flip flags (Tiled high bits).
         final clean = gid & 0x1FFFFFFF;
-        final rects = coll[clean];
-        if (rects == null) continue;
+        final entry = coll[clean];
+        if (entry == null) continue;
         final tx = i % lw;
         final ty = i ~/ lw;
         final ox = tx * tw;
         final oy = ty * th;
-        for (final r in rects) {
-          _rasterizeRect(
-            Rect.fromLTWH(ox + r.left, oy + r.top, r.width, r.height),
-            blocked,
-          );
+        final tileBounds = Rect.fromLTWH(ox, oy, tw, th);
+        for (final r in entry.$1) {
+          var world = Rect.fromLTWH(ox + r.left, oy + r.top, r.width, r.height);
+          // Props art: canopy / foliage should stay walkable — only the foot
+          // of the sprite blocks (matches what the pixel art suggests).
+          if (isProps) {
+            final foot = _propArtFoot(world, tileBounds, entry.$2);
+            if (foot == null) continue;
+            world = foot;
+          }
+          _rasterizeRect(world, blocked);
         }
       }
     }
@@ -483,9 +498,13 @@ class ClickPathfinder {
       final parent = hit.hitboxParent;
       if (parent is TileWithCollision ||
           parent is Building ||
-          parent is CollisionMapComponent ||
-          parent is GameDecorationWithCollision) {
+          parent is CollisionMapComponent) {
         _rasterizeRect(hit.toAbsoluteRect(), barriers);
+      } else if (parent is GameDecorationWithCollision) {
+        // Live props (trees, bushes, lanterns…): foot only, same as TMJ props.
+        final raw = hit.toAbsoluteRect();
+        final foot = _decorationArtFoot(raw, parent.size);
+        if (foot != null) _rasterizeRect(foot, barriers);
       }
     }
     void addHits(Iterable<ShapeHitbox> hits) {
@@ -525,22 +544,104 @@ class ClickPathfinder {
     }
   }
 
+  /// Props layer: keep a trunk/base that matches the art (walk under canopy).
+  static Rect? _propArtFoot(Rect shape, Rect tile, String? prop) {
+    final p = prop ?? '';
+    // Solid set pieces — keep the authored collider.
+    if (p.startsWith('crashed_ship') ||
+        p == 'tent' ||
+        p == 'boulder' ||
+        p == 'monolith' ||
+        p == 'standing_stone' ||
+        p == 'fence_h' ||
+        p == 'fence_v' ||
+        p == 'radio_dish' ||
+        p == 'crate' ||
+        p == 'campfire') {
+      return shape;
+    }
+    // Soft props: only the visible base. Canopy / mossy edges stay walkable.
+    final isFoliage = p.startsWith('tree_') || p.startsWith('bush_');
+    final isClutter = isFoliage ||
+        p.startsWith('rock_') ||
+        p == 'lantern' ||
+        p == 'stump' ||
+        p == 'log' ||
+        p == 'signpost';
+    final footH = tile.height * (isFoliage ? 0.22 : (isClutter ? 0.32 : 0.40));
+    final band = Rect.fromLTRB(
+      tile.left,
+      tile.bottom - footH,
+      tile.right,
+      tile.bottom,
+    );
+    final clipped = shape.intersect(band);
+    if (clipped.isEmpty) return null;
+    // Narrow toward center so soft art edges don't seal half-tiles of grass.
+    if (isClutter) {
+      final cx = clipped.center.dx;
+      final maxW = tile.width * (isFoliage ? 0.38 : 0.50);
+      final halfW = min(clipped.width, maxW) / 2;
+      return Rect.fromLTRB(
+        cx - halfW,
+        clipped.top,
+        cx + halfW,
+        clipped.bottom,
+      );
+    }
+    return clipped;
+  }
+
+  /// Live [GameDecorationWithCollision] foot — same idea as [_propArtFoot].
+  static Rect? _decorationArtFoot(Rect hit, Vector2 parentSize) {
+    // Large props / multi-tile set pieces: keep most of the collider, bias down.
+    if (parentSize.x >= 48 || parentSize.y >= 48) {
+      final keep = max(10.0, hit.height * 0.55);
+      return Rect.fromLTRB(hit.left, hit.bottom - keep, hit.right, hit.bottom);
+    }
+    // Single-tile clutter: trunk/base only.
+    final keep = max(5.0, hit.height * 0.28);
+    final cx = hit.center.dx;
+    final halfW = min(hit.width, 10.0) / 2;
+    return Rect.fromLTRB(
+      cx - halfW,
+      hit.bottom - keep,
+      cx + halfW,
+      hit.bottom,
+    );
+  }
+
   static void _rasterizeRect(Rect rect, Set<(int, int)> barriers) {
-    final hw = _clearW * 0.5;
-    final hh = _clearH * 0.5;
-    // Same test as physics: can feet stand at the cell center?
+    // Slimmer probe than full physics feet: half-cells that only graze a
+    // solid (and still look like walkable grass in the art) stay open for
+    // pathing. WASD still uses the full hitbox.
+    const probeW = _clearW * 0.55;
+    const probeH = _clearH * 0.55;
+    final hw = probeW * 0.5;
+    final hh = probeH * 0.5;
     final x0 = ((rect.left - hw) / _cell).floor().clamp(0, _cols - 1);
     final y0 = ((rect.top - hh) / _cell).floor().clamp(0, _rows - 1);
     final x1 = ((rect.right + hw - 0.01) / _cell).floor().clamp(0, _cols - 1);
     final y1 = ((rect.bottom + hh - 0.01) / _cell).floor().clamp(0, _rows - 1);
     for (var y = y0; y <= y1; y++) {
       for (var x = x0; x <= x1; x++) {
+        final cx = (x + 0.5) * _cell;
+        final cy = (y + 0.5) * _cell;
+        // Prefer art: if the half-tile's center is free grass, keep it green
+        // unless a meaningful chunk of Kaela's feet would sit on the solid.
+        if (rect.contains(Offset(cx, cy))) {
+          barriers.add((x, y));
+          continue;
+        }
         final feet = Rect.fromCenter(
-          center: Offset((x + 0.5) * _cell, (y + 0.5) * _cell),
-          width: _clearW,
-          height: _clearH,
+          center: Offset(cx, cy),
+          width: probeW,
+          height: probeH,
         );
-        if (feet.overlaps(rect)) {
+        final o = feet.intersect(rect);
+        if (o.isEmpty) continue;
+        // Ignore hairline grazes that painted neighbor half-cells red.
+        if (o.width * o.height >= probeW * probeH * 0.28) {
           barriers.add((x, y));
         }
       }
