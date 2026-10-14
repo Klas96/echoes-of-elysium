@@ -181,8 +181,8 @@ class _DroneStats {
             idleColor: Color(0xFF88AA66),
             aggroColor: Color(0xFFFFCC33),
             spritePath: 'sprites/uec_swarm.png',
-            // Three ships in one sprite: below ~24px they turn to mush.
-            spriteSize: 26,
+            // 64px source from uec_swarm_v2; draw a bit larger for readability.
+            spriteSize: 32,
           ),
       };
 }
@@ -285,13 +285,15 @@ class UECDrone extends GameDecoration {
     _sprite = await Sprite.load(_stats.spritePath);
     try {
       // Frame 2 bobs up 1px and brightens the eye (uec_*_hover.json).
+      // Frame size = sheet height (square cells); swarm can be 64px, others 32.
       final img = await Flame.images.load(_stats.hoverPath);
+      final frame = max(1, img.height);
       _hover = SpriteAnimation.fromFrameData(
         img,
         SpriteAnimationData.sequenced(
-          amount: max(1, img.width ~/ 32),
+          amount: max(1, img.width ~/ frame),
           stepTime: kind == DroneKind.swarm ? 0.2 : 0.3,
-          textureSize: Vector2.all(32),
+          textureSize: Vector2.all(frame.toDouble()),
         ),
       ).createTicker();
     } catch (_) {

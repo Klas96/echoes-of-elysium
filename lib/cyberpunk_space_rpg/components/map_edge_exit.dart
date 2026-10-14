@@ -20,11 +20,19 @@ class MapEdgeExit extends GameComponent {
 
   /// A beat to play before leaving (the region farewell); null = none now.
   final Future<void> Function()? Function()? beforeExit;
+
+  /// Optional designer art for locked / open states (#55). Paths relative to
+  /// `assets/images/` (Bonfire [Sprite.load] convention).
+  final String? lockedSpritePath;
+  final String? openSpritePath;
+
   bool _fired = false;
   bool _beat = false;
   bool _lockedHint = false;
   bool? _sealed;
   RectangleHitbox? _block;
+  Sprite? _lockedSprite;
+  Sprite? _openSprite;
 
   MapEdgeExit(
     Vector2 position,
@@ -35,6 +43,8 @@ class MapEdgeExit extends GameComponent {
     this.lockedTitle = 'PATH CLOSED',
     this.lockedBody = 'Not yet.',
     this.beforeExit,
+    this.lockedSpritePath,
+    this.openSpritePath,
   })  : canExit = canExit ?? (() => true) {
     this.position = position;
     this.size = size;
@@ -60,6 +70,16 @@ class MapEdgeExit extends GameComponent {
 
   @override
   Future<void> onLoad() async {
+    if (lockedSpritePath != null) {
+      try {
+        _lockedSprite = await Sprite.load(lockedSpritePath!);
+      } catch (_) {}
+    }
+    if (openSpritePath != null) {
+      try {
+        _openSprite = await Sprite.load(openSpritePath!);
+      } catch (_) {}
+    }
     _syncSeal();
     return super.onLoad();
   }
@@ -126,7 +146,17 @@ class MapEdgeExit extends GameComponent {
   @override
   void render(Canvas canvas) {
     if (_sealed ?? !canExit()) {
+      final locked = _lockedSprite;
+      if (locked != null) {
+        locked.render(canvas, position: Vector2.zero(), size: size);
+        return;
+      }
       _paintThicket(canvas);
+      return;
+    }
+    final open = _openSprite;
+    if (open != null) {
+      open.render(canvas, position: Vector2.zero(), size: size);
       return;
     }
     // Soft dust line so the opening reads as a road, not a void.
