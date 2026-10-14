@@ -87,7 +87,8 @@
    <property name="ground" value="ruin roof" />
   </properties>
   <objectgroup draworder="index" id="2">
-   <object id="1" type="collision" x="0" y="0" width="32" height="32" rotation="0" />
+   <object id="1" type="collision" x="0" y="8.05" width="32.58" height="23.95" rotation="0" />
+   <object id="2" type="collision" x="0" y="3.38" width="32.42" height="28.62" rotation="0" />
   </objectgroup>
  </tile>
  <tile id="17" probability="0.12">
@@ -1352,7 +1353,8 @@
    <property name="prop" value="neon_sign" />
   </properties>
   <objectgroup draworder="index" id="2">
-   <object id="1" type="collision" x="0" y="5" width="32" height="25" rotation="0" />
+   <object id="1" type="collision" x="0" y="8.34" width="33.34" height="23.66" rotation="0" />
+   <object id="2" type="collision" x="0" y="0.3" width="32.42" height="31.7" rotation="0" />
   </objectgroup>
  </tile>
  <tile id="192">

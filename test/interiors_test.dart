@@ -139,6 +139,18 @@ void main() {
       }
     });
 
+    test('noodle shop click-path walks around tables to the door', () {
+      final r = _room('noodle_shop');
+      final p = r.path(r.spawn, (7, 8));
+      expect(p, isNotEmpty);
+      expect(p.first, r.spawn);
+      expect(p.last, (7, 8));
+      // Table click snaps to a free neighbour instead of failing.
+      final nearTable = r.path(r.spawn, (4, 5));
+      expect(nearTable, isNotEmpty);
+      expect(r.solid(nearTable.last.$1, nearTable.last.$2), isFalse);
+    });
+
     test('facing rule: next to a rect and facing it', () {
       final r = _room('ranger_cabin');
       final map = r.spots.firstWhere((s) => s.id == 'wall_map').rect; // [6,0,3,3]

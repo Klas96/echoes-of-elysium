@@ -51,8 +51,7 @@ class SfxManager {
     _portal?.volume = _basePortal * s;
     _shoot?.volume = _baseShoot * s;
     _chime?.volume = _baseChime * s;
-    // VO is not part of SFX mute/volume — always full.
-    _currentVoice?.volume = _baseVoice;
+    _currentVoice?.volume = _baseVoice * s;
   }
 
   html.AudioElement _preload(String path) {
@@ -83,11 +82,16 @@ class SfxManager {
   /// Soft chime for bonds and finds (reuses the computer beep).
   Future<void> playChime() async => _play(_chime, 'chime');
 
-  /// Dialogue / cutscene VO — always on; ignores SFX mute and volume.
+  /// Dialogue / cutscene VO — respects SFX mute / volume.
   Future<void> playVoice(String assetPath) async {
+    if (!_audible) {
+      await stopVoice();
+      return;
+    }
     try {
       _currentVoice?.pause();
-      _currentVoice = html.AudioElement(_url(assetPath))..volume = _baseVoice;
+      _currentVoice =
+          html.AudioElement(_url(assetPath))..volume = _baseVoice * _scale;
       await _currentVoice!.play();
     } catch (_) {}
   }

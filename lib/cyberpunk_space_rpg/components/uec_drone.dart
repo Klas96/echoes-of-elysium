@@ -213,14 +213,24 @@ class UECDrone extends GameDecoration {
   Vector2 _knockback = Vector2.zero();
   /// Puffcap HUSH: seconds left calmed (no chase / attack).
   double _hushed = 0;
+  /// Pulse-shot / Anchor slow: seconds left at reduced move speed.
+  double _slowT = 0;
+  double _slowFactor = 0.45;
   bool get isDead => _health <= 0;
   int get maxHealth => _maxHp;
   bool get isHushed => _hushed > 0;
+  double get _speedMult => _slowT > 0 ? _slowFactor : 1.0;
 
   void applyHush(double seconds) {
     if (isDead) return;
     _hushed = max(_hushed, seconds);
     _state = _DroneState.patrol;
+  }
+
+  void applySlow(double seconds, {double factor = 0.45}) {
+    if (isDead || seconds <= 0) return;
+    _slowT = max(_slowT, seconds);
+    _slowFactor = min(_slowFactor, factor.clamp(0.1, 1.0));
   }
 
   factory UECDrone(
@@ -302,11 +312,14 @@ class UECDrone extends GameDecoration {
     super.onRemove();
   }
 
-  void takeDamage(int amount, {Vector2? knockbackDir}) {
+  void takeDamage(int amount,
+      {Vector2? knockbackDir, double knockbackScale = 1.0}) {
     if (isDead || amount <= 0) return;
     _shieldRegen = 0;
     _shieldRegenAcc = 0;
-    if (knockbackDir != null) _applyKnockback(knockbackDir);
+    if (knockbackDir != null) {
+      _applyKnockback(knockbackDir, scale: knockbackScale);
+    }
     final top = position + Vector2(size.x / 2, 0);
     if (_shield > 0) {
       final absorbed = min(_shield, amount);
@@ -321,7 +334,7 @@ class UECDrone extends GameDecoration {
     DamageNumber.spawn(this, top, amount, DamageNumberStyle.dealt);
   }
 
-  void _applyKnockback(Vector2 dir) {
+  void _applyKnockback(Vector2 dir, {double scale = 1.0}) {
     if (dir.length2 < 1e-8) return;
     final mult = switch (kind) {
       DroneKind.swarm => 1.25,
@@ -330,7 +343,7 @@ class UECDrone extends GameDecoration {
       DroneKind.shield => 0.4,
     };
     // Replace rather than stack so rapid fire feels snappy, not rocket-launch.
-    _knockback = dir.normalized() * (140 * mult);
+    _knockback = dir.normalized() * (140 * mult * scale);
   }
 
   /// Patrol stays near spawn; once aggro'd, allow a longer chase so they don't
@@ -373,6 +386,8 @@ class UECDrone extends GameDecoration {
     _pulse += dt * (kind == DroneKind.swarm ? 5.0 : 3.5);
     _attackTimer = max(0, _attackTimer - dt);
     _hushed = max(0, _hushed - dt);
+    _slowT = max(0, _slowT - dt);
+    if (_slowT <= 0) _slowFactor = 0.45;
 
     if (_maxShield > 0 && _shield < _maxShield) {
       _shieldRegen += dt;
@@ -446,15 +461,16 @@ class UECDrone extends GameDecoration {
             Vector2(cos(_patrolAngle) * radius, sin(_patrolAngle) * radius);
         final step = target - position;
         if (step.length > 1) {
-          _move(step.normalized() * min(_stats.speed * dt, step.length));
+          _move(step.normalized() *
+              min(_stats.speed * _speedMult * dt, step.length));
         }
       case _DroneState.chase:
         if (toPlayer.length > 1) {
-          _move(toPlayer.normalized() * _stats.speed * dt);
+          _move(toPlayer.normalized() * _stats.speed * _speedMult * dt);
         }
       case _DroneState.retreat:
         if (toPlayer.length > 1) {
-          _move(-toPlayer.normalized() * _stats.speed * 1.1 * dt);
+          _move(-toPlayer.normalized() * _stats.speed * _speedMult * 1.1 * dt);
         }
         if (_attackTimer <= 0 && dist <= _stats.attackRadius) {
           _fireOrMelee(toPlayer);
@@ -468,7 +484,7 @@ class UECDrone extends GameDecoration {
           // like the AI stalled mid-charge.
           const strikeRange = 20.0;
           if (dist > strikeRange && toPlayer.length > 1) {
-            _move(toPlayer.normalized() * _stats.speed * dt);
+            _move(toPlayer.normalized() * _stats.speed * _speedMult * dt);
           }
           if (_attackTimer <= 0) _fireOrMelee(toPlayer);
         }

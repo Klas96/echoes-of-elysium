@@ -6,7 +6,7 @@ import 'sfx_manager.dart';
 
 /// Persistent music / SFX levels. Read from [SaveData.settings] so they survive
 /// a new playthrough (see [SaveService.startNewGame]).
-/// Dialogue VO is separate and always plays (see [SfxManager.playVoice]).
+/// SFX Off also mutes dialogue / cutscene VO.
 class AudioSettings {
   AudioSettings._();
 
@@ -68,6 +68,7 @@ class AudioSettings {
   static void setSfxOn(bool on) {
     sfxOn.value = on;
     apply();
+    if (!on) SfxManager().stopVoice();
     persist();
   }
 }

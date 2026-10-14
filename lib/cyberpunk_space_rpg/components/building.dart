@@ -13,31 +13,32 @@ import '../interiors/room_text.dart';
 /// Sprite size, collision box and door point of a placeable building, in px
 /// from the sprite's top-left. Generated from tools/buildings/<name>.json
 /// (buildings_v2); keep in sync with tools/buildings/buildings.tsj.
+/// [collision] is mutable for the in-game mask editor.
 class BuildingDef {
   final double w, h;
-  final Rect collision;
+  Rect collision;
   final Offset door;
 
   /// Shown when Kaela examines the door.
   final String flavour;
 
-  const BuildingDef(this.w, this.h, this.collision, this.door, this.flavour);
+  BuildingDef(this.w, this.h, this.collision, this.door, this.flavour);
 }
 
-const buildingDefs = <String, BuildingDef>{
-  'noodle_shop': BuildingDef(128, 128, Rect.fromLTWH(12, 60, 104, 64), Offset(61, 124),
+final buildingDefs = <String, BuildingDef>{
+  'noodle_shop': BuildingDef(128, 128, const Rect.fromLTWH(12, 60, 104, 64), const Offset(61, 124),
       'Noodle Shop · Closed for the night. The broth still smells warm.'),
-  'tea_house': BuildingDef(128, 128, Rect.fromLTWH(10, 60, 108, 64), Offset(64, 124),
+  'tea_house': BuildingDef(128, 128, const Rect.fromLTWH(10, 60, 108, 64), const Offset(64, 124),
       'Tea House · Closed. A kettle hums somewhere inside.'),
-  'greenhouse': BuildingDef(128, 128, Rect.fromLTWH(12, 60, 104, 64), Offset(63, 124),
+  'greenhouse': BuildingDef(128, 128, const Rect.fromLTWH(12, 60, 104, 64), const Offset(63, 124),
       'Greenhouse · Locked. The plants lean towards the glass.'),
-  'apartment_block': BuildingDef(160, 160, Rect.fromLTWH(0, 78, 160, 64), Offset(80, 142),
+  'apartment_block': BuildingDef(160, 160, const Rect.fromLTWH(0, 78, 160, 64), const Offset(80, 142),
       'Apartments · The door wants a resident keycard.'),
-  'archive_library': BuildingDef(160, 160, Rect.fromLTWH(8, 82, 142, 64), Offset(80, 146),
+  'archive_library': BuildingDef(160, 160, const Rect.fromLTWH(8, 82, 142, 64), const Offset(80, 146),
       'Archive Library · Sealed. The Archivist keeps the key.'),
-  'ranger_cabin': BuildingDef(128, 128, Rect.fromLTWH(6, 54, 108, 64), Offset(63, 118),
+  'ranger_cabin': BuildingDef(128, 128, const Rect.fromLTWH(6, 54, 108, 64), const Offset(63, 118),
       'Ranger Cabin · Locked. Someone left the stove warm.'),
-  'ruin_shrine': BuildingDef(128, 160, Rect.fromLTWH(16, 88, 96, 64), Offset(64, 152),
+  'ruin_shrine': BuildingDef(128, 160, const Rect.fromLTWH(16, 88, 96, 64), const Offset(64, 152),
       'Aetherian Shrine · The portal is dormant. For now.'),
 };
 
@@ -84,6 +85,23 @@ class Building extends GameDecorationWithCollision with Interactable {
     RoomDay.ensure();
     return super.onLoad();
   }
+
+  /// Live hitbox from [def.collision] (mask editor / after JSON load).
+  void applyColliderRects(List<Rect> rects) {
+    if (rects.isEmpty) return;
+    def.collision = rects.first;
+    for (final h in children.whereType<RectangleHitbox>().toList()) {
+      h.removeFromParent();
+    }
+    final r = def.collision;
+    add(RectangleHitbox(
+      position: Vector2(r.left, r.top),
+      size: Vector2(r.width, r.height),
+      isSolid: true,
+    ));
+  }
+
+  void refreshColliders() => applyColliderRects([def.collision]);
 
   /// Locked-door line (#31, GameConcept), else the building's own.
   String get flavour => RoomText.lockedDoors[id] ?? def.flavour;

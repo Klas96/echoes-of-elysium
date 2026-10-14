@@ -177,4 +177,54 @@ class RoomData {
     }
     return null;
   }
+
+  /// Shortest walkable tile path (4-neighbour). Empty if sealed.
+  List<(int, int)> path((int, int) from, (int, int) to) {
+    if (solid(from.$1, from.$2)) return const [];
+    var goal = to;
+    if (solid(goal.$1, goal.$2)) {
+      // Click on a table/wall → nearest free neighbour (LoL-style).
+      (int, int)? best;
+      var bestD = 1 << 30;
+      for (var r = 0; r <= 4; r++) {
+        for (var dy = -r; dy <= r; dy++) {
+          for (var dx = -r; dx <= r; dx++) {
+            if (r > 0 && dx.abs() != r && dy.abs() != r) continue;
+            final c = (goal.$1 + dx, goal.$2 + dy);
+            if (solid(c.$1, c.$2)) continue;
+            final d = dx.abs() + dy.abs();
+            if (d < bestD) {
+              bestD = d;
+              best = c;
+            }
+          }
+        }
+        if (best != null) break;
+      }
+      if (best == null) return const [];
+      goal = best;
+    }
+    if (from == goal) return [from];
+
+    final came = <(int, int), (int, int)?>{from: null};
+    final q = Queue<(int, int)>()..add(from);
+    while (q.isNotEmpty) {
+      final cur = q.removeFirst();
+      if (cur == goal) break;
+      for (final (dx, dy) in const [(1, 0), (-1, 0), (0, 1), (0, -1)]) {
+        final n = (cur.$1 + dx, cur.$2 + dy);
+        if (came.containsKey(n) || solid(n.$1, n.$2)) continue;
+        came[n] = cur;
+        q.add(n);
+      }
+    }
+    if (!came.containsKey(goal)) return const [];
+    final out = <(int, int)>[];
+    (int, int)? cur = goal;
+    while (cur != null) {
+      out.add(cur);
+      cur = came[cur];
+    }
+    return out.reversed.toList();
+  }
 }

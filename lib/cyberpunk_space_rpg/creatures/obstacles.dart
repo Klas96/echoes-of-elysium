@@ -11,6 +11,7 @@ import 'creature_species.dart';
 import 'day_cycle.dart';
 import 'gate_components.dart';
 import 'interaction.dart';
+import 'obstacle_masks.dart';
 import '../interiors/room_services.dart';
 
 /// Ability-gated obstacles and the small finds they guard (M2). All of them
@@ -70,8 +71,15 @@ class Boulder extends GameComponent with Interactable, PointOfInterest {
     }
   }
 
+  void refreshColliders() {
+    _setColliders(pushed ? GateArt.boulderOpenColliders : GateArt.boulderClosedColliders);
+  }
+
+  void applyColliderRects(List<Rect> rects) => _setColliders(rects);
+
   @override
   Future<void> onLoad() async {
+    await ObstacleMasks.ensureLoaded();
     _openT = pushed ? 1 : 0;
     _setColliders(pushed ? GateArt.boulderOpenColliders : GateArt.boulderClosedColliders);
     _closed = await Sprite.load(GateArt.boulderClosed);
@@ -477,8 +485,8 @@ class HiddenPath extends GameComponent with Interactable, PointOfInterest {
   /// bramble_open.json.
   // Closed: plug from mid-north through the south row. A feet-only strip at
   // y=39 let Kaela walk through the foliage (approach is from the north).
-  static const closedColliders = [Rect.fromLTWH(4, 16, 56, 46)];
-  static const openColliders = [Rect.fromLTWH(1, 39, 15, 22), Rect.fromLTWH(48, 39, 15, 22)];
+  static List<Rect> get closedColliders => ObstacleMasks.brambleClosed;
+  static List<Rect> get openColliders => ObstacleMasks.brambleOpen;
 
   /// The walkable middle of the open bramble ('passage' x 16, w 32).
   static const passage = (x: 16.0, w: 32.0);
@@ -509,6 +517,7 @@ class HiddenPath extends GameComponent with Interactable, PointOfInterest {
 
   @override
   Future<void> onLoad() async {
+    await ObstacleMasks.ensureLoaded();
     // Solid before art awaits (add() needs gameRef — not safe in constructor).
     _open = revealed ? 1 : 0;
     _setColliders(revealed ? openColliders : closedColliders);
@@ -544,6 +553,12 @@ class HiddenPath extends GameComponent with Interactable, PointOfInterest {
       add(h);
     }
   }
+
+  void refreshColliders() {
+    _setColliders(revealed ? openColliders : closedColliders);
+  }
+
+  void applyColliderRects(List<Rect> rects) => _setColliders(rects);
 
   @override
   Ability get poiAbility => Ability.scent;
@@ -625,8 +640,8 @@ class HiddenPath extends GameComponent with Interactable, PointOfInterest {
 /// then sweetroot_stump_plain.png once picked). Only the trunk base collides;
 /// pick it standing just below the trunk.
 class SweetrootStump extends GameComponent with Interactable {
-  /// From sweetroot_stump.json (64x64 art px).
-  static const collider = Rect.fromLTWH(16, 30, 32, 25);
+  /// From sweetroot_stump art (64x64 art px). Mutable for mask editor.
+  static Rect collider = const Rect.fromLTWH(16, 30, 32, 25);
   static final pickAt = Vector2(31, 59);
   static final tuber = Vector2(31, 45);
 
@@ -647,13 +662,23 @@ class SweetrootStump extends GameComponent with Interactable {
   Future<void> onLoad() async {
     _full = await Sprite.load('obstacles/sweetroot_stump.png');
     _plain = await Sprite.load('obstacles/sweetroot_stump_plain.png');
+    applyColliderRects([collider]);
+    return super.onLoad();
+  }
+
+  void applyColliderRects(List<Rect> rects) {
+    if (rects.isEmpty) return;
+    collider = rects.first;
+    for (final h in children.whereType<RectangleHitbox>().toList()) {
+      h.removeFromParent();
+    }
+    final r = collider;
     add(RectangleHitbox(
-      position: Vector2(collider.left, collider.top) * _k,
-      size: Vector2(collider.width, collider.height) * _k,
+      position: Vector2(r.left, r.top) * _k,
+      size: Vector2(r.width, r.height) * _k,
       isSolid: true,
       collisionType: CollisionType.passive,
     ));
-    return super.onLoad();
   }
 
   @override

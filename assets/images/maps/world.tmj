@@ -11,7 +11,7 @@
  "tilewidth": 32,
  "tileheight": 32,
  "nextlayerid": 4,
- "nextobjectid": 75,
+ "nextobjectid": 76,
  "properties": [
   {
    "name": "generator",
@@ -15174,6 +15174,44 @@
        "name": "kind",
        "type": "string",
        "value": "sniper"
+      }
+     ]
+    },
+    {
+     "id": 75,
+     "name": "dronespawn",
+     "type": "",
+     "rotation": 0,
+     "visible": true,
+     "x": 96.0,
+     "y": 1184.0,
+     "width": 96.0,
+     "height": 96.0,
+     "properties": [
+      {
+       "name": "kind",
+       "type": "string",
+       "value": "scout"
+      },
+      {
+       "name": "interval",
+       "type": "float",
+       "value": 7.0
+      },
+      {
+       "name": "max",
+       "type": "int",
+       "value": 2
+      },
+      {
+       "name": "hp",
+       "type": "int",
+       "value": 80
+      },
+      {
+       "name": "nest",
+       "type": "bool",
+       "value": true
       }
      ]
     },

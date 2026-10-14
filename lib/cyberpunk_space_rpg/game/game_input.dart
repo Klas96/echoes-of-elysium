@@ -2,6 +2,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import '../components/custom_player.dart';
+import 'debug_mask_editor.dart';
+import 'game_debug.dart';
 import 'keyboard_guard.dart';
 
 /// Overworld keyboard focus + a focus-independent WASD path.
@@ -42,6 +44,9 @@ class GameInput {
     if (_installed) return;
     _installed = true;
     HardwareKeyboard.instance.addHandler(_onKey);
+    // Mask editor must see S/A before WASD (Bonfire directional keys).
+    DebugMaskEditor.installKeys();
+    GameDebug.install();
   }
 
   static bool _isMove(LogicalKeyboardKey key) => _moveKeys.contains(key);

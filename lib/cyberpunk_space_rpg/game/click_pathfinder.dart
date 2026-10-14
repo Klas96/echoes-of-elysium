@@ -200,6 +200,9 @@ class ClickPathfinder {
 
   static bool get hasGrid => _cols > 0 && _rows > 0 && _tileBarriers.isNotEmpty;
 
+  /// Static tile walls only (no live collision scan) — for cheap DEBUG overlay.
+  static Set<(int, int)> get tileBarriersView => _tileBarriers;
+
   /// Live walk grid including stones/gates (same as click A*).
   static Set<(int, int)> barriersFor(BonfireGameInterface game) {
     if (_cols <= 0) _ensureTileCache(game.map);

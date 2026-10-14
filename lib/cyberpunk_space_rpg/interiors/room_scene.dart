@@ -19,6 +19,7 @@ import '../game/adventure.dart';
 import '../game/game_input.dart';
 import '../game/keyboard_guard.dart';
 import '../game/save_service.dart';
+import '../ui/hud_layout.dart';
 import 'meal_chip.dart';
 import 'room_actions.dart';
 import 'room_data.dart';
@@ -52,10 +53,14 @@ class Interiors {
     'pond_grotto',
   ];
 
-  /// Click talk/examine indoors (spots + NPCs). Walks Kaela over if needed.
+  /// Click talk/examine indoors, or click-move on the floor (same as overworld).
   static void handleRoomClick(BonfireGameInterface game, Vector2 screen) {
     final player = RoomPlayer.current;
     if (player == null || !player.isMounted || !player.hasGameRef) return;
+    // Panels/cutscenes can leave the room engine paused — wake it for moves.
+    if (game.paused && !RoomPanel.isOpen && !Journal.open.value) {
+      game.resumeEngine();
+    }
     final cam = game.camera.viewfinder.position;
     final center = game.size / 2;
     final zoom = game.camera.viewfinder.zoom;
@@ -64,20 +69,14 @@ class Interiors {
     if (flame == null) return;
     final hit = Interaction.atWorld(world, game: flame, clickRadius: 48);
     if (hit != null && hit.prompt.enabled) {
-      final dist = player.position.distanceTo(hit.interactPoint - player.size / 2);
-      // Close enough: use now. Otherwise nudge toward the spot (simple step).
+      final dest = hit.interactPoint - player.size / 2;
+      final dist = player.position.distanceTo(dest);
       if (dist <= hit.interactRadius + 8) {
         hit.interact();
       } else {
-        // Walk a bit toward it; user can click again — rooms are small.
-        final dest = hit.interactPoint - player.size / 2;
-        final step = (dest - player.position);
-        if (step.length > 1) {
-          player.position += step.normalized() * min(48, step.length);
-        }
-        if (player.position.distanceTo(dest) <= hit.interactRadius) {
-          hit.interact();
-        }
+        player.walkTo(hit.interactPoint, onArrive: () {
+          if (hit.isMounted) hit.interact();
+        });
       }
       return;
     }
@@ -85,9 +84,18 @@ class Interiors {
       if (!n.isMounted) continue;
       final c = n.position + n.size / 2;
       if (c.distanceTo(world) > 40) continue;
-      n.interact();
+      final dest = c;
+      if (player.position.distanceTo(dest - player.size / 2) <= 36) {
+        n.interact();
+      } else {
+        player.walkTo(dest, onArrive: () {
+          if (n.isMounted) n.interact();
+        });
+      }
       return;
     }
+    // Empty floor / furniture: path around solids to the click.
+    player.walkTo(world);
   }
 
   static void _reclaimRoomKeys() {
@@ -323,10 +331,12 @@ class _RoomScreenState extends State<RoomScreen> {
       child: Scaffold(
         backgroundColor: Colors.black,
         body: LayoutBuilder(builder: (context, box) {
-          // Fit the whole room when the screen allows, never smaller than
-          // 1.5x (pixel art stays readable; portrait scrolls with Kaela).
+          // Fit the whole room when the screen allows; desktop needs a higher
+          // floor so interiors match the closer overworld view.
           final fit = min(box.maxWidth / room.widthPx, box.maxHeight / room.heightPx);
-          final zoom = fit.clamp(1.5, 3.0).toDouble();
+          final minZ = HudLayout.isTouch ? 1.5 : 2.0;
+          final maxZ = HudLayout.isTouch ? 3.0 : 3.5;
+          final zoom = fit.clamp(minZ, maxZ).toDouble();
           return Stack(children: [
             GestureDetector(
               behavior: HitTestBehavior.translucent,
@@ -444,11 +454,15 @@ class RoomPlayer extends SimplePlayer with BlockMovementCollision, InstantFacing
   bool _left = false;
   double _step = 0;
   JogSheet? _jog;
+  final List<Vector2> _waypoints = [];
+  int _wpIndex = 0;
+  VoidCallback? _onArrive;
 
   /// Indoors Kaela — [GameInput] steers her when Bonfire loses focus.
   static RoomPlayer? current;
 
   static const baseSpeed = CustomPlayer.sizePlayer * 2.5;
+  static const _arrive = 10.0;
 
   RoomPlayer(this.room, {required this.onDoormat})
       : super(
@@ -466,15 +480,23 @@ class RoomPlayer extends SimplePlayer with BlockMovementCollision, InstantFacing
     return ((f.x / room.tile).floor(), (f.y / room.tile).floor());
   }
 
+  Vector2 _positionForTile((int, int) t) =>
+      room.tilePx(t.$1, t.$2) + Vector2(room.tile / 2, room.tile / 2) - _feet;
+
   @override
   Future<void> onLoad() async {
     current = this;
+    setupMovementByJoystick(enabled: true);
     paint.filterQuality = FilterQuality.none;
     _jog = await JogSheet.load();
     animation = _jog!.animation;
+    // Same feet box as overworld Kaela so indoor gaps match outdoor feel.
     add(RectangleHitbox(
-      size: Vector2(CustomPlayer.feetWidth, CustomPlayer.sizePlayer / 3),
-      position: Vector2(CustomPlayer.sizePlayer * 0.25, CustomPlayer.sizePlayer * 0.65),
+      size: Vector2(CustomPlayer.feetWidth, CustomPlayer.feetHeight),
+      position: Vector2(
+        (CustomPlayer.sizePlayer - CustomPlayer.feetWidth) / 2,
+        CustomPlayer.feetTop,
+      ),
     ));
     return super.onLoad();
   }
@@ -485,8 +507,85 @@ class RoomPlayer extends SimplePlayer with BlockMovementCollision, InstantFacing
     super.onRemove();
   }
 
+  /// League-style click path on the room grid (around tables/counters).
+  void walkTo(Vector2 worldPoint, {VoidCallback? onArrive}) {
+    if (RoomPanel.isOpen || Journal.open.value) return;
+    if (hasGameRef && gameRef.paused) gameRef.resumeEngine();
+    final to = (
+      (worldPoint.x / room.tile).floor().clamp(0, room.cols - 1),
+      (worldPoint.y / room.tile).floor().clamp(0, room.rows - 1),
+    );
+    final cells = room.path(tile, to);
+    _onArrive = onArrive;
+    _waypoints
+      ..clear()
+      ..addAll(cells.map(_positionForTile));
+    _wpIndex = 0;
+    if (_waypoints.isEmpty) {
+      _finishWalk();
+      return;
+    }
+  }
+
+  void _clearWalk({bool runArrive = false}) {
+    _waypoints.clear();
+    _wpIndex = 0;
+    final cb = _onArrive;
+    _onArrive = null;
+    if (runArrive) cb?.call();
+  }
+
+  void _finishWalk() {
+    stopMove(forceIdle: true);
+    _clearWalk(runArrive: true);
+  }
+
+  void _followWalk() {
+    while (_wpIndex < _waypoints.length &&
+        position.distanceTo(_waypoints[_wpIndex]) <= _arrive) {
+      _wpIndex++;
+    }
+    if (_wpIndex >= _waypoints.length) {
+      _finishWalk();
+      return;
+    }
+    final dest = _waypoints[_wpIndex];
+    final d = dest - position;
+    if (d.length < 1) {
+      _wpIndex++;
+      return;
+    }
+    final n = d.normalized();
+    final JoystickMoveDirectional dir;
+    if (n.y < -0.4 && n.x < -0.4) {
+      dir = JoystickMoveDirectional.MOVE_UP_LEFT;
+    } else if (n.y < -0.4 && n.x > 0.4) {
+      dir = JoystickMoveDirectional.MOVE_UP_RIGHT;
+    } else if (n.y > 0.4 && n.x < -0.4) {
+      dir = JoystickMoveDirectional.MOVE_DOWN_LEFT;
+    } else if (n.y > 0.4 && n.x > 0.4) {
+      dir = JoystickMoveDirectional.MOVE_DOWN_RIGHT;
+    } else if (n.y < -0.4) {
+      dir = JoystickMoveDirectional.MOVE_UP;
+    } else if (n.y > 0.4) {
+      dir = JoystickMoveDirectional.MOVE_DOWN;
+    } else if (n.x < -0.4) {
+      dir = JoystickMoveDirectional.MOVE_LEFT;
+    } else if (n.x > 0.4) {
+      dir = JoystickMoveDirectional.MOVE_RIGHT;
+    } else {
+      dir = JoystickMoveDirectional.IDLE;
+    }
+    onJoystickChangeDirectional(JoystickDirectionalEvent(
+      directional: dir,
+      intensity: 1.0,
+      isKeyboard: true,
+    ));
+  }
+
   /// Focus-independent WASD (same mapping as overworld [CustomPlayer]).
-  void syncMovementFromKeyboard() {
+  /// Returns true when a move key is held.
+  bool syncMovementFromKeyboard() {
     final keys = HardwareKeyboard.instance.logicalKeysPressed;
     final up = keys.contains(LogicalKeyboardKey.keyW) ||
         keys.contains(LogicalKeyboardKey.arrowUp);
@@ -496,6 +595,8 @@ class RoomPlayer extends SimplePlayer with BlockMovementCollision, InstantFacing
         keys.contains(LogicalKeyboardKey.arrowLeft);
     final right = keys.contains(LogicalKeyboardKey.keyD) ||
         keys.contains(LogicalKeyboardKey.arrowRight);
+    final held = up || down || left || right;
+    if (held) _clearWalk();
 
     final JoystickMoveDirectional dir;
     if (up && left) {
@@ -518,19 +619,26 @@ class RoomPlayer extends SimplePlayer with BlockMovementCollision, InstantFacing
       dir = JoystickMoveDirectional.IDLE;
     }
 
+    // Don't IDLE over an active click-path — follower owns the stick.
+    if (dir == JoystickMoveDirectional.IDLE && _waypoints.isNotEmpty) {
+      return false;
+    }
+
     onJoystickChangeDirectional(JoystickDirectionalEvent(
       directional: dir,
       intensity: dir == JoystickMoveDirectional.IDLE ? 0.0 : 1.0,
       isKeyboard: true,
     ));
+    return held;
   }
 
   @override
   void update(double dt) {
     speed = baseSpeed * Meals.speedMultiplier;
-    // Cutscenes steal Bonfire focus; keep stick locked to held keys.
     if (!RoomPanel.isOpen && !Journal.open.value) {
-      syncMovementFromKeyboard();
+      if (hasGameRef && gameRef.paused) gameRef.resumeEngine();
+      final held = syncMovementFromKeyboard();
+      if (!held && _waypoints.isNotEmpty) _followWalk();
     }
     super.update(dt);
     _jog?.setSpeed(velocity.length);
@@ -540,6 +648,7 @@ class RoomPlayer extends SimplePlayer with BlockMovementCollision, InstantFacing
     if (!onMat) _armed = true;
     if (onMat && _armed && !_left) {
       _left = true;
+      _clearWalk();
       stopMove(forceIdle: true);
       onDoormat();
     }

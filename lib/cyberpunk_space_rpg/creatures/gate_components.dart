@@ -11,14 +11,15 @@ import 'creature_components.dart';
 import 'creature_species.dart';
 import 'gates.dart';
 import 'interaction.dart';
+import 'obstacle_masks.dart';
 import 'obstacles.dart' show HiddenPath;
 import 'region_gates.dart';
 
 /// Art for the main-route gates (assets/images/obstacles/, Designer's
-/// "Woods gates" set; closed/open swap in place). Colliders are in the art's
-/// own pixels, copied from the JSON next to each PNG (pond_grotto.json,
-/// road_boulder.json, bramble_*.json; test/woods_gates_test.dart keeps them
-/// in sync, and tools/make_tiled_maps.py GATE_ART uses the same rects).
+/// "Woods gates" set; closed/open swap in place). Collider lists come from
+/// [ObstacleMasks] (Designer JSON); paths/constants stay here.
+/// `tools/make_tiled_maps.py` GATE_ART is a map-gen snapshot — re-run after
+/// hand-edits only if world.tmj gate objects need regenerating.
 class GateArt {
   GateArt._();
 
@@ -28,16 +29,10 @@ class GateArt {
   /// Left rock, right rock, arch, pond, mouth. Lit or dark the façade stays
   /// solid — entry is ENTER into the cave room (like a house), not walking
   /// through the sprite.
-  static const grottoLitColliders = [
-    Rect.fromLTWH(16, 3, 19, 30),
-    Rect.fromLTWH(58, 3, 19, 30),
-    Rect.fromLTWH(35, 3, 23, 10),
-    Rect.fromLTWH(14, 33, 65, 29),
-    Rect.fromLTWH(35, 13, 23, 20),
-  ];
-  static const grottoPondCollider = Rect.fromLTWH(14, 33, 65, 29);
-  static const grottoMouthCollider = Rect.fromLTWH(35, 13, 23, 20);
-  static const grottoDarkColliders = grottoLitColliders;
+  static List<Rect> get grottoLitColliders => ObstacleMasks.grottoOpen;
+  static Rect get grottoPondCollider => const Rect.fromLTWH(14, 33, 65, 29);
+  static Rect get grottoMouthCollider => const Rect.fromLTWH(35, 13, 23, 20);
+  static List<Rect> get grottoDarkColliders => ObstacleMasks.grottoClosed;
 
   /// Fragment just inside the mouth; LIGHT is used from the south bank.
   static const grottoFragmentPoint = Offset(45, 27);
@@ -51,15 +46,9 @@ class GateArt {
   static const boulderRollFrames = 3;
   static const boulderRollFps = 10.0;
 
-  /// Closed: solid plug across the art (y starts low enough that tile-row
-  /// under the rock, e.g. nook ~50,8, is not a free path corridor through
-  /// the sprite). Leave a thin north lip (~8px) for the south-exit push
-  /// stand. Open: turned-over resting stone only (opaque core of
-  /// road_boulder_open.png) — the old pad (58,16,38×48) ate the left-lane
-  /// passage and made A* grind around the road.
-  static const boulderClosedColliders = [Rect.fromLTWH(0, 8, 96, 52)];
-  // Main turned stone foot (a>180 ≈ x61–94,y27–54); left two tiles stay open.
-  static const boulderOpenColliders = [Rect.fromLTWH(64, 30, 28, 26)];
+  /// Closed / open rects: [ObstacleMasks] (road_boulder.json).
+  static List<Rect> get boulderClosedColliders => ObstacleMasks.boulderClosed;
+  static List<Rect> get boulderOpenColliders => ObstacleMasks.boulderOpen;
 
   /// Open-state resting stone (art px); used for depth sort.
   static const boulderOpenFoot = 64.0;
@@ -106,6 +95,7 @@ abstract class AbilityGate extends GameComponent with Interactable {
 
   @override
   Future<void> onLoad() async {
+    await ObstacleMasks.ensureLoaded();
     // Hitboxes first (before sprite awaits) so the gate is solid while art loads.
     // Cannot add() in the constructor — Bonfire needs gameRef for hitboxes.
     openT = isOpen ? 1 : 0;
@@ -149,6 +139,21 @@ abstract class AbilityGate extends GameComponent with Interactable {
       add(h);
     }
   }
+
+  /// Re-read [ObstacleMasks] into live hitboxes (debug mask editor).
+  void refreshColliders() {
+    _setColliders(isOpen ? openColliders : closedColliders);
+  }
+
+  /// Force a specific rect list (mask editor open/closed preview).
+  void applyColliderRects(List<Rect> rects) => _setColliders(rects);
+
+  ObstacleMaskId? get maskId => switch (this) {
+        GrottoGate() => ObstacleMaskId.grotto,
+        BrambleGate() => ObstacleMaskId.bramble,
+        FallenBoulderGate() => ObstacleMaskId.boulder,
+        _ => null,
+      };
 
   /// Where Kaela stands to use it, in art px.
   Offset get interactArt;

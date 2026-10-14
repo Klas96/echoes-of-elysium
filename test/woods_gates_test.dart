@@ -6,6 +6,7 @@ import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/creatures/bonds.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/creatures/creature_species.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/creatures/gate_components.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/creatures/gates.dart';
+import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/creatures/obstacle_masks.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/creatures/obstacles.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/creatures/region_gates.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/creatures/regions.dart';
@@ -381,7 +382,8 @@ void main() {
         ];
     Map json(String f) => jsonDecode(File('assets/images/obstacles/$f').readAsStringSync()) as Map;
 
-    test('gate colliders match Designer\'s JSON for each state', () {
+    test('gate colliders load from Designer JSON for each state', () {
+      ObstacleMasks.loadFromDisk();
       final g = json('pond_grotto.json');
       expect(GateArt.grottoDarkColliders, rects((g['dark'] as Map)['collision']));
       expect(GateArt.grottoLitColliders, rects((g['lit'] as Map)['collision']));

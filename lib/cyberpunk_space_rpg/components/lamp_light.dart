@@ -318,7 +318,10 @@ class NightTintPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final t = DayCycle.time.value;
-    final tint = DayCycle.tint(t);
+    // Ruins (world3) and other maps with no lamp objects get a flat wash with
+    // no warm pools — keep night readable instead of near-black.
+    final strength = NightLights.lights.isEmpty ? 0.48 : 1.0;
+    final tint = DayCycle.tint(t, strength: strength);
     final full = Offset.zero & size;
     final lights = NightLights.visible(size, DayCycle.darkness(t));
     if (lights.isEmpty) {

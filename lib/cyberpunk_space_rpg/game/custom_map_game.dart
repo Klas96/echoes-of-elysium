@@ -1,3 +1,5 @@
+import 'dart:math' show max;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kDebugMode, TargetPlatform;
@@ -9,6 +11,7 @@ import '../components/custom_map.dart';
 import '../components/portal_component.dart';
 import '../components/map_edge_exit.dart';
 import '../components/uec_drone.dart';
+import '../components/drone_spawn.dart';
 import '../components/ai_fragment.dart';
 import '../components/npc_character.dart';
 import '../components/fragment_pickup.dart';
@@ -16,6 +19,7 @@ import '../components/health_pickup.dart';
 import '../components/sentinel_drone.dart';
 import '../components/checkpoint.dart';
 import '../components/building.dart';
+import '../components/building_masks.dart';
 import '../components/story_gate.dart';
 import '../components/ambient_prop_fx.dart';
 import '../components/lamp_light.dart';
@@ -36,6 +40,7 @@ import '../creatures/journal_ui.dart';
 import '../creatures/obstacles.dart';
 import '../ui/cutscenes.dart';
 import '../ui/equipment_ui.dart';
+import '../ui/ability_hud.dart';
 import '../ui/hud_layout.dart';
 import '../interiors/meal_chip.dart';
 import '../ui/mmo_feedback.dart';
@@ -43,10 +48,12 @@ import '../ui/quest_board_ui.dart';
 import '../ui/shop_ui.dart';
 import 'adventure.dart';
 import 'click_pathfinder.dart';
+import 'debug_mask_editor.dart';
 import 'debug_walk_grid.dart';
 import 'game_debug.dart';
 import 'game_input.dart';
 import 'game_state.dart';
+import '../creatures/obstacle_masks.dart';
 import 'pause.dart';
 import 'progression.dart';
 import 'memories.dart';
@@ -789,6 +796,35 @@ Map<String, ObjectBuilder> _mapObjects(String mapId) => {
           level: levelRaw > 0 ? levelRaw : null,
         );
       },
+      // Rectangle = spawn area (designer draws it). Destructible pad at centre.
+      'dronespawn': (p) {
+        final customId = (p.others['id'] ?? '').toString();
+        final id = customId.isNotEmpty
+            ? customId
+            : _pickupId(mapId, 'dronespawn', p);
+        if (SaveService.data.collected.contains(id)) return _Gone();
+        final nestRaw = (p.others['nest'] ?? '').toString();
+        final nestId = nestRaw.isEmpty || nestRaw == 'false'
+            ? null
+            : (nestRaw == 'true' ? 'drone_nest' : nestRaw);
+        final levelRaw = _numProp(p, 'level', -1).round();
+        final area = Vector2(
+          p.size.x > 0 ? p.size.x : 96,
+          p.size.y > 0 ? p.size.y : 96,
+        );
+        return DroneSpawnPoint(
+          p.position,
+          area,
+          saveId: id,
+          kind: DroneKindParse.from((p.others['kind'] ?? '').toString()),
+          interval: _numProp(p, 'interval', 8).clamp(2, 60),
+          maxAlive: max(1, _numProp(p, 'max', 2).round()),
+          hp: max(1, _numProp(p, 'hp', 80).round()),
+          delay: _numProp(p, 'delay', 2).clamp(0.2, 30),
+          nestQuestId: nestId,
+          level: levelRaw > 0 ? levelRaw : null,
+        );
+      },
       'storygate': (p) => StoryGate(
             p.position,
             p.size,
@@ -948,6 +984,18 @@ class _CustomMapGameState extends State<CustomMapGame> with WidgetsBindingObserv
     return MaterialApp(
       title: 'Echoes of Elysium',
       theme: ThemeData(primarySwatch: Colors.blue),
+      builder: (context, child) {
+        if (HudLayout.isTouch || child == null) return child ?? const SizedBox.shrink();
+        final mq = MediaQuery.of(context);
+        return MediaQuery(
+          data: mq.copyWith(
+            textScaler: TextScaler.linear(
+              mq.textScaler.scale(1) * HudLayout.desktopTextScale,
+            ),
+          ),
+          child: child,
+        );
+      },
       home: const IntroScreen(),
     );
   }
@@ -1018,44 +1066,51 @@ class IntroScreen extends StatelessWidget {
                     height: compact ? 1.5 : 1.7)),
           );
 
-          final actions = Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ValueListenableBuilder<bool>(
-                valueListenable: SaveService.hasSave,
-                builder: (context, saved, _) => saved
-                    ? Column(mainAxisSize: MainAxisSize.min, children: [
-                        _CyberButton(
-                          label: 'CONTINUE',
-                          filled: true,
-                          onTap: () => _continueGame(context),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(_saveSummary(SaveService.data),
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                                color: Colors.white38, fontSize: 11, letterSpacing: 1)),
-                        SizedBox(height: compact ? 10 : 14),
-                        _CyberButton(
+          final actions = ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 360),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ValueListenableBuilder<bool>(
+                  valueListenable: SaveService.hasSave,
+                  builder: (context, saved, _) => saved
+                      ? Column(mainAxisSize: MainAxisSize.min, children: [
+                          _CyberButton(
+                            label: 'CONTINUE',
+                            filled: true,
+                            wide: true,
+                            onTap: () => _continueGame(context),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(_saveSummary(SaveService.data),
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                  color: Colors.white38, fontSize: 12, letterSpacing: 1)),
+                          SizedBox(height: compact ? 12 : 16),
+                          _CyberButton(
+                            label: 'BEGIN JOURNEY',
+                            wide: true,
+                            color: Colors.white54,
+                            onTap: () => _confirmNewGame(context),
+                          ),
+                        ])
+                      : _CyberButton(
                           label: 'BEGIN JOURNEY',
-                          color: Colors.white54,
-                          onTap: () => _confirmNewGame(context),
+                          filled: true,
+                          wide: true,
+                          onTap: () => _beginNewGame(context),
                         ),
-                      ])
-                    : _CyberButton(
-                        label: 'BEGIN JOURNEY',
-                        onTap: () => _beginNewGame(context),
-                      ),
-              ),
-              SizedBox(height: compact ? 12 : 20),
-              Text(_isTouch
-                      ? 'Tap to move · tap to talk/examine · WASD optional'
-                      : kDebugMode
-                          ? 'Click pathfind/talk · WASD · Esc menu · J journal · I gear · `'
-                          : 'Click pathfind/talk · WASD · Esc menu · J journal · I gear',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white24, fontSize: 11, letterSpacing: 1.2)),
-            ],
+                ),
+                SizedBox(height: compact ? 12 : 20),
+                Text(_isTouch
+                        ? 'Tap to move · tap to talk/examine · WASD optional'
+                        : kDebugMode
+                            ? 'Click pathfind/talk · WASD · Esc menu · J journal · I gear · `'
+                            : 'Click pathfind/talk · WASD · Esc menu · J journal · I gear',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.white24, fontSize: 11, letterSpacing: 1.2)),
+              ],
+            ),
           );
 
           final Widget content = (compact && wide)
@@ -1349,6 +1404,8 @@ String _mapAssetForLevel(int level) => switch (level) {
 
 Future<void> _startLevel(BonfireGameInterface game, int level) async {
   _onMapReady(game);
+  await ObstacleMasks.ensureLoaded();
+  BuildingMasks.loadFromDisk();
   // Walls from TMJ (complete) so click-paths go around forests, not through.
   await ClickPathfinder.primeFromAsset(_mapAssetForLevel(level));
   SaveService.snapshot = _snapshot;
@@ -1475,6 +1532,24 @@ KeyEventResult _handleDebugKey(FocusNode _, KeyEvent event) {
     GameDebug.toggle();
     return KeyEventResult.handled;
   }
+  if (kDebugMode &&
+      event is KeyDownEvent &&
+      GameDebug.isOn &&
+      event.logicalKey == LogicalKeyboardKey.keyG) {
+    GameDebug.toggleWalkGrid();
+    GameToast.show(
+      GameDebug.showWalkGrid ? 'WALK GRID ON' : 'WALK GRID OFF',
+      body: 'G toggles pathfinding overlay',
+      compact: true,
+      color: const Color(0xFF00FF88),
+    );
+    return KeyEventResult.handled;
+  }
+  if (kDebugMode &&
+      GameDebug.isOn &&
+      (DebugMaskEditor.instance?.handleKey(event) ?? false)) {
+    return KeyEventResult.handled;
+  }
   if (event is KeyDownEvent &&
       (event.logicalKey == LogicalKeyboardKey.keyJ || event.logicalKey == LogicalKeyboardKey.keyM) &&
       !_paused.value) {
@@ -1584,6 +1659,40 @@ void _onMapReady(BonfireGameInterface game) {
     g.removeFromParent();
   }
   game.add(DebugWalkGrid());
+  for (final g in game.query<DebugMaskEditor>()) {
+    g.removeFromParent();
+  }
+  game.add(DebugMaskEditor());
+}
+
+/// Map pointer → mask editor (debug) or click-to-move.
+Widget _mapPointer({required Widget child, bool checkDialogue = false}) {
+  return GestureDetector(
+    behavior: HitTestBehavior.translucent,
+    onTapDown: (d) {
+      if (checkDialogue) {
+        if (NpcCharacter.activeDialogue.value != null) return;
+        if (AIFragment.activeDialogue.value != null) return;
+      }
+      final screen = Vector2(d.localPosition.dx, d.localPosition.dy);
+      final ed = DebugMaskEditor.instance;
+      if (ed != null && GameDebug.isOn && ed.onScreenTap(screen)) return;
+      CustomPlayer.pendingClick.value = screen;
+    },
+    onPanStart: (d) {
+      if (!GameDebug.isOn) return;
+      final screen = Vector2(d.localPosition.dx, d.localPosition.dy);
+      DebugMaskEditor.instance?.onScreenPanStart(screen);
+    },
+    onPanUpdate: (d) {
+      final ed = DebugMaskEditor.instance;
+      if (ed == null || !ed.isDragging) return;
+      ed.onScreenPanUpdate(Vector2(d.localPosition.dx, d.localPosition.dy));
+    },
+    onPanEnd: (_) => DebugMaskEditor.instance?.onScreenPanEnd(),
+    onPanCancel: () => DebugMaskEditor.instance?.onScreenPanEnd(),
+    child: child,
+  );
 }
 
 // Keyboard (WASD / arrows) only — click/tap pathfinding is the pointer move.
@@ -1618,20 +1727,14 @@ class CustomMapGameScreen extends StatelessWidget {
       child: Scaffold(
         backgroundColor: Colors.black,
         body: Stack(children: [
-          GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onTapDown: (d) {
-              if (NpcCharacter.activeDialogue.value != null) return;
-              if (AIFragment.activeDialogue.value != null) return;
-              CustomPlayer.pendingClick.value =
-                  Vector2(d.localPosition.dx, d.localPosition.dy);
-            },
+          _mapPointer(
+            checkDialogue: true,
             child: BonfireWidget(
               focusNode: GameInput.focusNode,
             playerControllers: _playerControllers(),
             player: CustomPlayer(Vector2.zero()),
             map: CustomMap('maps/world.tmj', objectsBuilder: _mapObjects('world')),
-            cameraConfig: CameraConfig(moveOnlyMapArea: true, zoom: 2.0),
+            cameraConfig: CameraConfig(moveOnlyMapArea: true, zoom: HudLayout.worldZoom),
             overlayBuilderMap: {
               'portalReached': (ctx, game) =>
                   _PortalOverlay(game: game, fromLevel: 1),
@@ -1679,16 +1782,13 @@ class Map2GameScreen extends StatelessWidget {
       child: Scaffold(
         backgroundColor: Colors.black,
         body: Stack(children: [
-          GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onTapDown: (d) => CustomPlayer.pendingClick.value =
-                Vector2(d.localPosition.dx, d.localPosition.dy),
+          _mapPointer(
             child: BonfireWidget(
               focusNode: GameInput.focusNode,
             playerControllers: _playerControllers(),
             player: CustomPlayer(Vector2.zero()),
             map: CustomMap('maps/world2.tmj', objectsBuilder: _mapObjects('world2')),
-            cameraConfig: CameraConfig(moveOnlyMapArea: true, zoom: 2.0),
+            cameraConfig: CameraConfig(moveOnlyMapArea: true, zoom: HudLayout.worldZoom),
             overlayBuilderMap: {
               'portalReached': (ctx, game) =>
                   _PortalOverlay(game: game, fromLevel: 2),
@@ -1742,16 +1842,13 @@ class Map3GameScreen extends StatelessWidget {
       child: Scaffold(
         backgroundColor: Colors.black,
         body: Stack(children: [
-          GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onTapDown: (d) => CustomPlayer.pendingClick.value =
-                Vector2(d.localPosition.dx, d.localPosition.dy),
+          _mapPointer(
             child: BonfireWidget(
               focusNode: GameInput.focusNode,
               playerControllers: _playerControllers(),
               player: CustomPlayer(Vector2.zero()),
               map: CustomMap('maps/world3.tmj', objectsBuilder: _mapObjects('world3')),
-              cameraConfig: CameraConfig(moveOnlyMapArea: true, zoom: 2.0),
+              cameraConfig: CameraConfig(moveOnlyMapArea: true, zoom: HudLayout.worldZoom),
               overlayBuilderMap: {
                 'portalReached': (ctx, game) =>
                     _PortalOverlay(game: game, fromLevel: 3),
@@ -1799,16 +1896,13 @@ class Map4GameScreen extends StatelessWidget {
       child: Scaffold(
         backgroundColor: Colors.black,
         body: Stack(children: [
-          GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onTapDown: (d) => CustomPlayer.pendingClick.value =
-                Vector2(d.localPosition.dx, d.localPosition.dy),
+          _mapPointer(
             child: BonfireWidget(
               focusNode: GameInput.focusNode,
               playerControllers: _playerControllers(),
               player: CustomPlayer(Vector2.zero()),
               map: CustomMap('maps/world4.tmj', objectsBuilder: _mapObjects('world4')),
-              cameraConfig: CameraConfig(moveOnlyMapArea: true, zoom: 2.0),
+              cameraConfig: CameraConfig(moveOnlyMapArea: true, zoom: HudLayout.worldZoom),
               overlayBuilderMap: {
                 'portalReached': (ctx, game) =>
                     _PortalOverlay(game: game, fromLevel: 4),
@@ -1856,16 +1950,13 @@ class Map5GameScreen extends StatelessWidget {
       child: Scaffold(
         backgroundColor: Colors.black,
         body: Stack(children: [
-          GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onTapDown: (d) => CustomPlayer.pendingClick.value =
-                Vector2(d.localPosition.dx, d.localPosition.dy),
+          _mapPointer(
             child: BonfireWidget(
               focusNode: GameInput.focusNode,
               playerControllers: _playerControllers(),
               player: CustomPlayer(Vector2.zero()),
               map: CustomMap('maps/world5.tmj', objectsBuilder: _mapObjects('world5')),
-              cameraConfig: CameraConfig(moveOnlyMapArea: true, zoom: 2.0),
+              cameraConfig: CameraConfig(moveOnlyMapArea: true, zoom: HudLayout.worldZoom),
               overlayBuilderMap: {
                 'portalReached': (ctx, game) =>
                     _PortalOverlay(game: game, fromLevel: 5),
@@ -2199,83 +2290,104 @@ class GameHudState extends State<GameHud> {
             );
           },
         ));
+              // Fixed-width capsule bars. Do not wrap in IntrinsicWidth or
+              // put Expanded inside the bar — that fails layout and the
+              // whole top HUD (HP/XP) disappears.
+              Widget statusBar({
+                required double fill,
+                required Color color,
+              }) {
+                final h = HudLayout.statusBarHeight;
+                final r = h / 2;
+                return Container(
+                  width: 140,
+                  height: h,
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    border: Border.all(color: Colors.white12),
+                    borderRadius: BorderRadius.circular(r),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(r),
+                    child: FractionallySizedBox(
+                      alignment: Alignment.centerLeft,
+                      widthFactor: fill.clamp(0, 1),
+                      child: ColoredBox(color: color),
+                    ),
+                  ),
+                );
+              }
+
+              final statusBlock = Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  KeyedSubtree(
+                    key: const ValueKey('hud-health'),
+                    child: ValueListenableBuilder<int>(
+                      valueListenable: CustomPlayer.healthNotifier,
+                      builder: (_, hp, __) {
+                        final pct = hp / CustomPlayer.maxHealth;
+                        final barColor = pct > 0.5
+                            ? const Color(0xFF00FF88)
+                            : pct > 0.25
+                                ? const Color(0xFFFFAA00)
+                                : const Color(0xFFFF3333);
+                        return ValueListenableBuilder<int>(
+                          valueListenable: Progression.revision,
+                          builder: (_, __, ___) => Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'KAELA  ·  LV ${Progression.level}',
+                                style: TextStyle(
+                                  color: Colors.white54,
+                                  fontSize: HudLayout.statusLabelFont,
+                                  letterSpacing: 2,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              statusBar(fill: pct, color: barColor),
+                              const SizedBox(height: 3),
+                              Text(
+                                '$hp / ${CustomPlayer.maxHealth}',
+                                style: TextStyle(
+                                  color: Colors.white38,
+                                  fontSize: HudLayout.statusMetaFont,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              statusBar(
+                                fill: Progression.xpProgress,
+                                color: const Color(0xFFFFE08A),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                'XP ${Progression.xp}/${Progression.xpToNext(Progression.level)}'
+                                '${Progression.bonusDamage > 0 ? '  ·  +${Progression.bonusDamage} DMG' : ''}',
+                                style: TextStyle(
+                                  color: Colors.white38,
+                                  fontSize: HudLayout.statusMetaFont,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  CreatureHud(compact: HudLayout.compactChips(box.maxWidth)),
+                ],
+              );
+
               return Column(
                 key: const ValueKey('hud-top'),
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    KeyedSubtree(key: const ValueKey('hud-health'), child: ValueListenableBuilder<int>(
-          valueListenable: CustomPlayer.healthNotifier,
-          builder: (_, hp, __) {
-            final pct = hp / CustomPlayer.maxHealth;
-            final barColor = pct > 0.5
-                ? const Color(0xFF00FF88)
-                : pct > 0.25
-                    ? const Color(0xFFFFAA00)
-                    : const Color(0xFFFF3333);
-            return ValueListenableBuilder<int>(
-              valueListenable: Progression.revision,
-              builder: (_, __, ___) => Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('KAELA  ·  LV ${Progression.level}',
-                      style: const TextStyle(
-                          color: Colors.white54, fontSize: 10, letterSpacing: 2)),
-                  const SizedBox(height: 3),
-                  Container(
-                    width: 120,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: Colors.black54,
-                      border: Border.all(color: Colors.white12),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                    child: FractionallySizedBox(
-                      alignment: Alignment.centerLeft,
-                      widthFactor: pct.clamp(0, 1),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: barColor,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text('$hp / ${CustomPlayer.maxHealth}',
-                      style: const TextStyle(color: Colors.white38, fontSize: 9)),
-                  const SizedBox(height: 6),
-                  Container(
-                    width: 120,
-                    height: 5,
-                    decoration: BoxDecoration(
-                      color: Colors.black54,
-                      border: Border.all(color: Colors.white12),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                    child: FractionallySizedBox(
-                      alignment: Alignment.centerLeft,
-                      widthFactor: Progression.xpProgress,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFE08A),
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'XP ${Progression.xp}/${Progression.xpToNext(Progression.level)}'
-                    '${Progression.bonusDamage > 0 ? '  ·  +${Progression.bonusDamage} DMG' : ''}',
-                    style: const TextStyle(color: Colors.white38, fontSize: 9),
-                  ),
-                ],
-              ),
-            );
-          },
-        )),
+                    statusBlock,
                     const SizedBox(width: 12),
                     if (wide) ...[
                       Expanded(child: banner),
@@ -2357,11 +2469,6 @@ class GameHudState extends State<GameHud> {
                       ),
                     ),
                   ]),
-                  const SizedBox(height: 8),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: CreatureHud(compact: HudLayout.compactChips(box.maxWidth)),
-                  ),
                   const Align(alignment: Alignment.centerLeft, child: WellRestedChip()),
                   const Align(alignment: Alignment.centerLeft, child: MealChip()),
                   const SizedBox(height: 8),
@@ -2376,7 +2483,7 @@ class GameHudState extends State<GameHud> {
       Builder(builder: (context) {
         final screen = MediaQuery.sizeOf(context);
         return Positioned(
-          right: HudLayout.popsRight,
+          right: HudLayout.popsRight(screen),
           bottom: HudLayout.popsBottom(screen),
           child: ValueListenableBuilder<List<HudPop>>(
             valueListenable: MmoFeedback.pops,
@@ -2406,6 +2513,7 @@ class GameHudState extends State<GameHud> {
           ),
         );
       }),
+      const AbilityHud(),
     ]);
   }
 }
@@ -2926,22 +3034,27 @@ class _VictoryScreen extends StatelessWidget {
                     height: compact ? 1.5 : 1.75)),
           );
 
-          final actions = Wrap(
-            alignment: WrapAlignment.center,
-            spacing: 16,
-            runSpacing: compact ? 12 : 16,
-            children: [
-              _CyberButton(
-                label: 'PLAY AGAIN',
-                onTap: () => _beginNewGame(context),
-              ),
-              _CyberButton(
-                label: 'MAIN MENU',
-                color: Colors.white38,
-                onTap: () => Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(builder: (_) => const IntroScreen())),
-              ),
-            ],
+          final actions = ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 360),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _CyberButton(
+                  label: 'PLAY AGAIN',
+                  filled: true,
+                  wide: true,
+                  onTap: () => _beginNewGame(context),
+                ),
+                const SizedBox(height: 12),
+                _CyberButton(
+                  label: 'MAIN MENU',
+                  wide: true,
+                  color: Colors.white54,
+                  onTap: () => Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(builder: (_) => const IntroScreen())),
+                ),
+              ],
+            ),
           );
 
           final Widget content = (compact && wide)
@@ -2993,30 +3106,49 @@ class _CyberButton extends StatelessWidget {
   final Color color;
   /// Primary action: stronger fill.
   final bool filled;
+  /// Stretch to parent width (pause / stacked menus).
+  final bool wide;
   const _CyberButton({
     required this.label,
     required this.onTap,
     this.color = const Color(0xFF00FFCC),
     this.filled = false,
+    this.wide = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return TextButton(
+    final btn = TextButton(
       onPressed: onTap,
       style: TextButton.styleFrom(
-        backgroundColor: color.withOpacity(filled ? 0.28 : 0.12),
-        side: BorderSide(color: color, width: filled ? 2 : 1),
-        padding: EdgeInsets.symmetric(horizontal: filled ? 40 : 28, vertical: filled ? 14 : 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+        backgroundColor: color.withValues(alpha: filled ? 0.22 : 0.07),
+        foregroundColor: color,
+        side: BorderSide(
+          color: color.withValues(alpha: filled ? 1 : 0.85),
+          width: filled ? 2 : 1.5,
+        ),
+        padding: EdgeInsets.symmetric(
+          horizontal: filled ? 40 : 32,
+          vertical: filled ? 18 : 16,
+        ),
+        minimumSize: Size(wide ? double.infinity : 168, filled ? 54 : 50),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+        tapTargetSize: MaterialTapTargetSize.padded,
       ),
-      child: Text(label,
-          style: TextStyle(
-              color: color,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 2,
-              fontSize: filled ? 15 : 13)),
+      child: Text(
+        label,
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 2.4,
+          fontSize: filled ? 17 : 15,
+          height: 1.1,
+        ),
+      ),
     );
+    if (!wide) return btn;
+    return SizedBox(width: double.infinity, child: btn);
   }
 }
 
@@ -3132,7 +3264,9 @@ class _AudioRow extends StatelessWidget {
         ),
         SizedBox(
           width: 36,
-          child: Text(enabled ? '$pct%' : 'OFF',
+          // Keep the stored level visible while muted — the ON/OFF chip
+          // already says OFF (avoid "OFF OFF").
+          child: Text('$pct%',
               textAlign: TextAlign.right,
               style: TextStyle(
                   color: enabled ? Colors.white54 : Colors.white24,
@@ -3186,12 +3320,12 @@ class _PauseMenuState extends State<_PauseMenu> {
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Container(
-            constraints: const BoxConstraints(maxWidth: 420),
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            constraints: const BoxConstraints(maxWidth: 440),
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 28),
             decoration: BoxDecoration(
               color: const Color(0xFF06060F).withValues(alpha: 0.96),
               border: Border.all(color: const Color(0xFF00FFCC).withValues(alpha: 0.6)),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: _memories
                 ? _CollectedMemoriesPanel(onBack: () => setState(() => _memories = false))
@@ -3199,51 +3333,57 @@ class _PauseMenuState extends State<_PauseMenu> {
                     const Text('PAUSED',
                         style: TextStyle(
                             color: Color(0xFF00FFCC),
-                            fontSize: 22,
+                            fontSize: 26,
                             fontWeight: FontWeight.bold,
-                            letterSpacing: 5)),
-                    const SizedBox(height: 14),
-                    Wrap(
-                      alignment: WrapAlignment.center,
-                      spacing: 12,
-                      runSpacing: 12,
-                      children: [
-                        _CyberButton(label: 'RESUME', onTap: () => _setPaused(false)),
-                        _CyberButton(
-                          label: 'JOURNAL',
-                          color: const Color(0xFFE8D0FF),
-                          onTap: () {
-                            _paused.value = false;
-                            Journal.show();
-                          },
-                        ),
-                        _CyberButton(
-                          label: 'GEAR',
-                          color: const Color(0xFFFFE08A),
-                          onTap: () {
-                            _paused.value = false;
-                            Equipment.show();
-                          },
-                        ),
-                        _CyberButton(
-                          label: 'MEMORIES',
-                          color: const Color(0xFF88CCFF),
-                          onTap: () => setState(() => _memories = true),
-                        ),
-                        _CyberButton(
-                          label: 'MAIN MENU',
-                          color: Colors.white38,
-                          onTap: () async {
-                            final nav = Navigator.of(context);
-                            _setPaused(false);
-                            await _leaveMap();
-                            nav.pushReplacement(
-                                MaterialPageRoute(builder: (_) => const IntroScreen()));
-                          },
-                        ),
-                      ],
+                            letterSpacing: 6)),
+                    const SizedBox(height: 22),
+                    _CyberButton(
+                      label: 'RESUME',
+                      filled: true,
+                      wide: true,
+                      onTap: () => _setPaused(false),
                     ),
-                    const SizedBox(height: 18),
+                    const SizedBox(height: 12),
+                    _CyberButton(
+                      label: 'JOURNAL',
+                      wide: true,
+                      color: const Color(0xFFE8D0FF),
+                      onTap: () {
+                        _paused.value = false;
+                        Journal.show();
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    _CyberButton(
+                      label: 'GEAR',
+                      wide: true,
+                      color: const Color(0xFFFFE08A),
+                      onTap: () {
+                        _paused.value = false;
+                        Equipment.show();
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    _CyberButton(
+                      label: 'MEMORIES',
+                      wide: true,
+                      color: const Color(0xFF88CCFF),
+                      onTap: () => setState(() => _memories = true),
+                    ),
+                    const SizedBox(height: 12),
+                    _CyberButton(
+                      label: 'MAIN MENU',
+                      wide: true,
+                      color: Colors.white54,
+                      onTap: () async {
+                        final nav = Navigator.of(context);
+                        _setPaused(false);
+                        await _leaveMap();
+                        nav.pushReplacement(
+                            MaterialPageRoute(builder: (_) => const IntroScreen()));
+                      },
+                    ),
+                    const SizedBox(height: 22),
                     const _AudioSettingsPanel(),
                   ]),
           ),
@@ -3300,7 +3440,8 @@ class _CollectedMemoriesPanel extends StatelessWidget {
                       : null,
                 ),
             const SizedBox(height: 14),
-            Center(child: _CyberButton(label: 'BACK', color: Colors.white54, onTap: onBack)),
+            _CyberButton(
+                label: 'BACK', wide: true, color: Colors.white54, onTap: onBack),
           ],
         );
       },

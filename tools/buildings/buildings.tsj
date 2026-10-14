@@ -266,10 +266,10 @@
       "id": 1,
       "name": "collision",
       "type": "collision",
-      "x": 8,
-      "y": 82,
-      "width": 142,
-      "height": 64,
+      "x": 9.740234375,
+      "y": 111.44921875,
+      "width": 140.259765625,
+      "height": 34.55078125,
       "rotation": 0,
       "visible": true
      }

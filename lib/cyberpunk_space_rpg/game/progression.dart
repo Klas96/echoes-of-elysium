@@ -43,6 +43,15 @@ class GearItem {
 class Progression {
   Progression._();
 
+  /// Player level required before Phase Step (combat Space) unlocks.
+  static const int phaseUnlockLevel = 3;
+  /// Player level required before Pulse (combat Q) unlocks.
+  static const int pulseUnlockLevel = 5;
+  /// Player level required before Ward (combat F) unlocks.
+  static const int wardUnlockLevel = 7;
+  /// Player level required before Anchor (combat R) unlocks.
+  static const int anchorUnlockLevel = 9;
+
   static final revision = ValueNotifier<int>(0);
   static final _rng = Random();
 
@@ -192,6 +201,7 @@ class Progression {
 
   static void grantXp(int amount, {String? reason, bool float = true}) {
     if (amount <= 0) return;
+    final before = _d.level;
     _d.xp += amount;
     var leveled = false;
     while (_d.xp >= xpToNext(_d.level)) {
@@ -211,6 +221,50 @@ class Progression {
         color: const Color(0xFFFFE08A),
         compact: true,
       );
+      if (before < Progression.phaseUnlockLevel &&
+          _d.level >= Progression.phaseUnlockLevel) {
+        MmoFeedback.pushPop('PHASE UNLOCKED', color: const Color(0xFF88EEFF));
+        GameToast.show(
+          'PHASE UNLOCKED',
+          body: 'Short dash · tap the button or press Space',
+          color: const Color(0xFF88EEFF),
+          compact: true,
+          seconds: 3.5,
+        );
+      }
+      if (before < Progression.pulseUnlockLevel &&
+          _d.level >= Progression.pulseUnlockLevel) {
+        MmoFeedback.pushPop('PULSE UNLOCKED', color: const Color(0xFF00FFCC));
+        GameToast.show(
+          'PULSE UNLOCKED',
+          body: 'Cone burst · tap the button or press Q',
+          color: const Color(0xFF00FFCC),
+          compact: true,
+          seconds: 3.5,
+        );
+      }
+      if (before < Progression.wardUnlockLevel &&
+          _d.level >= Progression.wardUnlockLevel) {
+        MmoFeedback.pushPop('WARD UNLOCKED', color: const Color(0xFFE8D0FF));
+        GameToast.show(
+          'WARD UNLOCKED',
+          body: 'Personal shield · tap the button or press F',
+          color: const Color(0xFFE8D0FF),
+          compact: true,
+          seconds: 3.5,
+        );
+      }
+      if (before < Progression.anchorUnlockLevel &&
+          _d.level >= Progression.anchorUnlockLevel) {
+        MmoFeedback.pushPop('ANCHOR UNLOCKED', color: const Color(0xFFAA44FF));
+        GameToast.show(
+          'ANCHOR UNLOCKED',
+          body: 'Radial slow · tap the button or press R',
+          color: const Color(0xFFAA44FF),
+          compact: true,
+          seconds: 3.5,
+        );
+      }
     }
   }
 

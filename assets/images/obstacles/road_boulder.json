@@ -21,20 +21,20 @@
  "roll_anim": "road_boulder_roll_anim.json",
  "collision": [
   [
-   0,
+   34.3046875,
    8,
-   96,
-   52
+   45.240234375,
+   47.220703125
   ]
  ],
  "closed": {
   "file": "road_boulder_closed.png",
   "collision": [
    [
-    0,
+    34.3046875,
     8,
-    96,
-    52
+    45.240234375,
+    47.220703125
    ]
   ],
   "boulder_bbox": [
@@ -70,5 +70,5 @@
   64
  ],
  "ground_decal": true,
- "note": "place on a 3-tile-wide dirt road (both 96x64, one scale/palette, bottom-aligned; swap image + collision). `collision` = closed state (full road width, all 3 tiles). Open: turned-over resting stone foot only (opaque core \u2248 x64\u201392,y30\u201356) so the left two tiles stay a clear passage for feet/A*; the previous pad (58,16,38\u00d748) pinched that lane. Dirt patch is a soft decal; stones are opaque with outline + shadow."
+ "note": "place on a 3-tile-wide dirt road (both 96x64, one scale/palette, bottom-aligned; swap image + collision). `collision` = closed state (full road width, all 3 tiles). Open: turned-over resting stone foot only (opaque core ≈ x64–92,y30–56) so the left two tiles stay a clear passage for feet/A*; the previous pad (58,16,38×48) pinched that lane. Dirt patch is a soft decal; stones are opaque with outline + shadow."
 }

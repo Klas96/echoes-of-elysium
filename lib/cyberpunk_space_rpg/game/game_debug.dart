@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
+import 'package:flutter/services.dart';
 
 /// Shared debug toggle (Flutter debug builds only). Backtick / the DEBUG chip
 /// flips [enabled]; release builds always report off.
@@ -8,34 +9,67 @@ class GameDebug {
 
   static final enabled = ValueNotifier<bool>(false);
 
+  /// Pathfinding half-cell overlay — off by default (was the main DEBUG lag).
+  /// Toggle with **G** while DEBUG is on.
+  static final walkGrid = ValueNotifier<bool>(false);
+
+  static bool _hwInstalled = false;
+
   static bool get isOn => kDebugMode && enabled.value;
+
+  static bool get showWalkGrid => isOn && walkGrid.value;
+
+  static void install() {
+    if (_hwInstalled) return;
+    _hwInstalled = true;
+    HardwareKeyboard.instance.addHandler(_hwKey);
+  }
+
+  static bool _hwKey(KeyEvent event) {
+    if (!kDebugMode || event is! KeyDownEvent) return false;
+    if (event.logicalKey == LogicalKeyboardKey.keyG && isOn) {
+      toggleWalkGrid();
+      return true;
+    }
+    return false;
+  }
 
   static void toggle() {
     if (!kDebugMode) return;
     enabled.value = !enabled.value;
+    if (!enabled.value) walkGrid.value = false;
   }
 
-  /// World-space label (enemies, props) — centred on [topCenter], green mono.
+  static void toggleWalkGrid() {
+    if (!isOn) return;
+    walkGrid.value = !walkGrid.value;
+  }
+
+  static final _labelCache = <String, TextPainter>{};
+
+  /// World-space label (enemies) — centred on [topCenter], green mono.
+  /// Painters are cached by [text] so DEBUG doesn't layout every frame.
   static void paintLabel(Canvas canvas, String text, Offset topCenter) {
     if (!isOn || text.isEmpty) return;
-    final tp = TextPainter(
-      text: TextSpan(
-        text: text,
-        style: const TextStyle(
-          color: Color(0xFF00FF88),
-          fontSize: 9,
-          fontWeight: FontWeight.w700,
-          fontFamily: 'monospace',
-          letterSpacing: 0.5,
-          shadows: [
-            Shadow(color: Color(0xFF000000), blurRadius: 3, offset: Offset(0, 1)),
-          ],
+    final tp = _labelCache.putIfAbsent(text, () {
+      return TextPainter(
+        text: TextSpan(
+          text: text,
+          style: const TextStyle(
+            color: Color(0xFF00FF88),
+            fontSize: 9,
+            fontWeight: FontWeight.w700,
+            fontFamily: 'monospace',
+            letterSpacing: 0.5,
+            shadows: [
+              Shadow(color: Color(0xFF000000), blurRadius: 3, offset: Offset(0, 1)),
+            ],
+          ),
         ),
-      ),
-      textDirection: TextDirection.ltr,
-      maxLines: 1,
-    )..layout();
-    // Soft plate so labels stay readable over bright sprites.
+        textDirection: TextDirection.ltr,
+        maxLines: 1,
+      )..layout();
+    });
     final r = RRect.fromRectAndRadius(
       Rect.fromCenter(
         center: Offset(topCenter.dx, topCenter.dy - tp.height / 2),

@@ -117,8 +117,7 @@ class SfxManager {
         if (_portal != null) _portal!.setVolume(_basePortal * s),
         if (_shoot != null) _shoot!.setVolume(_baseShoot * s),
         if (_chime != null) _chime!.setVolume(_baseChime * s),
-        // VO is not part of SFX mute/volume — always full.
-        if (_voice != null) _voice!.setVolume(_baseVoice),
+        if (_voice != null) _voice!.setVolume(_baseVoice * s),
       ]);
     } catch (_) {}
   }
@@ -155,8 +154,12 @@ class SfxManager {
   /// Soft chime for bonds and finds (reuses the computer beep).
   Future<void> playChime() async => _playOneShot(_chime, _chimeAsset);
 
-  /// Dialogue / cutscene VO — always on; ignores SFX mute and volume.
+  /// Dialogue / cutscene VO — respects SFX mute / volume.
   Future<void> playVoice(String assetPath) async {
+    if (!_audible) {
+      await stopVoice();
+      return;
+    }
     if (!_ready) await init();
     final token = ++_voiceToken;
     final src = _asset(assetPath);
@@ -186,8 +189,14 @@ class SfxManager {
         return;
       }
       await p.setReleaseMode(ReleaseMode.stop);
-      await p.setVolume(_baseVoice);
+      await p.setVolume(_baseVoice * _scale);
       await p.setPlayerMode(PlayerMode.mediaPlayer);
+      if (!_audible || token != _voiceToken) {
+        try {
+          await p.dispose();
+        } catch (_) {}
+        return;
+      }
       await p.play(AssetSource(src));
       if (token != _voiceToken) {
         try {

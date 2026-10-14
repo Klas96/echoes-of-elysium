@@ -76,85 +76,117 @@ class CreatureHud extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final gap = compact ? 6.0 : 8.0;
+    final chips = <Widget>[
+      _MenuChip(compact: compact),
+      ValueListenableBuilder<int>(
+        valueListenable: Bonds.revision,
+        builder: (_, __, ___) => _Chip(
+          border: _gold.withValues(alpha: 0.45),
+          child: Text('${Bonds.glimmer}◆',
+              style: TextStyle(
+                  color: _gold,
+                  fontSize: HudLayout.chipFont,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1)),
+        ),
+      ),
+      if (SaveService.data.mapId == 'world5')
+        GestureDetector(
+          onTap: Shop.show,
+          child: _Chip(
+            border: _gold,
+            child: compact
+                ? Icon(Icons.storefront_outlined,
+                    size: HudLayout.chipIcon, color: _gold)
+                : Text('STALL',
+                    style: TextStyle(
+                        color: _gold,
+                        fontSize: HudLayout.chipFont,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.5)),
+          ),
+        ),
+      ValueListenableBuilder<double>(
+        valueListenable: DayCycle.time,
+        builder: (_, t, __) {
+          final night = DayCycle.isNight(t);
+          final icon = Icon(night ? Icons.nightlight_round : Icons.wb_sunny_outlined,
+              size: compact ? HudLayout.chipIcon : HudLayout.chipFont + 1,
+              color: night ? const Color(0xFFB8C4FF) : const Color(0xFFFFD27A));
+          return Tooltip(
+            message: DayCycle.label(t),
+            child: _Chip(
+              child: compact
+                  ? icon
+                  : Row(mainAxisSize: MainAxisSize.min, children: [
+                      icon,
+                      SizedBox(width: HudLayout.isTouch ? 4 : 6),
+                      Text(DayCycle.label(t),
+                          style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: HudLayout.chipFont,
+                              letterSpacing: 1.5)),
+                    ]),
+            ),
+          );
+        },
+      ),
+      ValueListenableBuilder<int>(
+        valueListenable: Bonds.revision,
+        builder: (_, __, ___) {
+          // Companions stay in their home region: no chip (and no ability)
+          // outside it.
+          final id = Bonds.activeHere;
+          if (id == null) return const SizedBox.shrink();
+          final s = creatureSpecies[id]!;
+          final face = HudLayout.isTouch ? 16.0 : 20.0;
+          final portrait = ClipOval(
+            child: Image.asset(s.portraitAsset(''),
+                width: face,
+                height: face,
+                fit: BoxFit.cover,
+                filterQuality: FilterQuality.none),
+          );
+          return GestureDetector(
+            onTap: () => Journal.show(entry: id),
+            child: _Chip(
+              child: compact
+                  ? portrait
+                  : Row(mainAxisSize: MainAxisSize.min, children: [
+                      portrait,
+                      SizedBox(width: HudLayout.isTouch ? 4 : 6),
+                      Text(s.ability?.label ?? s.name.toUpperCase(),
+                          style: TextStyle(
+                              color: const Color(0xFFE8D0FF),
+                              fontSize: HudLayout.chipFont,
+                              letterSpacing: 1.5)),
+                    ]),
+            ),
+          );
+        },
+      ),
+    ];
+
+    // Single row on wide layouts; wrap when compact.
+    if (!compact) {
+      return Row(
+        key: const ValueKey('hud-chips'),
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var i = 0; i < chips.length; i++) ...[
+            if (i > 0) SizedBox(width: gap),
+            chips[i],
+          ],
+        ],
+      );
+    }
     return Wrap(
       key: const ValueKey('hud-chips'),
-      spacing: compact ? 6 : 8,
+      spacing: gap,
       runSpacing: 6,
       crossAxisAlignment: WrapCrossAlignment.center,
-      children: [
-        _MenuChip(compact: compact),
-        ValueListenableBuilder<int>(
-          valueListenable: Bonds.revision,
-          builder: (_, __, ___) => _Chip(
-            border: _gold.withValues(alpha: 0.45),
-            child: Text('${Bonds.glimmer}◆',
-                style: const TextStyle(
-                    color: _gold, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
-          ),
-        ),
-        if (SaveService.data.mapId == 'world5')
-          GestureDetector(
-            onTap: Shop.show,
-            child: _Chip(
-              border: _gold,
-              child: compact
-                  ? const Icon(Icons.storefront_outlined, size: 13, color: _gold)
-                  : const Text('STALL',
-                      style: TextStyle(
-                          color: _gold, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
-            ),
-          ),
-        ValueListenableBuilder<double>(
-          valueListenable: DayCycle.time,
-          builder: (_, t, __) {
-            final night = DayCycle.isNight(t);
-            final icon = Icon(night ? Icons.nightlight_round : Icons.wb_sunny_outlined,
-                size: compact ? 13 : 11,
-                color: night ? const Color(0xFFB8C4FF) : const Color(0xFFFFD27A));
-            return Tooltip(
-              message: DayCycle.label(t),
-              child: _Chip(
-                child: compact
-                    ? icon
-                    : Row(mainAxisSize: MainAxisSize.min, children: [
-                        icon,
-                        const SizedBox(width: 4),
-                        Text(DayCycle.label(t),
-                            style: const TextStyle(color: Colors.white54, fontSize: 10, letterSpacing: 1.5)),
-                      ]),
-              ),
-            );
-          },
-        ),
-        ValueListenableBuilder<int>(
-          valueListenable: Bonds.revision,
-          builder: (_, __, ___) {
-            // Companions stay in their home region: no chip (and no ability)
-            // outside it.
-            final id = Bonds.activeHere;
-            if (id == null) return const SizedBox.shrink();
-            final s = creatureSpecies[id]!;
-            final portrait = ClipOval(
-              child: Image.asset(s.portraitAsset(''),
-                  width: 16, height: 16, fit: BoxFit.cover, filterQuality: FilterQuality.none),
-            );
-            return GestureDetector(
-              onTap: () => Journal.show(entry: id),
-              child: _Chip(
-                child: compact
-                    ? portrait
-                    : Row(mainAxisSize: MainAxisSize.min, children: [
-                        portrait,
-                        const SizedBox(width: 4),
-                        Text(s.ability?.label ?? s.name.toUpperCase(),
-                            style: const TextStyle(
-                                color: Color(0xFFE8D0FF), fontSize: 10, letterSpacing: 1.5)),
-                      ]),
-              ),
-            );
-          },
-        ),
-      ],
+      children: chips,
     );
   }
 }
@@ -209,39 +241,69 @@ class WellRestedChip extends StatelessWidget {
 class _Chip extends StatelessWidget {
   final Widget child;
   final Color border;
-  const _Chip({required this.child, this.border = Colors.white24});
+  final Color? fill;
+  final double borderWidth;
+  const _Chip({
+    required this.child,
+    this.border = Colors.white24,
+    this.fill,
+    this.borderWidth = 1,
+  });
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        padding: HudLayout.chipPadding,
         decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.6),
-          border: Border.all(color: border),
-          borderRadius: BorderRadius.circular(4),
+          color: fill ?? Colors.black.withValues(alpha: 0.6),
+          border: Border.all(color: border, width: borderWidth),
+          borderRadius: BorderRadius.circular(HudLayout.isTouch ? 4 : 5),
         ),
         child: child,
       );
 }
 
 /// Single entry for pause / journal / gear (opens the pause menu).
+/// Primary action button — filled Signal Teal so it won't read as a status chip.
 class _MenuChip extends StatelessWidget {
   final bool compact;
   const _MenuChip({this.compact = false});
 
   @override
   Widget build(BuildContext context) {
+    final pad = HudLayout.chipPadding;
+    final icon = Icon(Icons.menu,
+        size: HudLayout.chipIcon + 1, color: const Color(0xFF06060F));
+    final label = Text('MENU',
+        style: TextStyle(
+            color: const Color(0xFF06060F),
+            fontSize: HudLayout.chipFont,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 1.2));
     return GestureDetector(
       onTap: Pause.show,
-      child: _Chip(
-        border: _teal.withValues(alpha: 0.45),
+      child: Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: pad.horizontal / 2 + 2,
+          vertical: pad.vertical / 2 + 1,
+        ),
+        decoration: BoxDecoration(
+          color: _teal,
+          borderRadius: BorderRadius.circular(HudLayout.isTouch ? 4 : 5),
+          boxShadow: [
+            BoxShadow(
+              color: _teal.withValues(alpha: 0.35),
+              blurRadius: 8,
+              spreadRadius: 0,
+            ),
+          ],
+        ),
         child: compact
-            ? const Icon(Icons.menu, size: 13, color: _teal)
-            : Text(_isTouch ? 'MENU' : 'Esc  MENU',
-                style: const TextStyle(
-                    color: _teal,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.5)),
+            ? icon
+            : Row(mainAxisSize: MainAxisSize.min, children: [
+                icon,
+                SizedBox(width: HudLayout.isTouch ? 4 : 6),
+                label,
+              ]),
       ),
     );
   }

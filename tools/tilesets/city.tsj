@@ -5037,9 +5037,31 @@
       "name": "",
       "type": "collision",
       "x": 10,
-      "y": 3,
-      "width": 12,
-      "height": 27,
+      "y": 18.9,
+      "width": 10.7,
+      "height": 11.1,
+      "rotation": 0,
+      "visible": true
+     },
+     {
+      "id": 2,
+      "name": "",
+      "type": "collision",
+      "x": 10,
+      "y": 19.1,
+      "width": 10.7,
+      "height": 10.9,
+      "rotation": 0,
+      "visible": true
+     },
+     {
+      "id": 3,
+      "name": "",
+      "type": "collision",
+      "x": 14,
+      "y": 22.9,
+      "width": 10.7,
+      "height": 11.1,
       "rotation": 0,
       "visible": true
      }
@@ -5264,10 +5286,10 @@
       "id": 1,
       "name": "",
       "type": "collision",
-      "x": 0,
-      "y": 3,
-      "width": 32,
-      "height": 29,
+      "x": -16.97,
+      "y": 3.11,
+      "width": 32.87,
+      "height": 27.6,
       "rotation": 0,
       "visible": true
      }
@@ -6760,10 +6782,10 @@
       "id": 1,
       "name": "",
       "type": "collision",
-      "x": 6,
+      "x": 12.33,
       "y": 0,
-      "width": 26,
-      "height": 29,
+      "width": 19.67,
+      "height": 13.82,
       "rotation": 0,
       "visible": true
      }
