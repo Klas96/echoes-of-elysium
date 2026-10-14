@@ -22,9 +22,9 @@
  "collision": [
   [
    0,
-   12,
+   8,
    96,
-   48
+   52
   ]
  ],
  "closed": {
@@ -32,14 +32,14 @@
   "collision": [
    [
     0,
-    12,
+    8,
     96,
-    48
+    52
    ]
   ],
   "boulder_bbox": [
    0,
-   4,
+   2,
    96,
    56
   ]
@@ -70,5 +70,5 @@
   64
  ],
  "ground_decal": true,
- "note": "place on a 3-tile-wide dirt road (both 96x64). Closed collision = full road width (all 3 tiles). Art is rocks-only (no baked dirt); map tiles show the road under transparent pixels."
+ "note": "place on a 3-tile-wide dirt road (both 96x64, one scale/palette, bottom-aligned; swap image + collision). `collision` = closed state (full road width, all 3 tiles). Open: turned-over resting stone foot only (opaque core \u2248 x64\u201392,y30\u201356) so the left two tiles stay a clear passage for feet/A*; the previous pad (58,16,38\u00d748) pinched that lane. Dirt patch is a soft decal; stones are opaque with outline + shadow."
 }
