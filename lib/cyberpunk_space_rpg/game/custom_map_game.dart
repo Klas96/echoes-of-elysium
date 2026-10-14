@@ -688,6 +688,8 @@ Map<String, ObjectBuilder> _mapObjects(String mapId) => {
           p.size.x > 0 ? p.size.x : 64,
           p.size.y > 0 ? p.size.y : 48,
         );
+        // Woods → City south road: designer locked/open edge art (#55).
+        final woodsSouthCity = mapId == 'world' && dest == 2 && needUnlock;
         return MapEdgeExit(
           p.position,
           size,
@@ -700,6 +702,10 @@ Map<String, ObjectBuilder> _mapObjects(String mapId) => {
           lockedBody: (p.others['lockedBody'] ??
                   'Something still holds this road. Check your objective.')
               .toString(),
+          lockedSpritePath:
+              woodsSouthCity ? 'obstacles/woods_south_exit_locked.png' : null,
+          openSpritePath:
+              woodsSouthCity ? 'obstacles/woods_south_exit_open.png' : null,
           beforeExit: () {
             final region = GameState.regionIds[GameState.levelForMap(mapId)] ?? '';
             if (!Gates.wantsFarewell(region)) return null;

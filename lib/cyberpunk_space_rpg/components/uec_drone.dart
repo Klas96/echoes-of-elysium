@@ -181,8 +181,8 @@ class _DroneStats {
             idleColor: Color(0xFF88AA66),
             aggroColor: Color(0xFFFFCC33),
             spritePath: 'sprites/uec_swarm.png',
-            // Three ships in one sprite: below ~24px they turn to mush.
-            spriteSize: 26,
+            // Redesigned single-lead silhouette (#56); match scout draw size.
+            spriteSize: 28,
           ),
       };
 }
