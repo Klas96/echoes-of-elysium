@@ -50,10 +50,13 @@ void main() {
   });
 
   testWidgets('UEC drone sprites per kind + Sentinel (#28)', (tester) async {
-    for (final k in ['scout', 'shield', 'sniper', 'swarm']) {
+    for (final k in ['scout', 'shield', 'sniper']) {
       await expectSize(tester, '$sprites/uec_$k.png', 32, 32);
       await expectSize(tester, '$sprites/uec_${k}_hover.png', 64, 32);
     }
+    // Swarm uses a 64px source (#56 / Cursor-gen) so the silhouette stays readable.
+    await expectSize(tester, '$sprites/uec_swarm.png', 64, 64);
+    await expectSize(tester, '$sprites/uec_swarm_hover.png', 128, 64);
     await expectSize(tester, '$sprites/sentinel_boss.png', 64, 64);
     final src = File('lib/cyberpunk_space_rpg/components/uec_drone.dart').readAsStringSync();
     for (final k in ['scout', 'shield', 'sniper', 'swarm']) {
