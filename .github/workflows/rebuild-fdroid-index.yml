@@ -1,0 +1,106 @@
+name: Rebuild F-Droid index
+
+# Resigns Klas96/fdroid signed indexes (drops retired apps, picks up metadata/icons)
+# without publishing a new Echoes APK. Uses the same FDROID_* secrets as Release.
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: rebuild-fdroid-index
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout Klas96/fdroid (deploy key)
+        uses: actions/checkout@v5
+        with:
+          repository: Klas96/fdroid
+          ref: master
+          path: fdroid
+          ssh-key: ${{ secrets.FDROID_DEPLOY_KEY }}
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install fdroidserver
+        run: pip install 'fdroidserver==2.4.5'
+
+      - name: Decode keystore + prep config
+        working-directory: fdroid
+        env:
+          FDROID_KEYSTORE_BASE64: ${{ secrets.FDROID_KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+          if [ -z "${FDROID_KEYSTORE_BASE64:-}" ]; then
+            echo "::error::Secret FDROID_KEYSTORE_BASE64 is not set"; exit 1
+          fi
+          echo "$FDROID_KEYSTORE_BASE64" | base64 -d > keystore.p12
+          chmod 600 keystore.p12
+          sed -i -E \
+            -e 's/^keystorepass:.*/keystorepass: {env: FDROID_KEYSTORE_PASS}/' \
+            -e 's/^keypass:.*/keypass: {env: FDROID_KEYSTORE_PASS}/' config.yml
+          chmod 600 config.yml
+
+      - name: fdroid update
+        working-directory: fdroid
+        env:
+          FDROID_KEYSTORE_PASS: ${{ secrets.FDROID_KEYSTORE_PASS }}
+        run: fdroid update
+
+      - name: Clean up keystore / restore config
+        if: always()
+        working-directory: fdroid
+        run: |
+          rm -f keystore.p12
+          git checkout -- config.yml || true
+
+      - name: Verify signed index
+        working-directory: fdroid
+        run: |
+          python3 <<'PY'
+          import json, zipfile
+          with zipfile.ZipFile('repo/index-v1.jar') as z:
+              d = json.loads(z.read('index-v1.json'))
+          pkgs = sorted(d['packages'])
+          assert 'com.contentcreator.app' not in pkgs, pkgs
+          apps = {a['packageName']: a for a in d['apps']}
+          tec = apps['com.tectonic.tectonic']
+          name = tec.get('name') or (tec.get('localized') or {}).get('en-US', {}).get('name')
+          assert name == 'NumBlocks', name
+          for pkg in ('com.keymatch.app', 'com.tectonic.tectonic', 'se.klasholmgren.echoesofelysium'):
+              loc = (apps[pkg].get('localized') or {}).get('en-US') or {}
+              assert loc.get('icon') or apps[pkg].get('icon'), f'{pkg} missing icon'
+          print('OK signed packages:', pkgs)
+          PY
+
+      - name: Commit and push to Klas96/fdroid
+        working-directory: fdroid
+        run: |
+          set -euo pipefail
+          git config user.name "echoes-of-elysium CI"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          paths="repo metadata"
+          for d in tmp archive; do [ -e "$d" ] && paths="$paths $d"; done
+          git add -A -- $paths
+          if git diff --cached --quiet; then
+            echo "No index changes to commit"
+            exit 0
+          fi
+          git commit -m "Rebuild signed F-Droid index [automated]"
+          for i in 1 2 3; do
+            git push origin HEAD:master && exit 0
+            git pull --rebase origin master
+          done
+          exit 1
