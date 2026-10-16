@@ -10,7 +10,11 @@ import '../game/travel.dart';
 /// No portal glow — adjacent maps should feel like roads, not warp pads.
 ///
 /// While [canExit] is false the strip is a solid thicket so the punched map
-/// edge does not look (or play) like an open road.
+/// edge does not look (or play) like an open road. Designer sheets (#55)
+/// replace that paint: a locked treeline y-sorts in front of the meadow, and
+/// an open road sheet is a ground decal (under Kaela and the boulder). The
+/// open sheet may be taller than the strip so it can join the path one tile
+/// north without growing the solid hitbox.
 class MapEdgeExit extends GameComponent {
   final int destLevel;
   final String entrySide;
@@ -45,17 +49,26 @@ class MapEdgeExit extends GameComponent {
     this.beforeExit,
     this.lockedSpritePath,
     this.openSpritePath,
-  })  : canExit = canExit ?? (() => true) {
+  }) : canExit = canExit ?? (() => true) {
     this.position = position;
     this.size = size;
+    _applyPriority(!this.canExit());
   }
 
-  @override
-  int get priority =>
-      LayerPriority.getComponentPriority((position.y + size.y * 0.85).floor());
+  /// Open road art sits with the ground. A sealed treeline sorts by its foot.
+  void _applyPriority(bool sealed) {
+    final groundRoad = !sealed && _openSprite != null;
+    final next = groundRoad
+        ? LayerPriority.MAP + 1
+        : LayerPriority.getComponentPriority(
+            (position.y + size.y * 0.85).floor(),
+          );
+    if (priority != next) priority = next;
+  }
 
   void _syncSeal() {
     final sealed = !canExit();
+    _applyPriority(sealed);
     if (_sealed == sealed) return;
     _sealed = sealed;
     if (sealed) {
@@ -143,12 +156,23 @@ class MapEdgeExit extends GameComponent {
     }
   }
 
+  /// Native pixels, bottom-aligned on the strip. Extra height overhangs north.
+  void _paintSprite(Canvas canvas, Sprite sprite) {
+    final paint = Paint()..filterQuality = FilterQuality.none;
+    sprite.render(
+      canvas,
+      position: Vector2(0, size.y - sprite.srcSize.y),
+      size: Vector2(sprite.srcSize.x, sprite.srcSize.y),
+      overridePaint: paint,
+    );
+  }
+
   @override
   void render(Canvas canvas) {
     if (_sealed ?? !canExit()) {
       final locked = _lockedSprite;
       if (locked != null) {
-        locked.render(canvas, position: Vector2.zero(), size: size);
+        _paintSprite(canvas, locked);
         return;
       }
       _paintThicket(canvas);
@@ -156,7 +180,7 @@ class MapEdgeExit extends GameComponent {
     }
     final open = _openSprite;
     if (open != null) {
-      open.render(canvas, position: Vector2.zero(), size: size);
+      _paintSprite(canvas, open);
       return;
     }
     // Soft dust line so the opening reads as a road, not a void.
