@@ -51,12 +51,16 @@ class RoomLight {
   const RoomLight(this.tx, this.ty, this.kind);
 }
 
-/// Room data for an enterable building interior (#31), loaded from
-/// `assets/images/interiors/<id>.json` next to its 512x288 background.
+/// Room data for an enterable building interior (#31, scaled in #62).
+///
+/// Loaded from `assets/images/interiors/<id>.json`. The picture is a tiled
+/// room: `floor` and `props` index `tileset` (16 columns, [tile] px). The
+/// PNG next to the JSON is the same picture baked for review.
 /// Schema: see `assets/images/interiors/README.md`.
 class RoomData {
-  final String id, title, image;
-  final int cols, rows, tile;
+  final String id, title, image, tileset;
+  final int cols, rows, tile, sheetCols;
+  final List<List<int>> floor, props;
   final List<RoomRect> collision;
   final RoomRect door;
   final (int, int) spawn;
@@ -68,9 +72,13 @@ class RoomData {
     required this.id,
     required this.title,
     required this.image,
+    required this.tileset,
     required this.cols,
     required this.rows,
     required this.tile,
+    required this.sheetCols,
+    required this.floor,
+    required this.props,
     required this.collision,
     required this.door,
     required this.spawn,
@@ -87,17 +95,34 @@ class RoomData {
   double get widthPx => (cols * tile).toDouble();
   double get heightPx => (rows * tile).toDouble();
 
+  static List<List<int>> _grid(Object? raw) {
+    if (raw is! List) return const [];
+    final out = <List<int>>[];
+    for (final row in raw) {
+      if (row is! List) {
+        out.add(const []);
+        continue;
+      }
+      out.add([for (final n in row) (n as num).toInt()]);
+    }
+    return out;
+  }
+
   factory RoomData.parse(String source) {
     final m = jsonDecode(source) as Map<String, dynamic>;
-    final size = m['size'] as List? ?? const [16, 9];
+    final size = m['size'] as List? ?? const [12, 8];
     final spawn = m['spawn'] as List;
     return RoomData(
       id: m['id'] as String,
       title: (m['title'] ?? m['id']) as String,
       image: (m['image'] ?? '${m['id']}.png') as String,
+      tileset: (m['tileset'] ?? 'tileset.png') as String,
       cols: (size[0] as num).toInt(),
       rows: (size[1] as num).toInt(),
       tile: (m['tile'] as num? ?? 32).toInt(),
+      sheetCols: (m['sheetCols'] as num? ?? 16).toInt(),
+      floor: _grid(m['floor']),
+      props: _grid(m['props']),
       collision: [for (final r in (m['collision'] as List? ?? const [])) RoomRect.parse(r)],
       door: RoomRect.parse(m['door']),
       spawn: ((spawn[0] as num).toInt(), (spawn[1] as num).toInt()),
