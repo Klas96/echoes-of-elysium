@@ -12,7 +12,7 @@ Files per tileset: `<name>.png` (sheet), `<name>.tsx` (Tiled tileset with collis
 - **Core only:** two 16-tile **edge/connection sets** (wangset `type="edge"`): glowing roots and cyan conduits. These are transparent overlays for a layer above the floor. Tile = set start + bitmask (N=1, E=2, S=4, W=8).
 
 ## Woods / starter: `woods.png` / `woods.tsx`
-272 tiles (16 x 17), 163 with collision. Night forest in the neon palette. The crashed ship (Kaela's diagnostic skiff, #47), the portal platform and the dock pieces are props. The skiff's collision rects are derived from its art by `prop_collision.py` (`python3 tools/tilesets/prop_collision.py --write`, then re-run `tools/make_tiled_maps.py`); its smoke emitter sits on the fuselage (`EMITTERS` in `make_tiled_maps.py`). The dock planks don't collide, but the water tiles under them do, so leave the collision off the tiles under a dock (or build the dock on grass at the shore).
+384 tiles (16 x 24), 163 with collision. Night forest in the neon palette. The crashed ship (Kaela's diagnostic skiff, #47), the portal platform and the dock pieces are props. The skiff's collision rects are derived from its art by `prop_collision.py` (`python3 tools/tilesets/prop_collision.py --write`, then re-run `tools/make_tiled_maps.py`); its smoke emitter sits on the fuselage (`EMITTERS` in `make_tiled_maps.py`). The dock planks don't collide, but the water tiles under them do, so leave the collision off the tiles under a dock (or build the dock on grass at the shore).
 
 | ids | contents |
 |---|---|
@@ -27,6 +27,9 @@ Props (`name`: tile ids, row-major):
 `tree_green` 160-161, 176-177, `tree_teal` 162-163, 178-179, `tree_blue` 164-165, 180-181, `tree_purple` 166-167, 182-183, `tree_big` 168-170, 184-186, 200-202, `tree_pine` 171-172, 187-188, `bush_green` 173, `bush_glow` 174, `rock_small` 175, `rock_moss` 189, `boulder` 190-191, 206-207, `log` 192-193, `stump` 194, `mushrooms` 195, `flowers` 196, `campfire` 197, `tent` 198-199, 214-215, `crate` 203, `lantern` 204, `signpost` 205, `standing_stone` 208, `monolith` 209, 225, `ship_debris` 210, `radio_dish` 211-212, 227-228, `crashed_ship` 216-219, 232-235, 248-251, 264-267, `dock_planks_h` 213, `dock_planks_v` 220, `fence_h` 221, `fence_v` 222, `portal_platform` 229-231, 245-247, 261-263
 
 Wangsets: `grass-path` (mixed, 58 tiles), `grass-water` (mixed, 56 tiles), `grass-forest` (mixed, 56 tiles)
+
+### Refined trails (#64)
+Ids 272–379 (rows 17–23, `tools/trail_ribbons.py`) are walkable dirt tracks with grass verges. Names look like `trail-N1-E0`: edge N/E/S/W plus port 0/1/2 at 8/16/24 px, so a strip can run straight, near 45°, or on a shallow diagonal and turn without a hard square corner. `hero-` is the wider Woods → City road. None of them collide — stamp them only on ground that is already open. Blob grass, dirt and forest edges are softened so a meadow does not show a hard 32 px grid.
 
 ## City: `city.png` / `city.tsx`
 320 tiles (16 x 20), 148 with collision. Buildings: the edge pieces show a lit south facade and a parapet, and the roof-only props (AC, vents, solar, helipad, neon sign, archive dome) go on top of roofs. The crosswalk, lane and arrow decals on row 0 are not in the wangset's random variants, so place them by hand.

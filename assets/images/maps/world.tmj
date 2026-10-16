@@ -25,10 +25,10 @@
    "name": "woods",
    "image": "tilesets/woods.png",
    "imagewidth": 512,
-   "imageheight": 544,
+   "imageheight": 768,
    "tilewidth": 32,
    "tileheight": 32,
-   "tilecount": 272,
+   "tilecount": 384,
    "columns": 16,
    "margin": 0,
    "spacing": 0,
@@ -7363,6 +7363,1626 @@
        }
       ]
      }
+    },
+    {
+     "id": 272,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-N0-E0"
+      }
+     ]
+    },
+    {
+     "id": 273,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-N0-E1"
+      }
+     ]
+    },
+    {
+     "id": 274,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-N0-E2"
+      }
+     ]
+    },
+    {
+     "id": 275,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-N1-E0"
+      }
+     ]
+    },
+    {
+     "id": 276,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-N1-E1"
+      }
+     ]
+    },
+    {
+     "id": 277,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-N1-E2"
+      }
+     ]
+    },
+    {
+     "id": 278,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-N2-E0"
+      }
+     ]
+    },
+    {
+     "id": 279,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-N2-E1"
+      }
+     ]
+    },
+    {
+     "id": 280,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-N2-E2"
+      }
+     ]
+    },
+    {
+     "id": 281,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-N0-S0"
+      }
+     ]
+    },
+    {
+     "id": 282,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-N0-S1"
+      }
+     ]
+    },
+    {
+     "id": 283,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-N0-S2"
+      }
+     ]
+    },
+    {
+     "id": 284,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-N1-S0"
+      }
+     ]
+    },
+    {
+     "id": 285,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-N1-S1"
+      }
+     ]
+    },
+    {
+     "id": 286,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-N1-S2"
+      }
+     ]
+    },
+    {
+     "id": 287,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-N2-S0"
+      }
+     ]
+    },
+    {
+     "id": 288,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-N2-S1"
+      }
+     ]
+    },
+    {
+     "id": 289,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-N2-S2"
+      }
+     ]
+    },
+    {
+     "id": 290,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-N0-W0"
+      }
+     ]
+    },
+    {
+     "id": 291,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-N0-W1"
+      }
+     ]
+    },
+    {
+     "id": 292,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-N0-W2"
+      }
+     ]
+    },
+    {
+     "id": 293,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-N1-W0"
+      }
+     ]
+    },
+    {
+     "id": 294,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-N1-W1"
+      }
+     ]
+    },
+    {
+     "id": 295,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-N1-W2"
+      }
+     ]
+    },
+    {
+     "id": 296,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-N2-W0"
+      }
+     ]
+    },
+    {
+     "id": 297,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-N2-W1"
+      }
+     ]
+    },
+    {
+     "id": 298,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-N2-W2"
+      }
+     ]
+    },
+    {
+     "id": 299,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-E0-S0"
+      }
+     ]
+    },
+    {
+     "id": 300,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-E0-S1"
+      }
+     ]
+    },
+    {
+     "id": 301,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-E0-S2"
+      }
+     ]
+    },
+    {
+     "id": 302,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-E1-S0"
+      }
+     ]
+    },
+    {
+     "id": 303,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-E1-S1"
+      }
+     ]
+    },
+    {
+     "id": 304,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-E1-S2"
+      }
+     ]
+    },
+    {
+     "id": 305,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-E2-S0"
+      }
+     ]
+    },
+    {
+     "id": 306,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-E2-S1"
+      }
+     ]
+    },
+    {
+     "id": 307,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-E2-S2"
+      }
+     ]
+    },
+    {
+     "id": 308,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-E0-W0"
+      }
+     ]
+    },
+    {
+     "id": 309,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-E0-W1"
+      }
+     ]
+    },
+    {
+     "id": 310,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-E0-W2"
+      }
+     ]
+    },
+    {
+     "id": 311,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-E1-W0"
+      }
+     ]
+    },
+    {
+     "id": 312,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-E1-W1"
+      }
+     ]
+    },
+    {
+     "id": 313,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-E1-W2"
+      }
+     ]
+    },
+    {
+     "id": 314,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-E2-W0"
+      }
+     ]
+    },
+    {
+     "id": 315,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-E2-W1"
+      }
+     ]
+    },
+    {
+     "id": 316,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-E2-W2"
+      }
+     ]
+    },
+    {
+     "id": 317,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-S0-W0"
+      }
+     ]
+    },
+    {
+     "id": 318,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-S0-W1"
+      }
+     ]
+    },
+    {
+     "id": 319,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-S0-W2"
+      }
+     ]
+    },
+    {
+     "id": 320,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-S1-W0"
+      }
+     ]
+    },
+    {
+     "id": 321,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-S1-W1"
+      }
+     ]
+    },
+    {
+     "id": 322,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-S1-W2"
+      }
+     ]
+    },
+    {
+     "id": 323,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-S2-W0"
+      }
+     ]
+    },
+    {
+     "id": 324,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-S2-W1"
+      }
+     ]
+    },
+    {
+     "id": 325,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "trail-S2-W2"
+      }
+     ]
+    },
+    {
+     "id": 326,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-N0-E0"
+      }
+     ]
+    },
+    {
+     "id": 327,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-N0-E1"
+      }
+     ]
+    },
+    {
+     "id": 328,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-N0-E2"
+      }
+     ]
+    },
+    {
+     "id": 329,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-N1-E0"
+      }
+     ]
+    },
+    {
+     "id": 330,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-N1-E1"
+      }
+     ]
+    },
+    {
+     "id": 331,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-N1-E2"
+      }
+     ]
+    },
+    {
+     "id": 332,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-N2-E0"
+      }
+     ]
+    },
+    {
+     "id": 333,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-N2-E1"
+      }
+     ]
+    },
+    {
+     "id": 334,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-N2-E2"
+      }
+     ]
+    },
+    {
+     "id": 335,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-N0-S0"
+      }
+     ]
+    },
+    {
+     "id": 336,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-N0-S1"
+      }
+     ]
+    },
+    {
+     "id": 337,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-N0-S2"
+      }
+     ]
+    },
+    {
+     "id": 338,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-N1-S0"
+      }
+     ]
+    },
+    {
+     "id": 339,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-N1-S1"
+      }
+     ]
+    },
+    {
+     "id": 340,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-N1-S2"
+      }
+     ]
+    },
+    {
+     "id": 341,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-N2-S0"
+      }
+     ]
+    },
+    {
+     "id": 342,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-N2-S1"
+      }
+     ]
+    },
+    {
+     "id": 343,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-N2-S2"
+      }
+     ]
+    },
+    {
+     "id": 344,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-N0-W0"
+      }
+     ]
+    },
+    {
+     "id": 345,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-N0-W1"
+      }
+     ]
+    },
+    {
+     "id": 346,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-N0-W2"
+      }
+     ]
+    },
+    {
+     "id": 347,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-N1-W0"
+      }
+     ]
+    },
+    {
+     "id": 348,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-N1-W1"
+      }
+     ]
+    },
+    {
+     "id": 349,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-N1-W2"
+      }
+     ]
+    },
+    {
+     "id": 350,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-N2-W0"
+      }
+     ]
+    },
+    {
+     "id": 351,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-N2-W1"
+      }
+     ]
+    },
+    {
+     "id": 352,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-N2-W2"
+      }
+     ]
+    },
+    {
+     "id": 353,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-E0-S0"
+      }
+     ]
+    },
+    {
+     "id": 354,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-E0-S1"
+      }
+     ]
+    },
+    {
+     "id": 355,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-E0-S2"
+      }
+     ]
+    },
+    {
+     "id": 356,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-E1-S0"
+      }
+     ]
+    },
+    {
+     "id": 357,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-E1-S1"
+      }
+     ]
+    },
+    {
+     "id": 358,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-E1-S2"
+      }
+     ]
+    },
+    {
+     "id": 359,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-E2-S0"
+      }
+     ]
+    },
+    {
+     "id": 360,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-E2-S1"
+      }
+     ]
+    },
+    {
+     "id": 361,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-E2-S2"
+      }
+     ]
+    },
+    {
+     "id": 362,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-E0-W0"
+      }
+     ]
+    },
+    {
+     "id": 363,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-E0-W1"
+      }
+     ]
+    },
+    {
+     "id": 364,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-E0-W2"
+      }
+     ]
+    },
+    {
+     "id": 365,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-E1-W0"
+      }
+     ]
+    },
+    {
+     "id": 366,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-E1-W1"
+      }
+     ]
+    },
+    {
+     "id": 367,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-E1-W2"
+      }
+     ]
+    },
+    {
+     "id": 368,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-E2-W0"
+      }
+     ]
+    },
+    {
+     "id": 369,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-E2-W1"
+      }
+     ]
+    },
+    {
+     "id": 370,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-E2-W2"
+      }
+     ]
+    },
+    {
+     "id": 371,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-S0-W0"
+      }
+     ]
+    },
+    {
+     "id": 372,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-S0-W1"
+      }
+     ]
+    },
+    {
+     "id": 373,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-S0-W2"
+      }
+     ]
+    },
+    {
+     "id": 374,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-S1-W0"
+      }
+     ]
+    },
+    {
+     "id": 375,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-S1-W1"
+      }
+     ]
+    },
+    {
+     "id": 376,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-S1-W2"
+      }
+     ]
+    },
+    {
+     "id": 377,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-S2-W0"
+      }
+     ]
+    },
+    {
+     "id": 378,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-S2-W1"
+      }
+     ]
+    },
+    {
+     "id": 379,
+     "properties": [
+      {
+       "name": "ground",
+       "type": "string",
+       "value": "trail"
+      },
+      {
+       "name": "path",
+       "type": "string",
+       "value": "hero-S2-W2"
+      }
+     ]
     }
    ],
    "wangsets": [
@@ -10021,7 +11641,7 @@
      }
     }
    ],
-   "firstgid": 273
+   "firstgid": 385
   }
  ],
  "layers": [
@@ -10342,13 +11962,13 @@
     113,
     113,
     113,
+    1,
+    1,
+    1,
+    1,
     30,
-    45,
-    45,
-    45,
-    45,
-    45,
     28,
+    2,
     7,
     7,
     131,
@@ -10391,81 +12011,81 @@
     5,
     113,
     4,
-    30,
-    45,
-    45,
-    45,
-    45,
-    45,
-    45,
-    62,
-    60,
-    50,
-    50,
-    50,
-    50,
-    54,
-    45,
-    45,
-    28,
-    2,
-    113,
-    8,
-    113,
-    113,
-    113,
-    8,
-    2,
-    113,
-    113,
-    131,
-    157,
-    15,
-    142,
-    113,
-    113,
-    113,
-    113,
-    15,
-    159,
-    15,
-    142,
+    19,
+    4,
+    1,
     7,
-    7,
-    8,
-    6,
-    113,
-    2,
-    113,
-    113,
-    113,
-    6,
-    131,
-    157,
-    159,
-    142,
-    113,
-    113,
-    30,
-    57,
-    50,
-    50,
-    50,
-    50,
-    50,
-    50,
-    50,
+    306,
+    317,
+    317,
+    314,
+    313,
+    310,
+    309,
+    35,
     31,
+    315,
+    326,
+    1,
+    1,
+    2,
+    113,
+    8,
+    113,
+    113,
+    113,
+    8,
+    2,
+    113,
+    113,
+    131,
+    157,
+    15,
+    142,
+    113,
+    113,
+    113,
+    113,
+    15,
+    159,
+    15,
+    142,
+    7,
+    7,
+    8,
+    6,
+    113,
+    2,
+    113,
+    113,
+    113,
+    6,
+    131,
+    157,
+    159,
+    142,
+    113,
+    113,
+    20,
+    41,
+    310,
+    309,
+    309,
+    291,
+    1,
+    1,
+    1,
+    1,
     5,
     113,
     113,
     4,
-    35,
-    50,
-    50,
-    54,
-    45,
-    28,
+    1,
+    279,
+    312,
+    316,
+    323,
+    1,
     113,
     113,
     3,
@@ -10492,8 +12112,8 @@
     113,
     113,
     30,
-    45,
     28,
+    1,
     3,
     7,
     113,
@@ -10502,8 +12122,8 @@
     127,
     113,
     3,
-    52,
-    46,
+    305,
+    292,
     113,
     113,
     113,
@@ -10519,12 +12139,12 @@
     113,
     7,
     5,
-    35,
-    50,
-    54,
-    45,
-    45,
-    28,
+    7,
+    276,
+    312,
+    316,
+    320,
+    1,
     100,
     14,
     13,
@@ -10547,19 +12167,19 @@
     113,
     5,
     4,
-    52,
-    63,
-    59,
-    45,
-    45,
-    28,
+    35,
+    31,
+    315,
+    326,
+    1,
+    1,
     113,
     6,
     113,
     113,
-    30,
-    57,
-    31,
+    6,
+    288,
+    1,
     113,
     113,
     126,
@@ -10577,10 +12197,10 @@
     124,
     8,
     113,
-    35,
-    50,
-    61,
-    46,
+    1,
+    1,
+    273,
+    315,
     83,
     98,
     98,
@@ -10603,18 +12223,18 @@
     4,
     7,
     113,
-    52,
-    60,
-    50,
-    50,
-    50,
-    54,
-    45,
-    45,
-    28,
+    290,
+    1,
+    1,
+    1,
+    273,
+    315,
+    326,
+    1,
+    7,
     113,
-    52,
-    46,
+    301,
+    291,
     5,
     6,
     126,
@@ -10635,11 +12255,11 @@
     113,
     113,
     7,
-    52,
-    59,
-    45,
-    28,
-    4,
+    1,
+    307,
+    37,
+    36,
+    18,
     3,
     4,
     113,
@@ -10659,18 +12279,18 @@
     8,
     113,
     6,
-    52,
-    46,
+    289,
+    2,
     113,
     113,
     2,
-    35,
-    50,
-    50,
-    54,
-    45,
-    62,
-    46,
+    7,
+    1,
+    273,
+    315,
+    30,
+    28,
+    5,
     6,
     7,
     148,
@@ -10690,12 +12310,12 @@
     127,
     2,
     113,
-    30,
-    57,
-    50,
-    50,
-    54,
-    28,
+    3,
+    300,
+    294,
+    35,
+    287,
+    1,
     4,
     3,
     2,
@@ -10714,19 +12334,19 @@
     155,
     124,
     113,
-    30,
-    57,
-    31,
+    1,
+    286,
+    1,
     7,
     3,
     8,
     113,
     8,
     5,
+    3,
     35,
-    50,
-    61,
-    46,
+    31,
+    320,
     3,
     5,
     131,
@@ -10744,14 +12364,14 @@
     113,
     7,
     113,
-    30,
-    45,
-    57,
-    31,
+    1,
+    308,
+    311,
+    1,
     6,
     8,
-    35,
-    38,
+    1,
+    283,
     7,
     8,
     113,
@@ -10770,8 +12390,8 @@
     159,
     142,
     8,
-    52,
-    46,
+    1,
+    285,
     113,
     126,
     141,
@@ -10781,10 +12401,10 @@
     3,
     113,
     5,
-    35,
-    54,
-    45,
-    28,
+    1,
+    274,
+    322,
+    1,
     6,
     131,
     157,
@@ -10799,16 +12419,16 @@
     113,
     113,
     3,
-    30,
-    57,
-    50,
-    31,
+    1,
+    303,
+    298,
+    3,
     113,
     113,
     6,
     113,
-    42,
-    28,
+    287,
+    1,
     113,
     126,
     158,
@@ -10826,8 +12446,8 @@
     159,
     142,
     113,
-    52,
-    46,
+    1,
+    282,
     113,
     148,
     159,
@@ -10838,10 +12458,10 @@
     3,
     6,
     7,
-    35,
-    50,
-    54,
-    28,
+    1,
+    277,
+    325,
+    1,
     113,
     131,
     146,
@@ -10853,18 +12473,18 @@
     121,
     8,
     113,
-    113,
     30,
-    57,
-    31,
+    308,
+    311,
+    291,
     2,
     3,
     4,
     4,
     113,
     4,
-    35,
-    38,
+    1,
+    283,
     7,
     131,
     157,
@@ -10882,8 +12502,8 @@
     15,
     142,
     3,
-    52,
-    46,
+    2,
+    282,
     8,
     148,
     156,
@@ -10896,9 +12516,9 @@
     124,
     113,
     113,
-    35,
-    54,
-    28,
+    279,
+    324,
+    4,
     2,
     8,
     4,
@@ -10908,10 +12528,10 @@
     113,
     113,
     3,
-    30,
-    36,
-    43,
-    31,
+    4,
+    52,
+    46,
+    8,
     113,
     7,
     126,
@@ -10920,8 +12540,8 @@
     141,
     124,
     113,
-    42,
-    28,
+    287,
+    1,
     113,
     148,
     159,
@@ -10938,8 +12558,8 @@
     15,
     142,
     8,
-    52,
-    46,
+    290,
+    291,
     8,
     131,
     127,
@@ -10953,20 +12573,20 @@
     124,
     113,
     6,
-    35,
-    54,
-    28,
+    1,
+    275,
+    320,
     113,
     113,
     2,
     113,
     113,
     113,
-    30,
-    45,
-    57,
+    1,
+    308,
+    311,
+    291,
     31,
-    3,
     5,
     8,
     126,
@@ -10976,8 +12596,8 @@
     15,
     142,
     5,
-    35,
-    38,
+    1,
+    283,
     3,
     131,
     157,
@@ -10994,8 +12614,8 @@
     159,
     142,
     113,
-    52,
-    46,
+    290,
+    3,
     113,
     4,
     113,
@@ -11010,17 +12630,17 @@
     141,
     124,
     113,
-    35,
-    54,
-    45,
-    45,
-    45,
+    1,
+    274,
+    322,
+    2,
+    30,
     28,
     113,
-    30,
-    57,
-    50,
-    31,
+    1,
+    303,
+    298,
+    1,
     113,
     113,
     113,
@@ -11033,8 +12653,8 @@
     155,
     124,
     113,
-    42,
-    28,
+    287,
+    1,
     113,
     148,
     159,
@@ -11050,8 +12670,8 @@
     156,
     127,
     113,
-    52,
-    46,
+    289,
+    4,
     113,
     4,
     3,
@@ -11067,257 +12687,257 @@
     155,
     124,
     8,
-    35,
-    61,
-    12,
-    9,
-    59,
-    45,
-    57,
-    31,
-    5,
-    4,
-    113,
-    3,
-    126,
-    158,
-    159,
-    159,
-    159,
-    159,
-    15,
-    15,
-    142,
-    5,
-    35,
-    38,
-    113,
-    131,
-    146,
-    146,
-    157,
-    159,
-    159,
-    15,
-    15,
-    15,
-    16,
-    156,
-    127,
-    113,
-    30,
-    57,
-    31,
-    4,
-    113,
-    30,
-    45,
-    57,
-    31,
-    2,
-    113,
-    148,
-    15,
-    15,
-    159,
-    159,
-    142,
-    5,
-    113,
-    52,
-    63,
-    63,
-    63,
-    10,
-    46,
-    8,
-    113,
     7,
-    126,
-    141,
-    158,
-    15,
-    159,
-    159,
-    15,
-    159,
-    16,
-    159,
-    155,
-    124,
-    5,
-    42,
-    28,
-    4,
-    113,
-    7,
-    131,
-    157,
-    159,
-    159,
-    159,
-    159,
-    15,
-    142,
-    113,
-    6,
-    52,
-    46,
-    113,
-    30,
-    45,
-    57,
-    50,
-    31,
-    6,
-    113,
-    113,
-    148,
-    159,
-    159,
-    159,
-    159,
-    142,
-    6,
-    3,
-    35,
-    61,
-    9,
-    63,
-    9,
-    59,
-    28,
-    2,
-    5,
-    131,
-    146,
-    146,
-    146,
-    146,
-    157,
-    15,
-    15,
-    156,
-    146,
-    146,
-    127,
-    113,
-    35,
-    38,
-    113,
-    7,
-    5,
-    6,
-    131,
-    157,
-    159,
-    159,
-    15,
-    156,
-    127,
-    113,
-    6,
-    52,
-    59,
-    45,
-    57,
-    50,
-    31,
-    2,
-    113,
-    113,
-    113,
-    126,
-    158,
-    15,
-    15,
-    159,
-    159,
-    142,
-    5,
-    113,
-    2,
-    52,
-    9,
-    60,
-    50,
-    50,
-    54,
-    45,
-    28,
-    3,
-    113,
-    7,
-    5,
-    3,
-    131,
-    146,
-    146,
-    127,
-    113,
-    3,
-    113,
-    113,
-    113,
-    42,
-    28,
-    113,
-    113,
-    113,
-    4,
-    148,
-    15,
-    15,
-    15,
-    142,
-    113,
-    113,
-    113,
-    52,
-    60,
-    50,
-    31,
-    113,
-    113,
-    126,
-    141,
-    141,
-    141,
-    158,
-    159,
-    159,
-    159,
-    15,
-    156,
-    127,
-    113,
-    5,
-    30,
-    57,
-    50,
-    31,
-    113,
-    113,
-    35,
-    50,
-    54,
-    45,
-    28,
-    113,
-    113,
-    113,
-    3,
-    6,
-    113,
-    30,
-    45,
-    45,
-    45,
-    45,
-    45,
+    277,
+    325,
     62,
-    46,
+    59,
+    307,
+    311,
     6,
+    5,
+    4,
+    113,
+    3,
+    126,
+    158,
+    159,
+    159,
+    159,
+    159,
+    15,
+    15,
+    142,
+    5,
+    1,
+    283,
+    113,
+    131,
+    146,
+    146,
+    157,
+    159,
+    159,
+    15,
+    15,
+    15,
+    16,
+    156,
+    127,
+    113,
+    6,
+    286,
+    1,
+    4,
+    113,
+    1,
+    303,
+    35,
+    31,
+    2,
+    113,
+    148,
+    15,
+    15,
+    159,
+    159,
+    142,
+    5,
+    113,
+    30,
+    62,
+    9,
+    11,
+    59,
+    28,
+    8,
+    113,
+    7,
+    126,
+    141,
+    158,
+    15,
+    159,
+    159,
+    15,
+    159,
+    16,
+    159,
+    155,
+    124,
+    5,
+    287,
+    1,
+    4,
+    113,
+    7,
+    131,
+    157,
+    159,
+    159,
+    159,
+    159,
+    15,
+    142,
+    113,
+    6,
+    5,
+    285,
+    113,
+    1,
+    307,
+    311,
+    291,
+    1,
+    6,
+    113,
+    113,
+    148,
+    159,
+    159,
+    159,
+    159,
+    142,
+    6,
+    3,
+    35,
+    61,
+    63,
+    63,
+    60,
+    320,
+    5,
+    2,
+    5,
+    131,
+    146,
+    146,
+    146,
+    146,
+    157,
+    15,
+    15,
+    156,
+    146,
+    146,
+    127,
+    113,
+    1,
+    283,
+    113,
+    7,
+    5,
+    6,
+    131,
+    157,
+    159,
+    159,
+    15,
+    156,
+    127,
+    113,
+    6,
+    1,
+    282,
+    308,
+    311,
+    294,
+    3,
+    2,
+    113,
+    113,
+    113,
+    126,
+    158,
+    15,
+    15,
+    159,
+    159,
+    142,
+    5,
+    113,
+    2,
+    305,
+    61,
+    60,
+    31,
+    273,
+    315,
+    323,
+    1,
+    3,
+    113,
+    7,
+    5,
+    3,
+    131,
+    146,
+    146,
+    127,
+    113,
+    3,
+    113,
+    113,
+    113,
+    287,
+    1,
+    113,
+    113,
+    113,
+    4,
+    148,
+    15,
+    15,
+    15,
+    142,
+    113,
+    113,
+    113,
+    30,
+    28,
+    298,
+    4,
+    113,
+    113,
+    126,
+    141,
+    141,
+    141,
+    158,
+    159,
+    159,
+    159,
+    15,
+    156,
+    127,
+    113,
+    5,
+    5,
+    288,
+    35,
+    31,
+    113,
+    113,
+    1,
+    276,
+    315,
+    326,
+    1,
+    113,
+    113,
+    113,
+    3,
+    6,
+    113,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    30,
+    45,
+    28,
     3,
     3,
     113,
@@ -11329,8 +12949,8 @@
     2,
     7,
     3,
-    52,
-    46,
+    35,
+    31,
     8,
     113,
     4,
@@ -11347,33 +12967,33 @@
     127,
     3,
     2,
+    1,
+    288,
+    291,
+    113,
+    4,
+    113,
+    113,
+    113,
+    113,
+    4,
+    279,
+    312,
     30,
-    57,
+    28,
+    317,
+    317,
+    317,
+    314,
+    313,
+    313,
+    310,
+    309,
+    309,
+    309,
+    309,
+    50,
     31,
-    113,
-    4,
-    113,
-    113,
-    113,
-    113,
-    35,
-    50,
-    54,
-    45,
-    45,
-    45,
-    45,
-    45,
-    45,
-    62,
-    9,
-    60,
-    50,
-    50,
-    50,
-    61,
-    46,
-    4,
     113,
     113,
     113,
@@ -11385,9 +13005,9 @@
     124,
     113,
     113,
-    35,
-    54,
-    28,
+    3,
+    283,
+    4,
     113,
     126,
     158,
@@ -11403,8 +13023,8 @@
     113,
     113,
     3,
-    52,
-    46,
+    305,
+    292,
     3,
     4,
     113,
@@ -11414,21 +13034,21 @@
     124,
     113,
     3,
-    52,
-    9,
-    60,
-    50,
-    50,
-    50,
-    50,
-    50,
-    50,
+    1,
+    35,
     31,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
     113,
     113,
     3,
-    44,
-    31,
+    289,
+    291,
     113,
     2,
     4,
@@ -11442,8 +13062,8 @@
     4,
     113,
     3,
-    52,
-    46,
+    287,
+    1,
     113,
     131,
     146,
@@ -11459,8 +13079,8 @@
     2,
     2,
     30,
-    57,
-    31,
+    28,
+    1,
     8,
     126,
     141,
@@ -11470,9 +13090,9 @@
     155,
     124,
     113,
-    52,
-    60,
-    31,
+    1,
+    288,
+    8,
     113,
     113,
     6,
@@ -11482,8 +13102,8 @@
     141,
     124,
     113,
-    30,
-    39,
+    6,
+    285,
     4,
     113,
     113,
@@ -11498,8 +13118,8 @@
     141,
     124,
     113,
-    52,
-    46,
+    281,
+    320,
     113,
     113,
     113,
@@ -11514,8 +13134,8 @@
     142,
     4,
     113,
-    52,
-    46,
+    35,
+    31,
     113,
     5,
     148,
@@ -11526,8 +13146,8 @@
     159,
     142,
     8,
-    52,
-    46,
+    308,
+    293,
     8,
     113,
     126,
@@ -11538,8 +13158,8 @@
     156,
     127,
     113,
-    44,
-    31,
+    289,
+    291,
     8,
     115,
     8,
@@ -11554,8 +13174,8 @@
     146,
     127,
     113,
-    52,
-    46,
+    2,
+    282,
     113,
     113,
     113,
@@ -11570,8 +13190,8 @@
     142,
     2,
     113,
-    52,
-    46,
+    1,
+    282,
     5,
     113,
     148,
@@ -11582,8 +13202,8 @@
     156,
     127,
     5,
-    52,
-    46,
+    289,
+    1,
     5,
     126,
     158,
@@ -11593,8 +13213,8 @@
     159,
     142,
     7,
-    30,
-    39,
+    1,
+    285,
     113,
     126,
     135,
@@ -11610,9 +13230,9 @@
     113,
     4,
     113,
-    35,
-    54,
-    28,
+    1,
+    284,
+    1,
     113,
     126,
     146,
@@ -11626,8 +13246,8 @@
     155,
     124,
     113,
-    52,
-    46,
+    1,
+    283,
     2,
     113,
     131,
@@ -11637,9 +13257,9 @@
     15,
     142,
     113,
-    30,
-    57,
-    31,
+    1,
+    285,
+    1,
     126,
     158,
     16,
@@ -11649,8 +13269,8 @@
     156,
     127,
     6,
-    44,
-    31,
+    289,
+    291,
     5,
     140,
     127,
@@ -11667,8 +13287,8 @@
     113,
     2,
     8,
-    52,
-    46,
+    290,
+    1,
     113,
     148,
     142,
@@ -11682,9 +13302,9 @@
     156,
     127,
     3,
-    35,
-    54,
-    28,
+    1,
+    286,
+    1,
     113,
     3,
     131,
@@ -11693,8 +13313,8 @@
     15,
     142,
     4,
-    52,
-    46,
+    305,
+    292,
     113,
     148,
     15,
@@ -11704,8 +13324,8 @@
     159,
     142,
     113,
-    30,
-    39,
+    1,
+    285,
     113,
     126,
     135,
@@ -11723,8 +13343,8 @@
     113,
     6,
     4,
-    52,
-    46,
+    279,
+    318,
     4,
     131,
     150,
@@ -11739,8 +13359,8 @@
     113,
     5,
     113,
-    52,
-    46,
+    287,
+    1,
     5,
     6,
     113,
@@ -11748,9 +13368,9 @@
     159,
     156,
     127,
-    30,
-    57,
-    31,
+    1,
+    289,
+    1,
     5,
     148,
     16,
@@ -11760,8 +13380,8 @@
     146,
     127,
     6,
-    44,
-    31,
+    289,
+    291,
     113,
     148,
     142,
@@ -11779,8 +13399,8 @@
     3,
     8,
     113,
-    52,
-    46,
+    1,
+    283,
     4,
     113,
     131,
@@ -11795,8 +13415,8 @@
     113,
     2,
     4,
-    52,
-    46,
+    290,
+    1,
     6,
     3,
     113,
@@ -11804,8 +13424,8 @@
     146,
     127,
     8,
-    52,
-    46,
+    1,
+    285,
     113,
     126,
     158,
@@ -11815,8 +13435,8 @@
     127,
     7,
     113,
-    30,
-    39,
+    5,
+    285,
     113,
     126,
     158,
@@ -11835,33 +13455,33 @@
     126,
     124,
     113,
-    35,
-    54,
-    28,
+    6,
+    287,
+    1,
     113,
     113,
     8,
     113,
     113,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
     30,
-    45,
-    45,
-    45,
-    45,
-    45,
-    45,
-    45,
-    62,
-    59,
-    45,
     28,
+    1,
+    1,
     5,
     8,
     2,
     6,
     113,
-    52,
-    46,
+    302,
+    291,
     113,
     131,
     146,
@@ -11871,8 +13491,8 @@
     113,
     113,
     113,
-    44,
-    31,
+    289,
+    291,
     113,
     148,
     15,
@@ -11892,32 +13512,32 @@
     142,
     113,
     113,
-    52,
-    59,
-    45,
-    45,
-    45,
-    45,
-    45,
-    62,
-    63,
-    60,
-    50,
-    50,
-    50,
-    50,
-    50,
-    50,
-    50,
-    61,
-    59,
-    45,
-    45,
-    45,
-    45,
-    45,
-    62,
-    46,
+    30,
+    28,
+    317,
+    317,
+    317,
+    317,
+    314,
+    313,
+    313,
+    313,
+    310,
+    309,
+    309,
+    309,
+    309,
+    35,
+    31,
+    312,
+    316,
+    326,
+    1,
+    1,
+    1,
+    1,
+    288,
+    5,
     3,
     3,
     113,
@@ -11926,8 +13546,8 @@
     113,
     113,
     113,
-    30,
-    39,
+    1,
+    285,
     113,
     113,
     148,
@@ -11947,17 +13567,17 @@
     156,
     127,
     3,
-    30,
-    57,
-    50,
-    50,
-    50,
-    50,
-    50,
-    50,
-    50,
-    50,
+    8,
+    35,
     31,
+    3,
+    1,
+    1,
+    1,
+    4,
+    1,
+    6,
+    1,
     113,
     4,
     3,
@@ -11965,25 +13585,25 @@
     113,
     113,
     7,
-    35,
-    50,
-    50,
-    50,
-    61,
-    63,
-    63,
-    9,
-    59,
-    45,
-    45,
-    45,
+    2,
+    1,
+    1,
+    273,
+    312,
+    316,
+    30,
     28,
+    1,
+    7,
+    1,
+    1,
+    4,
     5,
     6,
     4,
-    113,
-    44,
-    31,
+    30,
+    289,
+    291,
     113,
     2,
     131,
@@ -12002,9 +13622,9 @@
     146,
     127,
     4,
-    30,
-    57,
-    31,
+    5,
+    300,
+    1,
     2,
     4,
     8,
@@ -12025,21 +13645,21 @@
     113,
     4,
     7,
+    1,
+    1,
     35,
-    50,
-    50,
-    50,
-    50,
-    50,
-    50,
-    61,
+    31,
+    309,
+    309,
+    312,
+    313,
+    313,
+    316,
+    317,
+    317,
+    62,
     59,
-    45,
-    45,
-    45,
-    45,
-    39,
-    7,
+    28,
     113,
     5,
     5,
@@ -12057,9 +13677,9 @@
     127,
     4,
     113,
-    30,
-    57,
-    31,
+    4,
+    300,
+    291,
     113,
     113,
     6,
@@ -12088,14 +13708,14 @@
     113,
     6,
     113,
+    3,
+    5,
+    1,
+    7,
     35,
-    50,
-    50,
-    50,
-    50,
     61,
-    46,
-    5,
+    60,
+    31,
     7,
     4,
     113,
@@ -12112,64 +13732,64 @@
     142,
     3,
     113,
+    1,
+    301,
+    291,
+    7,
+    113,
+    126,
+    141,
+    124,
+    113,
+    113,
+    113,
+    7,
+    4,
+    113,
+    148,
+    159,
+    155,
+    141,
+    124,
+    113,
+    4,
+    126,
+    141,
+    158,
+    155,
+    124,
+    7,
+    113,
+    2,
+    113,
+    126,
+    141,
+    124,
+    113,
+    5,
+    8,
+    113,
+    35,
+    336,
+    2,
+    113,
+    113,
+    126,
+    158,
+    15,
+    159,
+    15,
+    15,
+    159,
+    15,
+    159,
+    15,
+    159,
+    142,
+    4,
     30,
-    57,
-    31,
-    7,
-    113,
-    126,
-    141,
-    124,
-    113,
-    113,
-    113,
-    7,
-    4,
-    113,
-    148,
-    159,
-    155,
-    141,
-    124,
-    113,
-    4,
-    126,
-    141,
-    158,
-    155,
-    124,
-    7,
-    113,
-    2,
-    113,
-    126,
-    141,
-    124,
-    113,
-    5,
-    8,
-    113,
-    52,
-    46,
-    2,
-    113,
-    113,
-    126,
-    158,
-    15,
-    159,
-    15,
-    15,
-    159,
-    15,
-    159,
-    15,
-    159,
-    142,
-    4,
-    4,
-    52,
-    46,
+    45,
+    295,
     3,
     113,
     126,
@@ -12205,8 +13825,8 @@
     113,
     113,
     8,
-    52,
-    46,
+    1,
+    336,
     2,
     113,
     4,
@@ -12223,8 +13843,8 @@
     159,
     142,
     5,
-    7,
     35,
+    50,
     31,
     113,
     113,
@@ -12261,8 +13881,8 @@
     124,
     2,
     2,
-    52,
-    46,
+    30,
+    336,
     113,
     8,
     126,
@@ -12317,8 +13937,8 @@
     155,
     124,
     5,
-    52,
-    46,
+    35,
+    336,
     126,
     141,
     158,
@@ -12373,8 +13993,8 @@
     16,
     142,
     113,
-    35,
-    31,
+    1,
+    336,
     148,
     15,
     159,
@@ -16729,7 +18349,7 @@
      "id": 74,
      "name": "building",
      "type": "",
-     "gid": 278,
+     "gid": 390,
      "rotation": 0,
      "visible": true,
      "x": 576.0,

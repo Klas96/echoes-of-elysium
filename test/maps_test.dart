@@ -49,4 +49,26 @@ void main() {
       }
     });
   }
+
+  test('woods ground uses diagonal trail tiles (#64)', () {
+    final tmj = jsonDecode(File('assets/images/maps/world.tmj').readAsStringSync()) as Map;
+    final woods = (tmj['tilesets'] as List).first as Map;
+    final tsj = jsonDecode(File('tools/tilesets/woods.tsj').readAsStringSync()) as Map;
+    expect(woods['tilecount'], tsj['tilecount']);
+    expect(woods['imageheight'], tsj['imageheight']);
+    expect(woods['tilecount'], greaterThan(272));
+    final names = [
+      for (final t in (tsj['tiles'] as List).cast<Map>())
+        for (final p in (t['properties'] as List? ?? const []).cast<Map>())
+          if (p['name'] == 'path') p['value'] as String,
+    ];
+    expect(names, contains('trail-N0-S2'));
+    expect(names, contains('hero-N1-S1'));
+    final ground = (tmj['layers'] as List).firstWhere((l) => l['name'] == 'ground') as Map;
+    final first = woods['firstgid'] as int;
+    final used = (ground['data'] as List).cast<num>().where((g) => g.toInt() - first >= 272);
+    expect(used.length, greaterThan(40));
+    final buildings = (tmj['tilesets'] as List).cast<Map>().firstWhere((t) => t['name'] == 'buildings');
+    expect(buildings['firstgid'], (woods['tilecount'] as int) + (woods['firstgid'] as int));
+  });
 }

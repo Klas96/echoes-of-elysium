@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<tileset version="1.10" tiledversion="1.10.2" name="woods" tilewidth="32" tileheight="32" spacing="0" margin="0" tilecount="272" columns="16">
- <image source="woods.png" width="512" height="544" />
+<tileset version="1.10" tiledversion="1.10.2" name="woods" tilewidth="32" tileheight="32" spacing="0" margin="0" tilecount="384" columns="16">
+ <image source="woods.png" width="512" height="768" />
  <tile id="0">
   <properties>
    <property name="ground" value="grass" />
@@ -1895,7 +1895,655 @@
    <object id="1" type="collision" x="0" y="0" width="18" height="16" rotation="0" />
   </objectgroup>
  </tile>
- <wangsets>
+  <tile id="272">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-N0-E0" />
+  </properties>
+ </tile>
+ <tile id="273">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-N0-E1" />
+  </properties>
+ </tile>
+ <tile id="274">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-N0-E2" />
+  </properties>
+ </tile>
+ <tile id="275">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-N1-E0" />
+  </properties>
+ </tile>
+ <tile id="276">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-N1-E1" />
+  </properties>
+ </tile>
+ <tile id="277">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-N1-E2" />
+  </properties>
+ </tile>
+ <tile id="278">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-N2-E0" />
+  </properties>
+ </tile>
+ <tile id="279">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-N2-E1" />
+  </properties>
+ </tile>
+ <tile id="280">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-N2-E2" />
+  </properties>
+ </tile>
+ <tile id="281">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-N0-S0" />
+  </properties>
+ </tile>
+ <tile id="282">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-N0-S1" />
+  </properties>
+ </tile>
+ <tile id="283">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-N0-S2" />
+  </properties>
+ </tile>
+ <tile id="284">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-N1-S0" />
+  </properties>
+ </tile>
+ <tile id="285">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-N1-S1" />
+  </properties>
+ </tile>
+ <tile id="286">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-N1-S2" />
+  </properties>
+ </tile>
+ <tile id="287">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-N2-S0" />
+  </properties>
+ </tile>
+ <tile id="288">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-N2-S1" />
+  </properties>
+ </tile>
+ <tile id="289">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-N2-S2" />
+  </properties>
+ </tile>
+ <tile id="290">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-N0-W0" />
+  </properties>
+ </tile>
+ <tile id="291">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-N0-W1" />
+  </properties>
+ </tile>
+ <tile id="292">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-N0-W2" />
+  </properties>
+ </tile>
+ <tile id="293">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-N1-W0" />
+  </properties>
+ </tile>
+ <tile id="294">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-N1-W1" />
+  </properties>
+ </tile>
+ <tile id="295">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-N1-W2" />
+  </properties>
+ </tile>
+ <tile id="296">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-N2-W0" />
+  </properties>
+ </tile>
+ <tile id="297">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-N2-W1" />
+  </properties>
+ </tile>
+ <tile id="298">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-N2-W2" />
+  </properties>
+ </tile>
+ <tile id="299">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-E0-S0" />
+  </properties>
+ </tile>
+ <tile id="300">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-E0-S1" />
+  </properties>
+ </tile>
+ <tile id="301">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-E0-S2" />
+  </properties>
+ </tile>
+ <tile id="302">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-E1-S0" />
+  </properties>
+ </tile>
+ <tile id="303">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-E1-S1" />
+  </properties>
+ </tile>
+ <tile id="304">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-E1-S2" />
+  </properties>
+ </tile>
+ <tile id="305">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-E2-S0" />
+  </properties>
+ </tile>
+ <tile id="306">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-E2-S1" />
+  </properties>
+ </tile>
+ <tile id="307">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-E2-S2" />
+  </properties>
+ </tile>
+ <tile id="308">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-E0-W0" />
+  </properties>
+ </tile>
+ <tile id="309">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-E0-W1" />
+  </properties>
+ </tile>
+ <tile id="310">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-E0-W2" />
+  </properties>
+ </tile>
+ <tile id="311">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-E1-W0" />
+  </properties>
+ </tile>
+ <tile id="312">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-E1-W1" />
+  </properties>
+ </tile>
+ <tile id="313">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-E1-W2" />
+  </properties>
+ </tile>
+ <tile id="314">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-E2-W0" />
+  </properties>
+ </tile>
+ <tile id="315">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-E2-W1" />
+  </properties>
+ </tile>
+ <tile id="316">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-E2-W2" />
+  </properties>
+ </tile>
+ <tile id="317">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-S0-W0" />
+  </properties>
+ </tile>
+ <tile id="318">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-S0-W1" />
+  </properties>
+ </tile>
+ <tile id="319">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-S0-W2" />
+  </properties>
+ </tile>
+ <tile id="320">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-S1-W0" />
+  </properties>
+ </tile>
+ <tile id="321">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-S1-W1" />
+  </properties>
+ </tile>
+ <tile id="322">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-S1-W2" />
+  </properties>
+ </tile>
+ <tile id="323">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-S2-W0" />
+  </properties>
+ </tile>
+ <tile id="324">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-S2-W1" />
+  </properties>
+ </tile>
+ <tile id="325">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="trail-S2-W2" />
+  </properties>
+ </tile>
+ <tile id="326">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-N0-E0" />
+  </properties>
+ </tile>
+ <tile id="327">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-N0-E1" />
+  </properties>
+ </tile>
+ <tile id="328">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-N0-E2" />
+  </properties>
+ </tile>
+ <tile id="329">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-N1-E0" />
+  </properties>
+ </tile>
+ <tile id="330">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-N1-E1" />
+  </properties>
+ </tile>
+ <tile id="331">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-N1-E2" />
+  </properties>
+ </tile>
+ <tile id="332">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-N2-E0" />
+  </properties>
+ </tile>
+ <tile id="333">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-N2-E1" />
+  </properties>
+ </tile>
+ <tile id="334">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-N2-E2" />
+  </properties>
+ </tile>
+ <tile id="335">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-N0-S0" />
+  </properties>
+ </tile>
+ <tile id="336">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-N0-S1" />
+  </properties>
+ </tile>
+ <tile id="337">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-N0-S2" />
+  </properties>
+ </tile>
+ <tile id="338">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-N1-S0" />
+  </properties>
+ </tile>
+ <tile id="339">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-N1-S1" />
+  </properties>
+ </tile>
+ <tile id="340">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-N1-S2" />
+  </properties>
+ </tile>
+ <tile id="341">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-N2-S0" />
+  </properties>
+ </tile>
+ <tile id="342">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-N2-S1" />
+  </properties>
+ </tile>
+ <tile id="343">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-N2-S2" />
+  </properties>
+ </tile>
+ <tile id="344">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-N0-W0" />
+  </properties>
+ </tile>
+ <tile id="345">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-N0-W1" />
+  </properties>
+ </tile>
+ <tile id="346">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-N0-W2" />
+  </properties>
+ </tile>
+ <tile id="347">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-N1-W0" />
+  </properties>
+ </tile>
+ <tile id="348">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-N1-W1" />
+  </properties>
+ </tile>
+ <tile id="349">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-N1-W2" />
+  </properties>
+ </tile>
+ <tile id="350">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-N2-W0" />
+  </properties>
+ </tile>
+ <tile id="351">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-N2-W1" />
+  </properties>
+ </tile>
+ <tile id="352">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-N2-W2" />
+  </properties>
+ </tile>
+ <tile id="353">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-E0-S0" />
+  </properties>
+ </tile>
+ <tile id="354">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-E0-S1" />
+  </properties>
+ </tile>
+ <tile id="355">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-E0-S2" />
+  </properties>
+ </tile>
+ <tile id="356">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-E1-S0" />
+  </properties>
+ </tile>
+ <tile id="357">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-E1-S1" />
+  </properties>
+ </tile>
+ <tile id="358">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-E1-S2" />
+  </properties>
+ </tile>
+ <tile id="359">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-E2-S0" />
+  </properties>
+ </tile>
+ <tile id="360">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-E2-S1" />
+  </properties>
+ </tile>
+ <tile id="361">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-E2-S2" />
+  </properties>
+ </tile>
+ <tile id="362">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-E0-W0" />
+  </properties>
+ </tile>
+ <tile id="363">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-E0-W1" />
+  </properties>
+ </tile>
+ <tile id="364">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-E0-W2" />
+  </properties>
+ </tile>
+ <tile id="365">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-E1-W0" />
+  </properties>
+ </tile>
+ <tile id="366">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-E1-W1" />
+  </properties>
+ </tile>
+ <tile id="367">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-E1-W2" />
+  </properties>
+ </tile>
+ <tile id="368">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-E2-W0" />
+  </properties>
+ </tile>
+ <tile id="369">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-E2-W1" />
+  </properties>
+ </tile>
+ <tile id="370">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-E2-W2" />
+  </properties>
+ </tile>
+ <tile id="371">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-S0-W0" />
+  </properties>
+ </tile>
+ <tile id="372">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-S0-W1" />
+  </properties>
+ </tile>
+ <tile id="373">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-S0-W2" />
+  </properties>
+ </tile>
+ <tile id="374">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-S1-W0" />
+  </properties>
+ </tile>
+ <tile id="375">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-S1-W1" />
+  </properties>
+ </tile>
+ <tile id="376">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-S1-W2" />
+  </properties>
+ </tile>
+ <tile id="377">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-S2-W0" />
+  </properties>
+ </tile>
+ <tile id="378">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-S2-W1" />
+  </properties>
+ </tile>
+ <tile id="379">
+  <properties>
+   <property name="ground" value="trail" />
+   <property name="path" value="hero-S2-W2" />
+  </properties>
+ </tile>
+<wangsets>
   <wangset name="grass-path" type="mixed" tile="62">
    <wangcolor name="grass" color="#3070ff" tile="0" probability="1" />
    <wangcolor name="dirt" color="#ff3070" tile="62" probability="1" />

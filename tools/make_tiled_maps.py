@@ -81,6 +81,7 @@ import numpy as np
 from PIL import Image
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from map_rings import rings  # noqa: E402
+from trail_ribbons import apply_woods_ribbons  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -1173,6 +1174,9 @@ def map1():
                 lv.ground[y, x] = blob(ts, "grass-forest", wall, x, y, lv.rng)
             if water[y, x]: lv.ground[y, x] = blob(ts, "grass-water", water, x, y, lv.rng)
             if path[y, x]: lv.ground[y, x] = blob(ts, "grass-path", path, x, y, lv.rng)
+    # #64: open the brown staircase into grass verges, round pads and diagonal tracks.
+    # Same route coordinates as WOODS_TRAILS in tools/trail_ribbons.py.
+    apply_woods_ribbons(lv.ground, ts)
     # keep-out: trails, clearings, gated pockets, the cabin
     for r in trails:
         carve_route(lv, route_pts(r), 2.5, lv.keepout)

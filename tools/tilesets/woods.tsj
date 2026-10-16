@@ -1,12 +1,12 @@
 {
  "columns": 16,
  "image": "woods.png",
- "imageheight": 544,
+ "imageheight": 768,
  "imagewidth": 512,
  "margin": 0,
  "name": "woods",
  "spacing": 0,
- "tilecount": 272,
+ "tilecount": 384,
  "tiledversion": "1.10.2",
  "tileheight": 32,
  "tilewidth": 32,
@@ -7270,6 +7270,1626 @@
      }
     ]
    }
+  },
+  {
+   "id": 272,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-N0-E0"
+    }
+   ]
+  },
+  {
+   "id": 273,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-N0-E1"
+    }
+   ]
+  },
+  {
+   "id": 274,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-N0-E2"
+    }
+   ]
+  },
+  {
+   "id": 275,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-N1-E0"
+    }
+   ]
+  },
+  {
+   "id": 276,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-N1-E1"
+    }
+   ]
+  },
+  {
+   "id": 277,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-N1-E2"
+    }
+   ]
+  },
+  {
+   "id": 278,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-N2-E0"
+    }
+   ]
+  },
+  {
+   "id": 279,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-N2-E1"
+    }
+   ]
+  },
+  {
+   "id": 280,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-N2-E2"
+    }
+   ]
+  },
+  {
+   "id": 281,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-N0-S0"
+    }
+   ]
+  },
+  {
+   "id": 282,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-N0-S1"
+    }
+   ]
+  },
+  {
+   "id": 283,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-N0-S2"
+    }
+   ]
+  },
+  {
+   "id": 284,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-N1-S0"
+    }
+   ]
+  },
+  {
+   "id": 285,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-N1-S1"
+    }
+   ]
+  },
+  {
+   "id": 286,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-N1-S2"
+    }
+   ]
+  },
+  {
+   "id": 287,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-N2-S0"
+    }
+   ]
+  },
+  {
+   "id": 288,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-N2-S1"
+    }
+   ]
+  },
+  {
+   "id": 289,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-N2-S2"
+    }
+   ]
+  },
+  {
+   "id": 290,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-N0-W0"
+    }
+   ]
+  },
+  {
+   "id": 291,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-N0-W1"
+    }
+   ]
+  },
+  {
+   "id": 292,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-N0-W2"
+    }
+   ]
+  },
+  {
+   "id": 293,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-N1-W0"
+    }
+   ]
+  },
+  {
+   "id": 294,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-N1-W1"
+    }
+   ]
+  },
+  {
+   "id": 295,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-N1-W2"
+    }
+   ]
+  },
+  {
+   "id": 296,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-N2-W0"
+    }
+   ]
+  },
+  {
+   "id": 297,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-N2-W1"
+    }
+   ]
+  },
+  {
+   "id": 298,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-N2-W2"
+    }
+   ]
+  },
+  {
+   "id": 299,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-E0-S0"
+    }
+   ]
+  },
+  {
+   "id": 300,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-E0-S1"
+    }
+   ]
+  },
+  {
+   "id": 301,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-E0-S2"
+    }
+   ]
+  },
+  {
+   "id": 302,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-E1-S0"
+    }
+   ]
+  },
+  {
+   "id": 303,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-E1-S1"
+    }
+   ]
+  },
+  {
+   "id": 304,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-E1-S2"
+    }
+   ]
+  },
+  {
+   "id": 305,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-E2-S0"
+    }
+   ]
+  },
+  {
+   "id": 306,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-E2-S1"
+    }
+   ]
+  },
+  {
+   "id": 307,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-E2-S2"
+    }
+   ]
+  },
+  {
+   "id": 308,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-E0-W0"
+    }
+   ]
+  },
+  {
+   "id": 309,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-E0-W1"
+    }
+   ]
+  },
+  {
+   "id": 310,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-E0-W2"
+    }
+   ]
+  },
+  {
+   "id": 311,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-E1-W0"
+    }
+   ]
+  },
+  {
+   "id": 312,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-E1-W1"
+    }
+   ]
+  },
+  {
+   "id": 313,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-E1-W2"
+    }
+   ]
+  },
+  {
+   "id": 314,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-E2-W0"
+    }
+   ]
+  },
+  {
+   "id": 315,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-E2-W1"
+    }
+   ]
+  },
+  {
+   "id": 316,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-E2-W2"
+    }
+   ]
+  },
+  {
+   "id": 317,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-S0-W0"
+    }
+   ]
+  },
+  {
+   "id": 318,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-S0-W1"
+    }
+   ]
+  },
+  {
+   "id": 319,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-S0-W2"
+    }
+   ]
+  },
+  {
+   "id": 320,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-S1-W0"
+    }
+   ]
+  },
+  {
+   "id": 321,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-S1-W1"
+    }
+   ]
+  },
+  {
+   "id": 322,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-S1-W2"
+    }
+   ]
+  },
+  {
+   "id": 323,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-S2-W0"
+    }
+   ]
+  },
+  {
+   "id": 324,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-S2-W1"
+    }
+   ]
+  },
+  {
+   "id": 325,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "trail-S2-W2"
+    }
+   ]
+  },
+  {
+   "id": 326,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-N0-E0"
+    }
+   ]
+  },
+  {
+   "id": 327,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-N0-E1"
+    }
+   ]
+  },
+  {
+   "id": 328,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-N0-E2"
+    }
+   ]
+  },
+  {
+   "id": 329,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-N1-E0"
+    }
+   ]
+  },
+  {
+   "id": 330,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-N1-E1"
+    }
+   ]
+  },
+  {
+   "id": 331,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-N1-E2"
+    }
+   ]
+  },
+  {
+   "id": 332,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-N2-E0"
+    }
+   ]
+  },
+  {
+   "id": 333,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-N2-E1"
+    }
+   ]
+  },
+  {
+   "id": 334,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-N2-E2"
+    }
+   ]
+  },
+  {
+   "id": 335,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-N0-S0"
+    }
+   ]
+  },
+  {
+   "id": 336,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-N0-S1"
+    }
+   ]
+  },
+  {
+   "id": 337,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-N0-S2"
+    }
+   ]
+  },
+  {
+   "id": 338,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-N1-S0"
+    }
+   ]
+  },
+  {
+   "id": 339,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-N1-S1"
+    }
+   ]
+  },
+  {
+   "id": 340,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-N1-S2"
+    }
+   ]
+  },
+  {
+   "id": 341,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-N2-S0"
+    }
+   ]
+  },
+  {
+   "id": 342,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-N2-S1"
+    }
+   ]
+  },
+  {
+   "id": 343,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-N2-S2"
+    }
+   ]
+  },
+  {
+   "id": 344,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-N0-W0"
+    }
+   ]
+  },
+  {
+   "id": 345,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-N0-W1"
+    }
+   ]
+  },
+  {
+   "id": 346,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-N0-W2"
+    }
+   ]
+  },
+  {
+   "id": 347,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-N1-W0"
+    }
+   ]
+  },
+  {
+   "id": 348,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-N1-W1"
+    }
+   ]
+  },
+  {
+   "id": 349,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-N1-W2"
+    }
+   ]
+  },
+  {
+   "id": 350,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-N2-W0"
+    }
+   ]
+  },
+  {
+   "id": 351,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-N2-W1"
+    }
+   ]
+  },
+  {
+   "id": 352,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-N2-W2"
+    }
+   ]
+  },
+  {
+   "id": 353,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-E0-S0"
+    }
+   ]
+  },
+  {
+   "id": 354,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-E0-S1"
+    }
+   ]
+  },
+  {
+   "id": 355,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-E0-S2"
+    }
+   ]
+  },
+  {
+   "id": 356,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-E1-S0"
+    }
+   ]
+  },
+  {
+   "id": 357,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-E1-S1"
+    }
+   ]
+  },
+  {
+   "id": 358,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-E1-S2"
+    }
+   ]
+  },
+  {
+   "id": 359,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-E2-S0"
+    }
+   ]
+  },
+  {
+   "id": 360,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-E2-S1"
+    }
+   ]
+  },
+  {
+   "id": 361,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-E2-S2"
+    }
+   ]
+  },
+  {
+   "id": 362,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-E0-W0"
+    }
+   ]
+  },
+  {
+   "id": 363,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-E0-W1"
+    }
+   ]
+  },
+  {
+   "id": 364,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-E0-W2"
+    }
+   ]
+  },
+  {
+   "id": 365,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-E1-W0"
+    }
+   ]
+  },
+  {
+   "id": 366,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-E1-W1"
+    }
+   ]
+  },
+  {
+   "id": 367,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-E1-W2"
+    }
+   ]
+  },
+  {
+   "id": 368,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-E2-W0"
+    }
+   ]
+  },
+  {
+   "id": 369,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-E2-W1"
+    }
+   ]
+  },
+  {
+   "id": 370,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-E2-W2"
+    }
+   ]
+  },
+  {
+   "id": 371,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-S0-W0"
+    }
+   ]
+  },
+  {
+   "id": 372,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-S0-W1"
+    }
+   ]
+  },
+  {
+   "id": 373,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-S0-W2"
+    }
+   ]
+  },
+  {
+   "id": 374,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-S1-W0"
+    }
+   ]
+  },
+  {
+   "id": 375,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-S1-W1"
+    }
+   ]
+  },
+  {
+   "id": 376,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-S1-W2"
+    }
+   ]
+  },
+  {
+   "id": 377,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-S2-W0"
+    }
+   ]
+  },
+  {
+   "id": 378,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-S2-W1"
+    }
+   ]
+  },
+  {
+   "id": 379,
+   "properties": [
+    {
+     "name": "ground",
+     "type": "string",
+     "value": "trail"
+    },
+    {
+     "name": "path",
+     "type": "string",
+     "value": "hero-S2-W2"
+    }
+   ]
   }
  ],
  "wangsets": [
