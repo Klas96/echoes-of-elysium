@@ -81,8 +81,29 @@ void main() {
       test('$id parses, art matches, every spot and the door are reachable', () {
         final r = _room(id);
         expect(r.id, id);
-        expect((r.cols, r.rows, r.tile), (16, 9, 32));
-        expect(_pngSize('assets/images/interiors/${r.image}'), (512, 288));
+        // #62: one domestic grid, 32px so a tile is Kaela's height.
+        expect((r.cols, r.rows, r.tile), (12, 8, 32));
+        expect(r.tile, CustomPlayer.sizePlayer.toInt());
+        expect(_pngSize('assets/images/interiors/${r.image}'), (r.cols * r.tile, r.rows * r.tile));
+        expect(r.tileset, 'tileset.png');
+        expect(r.sheetCols, 16);
+        expect(r.floor, hasLength(r.rows));
+        expect(r.props, hasLength(r.rows));
+        final sheet = _pngSize('assets/images/interiors/${r.tileset}');
+        expect(sheet.$1, r.sheetCols * r.tile);
+        final tileCount = r.sheetCols * (sheet.$2 ~/ r.tile);
+        for (final row in r.floor) {
+          expect(row, hasLength(r.cols));
+          for (final tid in row) {
+            expect(tid, inInclusiveRange(0, tileCount - 1));
+          }
+        }
+        for (final row in r.props) {
+          expect(row, hasLength(r.cols));
+          for (final tid in row) {
+            expect(tid, inInclusiveRange(0, tileCount - 1));
+          }
+        }
         expect(File('pubspec.yaml').readAsStringSync(), contains('- assets/images/interiors/'));
 
         final floor = r.reachable();
@@ -130,34 +151,52 @@ void main() {
       }
     });
 
-    test('tea house and noodle shop spawn above the painted door (#31 follow-up)', () {
+    test('tea house and noodle shop spawn just inside the door (#31 follow-up)', () {
       for (final id in ['tea_house', 'noodle_shop']) {
         final r = _room(id);
-        expect(r.spawn, (7, 6), reason: id);
-        expect(r.door.contains(7, 7), isFalse);
-        expect(r.door.contains(7, 8), isTrue);
+        // A floor tile sits between spawn and the mat, on the mat's column.
+        expect(r.door.contains(r.spawn.$1, r.spawn.$2), isFalse, reason: id);
+        expect(r.door.contains(r.spawn.$1, r.spawn.$2 + 1), isFalse, reason: id);
+        expect(r.door.contains(r.spawn.$1, r.spawn.$2 + 2), isTrue, reason: id);
       }
     });
 
     test('noodle shop click-path walks around tables to the door', () {
       final r = _room('noodle_shop');
-      final p = r.path(r.spawn, (7, 8));
+      final door = (r.door.x, r.door.y);
+      final p = r.path(r.spawn, door);
       expect(p, isNotEmpty);
       expect(p.first, r.spawn);
-      expect(p.last, (7, 8));
+      expect(p.last, door);
       // Table click snaps to a free neighbour instead of failing.
-      final nearTable = r.path(r.spawn, (4, 5));
+      final bowl = r.spots.firstWhere((s) => s.id == 'tables').rect;
+      final nearTable = r.path(r.spawn, (bowl.x, bowl.y));
       expect(nearTable, isNotEmpty);
       expect(r.solid(nearTable.last.$1, nearTable.last.$2), isFalse);
     });
 
     test('facing rule: next to a rect and facing it', () {
       final r = _room('ranger_cabin');
-      final map = r.spots.firstWhere((s) => s.id == 'wall_map').rect; // [6,0,3,3]
-      expect(r.stepInto(map, 7, 3), (0, -1));
+      final map = r.spots.firstWhere((s) => s.id == 'wall_map').rect;
+      final below = (map.x + 1, map.y + map.h);
+      expect(r.stepInto(map, below.$1, below.$2), (0, -1));
       expect(RoomSpotComponent.facing(Direction.up, (0, -1)), isTrue);
       expect(RoomSpotComponent.facing(Direction.down, (0, -1)), isFalse);
-      expect(r.stepInto(map, 7, 5), isNull);
+      expect(r.stepInto(map, below.$1, below.$2 + 2), isNull);
+    });
+
+    test('furniture footprints stay domestic (#62)', () {
+      for (final id in Interiors.rooms) {
+        final r = _room(id);
+        for (final s in r.spots) {
+          // A wall of shelves can run the width of the room. Nothing stacks
+          // into a hall-sized prop: beds are 2 tiles, everything else is 1.
+          expect(s.rect.h, lessThanOrEqualTo(2), reason: '${r.id}/${s.id}');
+          if (s.kind != 'lore') {
+            expect(s.rect.w, lessThanOrEqualTo(4), reason: '${r.id}/${s.id}');
+          }
+        }
+      }
     });
   });
 

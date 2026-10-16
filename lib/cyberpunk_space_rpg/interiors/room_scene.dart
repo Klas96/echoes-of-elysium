@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:ui' as ui;
 
 import 'package:bonfire/bonfire.dart';
 import 'package:bonfire/map/empty_map.dart';
@@ -28,9 +29,10 @@ import 'room_services.dart';
 
 /// Enterable building interiors (#31).
 ///
-/// E at an enterable building's door fades to a small room scene built from
-/// the room's 512x288 background + JSON (collision rects, doormat, spawn,
-/// NPCs, interact spots, lights). Stepping onto the doormat fades back out
+/// E at an enterable building's door fades to a small tiled room (12×8 of
+/// 32 px, same density as Kaela) built from the JSON floor/props layers
+/// (collision rects, doormat, spawn, NPCs, interact spots, lights). Stepping
+/// onto the doormat fades back out
 /// and puts Kaela one step in front of the same exterior door, facing down.
 ///
 /// The room is its own [BonfireWidget] pushed over the paused overworld, so
@@ -409,6 +411,7 @@ List<RoomSpot> _usableSpots(RoomData room) {
 
 class RoomBackground extends GameComponent {
   final RoomData room;
+  ui.Image? _sheet;
   Sprite? _sprite;
   final _paint = Paint()..filterQuality = FilterQuality.none;
 
@@ -420,15 +423,45 @@ class RoomBackground extends GameComponent {
   @override
   int get priority => LayerPriority.MAP + 1;
 
+  bool get _tiled => room.floor.isNotEmpty;
+
   @override
   Future<void> onLoad() async {
-    _sprite = await Sprite.load(room.imagePath);
+    if (_tiled) {
+      _sheet = await Flame.images.load('interiors/${room.tileset}');
+    } else {
+      _sprite = await Sprite.load(room.imagePath);
+    }
     return super.onLoad();
+  }
+
+  void _blit(Canvas canvas, int id, int tx, int ty) {
+    final sheet = _sheet;
+    if (sheet == null) return;
+    final s = room.tile.toDouble();
+    final src = Rect.fromLTWH(
+      ((id % room.sheetCols) * room.tile).toDouble(),
+      ((id ~/ room.sheetCols) * room.tile).toDouble(),
+      s,
+      s,
+    );
+    canvas.drawImageRect(sheet, src, Rect.fromLTWH(tx * s, ty * s, s, s), _paint);
   }
 
   @override
   void render(Canvas canvas) {
-    _sprite?.render(canvas, size: size, overridePaint: _paint);
+    if (_sheet != null) {
+      for (var y = 0; y < room.rows; y++) {
+        final floor = room.floor[y];
+        final props = y < room.props.length ? room.props[y] : const <int>[];
+        for (var x = 0; x < room.cols; x++) {
+          _blit(canvas, floor[x], x, y);
+          if (x < props.length && props[x] > 0) _blit(canvas, props[x], x, y);
+        }
+      }
+    } else {
+      _sprite?.render(canvas, size: size, overridePaint: _paint);
+    }
     super.render(canvas);
   }
 }
