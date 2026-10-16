@@ -51,24 +51,30 @@ class ExamineHotspot extends GameComponent with Interactable {
 
   bool get _hasKey => requiresItem == null || Bonds.hasItem(requiresItem!);
 
+  /// Permanent hubs (board / shop) stay; loot and one-shot examines vanish.
+  bool get _linger => openQuestBoard || openShop;
+
   @override
   double get interactRadius => 36;
+
+  @override
+  bool get canFocus => _linger || !_done;
 
   @override
   PromptInfo get prompt {
     if (openQuestBoard) return const PromptInfo('READ BOARD');
     if (openShop) return const PromptInfo('TRADE');
-    if (requiresItem != null && !_hasKey && !_done) {
+    if (_done) return PromptInfo.note(title);
+    if (requiresItem != null && !_hasKey) {
       if (requiresItem == 'ruins_gate_key') {
         return PromptInfo.note('Sealed · keystone is in the NE wing', item: requiresItem);
       }
       final name = itemLabels[requiresItem!] ?? requiresItem!;
       return PromptInfo.note('Locked · needs $name', item: requiresItem);
     }
-    if (requiresItem != null && _hasKey && !_done) {
+    if (requiresItem != null && _hasKey) {
       return PromptInfo('USE ITEM', item: requiresItem);
     }
-    if (_done) return PromptInfo.note(title);
     if (_dropVisible) return PromptInfo('EXAMINE', item: giveItem);
     return const PromptInfo('EXAMINE');
   }
@@ -162,6 +168,8 @@ class ExamineHotspot extends GameComponent with Interactable {
 
   @override
   void render(Canvas canvas) {
+    // Examined loot / clues: gone (not grey). Board and shop keep their dots.
+    if (_done && !_linger) return;
     final cx = size.x / 2;
     final cy = size.y / 2;
     final p = sin(_pulse);
@@ -181,11 +189,9 @@ class ExamineHotspot extends GameComponent with Interactable {
           );
       return;
     }
-    final col = _done
-        ? const Color(0xFF668899)
-        : (_hasKey || requiresItem == null)
-            ? const Color(0xFF88DDFF)
-            : const Color(0xFFAA8866);
+    final col = (_hasKey || requiresItem == null)
+        ? const Color(0xFF88DDFF)
+        : const Color(0xFFAA8866);
     canvas.drawCircle(
       Offset(cx, cy),
       5 + p * 1.5,

@@ -55,6 +55,10 @@ class RoomText {
   static const bookFieldNotes =
       'A fragment was carried south, toward the alleys where the drones now hum.';
   static const readingDesk = 'A lamp still lit. Someone was here not long ago.';
+  static const mergeDraftTake =
+      'Dust lifts off the draft. The vote is there in brittle ink — merge, or become dust that remembers nothing.';
+  static const mergeDraftGone =
+      'The desk is bare. You already carry the First Memory Draft.';
 
   // --- Ranger cabin ---------------------------------------------------------
   static const ashaNote = 'Kaela, use what you need. The chest is yours now. A.';
@@ -62,6 +66,13 @@ class RoomText {
   static const wallMap = "Asha has pinned every trail she's walked. A few are still blank.";
   static const stove =
       'A low fire, still crackling. Asha must have stoked it before she left. It smells of pine.';
+
+  // --- Pond grotto (#57) ----------------------------------------------------
+  static const grottoFragmentTake =
+      'The crystal gives up a warm pulse of memory. Outside, the Woods feel a shade clearer.';
+  static const grottoFragmentGone = 'The alcove is quiet. That memory already travels with you.';
+  static const grottoDrip = 'Water ticks from the stone. The Light still hums in the moss.';
+  static const grottoPool = 'A shallow pool mirrors the mouth you came through.';
 
   // --- Still-locked doors ---------------------------------------------------
   static const lockedDoors = {

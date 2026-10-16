@@ -1467,7 +1467,9 @@
    <property name="prop" value="street_lamp" />
   </properties>
   <objectgroup draworder="index" id="2">
-   <object id="1" type="collision" x="10" y="3" width="12" height="27" rotation="0" />
+   <object id="1" type="collision" x="10" y="18.9" width="10.7" height="11.1" rotation="0" />
+   <object id="2" type="collision" x="10" y="19.1" width="10.7" height="10.9" rotation="0" />
+   <object id="3" type="collision" x="14" y="22.9" width="10.7" height="11.1" rotation="0" />
   </objectgroup>
  </tile>
  <tile id="225">
@@ -1521,7 +1523,7 @@
    <property name="prop" value="kiosk" />
   </properties>
   <objectgroup draworder="index" id="2">
-   <object id="1" type="collision" x="0" y="3" width="32" height="29" rotation="0" />
+   <object id="1" type="collision" x="-16.97" y="3.11" width="32.87" height="27.6" rotation="0" />
   </objectgroup>
  </tile>
  <tile id="231">
@@ -1899,7 +1901,7 @@
    <property name="prop" value="fountain" />
   </properties>
   <objectgroup draworder="index" id="2">
-   <object id="1" type="collision" x="6" y="0" width="26" height="29" rotation="0" />
+   <object id="1" type="collision" x="12.33" y="0" width="19.67" height="13.82" rotation="0" />
   </objectgroup>
  </tile>
  <tile id="285">

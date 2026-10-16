@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 
 import '../audio/sfx_manager.dart';
 import '../components/custom_player.dart';
+import '../components/sentinel_drone.dart';
+import '../components/uec_drone.dart';
 import 'bonds.dart';
 import 'creature_species.dart';
 import 'day_cycle.dart';
@@ -197,8 +199,13 @@ class WildCreature extends CreatureBody with Interactable {
 
   bool get _present => !species.nightOnly || DayCycle.night;
 
+  /// Wild befriend, or invite a befriended friend who isn't walking with you.
+  bool get _canInvite =>
+      Bonds.isBefriended(species.id) && Bonds.active != species.id;
+
   @override
-  bool get canFocus => !_hidden && alpha > 0.6 && !Bonds.isBefriended(species.id);
+  bool get canFocus =>
+      !_hidden && alpha > 0.6 && (!Bonds.isBefriended(species.id) || _canInvite);
 
   @override
   double get interactRadius => 46;
@@ -216,6 +223,7 @@ class WildCreature extends CreatureBody with Interactable {
 
   @override
   PromptInfo get prompt {
+    if (_canInvite) return const PromptInfo('SET AS COMPANION');
     final c = _check();
     if (!c.ok) return PromptInfo.note(c.note);
     return PromptInfo(c.label, hold: species.rule == BondRule.freeFromNet ? 1.4 : 1.0);
@@ -223,6 +231,20 @@ class WildCreature extends CreatureBody with Interactable {
 
   @override
   void interact() {
+    if (_canInvite) {
+      Bonds.setActive(species.id);
+      _happyFor = 1.6;
+      _target = null;
+      SfxManager().playChime();
+      final ab = species.ability;
+      GameToast.show(
+        'COMPANION · ${species.name}',
+        body: ab != null ? '${ab.label} · Walking with you' : 'Walking with you',
+        portrait: species.portraitAsset(''),
+        compact: true,
+      );
+      return;
+    }
     final c = _check();
     if (!c.ok || Bonds.isBefriended(species.id)) return;
     if (species.rule == BondRule.offerItem) Bonds.useItem(species.item!);
@@ -328,7 +350,9 @@ class WildCreature extends CreatureBody with Interactable {
     _idleFor -= dt;
     if (_idleFor <= 0 && radius > 0) {
       final a = _rng.nextDouble() * pi * 2;
-      final r = _rng.nextDouble() * radius;
+      // Flyers stay near home (e.g. glowmoth over open water); ground critters
+      // may pick the full wander disk.
+      final r = _rng.nextDouble() * (species.flying ? radius * 0.85 : radius);
       _target = home + Vector2(cos(a), sin(a)) * r;
     }
   }
@@ -390,14 +414,19 @@ class WildCreature extends CreatureBody with Interactable {
 }
 
 /// The active companion: follows Kaela, sparkles near points of interest
-/// for its ability, shows the SCENT trail / LIGHT glow. Swaps itself when
-/// the journal changes [Bonds.active].
+/// for its ability, shows ability trails / LIGHT glow / HUSH spores.
+/// Swaps itself when the journal changes [Bonds.active].
 class Companion extends CreatureBody {
   static Companion? current;
 
   /// Farewell at the region's edge: the companion stops here and stays
   /// behind (cleared on the next map).
   static Vector2? holdAt;
+
+  /// HUSH radius (px) and refresh duration applied to nearby drones.
+  static const hushRadius = 110.0;
+  static const hushSeconds = 4.5;
+
   String? _id;
   String? _lentTo;
   double _lentFor = 0;
@@ -412,7 +441,8 @@ class Companion extends CreatureBody {
   int _loadToken = 0;
   double _emote = 0;
   double _t = 0;
-  PointOfInterest? _scentTarget;
+  double _hushPulse = 0;
+  PointOfInterest? _trailTarget;
 
   Companion() : super(creatureSpecies['glowmoth']!, Vector2.zero());
 
@@ -513,22 +543,39 @@ class Companion extends CreatureBody {
     final ab = species.ability;
     PointOfInterest? near;
     var nd = double.infinity;
-    PointOfInterest? scent;
+    PointOfInterest? trail;
     var sd = double.infinity;
-    for (final p in PointOfInterest.registry) {
-      if (!p.isMounted || !p.poiPending || p.poiAbility != ab) continue;
-      final dd = p.poiPoint.distanceTo(bodyCenter);
-      if (dd < 130 && dd < nd) {
-        nd = dd;
-        near = p;
-      }
-      if (ab == Ability.scent && dd < 480 && dd < sd) {
-        sd = dd;
-        scent = p;
+    if (ab != null) {
+      for (final p in PointOfInterest.registry) {
+        if (!p.isMounted || !p.poiPending || p.poiAbility != ab) continue;
+        final dd = p.poiPoint.distanceTo(bodyCenter);
+        if (dd < 130 && dd < nd) {
+          nd = dd;
+          near = p;
+        }
+        if (ab.seeksTrail && dd < 480 && dd < sd) {
+          sd = dd;
+          trail = p;
+        }
       }
     }
     _emote = near != null ? min(1, _emote + dt * 3) : max(0, _emote - dt * 2);
-    _scentTarget = scent;
+    _trailTarget = trail;
+
+    // HUSH: soft spore pulse that calms nearby UEC drones (and the Sentinel).
+    if (ab == Ability.hush && present && _lentTo == null) {
+      _hushPulse += dt;
+      if (_hushPulse >= 0.45) {
+        _hushPulse = 0;
+        final origin = bodyCenter;
+        for (final d in gameRef.query<UECDrone>()) {
+          if (d.position.distanceTo(origin) < hushRadius) d.applyHush(hushSeconds);
+        }
+        for (final d in gameRef.query<SentinelDrone>()) {
+          if (d.position.distanceTo(origin) < hushRadius) d.applyHush(hushSeconds);
+        }
+      }
+    }
   }
 
   @override
@@ -537,7 +584,10 @@ class Companion extends CreatureBody {
     if (species.ability == Ability.light) {
       renderGlow(canvas, const Color(0xFFE8D0FF), DayCycle.night ? 30 : 16, DayCycle.night ? 0.45 : 0.25);
     }
-    final s = _scentTarget;
+    if (species.ability == Ability.hush) {
+      renderGlow(canvas, const Color(0xFF88CC88), 22 + sin(_t * 2) * 3, 0.22);
+    }
+    final s = _trailTarget;
     if (s != null) _renderTrail(canvas, s.poiPoint - position);
     renderBody(canvas);
     if (_emote > 0) _renderSparkle(canvas);

@@ -1,9 +1,10 @@
 # Interiors (#31)
 
 Enterable rooms: `tea_house` (the inn at Lantern Gate), `noodle_shop`
-(Market Row), `archive_library` (after the Archivist's seal) and
-`ranger_cabin` (Asha's place in the Woods). Every other building door stays
-locked and shows its GameConcept flavour line.
+(Market Row), `archive_library` (after the Archivist's seal),
+`ranger_cabin` (Asha's place in the Woods) and `pond_grotto` (Woods pond
+cave after LIGHT / `woods_grotto`). Every other building door stays locked
+and shows its GameConcept flavour line.
 
 Per room: `<id>.png` (512x288 = 16x9 tiles of 32 px, hard pixels; never
 commit the @2x previews or sources) + `<id>.json`. Code:

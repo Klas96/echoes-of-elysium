@@ -126,9 +126,11 @@ class MainGates(unittest.TestCase):
 
     def test_blocked_cells_follow_the_art_state(self):
         g = dict(name="abilitygate", x=40.0 * T, y=40.0 * T, w=3.0 * T, h=2.0 * T, props=dict(kind="boulder"))
+        # North row free for the interact stand; south row plugs the road.
         self.assertEqual(m.gate_blocked_cells(g, "closed"), {(40, 41), (41, 41), (42, 41)})
         self.assertEqual(m.gate_blocked_cells(g, "open"), {(42, 41)})     # passage x 0-64 free
         b = dict(name="abilitygate", x=50.0 * T, y=26.0 * T, w=2.0 * T, h=2.0 * T, props=dict(kind="bramble"))
+        # North row stays free for the interact stand; south row plugs the pocket.
         self.assertEqual(m.gate_blocked_cells(b, "closed"), {(50, 27), (51, 27)})
         self.assertEqual(m.gate_blocked_cells(b, "open"), set())
 

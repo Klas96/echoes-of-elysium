@@ -16,10 +16,17 @@ import '../game/game_state.dart';
 /// `sprites/obstacles/story_gate.png` closed,
 /// `story_gate_pulse.png` 2-frame energy pulse over the closed gate,
 /// `story_gate_open.png` open.
+///
+/// When open, the sprite is split: this component draws the floor / pillars
+/// (under Kaela), and a world sibling [_StoryGateRoof] draws the lintel
+/// (over her) so both N→S and S→N look right.
 class StoryGate extends GameComponent {
   static const closedPath = 'sprites/obstacles/story_gate.png';
   static const openPath = 'sprites/obstacles/story_gate_open.png';
   static const pulsePath = 'sprites/obstacles/story_gate_pulse.png';
+
+  /// Y fraction: above = roof (over player), below = floor (under player).
+  static const roofSplit = 0.48;
 
   final String openFlag;
   double _pulse = 0;
@@ -28,6 +35,8 @@ class StoryGate extends GameComponent {
   Sprite? _closed;
   Sprite? _openSprite;
   Sprite? _pulseLit;
+  _StoryGateRoof? _roof;
+  bool? _wasOpen;
 
   StoryGate(Vector2 position, Vector2 size, {required this.openFlag}) {
     this.position = position;
@@ -35,6 +44,15 @@ class StoryGate extends GameComponent {
   }
 
   bool get _open => Adventure.flag(openFlag);
+
+  Sprite? get openSprite => _openSprite;
+
+  /// Closed: south base. Open: north sill so the floor pad stays under Kaela.
+  @override
+  int get priority {
+    final foot = _open ? size.y * 0.32 : size.y;
+    return LayerPriority.getComponentPriority((position.y + foot).floor());
+  }
 
   @override
   Future<void> onLoad() async {
@@ -44,7 +62,8 @@ class StoryGate extends GameComponent {
       final pulse = await Flame.images.load(pulsePath);
       // Frame 1 is the lit barrier; frame 0 matches the closed art.
       _pulseLit = Sprite(pulse,
-          srcPosition: Vector2(pulse.width / 2, 0), srcSize: Vector2(pulse.width / 2, pulse.height.toDouble()));
+          srcPosition: Vector2(pulse.width / 2, 0),
+          srcSize: Vector2(pulse.width / 2, pulse.height.toDouble()));
     } catch (_) {
       // Missing art: fall back to the plain block below.
     }
@@ -52,14 +71,32 @@ class StoryGate extends GameComponent {
       // Full footprint solid — map choke is sized to this hitbox (no walk-around).
       add(_hitbox = RectangleHitbox(size: size, isSolid: true));
     }
+    // Roof is a world sibling so it can sort above the player.
+    _roof = _StoryGateRoof(this);
+    await gameRef.add(_roof!);
     return super.onLoad();
+  }
+
+  @override
+  void onRemove() {
+    _roof?.removeFromParent();
+    _roof = null;
+    super.onRemove();
   }
 
   @override
   void update(double dt) {
     super.update(dt);
     _pulse += dt * 2;
-    if (_open) {
+    final open = _open;
+    if (_wasOpen != open) {
+      _wasOpen = open;
+      if (hasGameRef) {
+        final g = gameRef;
+        if (g is BonfireGame) g.requestUpdatePriority();
+      }
+    }
+    if (open) {
       // Keystone seated: walkable doorway.
       if (_hitbox != null) {
         _hitbox!.removeFromParent();
@@ -69,7 +106,8 @@ class StoryGate extends GameComponent {
     }
     final player = gameRef.player;
     if (player == null || _hinted) return;
-    final dist = ((player.position + player.size / 2) - (position + size / 2)).length;
+    final dist =
+        ((player.position + player.size / 2) - (position + size / 2)).length;
     if (dist > 72) return;
     _hinted = true;
     GameState.refreshObjective();
@@ -96,7 +134,12 @@ class StoryGate extends GameComponent {
   void render(Canvas canvas) {
     final paint = Paint()..filterQuality = FilterQuality.none;
     if (_open) {
+      // Floor + pillar bases only; lintel is [_StoryGateRoof].
+      final split = size.y * roofSplit;
+      canvas.save();
+      canvas.clipRect(Rect.fromLTWH(0, split - 2, size.x, size.y - split + 2));
       _openSprite?.render(canvas, size: size, overridePaint: paint);
+      canvas.restore();
       return;
     }
     if (_closed == null) {
@@ -107,7 +150,8 @@ class StoryGate extends GameComponent {
       final a = 0.5 + 0.5 * sin(_pulse * pi / 2);
       if (a > 0.02) {
         _pulseLit?.render(canvas,
-            size: size, overridePaint: paint..color = Color.fromRGBO(255, 255, 255, a));
+            size: size,
+            overridePaint: paint..color = Color.fromRGBO(255, 255, 255, a));
       }
     }
     final label = Bonds.hasItem('ruins_gate_key') ? 'USE KEY' : 'NE KEY';
@@ -147,9 +191,43 @@ class StoryGate extends GameComponent {
     canvas.drawRRect(
       r,
       Paint()
-        ..color = const Color(0xFFFF6688).withValues(alpha: 0.45 + 0.15 * (0.5 + 0.5 * (1 - (_pulse % 1))))
+        ..color = const Color(0xFFFF6688)
+            .withValues(alpha: 0.45 + 0.15 * (0.5 + 0.5 * (1 - (_pulse % 1))))
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2,
     );
+  }
+}
+
+/// Lintel / roof of the open story gate — world sibling so it can draw above
+/// Kaela while the floor half stays under her.
+class _StoryGateRoof extends GameComponent {
+  final StoryGate gate;
+
+  _StoryGateRoof(this.gate);
+
+  @override
+  int get priority => LayerPriority.getComponentPriority(
+        (gate.position.y + gate.size.y).floor(),
+      );
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    position = gate.position.clone();
+    size = gate.size.clone();
+  }
+
+  @override
+  void render(Canvas canvas) {
+    if (!gate._open) return;
+    final sprite = gate.openSprite;
+    if (sprite == null) return;
+    final paint = Paint()..filterQuality = FilterQuality.none;
+    final split = size.y * StoryGate.roofSplit;
+    canvas.save();
+    canvas.clipRect(Rect.fromLTWH(0, 0, size.x, split + 2));
+    sprite.render(canvas, size: size, overridePaint: paint);
+    canvas.restore();
   }
 }

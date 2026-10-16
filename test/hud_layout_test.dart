@@ -119,17 +119,13 @@ void main() {
           final cr = tester.getRect(find.byWidget(el.widget).first);
           expect(cr.right <= size.width && cr.left >= 0, isTrue, reason: 'chip clipped $cr at $label');
         }
-        // No two HUD blocks overlap; prompt/pops/toast stay off the joystick.
+        // No two HUD blocks overlap (on-screen joystick removed — click/WASD only).
         final names = r.keys.toList();
         for (var i = 0; i < names.length; i++) {
           for (var j = i + 1; j < names.length; j++) {
             final a = r[names[i]]!, b = r[names[j]]!;
             expect(a.overlaps(b), isFalse, reason: '${names[i]} $a overlaps ${names[j]} $b at $label');
           }
-        }
-        final stick = HudLayout.joystickRect(size);
-        for (final k in ['prompt', 'hud-pops', 'hud-toast']) {
-          expect(r[k]!.overlaps(stick), isFalse, reason: '$k ${r[k]} on joystick $stick at $label');
         }
       });
     }

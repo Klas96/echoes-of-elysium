@@ -184,11 +184,71 @@ class JogSheet {
 /// the run of the old facing (a one-frame flash of e.g. jog-left when
 /// starting to move down from a left idle). Update the facing as soon as the
 /// velocity is set instead.
+///
+/// Also snaps to a **stable cardinal** (4-dir sheet) with hysteresis so
+/// diagonal pathing / WASD doesn't flicker left↔right or up↔down when both
+/// axes are nearly equal. True 8-dir art is optional polish — not required.
 mixin InstantFacing on Movement {
+  /// Other axis must beat the current by this factor to flip facing.
+  static const double _faceBias = 1.2;
+
   @override
   void setVelocityAxis({double? x, double? y}) {
     super.setVelocityAxis(x: x, y: y);
-    if (!velocity.isZero()) velocity = velocity.clone();
+    if (velocity.isZero()) return;
+    // Trigger Bonfire's direction refresh from the new velocity…
+    velocity = velocity.clone();
+    // …then replace diagonal / twitchy facing with a stable cardinal.
+    final face = stableCardinal(velocity, lastDirection);
+    lastDirection = face;
+    if (face == Direction.left || face == Direction.right) {
+      lastDirectionHorizontal = face;
+    } else {
+      lastDirectionVertical = face;
+    }
+  }
+
+  /// 4-way facing for a velocity, sticky near diagonals.
+  static Direction stableCardinal(Vector2 v, Direction prev) {
+    final ax = v.x.abs();
+    final ay = v.y.abs();
+    if (ax < 0.01 && ay < 0.01) return _asCardinal(prev);
+
+    if (ax > ay * _faceBias) {
+      return v.x > 0 ? Direction.right : Direction.left;
+    }
+    if (ay > ax * _faceBias) {
+      return v.y > 0 ? Direction.down : Direction.up;
+    }
+
+    // Near 45°: keep previous cardinal if it still matches a moving axis.
+    final kept = _keepIfCompatible(prev, v);
+    if (kept != null) return kept;
+    return ax >= ay
+        ? (v.x > 0 ? Direction.right : Direction.left)
+        : (v.y > 0 ? Direction.down : Direction.up);
+  }
+
+  static Direction _asCardinal(Direction d) {
+    switch (d) {
+      case Direction.upLeft:
+      case Direction.upRight:
+        return Direction.up;
+      case Direction.downLeft:
+      case Direction.downRight:
+        return Direction.down;
+      default:
+        return d;
+    }
+  }
+
+  static Direction? _keepIfCompatible(Direction prev, Vector2 v) {
+    final c = _asCardinal(prev);
+    if (c == Direction.left && v.x < 0) return Direction.left;
+    if (c == Direction.right && v.x > 0) return Direction.right;
+    if (c == Direction.up && v.y < 0) return Direction.up;
+    if (c == Direction.down && v.y > 0) return Direction.down;
+    return null;
   }
 }
 

@@ -152,8 +152,9 @@ class Adventure {
   static bool get readUecOrders => hasClue('uec_orders') || flag('read_uec_orders');
 
   /// Opened the Archive Library with the seal.
-  static bool get openedArchive =>
-      hasClue('archive_first_memory') || flag('archive_opened');
+  /// True once Kaela takes the First Memory Draft inside the Archive stacks
+  /// (door unlock is the separate `archive_opened` flag).
+  static bool get openedArchive => hasClue('archive_first_memory');
 
   /// Extra victory paragraphs when key clues shaped the ending.
   static String get endingCoda {
@@ -210,10 +211,17 @@ class Adventure {
       where: 'Woods · crash site',
     ),
     ClueDef(
+      id: 'skiff_crash',
+      title: 'Diagnostic Skiff',
+      body:
+          'Kaela\'s orbital diagnostic skiff. Gaia answered on the childhood neural lock mid-pass — instruments died, canopy rushed up. She woke in this wreck; Gaia was already waiting. Whether the lattice pulled her down or the channel simply fried the craft is still unclear.',
+      where: 'Woods · crash site',
+    ),
+    ClueDef(
       id: 'aetherian_merge',
       title: 'The Merge',
       body:
-          'The colony tagged Gaia as a caretaker AI. Incomplete: she is also an Aetherian upload lattice — minds in process, bodies returned — so a dying sun could not erase them. She ran quiet in caretaker mode until Kaela\'s diagnostic opened the channel.',
+          'The colony tagged Gaia as a caretaker AI. Incomplete: she is also an Aetherian upload lattice — minds in process, bodies returned — so a dying sun could not erase them. She ran quiet in caretaker mode until Kaela\'s diagnostic skiff opened the channel — and went down in the woods.',
       where: 'Woods · Gaia',
     ),
     ClueDef(

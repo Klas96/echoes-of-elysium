@@ -75,3 +75,53 @@ class MuzzleFlash extends GameComponent {
     canvas.restore();
   }
 }
+
+/// Expanding ring for Anchor (and similar radial abilities).
+class AbilityRing extends GameComponent {
+  final Color color;
+  final double maxRadius;
+  final double life;
+  final double stroke;
+  double _age = 0;
+
+  AbilityRing(
+    Vector2 center, {
+    this.color = const Color(0xFFAA44FF),
+    this.maxRadius = 90,
+    this.life = 0.35,
+    this.stroke = 3.5,
+  }) {
+    final pad = maxRadius + 12;
+    position = center - Vector2.all(pad);
+    size = Vector2.all(pad * 2);
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    _age += dt;
+    if (_age >= life) removeFromParent();
+  }
+
+  @override
+  void render(Canvas canvas) {
+    final u = (_age / life).clamp(0.0, 1.0);
+    final fade = (1.0 - u);
+    final r = maxRadius * (0.2 + 0.8 * u);
+    final c = Offset(size.x / 2, size.y / 2);
+    canvas.drawCircle(
+      c,
+      r,
+      Paint()
+        ..color = color.withValues(alpha: 0.55 * fade)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = stroke * fade
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.5),
+    );
+    canvas.drawCircle(
+      c,
+      r * 0.7,
+      Paint()..color = color.withValues(alpha: 0.22 * fade),
+    );
+  }
+}

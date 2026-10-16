@@ -1,12 +1,10 @@
 import 'package:bonfire/bonfire.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
-import '../components/ai_fragment.dart';
 import '../components/custom_player.dart';
-import '../components/npc_character.dart';
 import '../ui/cutscene_player.dart';
 import '../ui/cutscenes.dart';
+import 'game_input.dart';
 import 'game_state.dart';
 import 'pause.dart';
 
@@ -48,45 +46,36 @@ class StoryBeats {
     if (_busy || Cutscenes.seen(id)) return;
     _busy = true;
     CustomPlayer.pendingShot.value = null;
-    final fromTalk = NpcCharacter.activeDialogue.value != null ||
-        AIFragment.activeDialogue.value != null;
     Pause.dismissDialogueForStory();
-    final wasPaused = game.paused;
-    if (!wasPaused) game.pauseEngine();
+    if (!game.paused) game.pauseEngine();
+    const fade = Duration(milliseconds: 450);
     try {
       await Navigator.of(game.context).push(PageRouteBuilder<void>(
         opaque: false,
-        transitionDuration: const Duration(milliseconds: 450),
-        reverseTransitionDuration: const Duration(milliseconds: 450),
+        transitionDuration: fade,
+        reverseTransitionDuration: fade,
         pageBuilder: (context, _, __) => _BeatPage(id: id),
         transitionsBuilder: (context, anim, _, child) =>
             FadeTransition(opacity: anim, child: child),
       ));
+      await Future<void>.delayed(fade);
     } finally {
       CustomPlayer.pendingShot.value = null;
-      final held = HardwareKeyboard.instance.logicalKeysPressed.any(_move.contains);
-      if (!held) {
-        final player = game.player;
-        if (player is CustomPlayer) {
-          player.onJoystickChangeDirectional(
-              JoystickDirectionalEvent(directional: JoystickMoveDirectional.IDLE));
+      if (game.context.mounted) {
+        if (!GameInput.overworldKeysEnabled) {
+          // archive_ash / memories inside a building — restore room WASD.
+          GameInput.reclaim();
+        } else {
+          // Always unpause the overworld after a story beat (wasPaused can
+          // stay true after nested pauses and leave Kaela frozen).
+          if (game.paused) game.resumeEngine();
+          GameInput.reclaim();
+          GameInput.reclaim(releaseKeys: false);
         }
       }
-      if (!wasPaused || fromTalk) game.resumeEngine();
       _busy = false;
     }
   }
-
-  static final _move = {
-    LogicalKeyboardKey.arrowUp,
-    LogicalKeyboardKey.arrowDown,
-    LogicalKeyboardKey.arrowLeft,
-    LogicalKeyboardKey.arrowRight,
-    LogicalKeyboardKey.keyW,
-    LogicalKeyboardKey.keyA,
-    LogicalKeyboardKey.keyS,
-    LogicalKeyboardKey.keyD,
-  };
 }
 
 class _BeatPage extends StatefulWidget {

@@ -4,24 +4,33 @@
 /// Pure data (no Flutter/Flame), so the bond rules are unit tested.
 library;
 
-/// Companion abilities that act as keys for optional secrets.
-enum Ability { light, scent, push }
+/// Companion abilities that act as keys for gates / secrets / field tricks.
+enum Ability { light, scent, push, dig, trail, hush }
 
 extension AbilityInfo on Ability {
   String get label => switch (this) {
         Ability.light => 'LIGHT',
-        Ability.scent => 'SCENT',
+        Ability.scent => 'SNIFF',
         Ability.push => 'PUSH',
+        Ability.dig => 'DIG',
+        Ability.trail => 'TRAIL',
+        Ability.hush => 'HUSH',
       };
 
   String get description => switch (this) {
         Ability.light => 'Brightens dark places and wakes sleeping glyphs.',
-        Ability.scent => 'Follows hidden trails and buried things.',
+        Ability.scent => 'Noses a way through bramble thickets.',
         Ability.push => 'Moves heavy boulders.',
+        Ability.dig => 'Finds buried glimmer under the soil.',
+        Ability.trail => 'A calm presence in hidden glades after dark.',
+        Ability.hush => 'Spores calm nearby UEC drones for a few seconds.',
       };
 
   /// Value stored in SaveData.abilities.
   String get saveKey => name;
+
+  /// Draw a long-range hint trail toward pending points of interest.
+  bool get seeksTrail => this == Ability.scent || this == Ability.dig || this == Ability.trail;
 }
 
 /// How a creature is befriended (see [checkBond]).
@@ -136,6 +145,7 @@ const creatureSpecies = <String, CreatureSpecies>{
     hint: 'It\'s shy of footsteps.',
     lore: 'Puffcaps grow from the same roots as the forest. When one sleeps, so does a little patch of woods.',
     rule: BondRule.stillWatch,
+    ability: Ability.hush,
     speed: 0,
   ),
   'brookling': CreatureSpecies(
@@ -147,6 +157,7 @@ const creatureSpecies = <String, CreatureSpecies>{
     rule: BondRule.offerItem,
     item: 'pebble',
     itemName: 'river pebble',
+    ability: Ability.dig,
     speed: 20,
   ),
   'hushdeer': CreatureSpecies(
@@ -156,6 +167,7 @@ const creatureSpecies = <String, CreatureSpecies>{
     hint: 'Follow the scent of moonflowers.',
     lore: 'Few have seen a hushdeer. The Aetherians believed they guard the places Gaia dreams.',
     rule: BondRule.nightPresence,
+    ability: Ability.trail,
     nightOnly: true,
     speed: 12,
   ),

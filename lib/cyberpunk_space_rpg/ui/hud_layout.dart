@@ -1,49 +1,64 @@
 import 'dart:math';
 
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/widgets.dart';
 
-/// Shared HUD geometry so the top bar, prompts, toasts, pops and the
-/// on-screen joystick never overlap at phone sizes (412x915, 360x800) or
-/// landscape (915x412).
+/// Shared HUD geometry so the top bar, prompts, toasts and pops never
+/// overlap at phone sizes (412x915, 360x800) or landscape (915x412).
+/// Movement is click/tap pathfinding + WASD (no on-screen joystick).
 class HudLayout {
   HudLayout._();
 
-  /// Bonfire joystick: background radius = size / 2, centred at
-  /// (margin.left + r, H - margin.bottom - r).
-  static const joystickSize = 80.0;
-  static const joystickMargin = EdgeInsets.only(left: 100, bottom: 100, right: 100, top: 100);
+  /// Phones/tablets — keep existing zoom and HUD density.
+  static bool get isTouch =>
+      defaultTargetPlatform == TargetPlatform.android ||
+      defaultTargetPlatform == TargetPlatform.iOS;
 
-  /// Screen rect the joystick background covers.
-  static Rect joystickRect(Size screen) {
-    const r = joystickSize / 2;
-    final cx = joystickMargin.left + r;
-    final cy = screen.height - joystickMargin.bottom - r;
-    return Rect.fromCircle(center: Offset(cx, cy), radius: r);
-  }
+  /// Overworld camera zoom. Desktop monitors show far more pixels than a
+  /// phone, so the same 2.0 zoom makes sprites/UI feel tiny on Linux.
+  static double get worldZoom => isTouch ? 2.0 : 2.85;
 
-  /// Narrow (portrait phone): bottom-centre widgets would sit on the
-  /// joystick, so they move above it.
+  /// Extra Flutter text scale on desktop (world zoom does not affect HUD).
+  static const desktopTextScale = 1.15;
+
+  /// Top chip row (MENU / glimmer / day-night) — larger on desktop monitors.
+  static double get chipFont => isTouch ? 10.0 : 13.0;
+  static double get chipIcon => isTouch ? 13.0 : 16.0;
+  static EdgeInsets get chipPadding => isTouch
+      ? const EdgeInsets.symmetric(horizontal: 8, vertical: 4)
+      : const EdgeInsets.symmetric(horizontal: 12, vertical: 7);
+
+  /// HP / XP bar thickness (bars use a fixed width in GameHud).
+  static double get statusBarHeight => isTouch ? 8.0 : 10.0;
+  static double get statusLabelFont => isTouch ? 10.0 : 12.0;
+  static double get statusMetaFont => isTouch ? 9.0 : 11.0;
+
+  /// Narrow (portrait phone).
   static bool narrow(Size screen) => screen.width < 600;
 
   /// Top chip row uses icon-only buttons below this width.
   static bool compactChips(double width) => width < 560;
 
   /// Bottom offset of the TALK / INTERACT / hold prompts.
-  static double promptBottom(Size screen) =>
-      narrow(screen) ? joystickMargin.bottom + joystickSize + 16 : 80;
+  static double promptBottom(Size screen) => narrow(screen) ? 24 : 80;
 
-  /// Toasts: above the prompt in portrait; in landscape along the bottom
-  /// edge under the prompt, so they never cover Kaela in the middle.
-  static double toastBottom(Size screen, {bool compact = false}) =>
-      narrow(screen) ? promptBottom(screen) + 100 : 12;
-
-  /// +XP / loot pops: right-aligned column beside the joystick (under the
-  /// prompt) in portrait; bottom-right corner in landscape.
-  static double popsBottom(Size screen) => narrow(screen) ? joystickMargin.bottom : 12;
-  static const popsRight = 16.0;
-  /// Room right of the joystick, capped.
+  /// +XP / loot pops: right column just above the prompt in portrait
+  /// (prompt spans nearly full width, so same bottom overlaps); corner in
+  /// landscape.
+  static double popsBottom(Size screen) =>
+      narrow(screen) ? promptBottom(screen) + 92 : 12;
+  /// Leave room for the 4-slot ability bar on the lower-right.
+  static double popsRight(Size screen) => isTouch ? 300.0 : 260.0;
   static double popsMaxWidth(Size screen) =>
-      min(220, screen.width - joystickRect(screen).right - 16 - popsRight);
+      min(220, screen.width - popsRight(screen) - 32);
+
+  /// Toasts: above pops in portrait; above the talk/interact prompt in
+  /// landscape (pops stay bottom-right by the ability bar at [popsBottom]).
+  static double toastBottom(Size screen, {bool compact = false}) =>
+      narrow(screen)
+          ? popsBottom(screen) + 68
+          : promptBottom(screen) + 72;
 
   /// Max width of the quest tracker (top right) next to the health block.
   static double trackerMaxWidth(double width) => min(220, max(140, (width - 24) * 0.48));

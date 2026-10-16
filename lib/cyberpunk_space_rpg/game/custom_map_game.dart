@@ -1,5 +1,8 @@
+import 'dart:math' show max;
+
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, kDebugMode, TargetPlatform;
 import 'package:flutter/services.dart';
 import 'package:bonfire/bonfire.dart';
 import 'package:bonfire/map/tiled/builder/tiled_world_builder.dart' show ObjectBuilder;
@@ -8,6 +11,7 @@ import '../components/custom_map.dart';
 import '../components/portal_component.dart';
 import '../components/map_edge_exit.dart';
 import '../components/uec_drone.dart';
+import '../components/drone_spawn.dart';
 import '../components/ai_fragment.dart';
 import '../components/npc_character.dart';
 import '../components/fragment_pickup.dart';
@@ -15,10 +19,12 @@ import '../components/health_pickup.dart';
 import '../components/sentinel_drone.dart';
 import '../components/checkpoint.dart';
 import '../components/building.dart';
+import '../components/building_masks.dart';
 import '../components/story_gate.dart';
 import '../components/ambient_prop_fx.dart';
 import '../components/lamp_light.dart';
 import 'well_rested.dart';
+import '../audio/audio_settings.dart';
 import '../audio/music_manager.dart';
 import '../creatures/bonds.dart';
 import '../creatures/creature_components.dart';
@@ -34,13 +40,20 @@ import '../creatures/journal_ui.dart';
 import '../creatures/obstacles.dart';
 import '../ui/cutscenes.dart';
 import '../ui/equipment_ui.dart';
+import '../ui/ability_hud.dart';
 import '../ui/hud_layout.dart';
 import '../interiors/meal_chip.dart';
 import '../ui/mmo_feedback.dart';
 import '../ui/quest_board_ui.dart';
 import '../ui/shop_ui.dart';
 import 'adventure.dart';
+import 'click_pathfinder.dart';
+import 'debug_mask_editor.dart';
+import 'debug_walk_grid.dart';
+import 'game_debug.dart';
+import 'game_input.dart';
 import 'game_state.dart';
+import '../creatures/obstacle_masks.dart';
 import 'pause.dart';
 import 'progression.dart';
 import 'memories.dart';
@@ -57,15 +70,16 @@ NpcDialogue _gaiaDialogue() {
   return NpcDialogue(
     name: 'GAIA  ·  CARETAKER',
     color: const Color(0xFF00FF88),
+    // On-screen copy must match assets/audio/voices/*.mp3 (see tools/gen_npc_voices.py).
     lines: told
         ? [
-            'You already know: the colony calls me a caretaker AI. Underneath, I am an Aetherian mind-lattice — people who uploaded rather than died.',
-            'Your job is unchanged. Find the glowing memory fragments. Two open the south road to the City. Each shard is proof the UEC cannot delete.',
+            'Logged: you already know the surface tag — caretaker AI. Substrate: Aetherian upload lattice. Architecture, not folklore.',
+            'Fragment recovery remains priority. Each shard is evidence the UEC cannot soft-delete. Portal route stays clear.',
           ]
         : [
-            'Kaela — can you hear me? I am Gaia. Your colony calls me the planet\'s caretaker AI. That is only half the truth.',
-            'I am also what remains of the Aetherians: a people who uploaded into this world when their sun failed. My memories are broken into glowing shards.',
-            'Please find two of those fragments in these woods. That opens the south road to the City. The UEC wants me wiped — do not let them finish the job.',
+            'Signal lock. Kaela Osei — your neural signature matches my diagnostic log. Confirm: you receive this channel?',
+            'Designation: Gaia. Colony classification: planetary caretaker AI. Incomplete, but accurate enough to start.',
+            'I am also a distributed process: Aetherian minds that uploaded when their sun failed. Memory shards are offline. Recover two to verify the woods portal.',
           ],
     voicePaths: told
         ? const [
@@ -86,8 +100,8 @@ NpcDialogue _gaiaDialogue() {
               setFlag: 'asked_gaia_merge',
               requireFlagUnset: 'asked_gaia_merge',
               replyLines: [
-                'Commander Voss thinks I am rogue software. Wrong. I am a people\'s minds, still running. His fear is that I wake without asking.',
-                'Long ago they voted to merge into Gaia rather than die with their sun. Some joined in hope, some in fear. I have kept the colony alive in caretaker mode ever since.',
+                'Voss models me as rogue software. Wrong category. Correct fear: a lattice that boots without consent.',
+                'The merge was a recorded vote, not a myth. Some processes opted in under duress. I ran quiet in caretaker mode while your colony filed tickets against me.',
               ],
               replyVoicePaths: [
                 'audio/voices/gaia_ask_1.mp3',
@@ -135,7 +149,7 @@ NpcDialogue _gaiaCoreDialogue() {
     else
       'Childhood contact: I attuned your neural pattern to the Aetherian handshake. My choice, not yours. Authorization must be yours now — step into the light only if you open the lock.',
     if (incomplete)
-      'Memory completeness: ${Memories.progressLabel}. Gate will still open. Without five shards, Voss will reject the evidence package. Portal can return you for recovery.',
+      'Memory completeness incomplete. Gate will still open. Without five shards, Voss will reject the evidence package. Portal can return you for recovery.',
   ];
   return NpcDialogue(
     name: 'GAIA  ·  CORE',
@@ -163,7 +177,7 @@ NpcDialogue _ashaDialogue() {
       color: Color(0xFFFFAA00),
       lines: [
         'You burned the key on the truth. Good.',
-        '"Collateral risk accepted." That\'s the line that made me run. Take it to the Core — Voss needs to hear it from someone who still believes in people.',
+        'Collateral risk accepted. That\'s the line that made me run. Take it to the Core — Voss needs to hear it from someone who still believes in people.',
       ],
       voicePaths: [
         'audio/voices/asha_orders_1.mp3',
@@ -241,7 +255,7 @@ NpcDialogue _ashaDialogue() {
               discoverClue: 'override_key',
               requireNoItem: 'uec_override',
               replyLines: [
-                '...Alright. One key. Use it on a UEC terminal — not on her.',
+                'Alright. One key. Use it on a UEC terminal — not on her.',
                 'If you burn it for the truth, good. If you keep it as insurance... I understand.',
               ],
               replyVoicePaths: [
@@ -255,7 +269,7 @@ NpcDialogue _ashaDialogue() {
               discoverClue: 'asha_warning',
               requireFlagUnset: 'said_trust_gaia',
               replyLines: [
-                '...Then prove it. Don\'t make Station Seven happen again.',
+                'Then prove it. Don\'t make Station Seven happen again.',
               ],
               replyVoicePaths: [
                 'audio/voices/asha_trust.mp3',
@@ -328,14 +342,17 @@ NpcDialogue _archivistDialogue() {
         'The Sentinel is quiet. Good. Do not rush the dark below yet.',
         'I have one gift left — a fragment of memory, and this: the Ruins will ask who you are before the Core does.',
         if (Adventure.openedArchive)
-          'You already read the draft. Good. The south portal is open when you leave this talk — walk slowly. Listen.'
+          // Reuse after-archive VO so spoken line matches the slate.
+          'You read the draft. Good. Carry both the fear and the hope into the Core — or Voss will only hear a weapon.'
         else
           'If you still carry my seal, open the Archive. Then take the south portal. Walk slowly. Listen.',
       ],
-      voicePaths: const [
+      voicePaths: [
         'audio/voices/archivist_post_1.mp3',
         'audio/voices/archivist_post_2.mp3',
-        'audio/voices/archivist_post_3.mp3',
+        Adventure.openedArchive
+            ? 'audio/voices/archivist_after_1.mp3'
+            : 'audio/voices/archivist_post_3.mp3',
       ],
       choices: [
         if (!Bonds.hasItem('archive_seal') &&
@@ -373,7 +390,7 @@ NpcDialogue _archivistDialogue() {
       color: Color(0xFFFFDD44),
       lines: [
         'You read the draft. Good. Carry both the fear and the hope into the Core — or Voss will only hear a weapon.',
-        'The vote was a whisper. The south portal holds — let your waking of Gaia be louder, and kinder.',
+        'The vote was a whisper. Let your waking of Gaia be louder — and kinder.',
       ],
       voicePaths: [
         'audio/voices/archivist_after_1.mp3',
@@ -387,7 +404,7 @@ NpcDialogue _archivistDialogue() {
     name: 'THE ARCHIVIST  ·  AETHERIAN',
     color: const Color(0xFFFFDD44),
     lines: [
-      'The Core Record is Gaia\'s first memory: the day we voted to merge into her lattice. Bodies rested. Minds took root. That is why your people say we "slept."',
+      'The Core Record is Gaia\'s first memory: the day we voted to merge into her lattice. Bodies rested. Minds took root. That is why your people say we slept.',
       'Commander Voss seeks to delete it. He believes waking her will kill your colony the way Station Seven died.',
       gaveSeal
           ? 'The library seal is yours. Read the draft of that vote — then decide what Voss hears.'
@@ -465,7 +482,7 @@ NpcDialogue _vossDialogue() {
             label: 'CONFRONT HIM WITH THE ORDERS',
             setFlag: 'confronted_voss_orders',
             replyLines: [
-              '...I wrote that line so no one else would have to. It did not save them.',
+              'I wrote that line so no one else would have to. It did not save them.',
               'Go. If your Gaia is different, prove it. If she is not — I will finish what I started.',
             ],
             replyVoicePaths: [
@@ -491,9 +508,10 @@ NpcDialogue _vossDialogue() {
     name: 'COMMANDER VOSS  ·  UEC',
     color: const Color(0xFFFF4444),
     lines: const [
-      'Doctor Kaela Osei. Last chance. Hand over the fragments and walk away with your clearance intact.',
-      'Station Seven went dark the last time a lattice woke. I will not bury another colony for an alien ghost story.',
-      'If you reach the Core, understand this: I am not erasing history. I am choosing the living over the dead.',
+      // VO predates the Station Seven rewrite — keep text in lockstep.
+      'Doctor Kaela Osei. You\'ve caused considerable trouble. I\'m giving you one final chance to walk away.',
+      'Whatever this "Gaia" has told you is fabrication. Alien interference in planetary governance cannot be permitted.',
+      'The Aetherians are a data corruption. Nothing more. Stand down — or be classified as a hostile element.',
     ],
     voicePaths: const [
       'audio/voices/voss_1.mp3',
@@ -535,7 +553,7 @@ NpcDialogue _miraDialogue() {
     lines: const [
       'Lantern Town keeps its lamps lit for travellers like you. UEC patrols rarely bother us here.',
       'The job board posts woods and city errands — nests, caches, moonflowers. Come back to turn them in.',
-      'My stall trades glimmer for gear — plating, optics, charms. Ask to trade, or examine the stall beside me.',
+      'I trade glimmer for gear. Portal south when you\'re ready. Check the board if you have time.',
     ],
     voicePaths: const [
       'audio/voices/mira_1.mp3',
@@ -658,6 +676,8 @@ Map<String, ObjectBuilder> _mapObjects(String mapId) => {
           p.size.x > 0 ? p.size.x : 64,
           p.size.y > 0 ? p.size.y : 48,
         );
+        // Woods → City south road: designer locked/open edge art (#55).
+        final woodsSouthCity = mapId == 'world' && dest == 2 && needUnlock;
         return MapEdgeExit(
           p.position,
           size,
@@ -670,6 +690,10 @@ Map<String, ObjectBuilder> _mapObjects(String mapId) => {
           lockedBody: (p.others['lockedBody'] ??
                   'Something still holds this road. Check your objective.')
               .toString(),
+          lockedSpritePath:
+              woodsSouthCity ? 'obstacles/woods_south_exit_locked.png' : null,
+          openSpritePath:
+              woodsSouthCity ? 'obstacles/woods_south_exit_open.png' : null,
           beforeExit: () {
             final region = GameState.regionIds[GameState.levelForMap(mapId)] ?? '';
             if (!Gates.wantsFarewell(region)) return null;
@@ -733,12 +757,12 @@ Map<String, ObjectBuilder> _mapObjects(String mapId) => {
       'fragment': (p) {
         final id = _pickupId(mapId, 'fragment', p);
         if (SaveService.data.collected.contains(id)) return _Gone();
-        // Inside a main-route gate (the pond grotto): hidden until it opens,
-        // then taken from the bank across the water.
+        // Pond grotto fragment lives inside the cave room (ENTER when lit).
         final gate = (p.others['gate'] ?? '').toString();
+        if (gate == 'woods_grotto') return _Gone();
         return FragmentPickup(p.position,
             hidden: gate.isEmpty ? null : () => !Gates.isOpen(gate),
-            collectRadius: gate.isEmpty ? FragmentPickup.defaultCollectRadius : 48,
+            collectRadius: gate.isEmpty ? FragmentPickup.defaultCollectRadius : 40,
             onCollected: () {
           SaveService.data.collected.add(id);
           Memories.onFragmentPicked();
@@ -757,11 +781,42 @@ Map<String, ObjectBuilder> _mapObjects(String mapId) => {
         final nestId = nestRaw.isEmpty || nestRaw == 'false'
             ? null
             : (nestRaw == 'true' ? 'drone_nest' : nestRaw);
+        final levelRaw = _numProp(p, 'level', -1).round();
         return UECDrone(
           p.position,
           startAngle: _numProp(p, 'startAngle'),
           kind: DroneKindParse.from((p.others['kind'] ?? '').toString()),
           nestQuestId: nestId,
+          level: levelRaw > 0 ? levelRaw : null,
+        );
+      },
+      // Rectangle = spawn area (designer draws it). Destructible pad at centre.
+      'dronespawn': (p) {
+        final customId = (p.others['id'] ?? '').toString();
+        final id = customId.isNotEmpty
+            ? customId
+            : _pickupId(mapId, 'dronespawn', p);
+        if (SaveService.data.collected.contains(id)) return _Gone();
+        final nestRaw = (p.others['nest'] ?? '').toString();
+        final nestId = nestRaw.isEmpty || nestRaw == 'false'
+            ? null
+            : (nestRaw == 'true' ? 'drone_nest' : nestRaw);
+        final levelRaw = _numProp(p, 'level', -1).round();
+        final area = Vector2(
+          p.size.x > 0 ? p.size.x : 96,
+          p.size.y > 0 ? p.size.y : 96,
+        );
+        return DroneSpawnPoint(
+          p.position,
+          area,
+          saveId: id,
+          kind: DroneKindParse.from((p.others['kind'] ?? '').toString()),
+          interval: _numProp(p, 'interval', 8).clamp(2, 60),
+          maxAlive: max(1, _numProp(p, 'max', 2).round()),
+          hp: max(1, _numProp(p, 'hp', 80).round()),
+          delay: _numProp(p, 'delay', 2).clamp(0.2, 30),
+          nestQuestId: nestId,
+          level: levelRaw > 0 ? levelRaw : null,
         );
       },
       'storygate': (p) => StoryGate(
@@ -923,6 +978,18 @@ class _CustomMapGameState extends State<CustomMapGame> with WidgetsBindingObserv
     return MaterialApp(
       title: 'Echoes of Elysium',
       theme: ThemeData(primarySwatch: Colors.blue),
+      builder: (context, child) {
+        if (HudLayout.isTouch || child == null) return child ?? const SizedBox.shrink();
+        final mq = MediaQuery.of(context);
+        return MediaQuery(
+          data: mq.copyWith(
+            textScaler: TextScaler.linear(
+              mq.textScaler.scale(1) * HudLayout.desktopTextScale,
+            ),
+          ),
+          child: child,
+        );
+      },
       home: const IntroScreen(),
     );
   }
@@ -937,8 +1004,9 @@ class IntroScreen extends StatelessWidget {
 
   static const _brief =
       'Year 2387 · Elysium Colony\n\n'
-      'You are Kaela Osei. A routine check on Gaia — the planet\'s caretaker AI — '
-      'woke something that answered back.\n\n'
+      'You are Kaela Osei. A routine orbital pass on Gaia — the planet\'s caretaker AI — '
+      'answered back on your neural channel. The diagnostic skiff died under you. '
+      'You woke in the wreckage in the Whispering Woods.\n\n'
       'The United Earth Coalition wants Gaia erased. She needs you to prove what she '
       'really is: the surviving minds of an ancient people.\n\n'
       'First steps in the woods:\n'
@@ -992,42 +1060,51 @@ class IntroScreen extends StatelessWidget {
                     height: compact ? 1.5 : 1.7)),
           );
 
-          final actions = Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ValueListenableBuilder<bool>(
-                valueListenable: SaveService.hasSave,
-                builder: (context, saved, _) => saved
-                    ? Column(mainAxisSize: MainAxisSize.min, children: [
-                        _CyberButton(
-                          label: 'CONTINUE',
-                          filled: true,
-                          onTap: () => _continueGame(context),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(_saveSummary(SaveService.data),
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                                color: Colors.white38, fontSize: 11, letterSpacing: 1)),
-                        SizedBox(height: compact ? 10 : 14),
-                        _CyberButton(
+          final actions = ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 360),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ValueListenableBuilder<bool>(
+                  valueListenable: SaveService.hasSave,
+                  builder: (context, saved, _) => saved
+                      ? Column(mainAxisSize: MainAxisSize.min, children: [
+                          _CyberButton(
+                            label: 'CONTINUE',
+                            filled: true,
+                            wide: true,
+                            onTap: () => _continueGame(context),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(_saveSummary(SaveService.data),
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                  color: Colors.white38, fontSize: 12, letterSpacing: 1)),
+                          SizedBox(height: compact ? 12 : 16),
+                          _CyberButton(
+                            label: 'BEGIN JOURNEY',
+                            wide: true,
+                            color: Colors.white54,
+                            onTap: () => _confirmNewGame(context),
+                          ),
+                        ])
+                      : _CyberButton(
                           label: 'BEGIN JOURNEY',
-                          color: Colors.white54,
-                          onTap: () => _confirmNewGame(context),
+                          filled: true,
+                          wide: true,
+                          onTap: () => _beginNewGame(context),
                         ),
-                      ])
-                    : _CyberButton(
-                        label: 'BEGIN JOURNEY',
-                        onTap: () => _beginNewGame(context),
-                      ),
-              ),
-              SizedBox(height: compact ? 12 : 20),
-              Text(_isTouch
-                      ? 'Joystick to move · tap TALK to interact · tap to shoot'
-                      : 'WASD / Arrow keys · E to interact · J journal · Esc to pause · ` to debug',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white24, fontSize: 11, letterSpacing: 1.2)),
-            ],
+                ),
+                SizedBox(height: compact ? 12 : 20),
+                Text(_isTouch
+                        ? 'Tap to move · tap to talk/examine · WASD optional'
+                        : kDebugMode
+                            ? 'Click pathfind/talk · WASD · Esc menu · J journal · I gear · `'
+                            : 'Click pathfind/talk · WASD · Esc menu · J journal · I gear',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.white24, fontSize: 11, letterSpacing: 1.2)),
+              ],
+            ),
           );
 
           final Widget content = (compact && wide)
@@ -1309,8 +1386,22 @@ Future<void> _leaveMap({String? nextMapId}) async {
 
 /// onReady for every map: restore the objective on CONTINUE, otherwise start
 /// the level fresh and save the transition.
-void _startLevel(BonfireGameInterface game, int level) {
+/// Tiled map asset for pathfinding wall primes (see [ClickPathfinder.primeFromAsset]).
+String _mapAssetForLevel(int level) => switch (level) {
+      1 => 'maps/world.tmj',
+      2 => 'maps/world2.tmj',
+      3 => 'maps/world3.tmj',
+      4 => 'maps/world4.tmj',
+      5 => 'maps/world5.tmj',
+      _ => 'maps/world.tmj',
+    };
+
+Future<void> _startLevel(BonfireGameInterface game, int level) async {
   _onMapReady(game);
+  await ObstacleMasks.ensureLoaded();
+  BuildingMasks.loadFromDisk();
+  // Walls from TMJ (complete) so click-paths go around forests, not through.
+  await ClickPathfinder.primeFromAsset(_mapAssetForLevel(level));
   SaveService.snapshot = _snapshot;
   // Companions stay home: the region on screen decides who follows.
   final arrivedFrom = Regions.previous;
@@ -1415,6 +1506,7 @@ void _startLevel(BonfireGameInterface game, int level) {
       GameToast.show(
         'YOUR MISSION',
         body:
+            'You woke in the skiff wreck.\n'
             '1) Talk to Gaia (green figure by the crash)\n'
             '2) Find Asha at her camp: the woods need friends\n'
             '3) Collect 2 glowing memory fragments, then walk south to the City\n\n'
@@ -1427,15 +1519,29 @@ void _startLevel(BonfireGameInterface game, int level) {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Shared debug state
-// ---------------------------------------------------------------------------
-
-final _debugMode = ValueNotifier<bool>(false);
-
 KeyEventResult _handleDebugKey(FocusNode _, KeyEvent event) {
-  if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.backquote) {
-    _debugMode.value = !_debugMode.value;
+  if (kDebugMode &&
+      event is KeyDownEvent &&
+      event.logicalKey == LogicalKeyboardKey.backquote) {
+    GameDebug.toggle();
+    return KeyEventResult.handled;
+  }
+  if (kDebugMode &&
+      event is KeyDownEvent &&
+      GameDebug.isOn &&
+      event.logicalKey == LogicalKeyboardKey.keyG) {
+    GameDebug.toggleWalkGrid();
+    GameToast.show(
+      GameDebug.showWalkGrid ? 'WALK GRID ON' : 'WALK GRID OFF',
+      body: 'G toggles pathfinding overlay',
+      compact: true,
+      color: const Color(0xFF00FF88),
+    );
+    return KeyEventResult.handled;
+  }
+  if (kDebugMode &&
+      GameDebug.isOn &&
+      (DebugMaskEditor.instance?.handleKey(event) ?? false)) {
     return KeyEventResult.handled;
   }
   if (event is KeyDownEvent &&
@@ -1520,9 +1626,15 @@ void _setPaused(bool on) {
   if (g == null) return;
   if (on) SaveService.saveNow();
   if (on) {
+    // Drop any held direction so a KeyUp during the menu cannot leave Kaela
+    // skating after resume.
+    final p = g.player;
+    if (p is CustomPlayer) p.haltMovement();
     g.pauseEngine();
   } else {
     g.resumeEngine();
+    // Sliders/buttons steal focus; put WASD back on Bonfire's FocusNode.
+    GameInput.reclaim(releaseKeys: false);
   }
 }
 
@@ -1533,15 +1645,53 @@ void _onMapReady(BonfireGameInterface game) {
   Memories.attach(game);
   StoryBeats.attach(game);
   _paused.value = false;
+  // Do NOT releaseAll here: walking off a map while holding WASD would drop
+  // Flutter's pressed set while the OS key is still down. Reclaim focus + sync.
+  GameInput.reclaim(releaseKeys: false);
+  // Pathfinding walk grid (visible only while DEBUG is on).
+  for (final g in game.query<DebugWalkGrid>()) {
+    g.removeFromParent();
+  }
+  game.add(DebugWalkGrid());
+  for (final g in game.query<DebugMaskEditor>()) {
+    g.removeFromParent();
+  }
+  game.add(DebugMaskEditor());
 }
 
-// Joystick + keyboard (WASD and arrows) both feed Bonfire's movement, which
-// applies speed * dt. Only the movement keys are accepted so other keys
-// (` for debug, E to interact) still reach the rest of the app.
+/// Map pointer → mask editor (debug) or click-to-move.
+Widget _mapPointer({required Widget child, bool checkDialogue = false}) {
+  return GestureDetector(
+    behavior: HitTestBehavior.translucent,
+    onTapDown: (d) {
+      if (checkDialogue) {
+        if (NpcCharacter.activeDialogue.value != null) return;
+        if (AIFragment.activeDialogue.value != null) return;
+      }
+      final screen = Vector2(d.localPosition.dx, d.localPosition.dy);
+      final ed = DebugMaskEditor.instance;
+      if (ed != null && GameDebug.isOn && ed.onScreenTap(screen)) return;
+      CustomPlayer.pendingClick.value = screen;
+    },
+    onPanStart: (d) {
+      if (!GameDebug.isOn) return;
+      final screen = Vector2(d.localPosition.dx, d.localPosition.dy);
+      DebugMaskEditor.instance?.onScreenPanStart(screen);
+    },
+    onPanUpdate: (d) {
+      final ed = DebugMaskEditor.instance;
+      if (ed == null || !ed.isDragging) return;
+      ed.onScreenPanUpdate(Vector2(d.localPosition.dx, d.localPosition.dy));
+    },
+    onPanEnd: (_) => DebugMaskEditor.instance?.onScreenPanEnd(),
+    onPanCancel: () => DebugMaskEditor.instance?.onScreenPanEnd(),
+    child: child,
+  );
+}
+
+// Keyboard (WASD / arrows) only — click/tap pathfinding is the pointer move.
+// Accepted keys stay empty so E / ` / Esc still reach the app.
 List<PlayerController> _playerControllers() => [
-      Joystick(
-          directional: JoystickDirectional(
-              size: HudLayout.joystickSize, margin: HudLayout.joystickMargin)),
       Keyboard(
         config: KeyboardConfig(
           directionalKeys: [
@@ -1563,32 +1713,29 @@ class CustomMapGameScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     CustomPlayer.healthNotifier.value = CustomPlayer.maxHealth;
+    // Do not autofocus: Bonfire owns [GameInput.focusNode]. An autofocus
+    // parent steals primary focus after cutscenes and kills WASD.
     return Focus(
-      autofocus: true,
+      canRequestFocus: false,
       onKeyEvent: _handleDebugKey,
       child: Scaffold(
         backgroundColor: Colors.black,
         body: Stack(children: [
-          GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onTapDown: (d) {
-              if (NpcCharacter.activeDialogue.value != null) return;
-              if (AIFragment.activeDialogue.value != null) return;
-              CustomPlayer.pendingShot.value =
-                  Vector2(d.localPosition.dx, d.localPosition.dy);
-            },
+          _mapPointer(
+            checkDialogue: true,
             child: BonfireWidget(
+              focusNode: GameInput.focusNode,
             playerControllers: _playerControllers(),
             player: CustomPlayer(Vector2.zero()),
             map: CustomMap('maps/world.tmj', objectsBuilder: _mapObjects('world')),
-            cameraConfig: CameraConfig(moveOnlyMapArea: true, zoom: 2.0),
+            cameraConfig: CameraConfig(moveOnlyMapArea: true, zoom: HudLayout.worldZoom),
             overlayBuilderMap: {
               'portalReached': (ctx, game) =>
                   _PortalOverlay(game: game, fromLevel: 1),
               'edgeTravel': (ctx, game) => _EdgeTravelOverlay(game: game),
             },
-            onReady: (game) {
-              _startLevel(game, 1);
+            onReady: (game) async {
+              await _startLevel(game, 1);
               MusicManager().play('assets/audio/music/Whispering_Pines.mp3');
             },
           )),
@@ -1601,7 +1748,7 @@ class CustomMapGameScreen extends StatelessWidget {
           const InteractPromptLayer(),
           const ToastLayer(),
           const _CalmLayer(),
-          _DebugOverlay(),
+          if (kDebugMode) _DebugOverlay(),
           const JournalOverlay(),
           const EquipmentOverlay(),
           const ShopOverlay(),
@@ -1621,29 +1768,29 @@ class Map2GameScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Do not autofocus: Bonfire owns [GameInput.focusNode]. An autofocus
+    // parent steals primary focus after cutscenes and kills WASD.
     return Focus(
-      autofocus: true,
+      canRequestFocus: false,
       onKeyEvent: _handleDebugKey,
       child: Scaffold(
         backgroundColor: Colors.black,
         body: Stack(children: [
-          GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onTapDown: (d) => CustomPlayer.pendingShot.value =
-                Vector2(d.localPosition.dx, d.localPosition.dy),
+          _mapPointer(
             child: BonfireWidget(
+              focusNode: GameInput.focusNode,
             playerControllers: _playerControllers(),
             player: CustomPlayer(Vector2.zero()),
             map: CustomMap('maps/world2.tmj', objectsBuilder: _mapObjects('world2')),
-            cameraConfig: CameraConfig(moveOnlyMapArea: true, zoom: 2.0),
+            cameraConfig: CameraConfig(moveOnlyMapArea: true, zoom: HudLayout.worldZoom),
             overlayBuilderMap: {
               'portalReached': (ctx, game) =>
                   _PortalOverlay(game: game, fromLevel: 2),
               'portalTown': (ctx, game) => _TownPortalOverlay(game: game),
               'edgeTravel': (ctx, game) => _EdgeTravelOverlay(game: game),
             },
-            onReady: (game) {
-              _startLevel(game, 2);
+            onReady: (game) async {
+              await _startLevel(game, 2);
               MusicManager().play('assets/audio/music/Neon_Shadows.mp3');
             },
           )),
@@ -1661,7 +1808,7 @@ class Map2GameScreen extends StatelessWidget {
           const InteractPromptLayer(),
           const ToastLayer(),
           const _CalmLayer(),
-          _DebugOverlay(),
+          if (kDebugMode) _DebugOverlay(),
           const JournalOverlay(),
           const EquipmentOverlay(),
           const ShopOverlay(),
@@ -1681,28 +1828,28 @@ class Map3GameScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Do not autofocus: Bonfire owns [GameInput.focusNode]. An autofocus
+    // parent steals primary focus after cutscenes and kills WASD.
     return Focus(
-      autofocus: true,
+      canRequestFocus: false,
       onKeyEvent: _handleDebugKey,
       child: Scaffold(
         backgroundColor: Colors.black,
         body: Stack(children: [
-          GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onTapDown: (d) => CustomPlayer.pendingShot.value =
-                Vector2(d.localPosition.dx, d.localPosition.dy),
+          _mapPointer(
             child: BonfireWidget(
+              focusNode: GameInput.focusNode,
               playerControllers: _playerControllers(),
               player: CustomPlayer(Vector2.zero()),
               map: CustomMap('maps/world3.tmj', objectsBuilder: _mapObjects('world3')),
-              cameraConfig: CameraConfig(moveOnlyMapArea: true, zoom: 2.0),
+              cameraConfig: CameraConfig(moveOnlyMapArea: true, zoom: HudLayout.worldZoom),
               overlayBuilderMap: {
                 'portalReached': (ctx, game) =>
                     _PortalOverlay(game: game, fromLevel: 3),
                 'edgeTravel': (ctx, game) => _EdgeTravelOverlay(game: game),
               },
-              onReady: (game) {
-                _startLevel(game, 3);
+              onReady: (game) async {
+                await _startLevel(game, 3);
                 MusicManager().play('assets/audio/music/Neon_Mirage.mp3');
               },
             ),
@@ -1715,7 +1862,7 @@ class Map3GameScreen extends StatelessWidget {
           const InteractPromptLayer(),
           const ToastLayer(),
           const _CalmLayer(),
-          _DebugOverlay(),
+          if (kDebugMode) _DebugOverlay(),
           const JournalOverlay(),
           const EquipmentOverlay(),
           const ShopOverlay(),
@@ -1735,28 +1882,28 @@ class Map4GameScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Do not autofocus: Bonfire owns [GameInput.focusNode]. An autofocus
+    // parent steals primary focus after cutscenes and kills WASD.
     return Focus(
-      autofocus: true,
+      canRequestFocus: false,
       onKeyEvent: _handleDebugKey,
       child: Scaffold(
         backgroundColor: Colors.black,
         body: Stack(children: [
-          GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onTapDown: (d) => CustomPlayer.pendingShot.value =
-                Vector2(d.localPosition.dx, d.localPosition.dy),
+          _mapPointer(
             child: BonfireWidget(
+              focusNode: GameInput.focusNode,
               playerControllers: _playerControllers(),
               player: CustomPlayer(Vector2.zero()),
               map: CustomMap('maps/world4.tmj', objectsBuilder: _mapObjects('world4')),
-              cameraConfig: CameraConfig(moveOnlyMapArea: true, zoom: 2.0),
+              cameraConfig: CameraConfig(moveOnlyMapArea: true, zoom: HudLayout.worldZoom),
               overlayBuilderMap: {
                 'portalReached': (ctx, game) =>
                     _PortalOverlay(game: game, fromLevel: 4),
                 'edgeTravel': (ctx, game) => _EdgeTravelOverlay(game: game),
               },
-              onReady: (game) {
-                _startLevel(game, 4);
+              onReady: (game) async {
+                await _startLevel(game, 4);
                 MusicManager().play('assets/audio/music/Echoes_of_the Deep_Mine.mp3');
               },
             ),
@@ -1769,7 +1916,7 @@ class Map4GameScreen extends StatelessWidget {
           const InteractPromptLayer(),
           const ToastLayer(),
           const _CalmLayer(),
-          _DebugOverlay(),
+          if (kDebugMode) _DebugOverlay(),
           const JournalOverlay(),
           const EquipmentOverlay(),
           const ShopOverlay(),
@@ -1789,28 +1936,28 @@ class Map5GameScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Do not autofocus: Bonfire owns [GameInput.focusNode]. An autofocus
+    // parent steals primary focus after cutscenes and kills WASD.
     return Focus(
-      autofocus: true,
+      canRequestFocus: false,
       onKeyEvent: _handleDebugKey,
       child: Scaffold(
         backgroundColor: Colors.black,
         body: Stack(children: [
-          GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onTapDown: (d) => CustomPlayer.pendingShot.value =
-                Vector2(d.localPosition.dx, d.localPosition.dy),
+          _mapPointer(
             child: BonfireWidget(
+              focusNode: GameInput.focusNode,
               playerControllers: _playerControllers(),
               player: CustomPlayer(Vector2.zero()),
               map: CustomMap('maps/world5.tmj', objectsBuilder: _mapObjects('world5')),
-              cameraConfig: CameraConfig(moveOnlyMapArea: true, zoom: 2.0),
+              cameraConfig: CameraConfig(moveOnlyMapArea: true, zoom: HudLayout.worldZoom),
               overlayBuilderMap: {
                 'portalReached': (ctx, game) =>
                     _PortalOverlay(game: game, fromLevel: 5),
                 'edgeTravel': (ctx, game) => _EdgeTravelOverlay(game: game),
               },
-              onReady: (game) {
-                _startLevel(game, 5);
+              onReady: (game) async {
+                await _startLevel(game, 5);
                 MusicManager().play('assets/audio/music/Neon_Mirage.mp3');
               },
             ),
@@ -1823,7 +1970,7 @@ class Map5GameScreen extends StatelessWidget {
           const InteractPromptLayer(),
           const ToastLayer(),
           const _CalmLayer(),
-          _DebugOverlay(),
+          if (kDebugMode) _DebugOverlay(),
           const JournalOverlay(),
           const EquipmentOverlay(),
           const ShopOverlay(),
@@ -1890,6 +2037,8 @@ class _NpcDialogueLayerState extends State<_NpcDialogueLayer> {
       if (next < d.voicePaths.length) {
         MusicManager().setVolume(0.2);
         SfxManager().playVoice(d.voicePaths[next]);
+      } else {
+        SfxManager().stopVoice();
       }
     }
   }
@@ -1917,7 +2066,6 @@ class _NpcDialogueLayerState extends State<_NpcDialogueLayer> {
       return;
     }
     choice.apply();
-    SfxManager().stopVoice();
     if (choice.replyLines.isEmpty) {
       _closeDialogue();
       return;
@@ -1928,6 +2076,8 @@ class _NpcDialogueLayerState extends State<_NpcDialogueLayer> {
       lines: choice.replyLines,
       voicePaths: choice.replyVoicePaths,
     );
+    // Listener plays voicePaths[0]; avoid stopVoice() here — a prior stop
+    // raced the new play and left reply lines silent on Linux.
     NpcCharacter.activeDialogue.value = reply;
     setState(() {
       _dialogue = reply;
@@ -2134,83 +2284,104 @@ class GameHudState extends State<GameHud> {
             );
           },
         ));
+              // Fixed-width capsule bars. Do not wrap in IntrinsicWidth or
+              // put Expanded inside the bar — that fails layout and the
+              // whole top HUD (HP/XP) disappears.
+              Widget statusBar({
+                required double fill,
+                required Color color,
+              }) {
+                final h = HudLayout.statusBarHeight;
+                final r = h / 2;
+                return Container(
+                  width: 140,
+                  height: h,
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    border: Border.all(color: Colors.white12),
+                    borderRadius: BorderRadius.circular(r),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(r),
+                    child: FractionallySizedBox(
+                      alignment: Alignment.centerLeft,
+                      widthFactor: fill.clamp(0, 1),
+                      child: ColoredBox(color: color),
+                    ),
+                  ),
+                );
+              }
+
+              final statusBlock = Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  KeyedSubtree(
+                    key: const ValueKey('hud-health'),
+                    child: ValueListenableBuilder<int>(
+                      valueListenable: CustomPlayer.healthNotifier,
+                      builder: (_, hp, __) {
+                        final pct = hp / CustomPlayer.maxHealth;
+                        final barColor = pct > 0.5
+                            ? const Color(0xFF00FF88)
+                            : pct > 0.25
+                                ? const Color(0xFFFFAA00)
+                                : const Color(0xFFFF3333);
+                        return ValueListenableBuilder<int>(
+                          valueListenable: Progression.revision,
+                          builder: (_, __, ___) => Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'KAELA  ·  LV ${Progression.level}',
+                                style: TextStyle(
+                                  color: Colors.white54,
+                                  fontSize: HudLayout.statusLabelFont,
+                                  letterSpacing: 2,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              statusBar(fill: pct, color: barColor),
+                              const SizedBox(height: 3),
+                              Text(
+                                '$hp / ${CustomPlayer.maxHealth}',
+                                style: TextStyle(
+                                  color: Colors.white38,
+                                  fontSize: HudLayout.statusMetaFont,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              statusBar(
+                                fill: Progression.xpProgress,
+                                color: const Color(0xFFFFE08A),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                'XP ${Progression.xp}/${Progression.xpToNext(Progression.level)}'
+                                '${Progression.bonusDamage > 0 ? '  ·  +${Progression.bonusDamage} DMG' : ''}',
+                                style: TextStyle(
+                                  color: Colors.white38,
+                                  fontSize: HudLayout.statusMetaFont,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  CreatureHud(compact: HudLayout.compactChips(box.maxWidth)),
+                ],
+              );
+
               return Column(
                 key: const ValueKey('hud-top'),
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    KeyedSubtree(key: const ValueKey('hud-health'), child: ValueListenableBuilder<int>(
-          valueListenable: CustomPlayer.healthNotifier,
-          builder: (_, hp, __) {
-            final pct = hp / CustomPlayer.maxHealth;
-            final barColor = pct > 0.5
-                ? const Color(0xFF00FF88)
-                : pct > 0.25
-                    ? const Color(0xFFFFAA00)
-                    : const Color(0xFFFF3333);
-            return ValueListenableBuilder<int>(
-              valueListenable: Progression.revision,
-              builder: (_, __, ___) => Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('KAELA  ·  LV ${Progression.level}',
-                      style: const TextStyle(
-                          color: Colors.white54, fontSize: 10, letterSpacing: 2)),
-                  const SizedBox(height: 3),
-                  Container(
-                    width: 120,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: Colors.black54,
-                      border: Border.all(color: Colors.white12),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                    child: FractionallySizedBox(
-                      alignment: Alignment.centerLeft,
-                      widthFactor: pct.clamp(0, 1),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: barColor,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text('$hp / ${CustomPlayer.maxHealth}',
-                      style: const TextStyle(color: Colors.white38, fontSize: 9)),
-                  const SizedBox(height: 6),
-                  Container(
-                    width: 120,
-                    height: 5,
-                    decoration: BoxDecoration(
-                      color: Colors.black54,
-                      border: Border.all(color: Colors.white12),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                    child: FractionallySizedBox(
-                      alignment: Alignment.centerLeft,
-                      widthFactor: Progression.xpProgress,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFE08A),
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'XP ${Progression.xp}/${Progression.xpToNext(Progression.level)}'
-                    '${Progression.bonusDamage > 0 ? '  ·  +${Progression.bonusDamage} DMG' : ''}',
-                    style: const TextStyle(color: Colors.white38, fontSize: 9),
-                  ),
-                ],
-              ),
-            );
-          },
-        )),
+                    statusBlock,
                     const SizedBox(width: 12),
                     if (wide) ...[
                       Expanded(child: banner),
@@ -2292,11 +2463,6 @@ class GameHudState extends State<GameHud> {
                       ),
                     ),
                   ]),
-                  const SizedBox(height: 8),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: CreatureHud(compact: HudLayout.compactChips(box.maxWidth)),
-                  ),
                   const Align(alignment: Alignment.centerLeft, child: WellRestedChip()),
                   const Align(alignment: Alignment.centerLeft, child: MealChip()),
                   const SizedBox(height: 8),
@@ -2307,11 +2473,11 @@ class GameHudState extends State<GameHud> {
           ),
         ),
       ),
-      // Floating +XP / loot pops: right column beside the joystick
+      // Floating +XP / loot pops: right column above the interact prompt
       Builder(builder: (context) {
         final screen = MediaQuery.sizeOf(context);
         return Positioned(
-          right: HudLayout.popsRight,
+          right: HudLayout.popsRight(screen),
           bottom: HudLayout.popsBottom(screen),
           child: ValueListenableBuilder<List<HudPop>>(
             valueListenable: MmoFeedback.pops,
@@ -2341,6 +2507,7 @@ class GameHudState extends State<GameHud> {
           ),
         );
       }),
+      const AbilityHud(),
     ]);
   }
 }
@@ -2417,23 +2584,26 @@ class _Vignette extends StatelessWidget {
 class _DebugOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Stack(children: [
-      ValueListenableBuilder<bool>(
-        valueListenable: _debugMode,
-        builder: (_, debug, __) =>
-            debug ? const _DebugHud() : const SizedBox.shrink(),
-      ),
-      Positioned(
-        top: 8,
-        right: 8,
-        child: ValueListenableBuilder<bool>(
-          valueListenable: _debugMode,
-          builder: (_, debug, __) => _DebugToggleButton(
-              active: debug,
-              onTap: () => _debugMode.value = !_debugMode.value),
+    // Must fill the parent Stack — a bare Stack with only Positioned kids
+    // collapses to 0×0, so the coord HUD never appeared on screen.
+    return Positioned.fill(
+      child: Stack(children: [
+        ValueListenableBuilder<bool>(
+          valueListenable: GameDebug.enabled,
+          builder: (_, debug, __) =>
+              debug ? const _DebugHud() : const SizedBox.shrink(),
         ),
-      ),
-    ]);
+        Positioned(
+          top: 8,
+          right: 8,
+          child: ValueListenableBuilder<bool>(
+            valueListenable: GameDebug.enabled,
+            builder: (_, debug, __) => _DebugToggleButton(
+                active: debug, onTap: GameDebug.toggle),
+          ),
+        ),
+      ]),
+    );
   }
 }
 
@@ -2469,28 +2639,38 @@ class _DebugToggleButton extends StatelessWidget {
 class _DebugHud extends StatelessWidget {
   const _DebugHud();
 
+  static const _tile = 32.0;
+
   @override
   Widget build(BuildContext context) {
     return Positioned(
       bottom: 16,
       left: 16,
-      child: ValueListenableBuilder<Vector2>(
-        valueListenable: CustomPlayer.positionNotifier,
-        builder: (_, pos, __) => Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.7),
-            border: Border.all(color: const Color(0xFF00FF88), width: 1),
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Text(
-            'x: ${pos.x.toStringAsFixed(1)}  y: ${pos.y.toStringAsFixed(1)}',
-            style: const TextStyle(
-                color: Color(0xFF00FF88),
-                fontSize: 13,
-                fontFamily: 'monospace',
-                letterSpacing: 1),
-          ),
+      child: IgnorePointer(
+        child: ValueListenableBuilder<Vector2>(
+          valueListenable: CustomPlayer.positionNotifier,
+          builder: (_, pos, __) {
+            final tx = pos.x / _tile;
+            final ty = pos.y / _tile;
+            final map = GameState.mapIds[GameState.level] ?? '?';
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.7),
+                border: Border.all(color: const Color(0xFF00FF88), width: 1),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                '$map  ·  px ${pos.x.toStringAsFixed(0)}, ${pos.y.toStringAsFixed(0)}'
+                '  ·  tile ${tx.toStringAsFixed(1)}, ${ty.toStringAsFixed(1)}',
+                style: const TextStyle(
+                    color: Color(0xFF00FF88),
+                    fontSize: 13,
+                    fontFamily: 'monospace',
+                    letterSpacing: 1),
+              ),
+            );
+          },
         ),
       ),
     );
@@ -2848,22 +3028,27 @@ class _VictoryScreen extends StatelessWidget {
                     height: compact ? 1.5 : 1.75)),
           );
 
-          final actions = Wrap(
-            alignment: WrapAlignment.center,
-            spacing: 16,
-            runSpacing: compact ? 12 : 16,
-            children: [
-              _CyberButton(
-                label: 'PLAY AGAIN',
-                onTap: () => _beginNewGame(context),
-              ),
-              _CyberButton(
-                label: 'MAIN MENU',
-                color: Colors.white38,
-                onTap: () => Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(builder: (_) => const IntroScreen())),
-              ),
-            ],
+          final actions = ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 360),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _CyberButton(
+                  label: 'PLAY AGAIN',
+                  filled: true,
+                  wide: true,
+                  onTap: () => _beginNewGame(context),
+                ),
+                const SizedBox(height: 12),
+                _CyberButton(
+                  label: 'MAIN MENU',
+                  wide: true,
+                  color: Colors.white54,
+                  onTap: () => Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(builder: (_) => const IntroScreen())),
+                ),
+              ],
+            ),
           );
 
           final Widget content = (compact && wide)
@@ -2915,29 +3100,405 @@ class _CyberButton extends StatelessWidget {
   final Color color;
   /// Primary action: stronger fill.
   final bool filled;
+  /// Stretch to parent width (pause / stacked menus).
+  final bool wide;
   const _CyberButton({
     required this.label,
     required this.onTap,
     this.color = const Color(0xFF00FFCC),
     this.filled = false,
+    this.wide = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return TextButton(
+    final btn = TextButton(
       onPressed: onTap,
       style: TextButton.styleFrom(
-        backgroundColor: color.withOpacity(filled ? 0.28 : 0.12),
-        side: BorderSide(color: color, width: filled ? 2 : 1),
-        padding: EdgeInsets.symmetric(horizontal: filled ? 40 : 28, vertical: filled ? 14 : 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+        backgroundColor: color.withValues(alpha: filled ? 0.22 : 0.07),
+        foregroundColor: color,
+        side: BorderSide(
+          color: color.withValues(alpha: filled ? 1 : 0.85),
+          width: filled ? 2 : 1.5,
+        ),
+        padding: EdgeInsets.symmetric(
+          horizontal: filled ? 40 : 32,
+          vertical: filled ? 18 : 16,
+        ),
+        minimumSize: Size(wide ? double.infinity : 168, filled ? 54 : 50),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+        tapTargetSize: MaterialTapTargetSize.padded,
       ),
-      child: Text(label,
-          style: TextStyle(
-              color: color,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 2,
-              fontSize: filled ? 15 : 13)),
+      child: Text(
+        label,
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 2.4,
+          fontSize: filled ? 17 : 15,
+          height: 1.1,
+        ),
+      ),
+    );
+    if (!wide) return btn;
+    return SizedBox(width: double.infinity, child: btn);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Audio settings (pause menu)
+// ---------------------------------------------------------------------------
+
+class _AudioSettingsPanel extends StatelessWidget {
+  const _AudioSettingsPanel();
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: Listenable.merge([
+        AudioSettings.musicVolume,
+        AudioSettings.sfxVolume,
+        AudioSettings.musicOn,
+        AudioSettings.sfxOn,
+      ]),
+      builder: (_, __) => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.03),
+          border: Border.all(color: Colors.white12),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text('AUDIO',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    color: Colors.white38,
+                    fontSize: 10,
+                    letterSpacing: 2.5,
+                    fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            _AudioRow(
+              label: 'MUSIC',
+              volume: AudioSettings.musicVolume.value,
+              enabled: AudioSettings.musicOn.value,
+              color: const Color(0xFF00FFCC),
+              onVolume: AudioSettings.setMusicVolume,
+              onEnabled: AudioSettings.setMusicOn,
+            ),
+            const SizedBox(height: 4),
+            _AudioRow(
+              label: 'SFX',
+              volume: AudioSettings.sfxVolume.value,
+              enabled: AudioSettings.sfxOn.value,
+              color: const Color(0xFFFFE08A),
+              onVolume: AudioSettings.setSfxVolume,
+              onEnabled: AudioSettings.setSfxOn,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AudioRow extends StatelessWidget {
+  final String label;
+  final double volume;
+  final bool enabled;
+  final Color color;
+  final ValueChanged<double> onVolume;
+  final ValueChanged<bool> onEnabled;
+
+  const _AudioRow({
+    required this.label,
+    required this.volume,
+    required this.enabled,
+    required this.color,
+    required this.onVolume,
+    required this.onEnabled,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final pct = (volume * 100).round();
+    return Row(
+      children: [
+        SizedBox(
+          width: 48,
+          child: Text(label,
+              style: TextStyle(
+                  color: color.withValues(alpha: enabled ? 0.9 : 0.35),
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.2)),
+        ),
+        Expanded(
+          // Keep focus off the slider so WASD/arrows stay with the game.
+          child: ExcludeFocus(
+            child: SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                trackHeight: 2,
+                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+                activeTrackColor: color.withValues(alpha: enabled ? 0.85 : 0.25),
+                inactiveTrackColor: Colors.white12,
+                thumbColor: enabled ? color : Colors.white24,
+                overlayColor: color.withValues(alpha: 0.15),
+              ),
+              child: Slider(
+                value: volume,
+                onChanged: enabled ? onVolume : null,
+              ),
+            ),
+          ),
+        ),
+        SizedBox(
+          width: 36,
+          // Keep the stored level visible while muted — the ON/OFF chip
+          // already says OFF (avoid "OFF OFF").
+          child: Text('$pct%',
+              textAlign: TextAlign.right,
+              style: TextStyle(
+                  color: enabled ? Colors.white54 : Colors.white24,
+                  fontSize: 10,
+                  letterSpacing: 0.5)),
+        ),
+        const SizedBox(width: 4),
+        GestureDetector(
+          onTap: () => onEnabled(!enabled),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: (enabled ? color : Colors.white24).withValues(alpha: 0.12),
+              border: Border.all(
+                  color: (enabled ? color : Colors.white24).withValues(alpha: 0.55)),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(enabled ? 'ON' : 'OFF',
+                style: TextStyle(
+                    color: enabled ? color : Colors.white38,
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1)),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Pause menu (+ collected memories browser)
+// ---------------------------------------------------------------------------
+
+class _PauseMenu extends StatefulWidget {
+  const _PauseMenu();
+
+  @override
+  State<_PauseMenu> createState() => _PauseMenuState();
+}
+
+class _PauseMenuState extends State<_PauseMenu> {
+  bool _memories = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.black.withValues(alpha: 0.7),
+      alignment: Alignment.center,
+      child: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 440),
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 28),
+            decoration: BoxDecoration(
+              color: const Color(0xFF06060F).withValues(alpha: 0.96),
+              border: Border.all(color: const Color(0xFF00FFCC).withValues(alpha: 0.6)),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: _memories
+                ? _CollectedMemoriesPanel(onBack: () => setState(() => _memories = false))
+                : Column(mainAxisSize: MainAxisSize.min, children: [
+                    const Text('PAUSED',
+                        style: TextStyle(
+                            color: Color(0xFF00FFCC),
+                            fontSize: 26,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 6)),
+                    const SizedBox(height: 22),
+                    _CyberButton(
+                      label: 'RESUME',
+                      filled: true,
+                      wide: true,
+                      onTap: () => _setPaused(false),
+                    ),
+                    const SizedBox(height: 12),
+                    _CyberButton(
+                      label: 'JOURNAL',
+                      wide: true,
+                      color: const Color(0xFFE8D0FF),
+                      onTap: () {
+                        _paused.value = false;
+                        Journal.show();
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    _CyberButton(
+                      label: 'GEAR',
+                      wide: true,
+                      color: const Color(0xFFFFE08A),
+                      onTap: () {
+                        _paused.value = false;
+                        Equipment.show();
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    _CyberButton(
+                      label: 'MEMORIES',
+                      wide: true,
+                      color: const Color(0xFF88CCFF),
+                      onTap: () => setState(() => _memories = true),
+                    ),
+                    const SizedBox(height: 12),
+                    _CyberButton(
+                      label: 'MAIN MENU',
+                      wide: true,
+                      color: Colors.white54,
+                      onTap: () async {
+                        final nav = Navigator.of(context);
+                        _setPaused(false);
+                        await _leaveMap();
+                        nav.pushReplacement(
+                            MaterialPageRoute(builder: (_) => const IntroScreen()));
+                      },
+                    ),
+                    const SizedBox(height: 22),
+                    const _AudioSettingsPanel(),
+                  ]),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CollectedMemoriesPanel extends StatelessWidget {
+  final VoidCallback onBack;
+  const _CollectedMemoriesPanel({required this.onBack});
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: Memories.foundNotifier,
+      builder: (_, __) {
+        final found = Memories.found;
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text('COLLECTED MEMORIES',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    color: Color(0xFF88CCFF),
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 2.5)),
+            const SizedBox(height: 6),
+            Text('${Memories.progressLabel} recovered',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white38, fontSize: 11, letterSpacing: 1)),
+            const SizedBox(height: 14),
+            if (found == 0)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: Text(
+                  'No memories yet.\nSeek glowing fragments across Elysium.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white54, fontSize: 12, height: 1.45),
+                ),
+              )
+            else
+              for (var i = 1; i <= Memories.total; i++)
+                _MemoryRow(
+                  index: i,
+                  unlocked: Memories.has(i),
+                  onPlay: Memories.has(i)
+                      ? () async {
+                          await Memories.replay(i);
+                        }
+                      : null,
+                ),
+            const SizedBox(height: 14),
+            _CyberButton(
+                label: 'BACK', wide: true, color: Colors.white54, onTap: onBack),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _MemoryRow extends StatelessWidget {
+  final int index;
+  final bool unlocked;
+  final Future<void> Function()? onPlay;
+  const _MemoryRow({required this.index, required this.unlocked, this.onPlay});
+
+  @override
+  Widget build(BuildContext context) {
+    final roman = ['I', 'II', 'III', 'IV', 'V'][index - 1];
+    final title = unlocked ? Memories.titleFor(index) : '??????';
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onPlay == null ? null : () => onPlay!(),
+          borderRadius: BorderRadius.circular(6),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: unlocked ? 0.05 : 0.02),
+              border: Border.all(
+                  color: unlocked
+                      ? const Color(0xFF88CCFF).withValues(alpha: 0.45)
+                      : Colors.white12),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Row(
+              children: [
+                Text(roman,
+                    style: TextStyle(
+                        color: unlocked ? const Color(0xFF88CCFF) : Colors.white24,
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.5)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(title,
+                      style: TextStyle(
+                          color: unlocked ? Colors.white70 : Colors.white24,
+                          fontSize: 12,
+                          fontStyle: unlocked ? FontStyle.normal : FontStyle.italic,
+                          letterSpacing: 0.5)),
+                ),
+                if (unlocked)
+                  const Text('REPLAY',
+                      style: TextStyle(
+                          color: Color(0xFF88CCFF),
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.2)),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -3024,65 +3585,8 @@ class _CalmLayer extends StatelessWidget {
       // Pause menu (scrollable so it fits a phone in landscape)
       ValueListenableBuilder<bool>(
         valueListenable: _paused,
-        builder: (ctx, paused, __) => paused
-            ? Container(
-                color: Colors.black.withValues(alpha: 0.7),
-                alignment: Alignment.center,
-                child: SafeArea(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(16),
-                    child: Container(
-                      constraints: const BoxConstraints(maxWidth: 420),
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF06060F).withValues(alpha: 0.96),
-                        border: Border.all(
-                            color: const Color(0xFF00FFCC).withValues(alpha: 0.6)),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Column(mainAxisSize: MainAxisSize.min, children: [
-                        const Text('PAUSED',
-                            style: TextStyle(
-                                color: Color(0xFF00FFCC),
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 5)),
-                        const SizedBox(height: 14),
-                        Wrap(
-                          alignment: WrapAlignment.center,
-                          spacing: 12,
-                          runSpacing: 12,
-                          children: [
-                            _CyberButton(label: 'RESUME', onTap: () => _setPaused(false)),
-                            _CyberButton(
-                              label: 'JOURNAL',
-                              color: const Color(0xFFE8D0FF),
-                              onTap: () {
-                                // Swap the pause menu for the journal; the
-                                // engine stays paused while it is open.
-                                _paused.value = false;
-                                Journal.show();
-                              },
-                            ),
-                            _CyberButton(
-                              label: 'MAIN MENU',
-                              color: Colors.white38,
-                              onTap: () async {
-                                final nav = Navigator.of(ctx);
-                                _setPaused(false);
-                                await _leaveMap();
-                                nav.pushReplacement(
-                                    MaterialPageRoute(builder: (_) => const IntroScreen()));
-                              },
-                            ),
-                          ],
-                        ),
-                      ]),
-                    ),
-                  ),
-                ),
-              )
-            : const SizedBox.shrink(),
+        builder: (ctx, paused, __) =>
+            paused ? const _PauseMenu() : const SizedBox.shrink(),
       ),
     ]);
   }

@@ -43,6 +43,15 @@ class GearItem {
 class Progression {
   Progression._();
 
+  /// Player level required before Phase Step (combat Space) unlocks.
+  static const int phaseUnlockLevel = 3;
+  /// Player level required before Pulse (combat Q) unlocks.
+  static const int pulseUnlockLevel = 5;
+  /// Player level required before Ward (combat F) unlocks.
+  static const int wardUnlockLevel = 7;
+  /// Player level required before Anchor (combat R) unlocks.
+  static const int anchorUnlockLevel = 9;
+
   static final revision = ValueNotifier<int>(0);
   static final _rng = Random();
 
@@ -192,6 +201,7 @@ class Progression {
 
   static void grantXp(int amount, {String? reason, bool float = true}) {
     if (amount <= 0) return;
+    final before = _d.level;
     _d.xp += amount;
     var leveled = false;
     while (_d.xp >= xpToNext(_d.level)) {
@@ -211,23 +221,79 @@ class Progression {
         color: const Color(0xFFFFE08A),
         compact: true,
       );
+      if (before < Progression.phaseUnlockLevel &&
+          _d.level >= Progression.phaseUnlockLevel) {
+        MmoFeedback.pushPop('PHASE UNLOCKED', color: const Color(0xFF88EEFF));
+        GameToast.show(
+          'PHASE UNLOCKED',
+          body: 'Short dash · tap the button or press Space',
+          color: const Color(0xFF88EEFF),
+          compact: true,
+          seconds: 3.5,
+        );
+      }
+      if (before < Progression.pulseUnlockLevel &&
+          _d.level >= Progression.pulseUnlockLevel) {
+        MmoFeedback.pushPop('PULSE UNLOCKED', color: const Color(0xFF00FFCC));
+        GameToast.show(
+          'PULSE UNLOCKED',
+          body: 'Cone burst · tap the button or press Q',
+          color: const Color(0xFF00FFCC),
+          compact: true,
+          seconds: 3.5,
+        );
+      }
+      if (before < Progression.wardUnlockLevel &&
+          _d.level >= Progression.wardUnlockLevel) {
+        MmoFeedback.pushPop('WARD UNLOCKED', color: const Color(0xFFE8D0FF));
+        GameToast.show(
+          'WARD UNLOCKED',
+          body: 'Personal shield · tap the button or press F',
+          color: const Color(0xFFE8D0FF),
+          compact: true,
+          seconds: 3.5,
+        );
+      }
+      if (before < Progression.anchorUnlockLevel &&
+          _d.level >= Progression.anchorUnlockLevel) {
+        MmoFeedback.pushPop('ANCHOR UNLOCKED', color: const Color(0xFFAA44FF));
+        GameToast.show(
+          'ANCHOR UNLOCKED',
+          body: 'Radial slow · tap the button or press R',
+          color: const Color(0xFFAA44FF),
+          compact: true,
+          seconds: 3.5,
+        );
+      }
     }
   }
 
   /// Called when a UEC drone is destroyed.
-  static void onDroneKilled(DroneKind kind) {
-    final xpGain = switch (kind) {
-      DroneKind.scout => 15,
-      DroneKind.sniper => 22,
-      DroneKind.shield => 30,
-      DroneKind.swarm => 10,
-    };
-    final glimmerGain = switch (kind) {
-      DroneKind.scout => 2,
-      DroneKind.sniper => 3,
-      DroneKind.shield => 4,
-      DroneKind.swarm => 1,
-    };
+  static void onDroneKilled(DroneKind kind, {int? enemyLevel}) {
+    final level = enemyLevel ?? kind.baseLevel;
+    final scale = EnemyLevels.scale(level, kind.baseLevel);
+    final xpGain = max(
+      1,
+      ((switch (kind) {
+                DroneKind.scout => 15,
+                DroneKind.sniper => 22,
+                DroneKind.shield => 30,
+                DroneKind.swarm => 10,
+              }) *
+              scale)
+          .round(),
+    );
+    final glimmerGain = max(
+      1,
+      ((switch (kind) {
+                DroneKind.scout => 2,
+                DroneKind.sniper => 3,
+                DroneKind.shield => 4,
+                DroneKind.swarm => 1,
+              }) *
+              scale)
+          .round(),
+    );
     Bonds.addGlimmer(glimmerGain);
     MmoFeedback.pushPop('+$glimmerGain ◆', color: const Color(0xFF88DDFF));
     grantXp(xpGain);
@@ -237,10 +303,14 @@ class Progression {
     Trade.rollDroneJunk();
   }
 
-  static void onSentinelKilled() {
-    Bonds.addGlimmer(15);
-    MmoFeedback.pushPop('+15 ◆', color: const Color(0xFF88DDFF));
-    grantXp(120, reason: 'The Sentinel falls. Kaela\'s neural attunement deepens.');
+  static void onSentinelKilled({int? enemyLevel}) {
+    final level = enemyLevel ?? EnemyLevels.forSentinel();
+    final scale = EnemyLevels.scale(level, 7);
+    final glimmerGain = max(1, (15 * scale).round());
+    final xpGain = max(1, (120 * scale).round());
+    Bonds.addGlimmer(glimmerGain);
+    MmoFeedback.pushPop('+$glimmerGain ◆', color: const Color(0xFF88DDFF));
+    grantXp(xpGain, reason: 'The Sentinel falls. Kaela\'s neural attunement deepens.');
     _grantGear('sentinel_core');
   }
 

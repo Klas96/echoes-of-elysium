@@ -6,6 +6,7 @@ import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/creatures/bonds.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/creatures/creature_species.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/creatures/gate_components.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/creatures/gates.dart';
+import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/creatures/obstacle_masks.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/creatures/obstacles.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/creatures/region_gates.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/creatures/regions.dart';
@@ -29,13 +30,16 @@ void main() {
   });
 
   group('gates', () {
-    test('a gate opens only with its own creature befriended, any follower', () {
+    test('a gate opens only with its own creature following', () {
       expect(Gates.canOpen('woods_boulder'), isFalse);
       Bonds.befriend('glowmoth');
       expect(Gates.canOpen('woods_boulder'), isFalse);
-      expect(Gates.canOpen('woods_grotto'), isTrue);
+      expect(Gates.canOpen('woods_grotto'), isTrue, reason: 'moth befriended and auto-follows');
       Bonds.befriend('stoneturtle');
-      Bonds.setActive('glowmoth'); // the moth follows; the turtle still comes over
+      Bonds.setActive('glowmoth'); // moth follows — turtle must be swapped in
+      expect(Gates.canOpen('woods_boulder'), isFalse);
+      expect(Gates.closedNote('woods_boulder'), contains('Stone Turtle'));
+      Bonds.setActive('stoneturtle');
       expect(Gates.canOpen('woods_boulder'), isTrue);
       Gates.open('woods_boulder');
       expect(Gates.isOpen('woods_boulder'), isTrue);
@@ -43,7 +47,7 @@ void main() {
       expect(SaveService.data.regions['woods']!['gates'], {'woods_boulder': true});
     });
 
-    test('three friends, any order: each gate needs its own creature', () {
+    test('three friends, any order: each gate needs its own creature following', () {
       for (final order in [
         ['stoneturtle', 'glowmoth', 'vinefox'],
         ['vinefox', 'stoneturtle', 'glowmoth'],
@@ -53,6 +57,7 @@ void main() {
           final gate = gatesIn('woods').firstWhere((g) => g.creature == id);
           final others = gatesIn('woods').where((g) => g != gate && !Bonds.isBefriended(g.creature));
           Bonds.befriend(id);
+          Bonds.setActive(id);
           expect(Gates.canOpen(gate.id), isTrue);
           for (final o in others) {
             expect(Gates.canOpen(o.id), isFalse, reason: '${o.id} still waits for ${o.creature}');
@@ -109,7 +114,7 @@ void main() {
       expect(GameState.objective.value, 'Friends of the Woods 0/3');
       Bonds.befriend('vinefox');
       expect(GameState.objective.value, 'Friends of the Woods 1/3');
-      Bonds.befriend('puffcap'); // optional, journal only
+      Bonds.befriend('puffcap'); // optional friend (HUSH), not a main-route gate
       expect(GameState.objective.value, 'Friends of the Woods 1/3');
       Bonds.befriend('glowmoth');
       Bonds.befriend('stoneturtle');
@@ -183,17 +188,19 @@ void main() {
       Bonds.setActive('stoneturtle');
       expect(Bonds.activeHere, 'stoneturtle');
       expect(Bonds.has(Ability.push), isTrue);
-      expect(Gates.canOpen('woods_grotto'), isTrue);
+      expect(Gates.canOpen('woods_boulder'), isTrue);
+      expect(Gates.canOpen('woods_grotto'), isFalse, reason: 'moth is not the follower');
 
       Regions.current = 'city';
       expect(Bonds.active, 'stoneturtle', reason: 'still the chosen friend (journal)');
       expect(Bonds.activeHere, isNull, reason: 'waits at home');
       expect(Bonds.has(Ability.push), isFalse);
       expect(Regions.abilityWorksIn('stoneturtle', 'city'), isFalse);
-      expect(Gates.canOpen('woods_grotto'), isFalse);
+      expect(Gates.canOpen('woods_boulder'), isFalse);
 
       Regions.current = 'woods';
       expect(Bonds.has(Ability.push), isTrue, reason: 'back home, back to work (optional secrets too)');
+      expect(Gates.canOpen('woods_boulder'), isTrue);
     });
 
     test('every current creature lives in the Woods', () {
@@ -375,7 +382,8 @@ void main() {
         ];
     Map json(String f) => jsonDecode(File('assets/images/obstacles/$f').readAsStringSync()) as Map;
 
-    test('gate colliders match Designer\'s JSON for each state', () {
+    test('gate colliders load from Designer JSON for each state', () {
+      ObstacleMasks.loadFromDisk();
       final g = json('pond_grotto.json');
       expect(GateArt.grottoDarkColliders, rects((g['dark'] as Map)['collision']));
       expect(GateArt.grottoLitColliders, rects((g['lit'] as Map)['collision']));

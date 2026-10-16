@@ -200,15 +200,19 @@ void main() {
     });
   });
 
-  test('InstantFacing: facing follows the new velocity on the first frame', () {
+  test('InstantFacing: updates on first frame and keeps a stable cardinal', () {
     final p = _FacingPlayer();
     p.lastDirection = Direction.left;
     p.moveDown();
     expect(p.lastDirection, Direction.down);
+    // Equal X/Y axes: hysteresis keeps the previous cardinal (no left↔right
+    // flicker on diagonal pathing / WASD). Stronger axis still wins.
     p.moveRight();
-    expect(p.lastDirection, Direction.downRight);
+    expect(p.lastDirection, Direction.down);
+    p.setVelocityAxis(x: 2, y: 1);
+    expect(p.lastDirection, Direction.right);
     p.stopMove(forceIdle: true);
-    expect(p.lastDirection, Direction.downRight);
+    expect(p.lastDirection, Direction.right);
   });
 }
 

@@ -6,6 +6,8 @@ import 'damage_number.dart';
 import 'drone_bounds.dart';
 import 'enemy_bullet.dart';
 import 'explosion_effect.dart';
+import '../game/game_debug.dart';
+import '../game/game_state.dart';
 import '../game/progression.dart';
 import '../game/quests.dart';
 import '../game/save_service.dart';
@@ -37,6 +39,41 @@ extension DroneKindParse on DroneKind {
         return DroneKind.scout;
     }
   }
+
+  /// Danger rank before map tier (swarm weakest → shield toughest).
+  int get baseLevel => switch (this) {
+        DroneKind.swarm => 1,
+        DroneKind.scout => 2,
+        DroneKind.sniper => 3,
+        DroneKind.shield => 4,
+      };
+}
+
+/// Enemy levels: kind danger + map tier (woods soft → core hard).
+class EnemyLevels {
+  EnemyLevels._();
+
+  static int mapBonus([int? gameLevel]) {
+    final g = gameLevel ?? GameState.level;
+    return switch (g) {
+      1 => 0, // woods
+      2 => 1, // city
+      5 => 1, // lantern town
+      3 => 2, // ruins
+      4 => 3, // core
+      _ => 0,
+    };
+  }
+
+  static int forDrone(DroneKind kind, {int? overrideLevel, int? gameLevel}) =>
+      overrideLevel ?? (kind.baseLevel + mapBonus(gameLevel));
+
+  /// Sentinel is the city apex threat.
+  static int forSentinel({int? gameLevel}) => 7 + mapBonus(gameLevel);
+
+  /// Stat multiplier so base-level drones keep today's numbers.
+  static double scale(int level, int baseLevel) =>
+      (1.0 + 0.1 * (level - baseLevel)).clamp(0.7, 2.2);
 }
 
 enum _DroneState { patrol, chase, attack, retreat }
@@ -144,8 +181,8 @@ class _DroneStats {
             idleColor: Color(0xFF88AA66),
             aggroColor: Color(0xFFFFCC33),
             spritePath: 'sprites/uec_swarm.png',
-            // Three ships in one sprite: below ~24px they turn to mush.
-            spriteSize: 26,
+            // 64px source from uec_swarm_v2; draw a bit larger for readability.
+            spriteSize: 32,
           ),
       };
 }
@@ -154,10 +191,15 @@ class UECDrone extends GameDecoration {
   static final List<UECDrone> active = [];
 
   final DroneKind kind;
+  /// Combat level shown above the HP bar (kind danger + map tier).
+  final int enemyLevel;
   /// When set, death counts toward that job board nest quest.
   final String? nestQuestId;
   final _DroneStats _stats;
   final Vector2 _origin;
+  final int _maxHp;
+  final int _maxShield;
+  final int _damage;
   _DroneState _state = _DroneState.patrol;
   double _patrolAngle;
   double _attackTimer = 0;
@@ -169,20 +211,70 @@ class UECDrone extends GameDecoration {
   bool _rewarded = false;
   /// Residual shove from player shots (px/s), decays each frame.
   Vector2 _knockback = Vector2.zero();
+  /// Puffcap HUSH: seconds left calmed (no chase / attack).
+  double _hushed = 0;
+  /// Pulse-shot / Anchor slow: seconds left at reduced move speed.
+  double _slowT = 0;
+  double _slowFactor = 0.45;
   bool get isDead => _health <= 0;
-  int get maxHealth => _stats.maxHealth;
+  int get maxHealth => _maxHp;
+  bool get isHushed => _hushed > 0;
+  double get _speedMult => _slowT > 0 ? _slowFactor : 1.0;
 
-  UECDrone(
+  void applyHush(double seconds) {
+    if (isDead) return;
+    _hushed = max(_hushed, seconds);
+    _state = _DroneState.patrol;
+  }
+
+  void applySlow(double seconds, {double factor = 0.45}) {
+    if (isDead || seconds <= 0) return;
+    _slowT = max(_slowT, seconds);
+    _slowFactor = min(_slowFactor, factor.clamp(0.1, 1.0));
+  }
+
+  factory UECDrone(
     Vector2 position, {
     double startAngle = 0,
-    this.kind = DroneKind.scout,
-    this.nestQuestId,
-  })  : _stats = _DroneStats.forKind(kind),
+    DroneKind kind = DroneKind.scout,
+    String? nestQuestId,
+    int? level,
+  }) {
+    final stats = _DroneStats.forKind(kind);
+    final lv = EnemyLevels.forDrone(kind, overrideLevel: level);
+    final s = EnemyLevels.scale(lv, kind.baseLevel);
+    return UECDrone._(
+      position,
+      startAngle: startAngle,
+      kind: kind,
+      nestQuestId: nestQuestId,
+      enemyLevel: lv,
+      stats: stats,
+      maxHp: max(1, (stats.maxHealth * s).round()),
+      maxShield: (stats.shieldMax * s).round(),
+      damage: max(1, (stats.damage * s).round()),
+    );
+  }
+
+  UECDrone._(
+    Vector2 position, {
+    double startAngle = 0,
+    required this.kind,
+    required this.nestQuestId,
+    required this.enemyLevel,
+    required _DroneStats stats,
+    required int maxHp,
+    required int maxShield,
+    required int damage,
+  })  : _stats = stats,
         _origin = position.clone(),
         _patrolAngle = startAngle,
-        super(position: position, size: Vector2.all(_DroneStats.forKind(kind).size)) {
-    _health = _stats.maxHealth;
-    _shield = _stats.shieldMax;
+        _maxHp = maxHp,
+        _maxShield = maxShield,
+        _damage = damage,
+        super(position: position, size: Vector2.all(stats.size)) {
+    _health = _maxHp;
+    _shield = _maxShield;
   }
 
   Sprite? _sprite;
@@ -193,13 +285,15 @@ class UECDrone extends GameDecoration {
     _sprite = await Sprite.load(_stats.spritePath);
     try {
       // Frame 2 bobs up 1px and brightens the eye (uec_*_hover.json).
+      // Frame size = sheet height (square cells); swarm can be 64px, others 32.
       final img = await Flame.images.load(_stats.hoverPath);
+      final frame = max(1, img.height);
       _hover = SpriteAnimation.fromFrameData(
         img,
         SpriteAnimationData.sequenced(
-          amount: max(1, img.width ~/ 32),
+          amount: max(1, img.width ~/ frame),
           stepTime: kind == DroneKind.swarm ? 0.2 : 0.3,
-          textureSize: Vector2.all(32),
+          textureSize: Vector2.all(frame.toDouble()),
         ),
       ).createTicker();
     } catch (_) {
@@ -220,11 +314,14 @@ class UECDrone extends GameDecoration {
     super.onRemove();
   }
 
-  void takeDamage(int amount, {Vector2? knockbackDir}) {
+  void takeDamage(int amount,
+      {Vector2? knockbackDir, double knockbackScale = 1.0}) {
     if (isDead || amount <= 0) return;
     _shieldRegen = 0;
     _shieldRegenAcc = 0;
-    if (knockbackDir != null) _applyKnockback(knockbackDir);
+    if (knockbackDir != null) {
+      _applyKnockback(knockbackDir, scale: knockbackScale);
+    }
     final top = position + Vector2(size.x / 2, 0);
     if (_shield > 0) {
       final absorbed = min(_shield, amount);
@@ -239,7 +336,7 @@ class UECDrone extends GameDecoration {
     DamageNumber.spawn(this, top, amount, DamageNumberStyle.dealt);
   }
 
-  void _applyKnockback(Vector2 dir) {
+  void _applyKnockback(Vector2 dir, {double scale = 1.0}) {
     if (dir.length2 < 1e-8) return;
     final mult = switch (kind) {
       DroneKind.swarm => 1.25,
@@ -248,14 +345,20 @@ class UECDrone extends GameDecoration {
       DroneKind.shield => 0.4,
     };
     // Replace rather than stack so rapid fire feels snappy, not rocket-launch.
-    _knockback = dir.normalized() * (140 * mult);
+    _knockback = dir.normalized() * (140 * mult * scale);
   }
 
-  double get _leash => max(120.0, _stats.detectionRadius * 0.75);
+  /// Patrol stays near spawn; once aggro'd, allow a longer chase so they don't
+  /// freeze on the leash while still glowing red at the player.
+  double get _leash {
+    final base = max(120.0, _stats.detectionRadius * 0.75);
+    return _state == _DroneState.patrol ? base : base * 1.85;
+  }
 
   void _move(Vector2 delta) {
     final before = position.clone();
-    final ok = DroneBounds.moveBy(this, delta, origin: _origin, leash: _leash);
+    final ok =
+        DroneBounds.chaseStep(this, delta, origin: _origin, leash: _leash);
     if (!ok) {
       _knockback.setZero();
       return;
@@ -271,7 +374,7 @@ class UECDrone extends GameDecoration {
     if (isDead) {
       if (!_rewarded) {
         _rewarded = true;
-        Progression.onDroneKilled(kind);
+        Progression.onDroneKilled(kind, enemyLevel: enemyLevel);
         final nest = nestQuestId;
         if (nest != null && nest.isNotEmpty) Quests.onNestDroneKilled(nest);
         Quests.onDroneKilled(SaveService.data.regionId);
@@ -284,14 +387,17 @@ class UECDrone extends GameDecoration {
     _hover?.update(dt);
     _pulse += dt * (kind == DroneKind.swarm ? 5.0 : 3.5);
     _attackTimer = max(0, _attackTimer - dt);
+    _hushed = max(0, _hushed - dt);
+    _slowT = max(0, _slowT - dt);
+    if (_slowT <= 0) _slowFactor = 0.45;
 
-    if (_stats.shieldMax > 0 && _shield < _stats.shieldMax) {
+    if (_maxShield > 0 && _shield < _maxShield) {
       _shieldRegen += dt;
       if (_shieldRegen >= 3.0) {
         _shieldRegenAcc += 25 * dt;
         final add = _shieldRegenAcc.floor();
         if (add > 0) {
-          _shield = (_shield + add).clamp(0, _stats.shieldMax);
+          _shield = (_shield + add).clamp(0, _maxShield);
           _shieldRegenAcc -= add;
         }
       }
@@ -306,10 +412,15 @@ class UECDrone extends GameDecoration {
         (player.position + player.size / 2) - (position + size / 2);
     final dist = toPlayer.length;
 
-    _updateState(dist);
-    // Strong shove briefly overrides chase so hits read clearly.
-    if (_knockback.length < 50) {
-      _act(dt, toPlayer, dist);
+    if (isHushed) {
+      _state = _DroneState.patrol;
+      if (_knockback.length < 50) _act(dt, toPlayer, dist);
+    } else {
+      _updateState(dist);
+      // Strong shove briefly overrides chase so hits read clearly.
+      if (_knockback.length < 50) {
+        _act(dt, toPlayer, dist);
+      }
     }
     if (_knockback.length2 > 0.25) {
       _move(_knockback * dt);
@@ -352,15 +463,16 @@ class UECDrone extends GameDecoration {
             Vector2(cos(_patrolAngle) * radius, sin(_patrolAngle) * radius);
         final step = target - position;
         if (step.length > 1) {
-          _move(step.normalized() * min(_stats.speed * dt, step.length));
+          _move(step.normalized() *
+              min(_stats.speed * _speedMult * dt, step.length));
         }
       case _DroneState.chase:
         if (toPlayer.length > 1) {
-          _move(toPlayer.normalized() * _stats.speed * dt);
+          _move(toPlayer.normalized() * _stats.speed * _speedMult * dt);
         }
       case _DroneState.retreat:
         if (toPlayer.length > 1) {
-          _move(-toPlayer.normalized() * _stats.speed * 1.1 * dt);
+          _move(-toPlayer.normalized() * _stats.speed * _speedMult * 1.1 * dt);
         }
         if (_attackTimer <= 0 && dist <= _stats.attackRadius) {
           _fireOrMelee(toPlayer);
@@ -369,8 +481,14 @@ class UECDrone extends GameDecoration {
         if (kind == DroneKind.sniper) {
           // Hold position and fire.
           if (_attackTimer <= 0) _fireOrMelee(toPlayer);
-        } else if (_attackTimer <= 0) {
-          _fireOrMelee(toPlayer);
+        } else {
+          // Keep closing during cooldown — standing still at attackRadius looks
+          // like the AI stalled mid-charge.
+          const strikeRange = 20.0;
+          if (dist > strikeRange && toPlayer.length > 1) {
+            _move(toPlayer.normalized() * _stats.speed * _speedMult * dt);
+          }
+          if (_attackTimer <= 0) _fireOrMelee(toPlayer);
         }
     }
   }
@@ -379,11 +497,11 @@ class UECDrone extends GameDecoration {
     if (kind == DroneKind.sniper) {
       if (toPlayer.length < 1) return;
       final origin = position + size / 2 - Vector2.all(EnemyBullet.bulletSize / 2);
-      gameRef.add(EnemyBullet(origin, toPlayer, damage: _stats.damage));
+      gameRef.add(EnemyBullet(origin, toPlayer, damage: _damage));
       _attackTimer = _stats.attackCooldown;
       return;
     }
-    CustomPlayer.applyDamage(_stats.damage);
+    CustomPlayer.applyDamage(_damage);
     _attackTimer = _stats.attackCooldown;
   }
 
@@ -393,10 +511,12 @@ class UECDrone extends GameDecoration {
     final cx = size.x / 2;
     final cy = size.y / 2;
     final r = size.x / 2;
-    final aggro = _state != _DroneState.patrol;
-    final col = aggro ? _stats.aggroColor : _stats.idleColor;
+    final aggro = !isHushed && _state != _DroneState.patrol;
+    final col = isHushed
+        ? const Color(0xFF88CC88)
+        : (aggro ? _stats.aggroColor : _stats.idleColor);
 
-    // Kind-coloured aura
+    // Kind-coloured aura (soft green while HUSHed)
     canvas.drawCircle(
       Offset(cx, cy),
       r + (kind == DroneKind.shield && _shield > 0 ? 8 : 5),
@@ -435,7 +555,7 @@ class UECDrone extends GameDecoration {
       );
     }
 
-    // HP bar
+    // Level + HP bar
     const barW = 22.0;
     const barH = 3.0;
     final barX = cx - barW / 2;
@@ -448,14 +568,14 @@ class UECDrone extends GameDecoration {
       Rect.fromLTWH(
         barX,
         barY,
-        barW * (_health / _stats.maxHealth).clamp(0, 1),
+        barW * (_health / _maxHp).clamp(0, 1),
         barH,
       ),
       Paint()..color = _stats.aggroColor,
     );
 
     // Shield bar (above HP)
-    if (_stats.shieldMax > 0) {
+    if (_maxShield > 0) {
       canvas.drawRect(
         Rect.fromLTWH(barX, barY - 4, barW, 2),
         Paint()..color = Colors.black54,
@@ -464,10 +584,37 @@ class UECDrone extends GameDecoration {
         Rect.fromLTWH(
           barX,
           barY - 4,
-          barW * (_shield / _stats.shieldMax).clamp(0, 1),
+          barW * (_shield / _maxShield).clamp(0, 1),
           2,
         ),
         Paint()..color = const Color(0xFF66CCFF),
+      );
+    }
+
+    final lvTp = TextPainter(
+      text: TextSpan(
+        text: 'LV$enemyLevel',
+        style: TextStyle(
+          color: Colors.white.withOpacity(0.9),
+          fontSize: 8,
+          fontWeight: FontWeight.w700,
+          shadows: const [
+            Shadow(color: Colors.black87, blurRadius: 2, offset: Offset(0, 1)),
+          ],
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    final lvTop = _maxShield > 0 ? barY - 4 : barY;
+    lvTp.paint(canvas, Offset(cx - lvTp.width / 2, lvTop - lvTp.height - 1));
+
+    if (GameDebug.isOn) {
+      final tileX = (absolutePosition.x / 32).toStringAsFixed(0);
+      final tileY = (absolutePosition.y / 32).toStringAsFixed(0);
+      GameDebug.paintLabel(
+        canvas,
+        '${kind.name} @$tileX,$tileY',
+        Offset(cx, lvTop - lvTp.height - 12),
       );
     }
   }

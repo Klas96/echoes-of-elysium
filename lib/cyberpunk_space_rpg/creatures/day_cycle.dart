@@ -38,14 +38,12 @@ class DayCycle {
     return 1 - ramp(0.18, 0.3, t);
   }
 
-  /// Screen tint: subtle blue at night, a warm hint at dawn and dusk.
-  static Color tint(double t) {
+  /// Screen tint: cool blue at night only (no amber dawn/dusk wash).
+  /// [strength] scales the wash (e.g. lower on maps with no lamp pools).
+  static Color tint(double t, {double strength = 1.0}) {
     final n = darkness(t);
-    final warm = (1 - (n - 0.5).abs() * 2).clamp(0.0, 1.0) * (n > 0 ? 1 : 0);
-    const nightCol = Color(0xFF0A1236);
-    const duskCol = Color(0xFFFF8A4C);
-    final a = 0.46 * n;
-    final c = Color.lerp(nightCol, duskCol, warm * 0.55)!;
-    return c.withValues(alpha: (a + warm * 0.06).clamp(0.0, 0.5));
+    if (n <= 0) return const Color(0x00000000);
+    final a = (0.46 * n * strength.clamp(0.0, 1.0)).clamp(0.0, 0.5);
+    return const Color(0xFF0A1236).withValues(alpha: a);
   }
 }

@@ -10,6 +10,7 @@ class FragmentPickup extends GameDecoration {
   final double collectRadius;
   double _pulse = 0;
   bool _collected = false;
+  Sprite? _sprite;
 
   /// Called once when collected, before the objective updates (and autosaves).
   final VoidCallback? onCollected;
@@ -20,6 +21,16 @@ class FragmentPickup extends GameDecoration {
 
   FragmentPickup(Vector2 position, {this.onCollected, this.hidden, this.collectRadius = defaultCollectRadius})
       : super(position: position, size: Vector2.all(18));
+
+  @override
+  Future<void> onLoad() async {
+    await super.onLoad();
+    try {
+      _sprite = await Sprite.load('sprites/fragment.png');
+    } catch (_) {
+      _sprite = null;
+    }
+  }
 
   @override
   void update(double dt) {
@@ -46,10 +57,21 @@ class FragmentPickup extends GameDecoration {
 
     canvas.drawCircle(Offset(cx, cy), 12 + p * 2,
         Paint()
-          ..color = const Color(0xFFAA44FF).withOpacity(0.22 + p * 0.06)
+          ..color = const Color(0xFFAA44FF).withValues(alpha: 0.22 + p * 0.06)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8));
 
-    // Diamond crystal
+    final sprite = _sprite;
+    if (sprite != null) {
+      final s = 14.0 + p * 1.5;
+      sprite.render(
+        canvas,
+        position: Vector2(cx - s / 2, cy - s / 2),
+        size: Vector2.all(s),
+      );
+      return;
+    }
+
+    // Fallback diamond if the PNG fails to load.
     final path = Path()
       ..moveTo(cx, cy - 8)
       ..lineTo(cx + 5, cy)
@@ -60,9 +82,9 @@ class FragmentPickup extends GameDecoration {
     canvas.drawPath(
         path,
         Paint()
-          ..color = Colors.white.withOpacity(0.35)
+          ..color = Colors.white.withValues(alpha: 0.35)
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1.0);
-    canvas.drawCircle(Offset(cx, cy), 2, Paint()..color = Colors.white.withOpacity(0.9));
+    canvas.drawCircle(Offset(cx, cy), 2, Paint()..color = Colors.white.withValues(alpha: 0.9));
   }
 }

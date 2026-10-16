@@ -325,7 +325,7 @@ class GameState {
         if (job != null && _step >= _l1Asha) return job;
         return _step >= _l1Asha
             ? 'Next: find Asha at her camp south of the standing stones — she knows the woods'
-            : 'Mission: talk to Gaia by the crash site (green figure nearby)';
+            : 'Mission: talk to Gaia by your skiff wreck (green figure nearby)';
       case 2:
         if (portalUnlocked.value || _step >= _l2Core) {
           if (!Adventure.openedArchive &&

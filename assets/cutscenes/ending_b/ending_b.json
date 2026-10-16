@@ -26,7 +26,7 @@
       "lines": [
         {
           "speaker": "N",
-          "text": "The Core Record opens — bright, incomplete. Gaps remain where memories were never found.",
+          "text": "The Core Record opens \u2014 bright, incomplete. Gaps remain where memories were never found.",
           "voice": "audio/voices/cut_ending_b_p1_l1.mp3"
         }
       ]
@@ -53,8 +53,8 @@
         },
         {
           "speaker": "VOSS",
-          "text": "Without the full record I still see a lattice risk — not a people I can trust. I am holding the drones. That is caution, not belief.",
-          "voice": ""
+          "text": "Without the full record I still see a lattice risk \u2014 not a people I can trust. I am holding the drones. That is caution, not belief.",
+          "voice": "audio/voices/cut_ending_b_p2_l2.mp3"
         },
         {
           "speaker": "VOSS",
@@ -87,7 +87,7 @@
       "lines": [
         {
           "speaker": "GAIA",
-          "text": "Then we remain online when the next fleet arrives. Incomplete dataset — but no longer in caretaker sleep.",
+          "text": "Then we remain online when the next fleet arrives. Incomplete dataset \u2014 but no longer in caretaker sleep.",
           "voice": "audio/voices/cut_ending_b_p3_l1.mp3"
         },
         {

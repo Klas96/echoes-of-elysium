@@ -28,12 +28,6 @@
    3,
    23,
    10
-  ],
-  [
-   14,
-   33,
-   65,
-   29
   ]
  ],
  "interaction": {
@@ -94,16 +88,16 @@
   "file": "pond_grotto_lit.png",
   "collision": [
    [
-    16,
-    3,
-    19,
-    30
+    28.5078125,
+    12.421875,
+    6.4921875,
+    20.578125
    ],
    [
     58,
-    3,
-    19,
-    30
+    9.890625,
+    6.4453125,
+    23.109375
    ],
    [
     35,
@@ -112,10 +106,16 @@
     10
    ],
    [
-    14,
-    33,
+    15.548828125,
+    19.119140625,
     65,
     29
+   ],
+   [
+    35,
+    13,
+    23,
+    20
    ]
   ]
  },
@@ -129,5 +129,5 @@
   "dark": "pond_grotto_dark.png",
   "lit": "pond_grotto_lit.png"
  },
- "note": "both 96x64 on one canvas/scale/palette, bottom-aligned: swap the image in place. collision = left rock, right rock, arch above the mouth, and the pond (rect 4): the water in front is ~29 px deep (0.9 tiles), not a thin edge, so it is non-walkable in both states. mouth_rect is an extra blocker while dark; once lit drop it (it can be the pickup / scene trigger), but the pond still separates the bank from the mouth, so the fragment at fragment_point is collected from the interaction point (or the glowmoth fetches it); remove rect 4 if the player should wade in."
+ "note": "both 96x64 on one canvas/scale/palette, bottom-aligned: swap the image in place. Dark and lit keep the same solid façade (rocks, arch, pond, mouth). Lit: E ENTER opens the pond_grotto cave room (#57); fragment is inside. LIGHT from the south-bank interaction point."
 }

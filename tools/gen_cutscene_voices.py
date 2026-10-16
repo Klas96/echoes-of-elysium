@@ -65,6 +65,12 @@ def synthesize(api_key: str, voice_id: str, text: str, dest: Path) -> None:
         raise RuntimeError(f"short response for {dest.name}: {data[:200]!r}")
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_bytes(data)
+    try:
+        from normalize_voices import normalize_file
+
+        normalize_file(dest)
+    except Exception as e:
+        print(f"WARN normalize {dest.name}: {e}", file=sys.stderr)
 
 
 def iter_lines(scene: dict):

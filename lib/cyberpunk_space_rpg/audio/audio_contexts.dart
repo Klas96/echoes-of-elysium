@@ -23,8 +23,11 @@ class GameAudioContexts {
     audioFocus: AndroidAudioFocus.gain,
   );
 
+  /// Must be `playback` (or playAndRecord / multiRoute) — audioplayers asserts
+  /// if `mixWithOthers` is paired with `ambient`, which broke SFX/VO/music
+  /// init on every platform in debug (constructor runs before setAudioContext).
   static final AudioContextIOS mixIos = AudioContextIOS(
-    category: AVAudioSessionCategory.ambient,
+    category: AVAudioSessionCategory.playback,
     options: const {AVAudioSessionOptions.mixWithOthers},
   );
 

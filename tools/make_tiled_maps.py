@@ -28,8 +28,8 @@ world px, width/height = component size (same coords the code used before).
 
 M2 (woods only): creature (species, radius in tiles, netted, gated), stump
 (the vine fox's sweetroot), pebble (the brookling's river pebble), stash
-(glimmer), moonflower (decor), glyph (glyph id), hidden (glimmer; only found with the vine fox's
-SCENT), hiddenpath (brambles the vine fox's SCENT opens), boulder (2x2 tiles,
+(glimmer), moonflower (decor), glyph (glyph id), hidden (glimmer; brookling DIG),
+hiddenpath (brambles the vine fox's SCENT opens), boulder (2x2 tiles,
 pushX/pushY in tiles; needs the stone turtle's PUSH) and darkzone (a rect of
 darkness; the glowmoth's LIGHT reveals the glyph inside). Those optional
 ability gates only guard secrets (glyph, stash, hidden, creatures marked gated).
@@ -184,13 +184,31 @@ class Tileset:
     def collides(self, tid):
         return tid >= 0 and bool(self.tiles.get(tid, {}).get("rects"))
 
+    # Walk-on / ground-plane props: always stay on the tile layer under Kaela.
+    # (Multi-tile pads would otherwise become dynamicAbove and draw over her.)
+    FLOOR_PROPS = frozenset({
+        "helipad", "portal_platform", "portal_hexpad",
+        "dock_planks_h", "dock_planks_v", "ship_debris",
+        "solar_panel", "loose_cables", "floor_ring_marker",
+    })
+
     def to_json(self, firstgid, image_path):
+        # Prop stamp height (tiles): tall / solid props become Bonfire
+        # `dynamicAbove` decorations so they y-sort with Kaela (tile-layer
+        # props always draw under the player, which looks wrong in front).
+        prop_h = {n: h for n, (_, h, _) in self.props.items()}
         tiles = []
         for tid in sorted(self.tiles):
             t = self.tiles[tid]
             d = {"id": tid}
             if t["prob"] != 1: d["probability"] = t["prob"]
-            if t["type"]: d["type"] = t["type"]
+            typ = t["type"]
+            if not typ:
+                prop_name = t["props"].get("prop", (None, None))[1]
+                if (prop_name and prop_name not in self.FLOOR_PROPS
+                        and (prop_h.get(prop_name, 1) >= 2 or t["rects"])):
+                    typ = "dynamicAbove"
+            if typ: d["type"] = typ
             if t["props"]:
                 d["properties"] = [{"name": k, "type": ty, "value": v} for k, (ty, v) in sorted(t["props"].items())]
             if t["rects"]:
@@ -352,18 +370,45 @@ class Level:
         ys, xs = np.nonzero(mask)
         return list(zip(xs.tolist(), ys.tolist()))
 
-    def scatter_on(self, names, n, mask, tries=None, need_floor=True):
-        """Place up to n props randomly among tiles where mask is True."""
+    def _prop_centre(self, name, x, y):
+        w, h, _ = self.ts.props[name]
+        return x + w / 2, y + h / 2
+
+    def _spaced(self, name, x, y, min_dist, centres):
+        if min_dist <= 0: return True
+        cx, cy = self._prop_centre(name, x, y)
+        r2 = min_dist * min_dist
+        for ox, oy in centres:
+            if (cx - ox) ** 2 + (cy - oy) ** 2 < r2:
+                return False
+        return True
+
+    def _instance_centres(self):
+        return [self._prop_centre(n, x, y) for n, x, y in self.instances]
+
+    def scatter_on(self, names, n, mask, tries=None, need_floor=True, min_dist=0):
+        """Place up to n props among tiles where mask is True.
+
+        With [min_dist] > 0, candidates must stay that many tiles away from
+        every already-stamped prop (and each other), so clutter doesn't clump.
+        """
         cells = self.cells_of(mask)
         if not cells or n <= 0: return 0
-        tries = tries or max(n * 40, 800)
+        self.rng.shuffle(cells)
+        tries = tries or max(n * 50, 1000)
         placed = 0
+        centres = self._instance_centres()
+        i = 0
         for _ in range(tries):
             if placed >= n: break
             name = names[self.rng.integers(len(names))]
-            x, y = cells[self.rng.integers(len(cells))]
-            if self.prop_fits(name, x, y, need_floor):
-                self.stamp(name, x, y); placed += 1
+            x, y = cells[i % len(cells)]
+            i += 1
+            if not self.prop_fits(name, x, y, need_floor): continue
+            if not self._spaced(name, x, y, min_dist, centres): continue
+            self.stamp(name, x, y)
+            centres.append(self._prop_centre(name, x, y))
+            placed += 1
         return placed
 
     def cluster(self, names, cx, cy, n, radius=2, need_floor=True):
@@ -378,6 +423,16 @@ class Level:
                 self.stamp(name, x, y); placed += 1
         return placed
 
+    def vignette(self, cx, cy, pieces, need_floor=True):
+        """Author a small scene: [(prop, dx, dy), ...] around a story tile."""
+        placed = 0
+        for name, dx, dy in pieces:
+            x, y = int(round(cx + dx)), int(round(cy + dy))
+            if name not in self.ts.props: continue
+            if self.prop_fits(name, x, y, need_floor):
+                self.stamp(name, x, y); placed += 1
+        return placed
+
     def line_props(self, name, points, step=3, need_floor=True):
         """Stamp the same prop along a polyline of tile centres (e.g. lamps)."""
         placed = 0
@@ -387,6 +442,22 @@ class Level:
             for t in range(0, int(dist) + 1, step):
                 u = t / dist
                 x, y = int(round(ax + (bx - ax) * u)), int(round(ay + (by - ay) * u))
+                if self.prop_fits(name, x, y, need_floor):
+                    self.stamp(name, x, y); placed += 1
+        return placed
+
+    def line_mix(self, names, points, step=3, need_floor=True):
+        """Alternate props from [names] along a polyline (street furniture)."""
+        if not names: return 0
+        placed = 0
+        i = 0
+        for a, b in zip(points, points[1:]):
+            ax, ay = a; bx, by = b
+            dist = max(abs(bx - ax), abs(by - ay), 1)
+            for t in range(0, int(dist) + 1, step):
+                u = t / dist
+                x, y = int(round(ax + (bx - ax) * u)), int(round(ay + (by - ay) * u))
+                name = names[i % len(names)]; i += 1
                 if self.prop_fits(name, x, y, need_floor):
                     self.stamp(name, x, y); placed += 1
         return placed
@@ -732,9 +803,11 @@ class Level:
             elif kind in ("steam", "smoke"):
                 cy = (y + 0.15 * h) * T
             elif kind == "ember":
-                cy = (y + 0.25 * h) * T
+                # Bowl / brazier mouth (not the top rim — FX was floating behind).
+                cy = (y + 0.42 * h) * T
             self.obj("ambient", cx - 12, cy - 12, 24, 24, kind=kind)
-        # chimney / kitchen smoke over buildings (px from the sprite top-left)
+        # chimney / kitchen smoke: px from the building sprite top-left, at the
+        # stack mouth so the plume base sits on the chimney (not in the sky).
         for bd in self.buildings:
             for (px, py) in self.CHIMNEYS.get(bd["name"], ()):
                 self.obj("ambient", bd["tx"] * T + px - 12, bd["ty"] * T + py - 12, 24, 24, kind="smoke")
@@ -748,9 +821,10 @@ class Level:
     }
 
     CHIMNEYS = {
-        "ranger_cabin": ((31, 12),),
-        "apartment_block": ((19, 4),),
-        "noodle_shop": ((36, 12),),
+        "ranger_cabin": ((48, 20),),       # left stone chimney tip
+        "apartment_block": ((30, 8),),     # left roof stack
+        "noodle_shop": ((64, 22),),        # kitchen roof line
+        "tea_house": ((64, 18),),          # roof peak
     }
 
     # Night light pools (#35): prop -> (kind, glow radius px, pool centre as a
@@ -947,14 +1021,15 @@ SECRET_KINDS = {"glyph", "stash", "hidden", "moonflower"}
 # state when one of that state's rects covers the tile centre.
 GATE_ART = {
     "grotto": dict(size=(96, 64), interact=(46, 66),
+                   # Façade stays solid lit or dark; cave entry is ENTER (#57).
                    closed=[(16, 3, 19, 30), (58, 3, 19, 30), (35, 3, 23, 10), (14, 33, 65, 29), (35, 13, 23, 20)],
-                   open=[(16, 3, 19, 30), (58, 3, 19, 30), (35, 3, 23, 10), (14, 33, 65, 29)]),
+                   open=[(16, 3, 19, 30), (58, 3, 19, 30), (35, 3, 23, 10), (14, 33, 65, 29), (35, 13, 23, 20)]),
     # Designer's interaction point is the south side; on the Woods road
     # Kaela arrives from the meadow, so the game uses the north side (48, 10)
     "boulder": dict(size=(96, 64), interact=(48, 10),
-                    closed=[(0, 21, 96, 28)], open=[(64, 37, 29, 17)]),
+                    closed=[(0, 18, 96, 42)], open=[(58, 16, 38, 48)]),
     "bramble": dict(size=(64, 64), interact=(32, 20),
-                    closed=[(5, 39, 52, 22)], open=[(1, 39, 15, 22), (48, 39, 15, 22)]),
+                    closed=[(4, 16, 56, 46)], open=[(1, 39, 15, 22), (48, 39, 15, 22)]),
 }
 
 def gate_blocked_cells(g, state):
@@ -1054,12 +1129,14 @@ def map1():
     wall = clean_walls(~lv.floor)
     lv.floor = ~wall
     # ---- ability-gated nooks, carved through solid forest after clean_walls
-    nooks = [(50, 8), (12, 26)]                       # boulder top-left; tunnel enters from the west
+    # Mouth top-left of a 3×2 road boulder (same art as the south exit).
+    nooks = [(49, 8), (11, 26)]
     gated = np.zeros_like(wall)
     for (bx, by) in nooks:
-        gated[by:by + 2, bx - 4:bx] = True            # tunnel from the trail (+ its mouth)
-        gated[by - 2:by + 4, bx:bx + 4] = True        # 4x6 nook
-    # SCENT bramble: ridge trail → 2x2 bramble → hushdeer glade below,
+        gated[by:by + 2, bx - 3:bx] = True            # tunnel from the west
+        gated[by:by + 2, bx:bx + 3] = True            # 3-wide mouth under the boulder
+        gated[by - 2:by + 4, bx + 3:bx + 7] = True    # nook east of the boulder
+    # SCENT side-bramble: ridge + moonflowers → 2x2 thorns → hushdeer glade,
     # hidden inside the forest block between the ridge and the crossroads
     gated[8:11, 27:29] = True                         # bramble cells (+ the trail row above)
     gated[11:14, 26:30] = True                        # hidden glade
@@ -1068,6 +1145,15 @@ def map1():
     gated[25:28, 50:52] = True
     gated[28:31, 49:53] = True
     wall &= ~gated
+    # Nook mouths: seal above/below the 3-wide plug so you cannot walk around
+    # the road boulder without PUSH (same idea as the south meadow neck).
+    for (bx, by) in nooks:
+        wall[by - 1, bx:bx + 3] = True
+        wall[by + 2, bx:bx + 3] = True
+    # Egrove's clearing disk opens flanks around the thorns; seal both sides
+    # (and the pocket corners) so the fragment is only entered through the gate.
+    wall[26:29, 49] = True
+    wall[26:29, 52] = True
     # Main-route PUSH gate: the south road narrows to a 3-tile neck (rows
     # 40-41, x 40-42) that the fallen boulder fills
     wall[40:42, 43] = True
@@ -1109,24 +1195,43 @@ def map1():
                        ("standing_stone", 24, 22), ("standing_stone", 30, 22),
                        ("tent", 26, 30), ("campfire", 21, 31), ("radio_dish", 30, 3),
                        ("signpost", 14, 10), ("signpost", 37, 21), ("signpost", 7, 31),
-                       ("signpost", 33, 33), ("signpost", 45, 15), ("portal_platform", 41, 37)):
+                       ("signpost", 33, 33), ("signpost", 45, 15)):
         landmark(lv, name, x, y)
+    # Decor: authored lanterns (colliding — random scatter can seal secret paths),
+    # spaced forest wall, path-verge soft props, story-clearing vignettes.
     fringe = lv.fringe(wall)
     edge = lv.path_edge()
-    mid = lv.floor & ~lv.keepout_hard & ~fringe
     trees = ["tree_green", "tree_teal", "tree_blue", "tree_purple", "tree_pine", "tree_big"]
-    bigp = ["boulder", "log", "stump"]
+    bigp = ["log", "stump"]  # not boulder — random boulders choke ability-gate mouths
     bush = ["bush_green", "bush_glow", "rock_small", "rock_moss"]
-    soft = ["mushrooms", "flowers", "lantern"]
-    lv.scatter_on(trees, 34, fringe)
-    lv.scatter_on(bigp, 10, fringe)
-    lv.scatter_on(bush, 14, fringe | (edge & mid))
-    lv.scatter_on(soft, 24, edge)
-    lv.scatter_on(soft, 8, mid)
-    lv.cluster(["flowers", "mushrooms", "lantern"], *P["cross"], 4, radius=3)
-    lv.cluster(["flowers", "bush_glow"], *P["asha"], 3, radius=2)
-    lv.cluster(["rock_moss", "flowers"], *P["meadow"], 3, radius=3)
-    lv.cluster(["mushrooms", "flowers"], *P["hollow"], 3, radius=2)
+    lv.scatter_on(trees, 30, fringe, min_dist=2.4)
+    lv.scatter_on(bigp, 8, fringe, min_dist=4.0)
+    lv.scatter_on(bush, 10, edge, min_dist=3.2)
+    lv.scatter_on(["flowers", "mushrooms"], 8, edge, min_dist=4.0)
+    lv.vignette(*P["cross"], [
+        ("flowers", 2, 1), ("flowers", 1, -2), ("mushrooms", -1, 1), ("bush_glow", -2, 0),
+    ])
+    lv.vignette(*P["asha"], [
+        ("flowers", 1, 1), ("bush_glow", 2, -1), ("stump", -1, 2),
+    ])
+    lv.vignette(*P["pond"], [
+        ("flowers", -2, 2), ("flowers", 2, 1), ("rock_moss", 1, 2), ("bush_green", -1, 3),
+    ])
+    lv.vignette(*P["meadow"], [
+        ("flowers", -1, -1), ("flowers", 2, 0), ("rock_moss", 1, 2), ("bush_green", -2, 1),
+    ])
+    lv.vignette(*P["hollow"], [
+        ("mushrooms", 0, 1), ("mushrooms", -1, -1), ("flowers", 1, 0), ("bush_glow", 1, 1),
+    ])
+    lv.vignette(*P["ridge"], [
+        ("rock_small", 2, 0), ("log", 1, 2), ("rock_moss", -1, 1),
+    ])
+    lv.vignette(*P["cabin"], [
+        ("stump", 2, 2), ("flowers", 1, 3), ("bush_green", -1, 3),
+    ])
+    lv.vignette(*P["nest"], [
+        ("log", 1, 0), ("bush_green", -1, 1), ("rock_moss", 0, -1),
+    ])
     lv.building("ranger_cabin", 18, 2)
     # gameplay objects
     place(lv, "spawn", *P["spawn"])
@@ -1150,10 +1255,15 @@ def map1():
                   lockedTitle="WOODS EDGE",
                   lockedBody="The road south is blocked. The woods still want something from you.")
     place_entry(lv, "south", P["exit"][0], P["exit"][1] - 1.0)    # arriving back from the City
+    # One backup per stage: spawn only (no mid-woods rings).
     place(lv, "checkpoint", *P["spawn"], label="Crash Site")
-    place(lv, "checkpoint", P["cross"][0] - 0.5, P["cross"][1] + 3.5, label="Crossroads")
-    place(lv, "checkpoint", P["asha"][0] + 1.5, P["asha"][1] + 1.6, label="Asha's Camp")
-    place(lv, "checkpoint", P["meadow"][0] - 2.5, P["meadow"][1] - 1.0, label="South Meadow")
+    # Kaela's diagnostic skiff (landmark crashed_ship at 2,4) — lore on the
+    # walkable scar edge toward spawn, not on the prop footprint.
+    place(lv, "examine", 6.5, 8.2,
+          id="woods_skiff", title="DIAGNOSTIC SKIFF",
+          text="Hull still warm. Flight log ends mid-sentence: ORBITAL PASS · GAIA DIAG · CHANNEL LOCK — then static. "
+               "You woke here. Gaia was already waiting in the trees.",
+          clue="skiff_crash")
     place(lv, "examine", P["spawn"][0] + 1.8, P["spawn"][1] - 0.6,
           id="woods_plaque", title="WEATHERED PLAQUE",
           text="\"We asked to stay.\" A second line: \"Bodies to soil. Minds to Gaia.\"",
@@ -1203,11 +1313,13 @@ def map1():
     place(lv, "hidden", 13.5, 12.5, glimmer=18, was=(13.0, 43.6))
     woods_creatures_and_secrets(lv, nooks)
     woods_main_gates(lv)
+    # After all objects exist: add path-verge lanterns that don't seal secrets.
+    _place_woods_lanterns(lv, lv.path_edge())
     lv.write("world.tmj", "tilesets/woods.png")
     return ts
 
 # tiles that later get creatures / moonflowers / secrets / quest props (no props there)
-WOODS_RESERVED = ((47.5, 7.5), (44, 12.5), (47.5, 20.5), (13, 19), (40, 12.5), (28, 12.5),
+WOODS_RESERVED = ((43.5, 8.5), (44, 12.5), (47.5, 20.5), (13, 19), (40, 12.5), (28, 12.5),
                   (24.5, 7.5), (26.5, 8), (29.5, 8.2), (26.5, 11.5), (29.5, 11.5), (27, 13.5),
                   (5.5, 21.5), (6.1, 21.2), (4.9, 22.5), (4.5, 39), (6.1, 38.6), (15.5, 36),
                   (3.5, 30.5), (13.5, 12.5), (37.5, 26), (14, 38), (13, 17), (32.5, 5.5))
@@ -1231,33 +1343,58 @@ def woods_main_gates(lv):
 def woods_creatures_and_secrets(lv, nooks):
     """M2: creatures (journal + companions) and ability-gated optional secrets
     (the main-route gates are in woods_main_gates)."""
-    creature(lv, "glowmoth", 47.5, 7.5, 1.4, was=(28.5, 21.5))     # over the pond, only out at night
+    # Centre of the NE pond (water tiles ~41–45, 7–9). Flying — no floor needed.
+    creature(lv, "glowmoth", 43.5, 8.5, 1.0, was=(28.5, 21.5))
     creature(lv, "stoneturtle", 44, 12.5, 0.6, netted=True, was=(24.5, 24.5))   # netted on the pond bank
     creature(lv, "vinefox", 47.5, 20.5, 1.2, was=(18.5, 40.5))     # east grove
     creature(lv, "puffcap", 13, 19, 0.0, was=(11.5, 21.5))         # mossy hollow off the west loop
-    creature(lv, "brookling", 40, 12.5, 0.6, was=(24.5, 21.5))     # otter on the pond bank
-    creature(lv, "hushdeer", 28, 12.5, 0.8, gated=True, was=(30.0, 33.0))   # hidden glade, night only
+    creature(lv, "brookling", 15, 26, 0.6, was=(24.5, 21.5))       # west nook (behind PUSH boulder)
+    # Night-only inside the glade (vine fox SCENT opens the thorns above).
+    creature(lv, "hushdeer", 28, 12.5, 0.8, gated=True, was=(30.0, 33.0))
     place(lv, "pebble", 42.5, 11.5, was=(24.5, 26.5))               # pond shallows, south bank
-    # SCENT: bramble plugging the gap from the grove's stub into the glade
+    # SCENT (vine fox): bramble plugging the gap into the moonflower glade
     lv.obj("hiddenpath", 27 * T, 9 * T, 2 * T, 2 * T, pid=f"{29 * T}_{30 * T}")
     for (fx, fy) in ((24.5, 7.5), (26.5, 8), (29.5, 8.2), (26.5, 11.5), (29.5, 11.5), (27, 13.5)):
         place(lv, "moonflower", fx, fy)
     # the vine fox's sweetroot, under a 2x2 stump in the mossy hollow
     lv.obj("stump", 12 * T, 16 * T, 2 * T, 2 * T)
-    # PUSH: boulders in the nook mouths, pushed one tile east
+    # PUSH: 3×2 road boulders (exit stone). Open in place — pushX unused.
     (b1x, b1y), (b2x, b2y) = nooks
-    boulder(lv, b1x, b1y, 1, 0, was=(24, 4))
-    place(lv, "stash", b1x + 2.5, b1y + 3.5, glimmer=25, was=(26.5, 6.5))
-    boulder(lv, b2x, b2y, 1, 0, was=(29, 38))
-    place(lv, "glyph", b2x + 2.5, b2y + 3.5, glyph="woods_nook", was=(30.5, 41.5))
+    boulder(lv, b1x, b1y, 0, 0)
+    place(lv, "stash", b1x + 4.5, b1y + 3.5, glimmer=25, was=(26.5, 6.5))
+    boulder(lv, b2x, b2y, 0, 0)
+    place(lv, "glyph", b2x + 4.5, b2y + 3.5, glyph="woods_nook", was=(30.5, 41.5))
     # LIGHT: dark zones with a glyph inside, off the main trails
     darkzone(lv, 40, 11, 41, 13, was=(27, 26))                     # pond's west bank, under the reeds
     place(lv, "glyph", 40.5, 11.5, glyph="woods_pond", was=(28.5, 27.5))
     darkzone(lv, 2, 29, 4, 31, was=(11, 49))                       # west loop pocket
     place(lv, "glyph", 3.5, 30.5, glyph="woods_gate", was=(12.5, 50.5))
-    # SCENT: buried glimmer, invisible until the vine fox sniffs it out
+    # DIG: buried glimmer, invisible until the brookling is along
     place(lv, "hidden", 15.5, 36.0, glimmer=15, was=(12.5, 12.5))
     place(lv, "hidden", 37.5, 26.0, glimmer=20, was=(14.5, 46.5))
+
+def _place_woods_lanterns(lv, edge, want=8):
+    """Colliding lanterns can seal ability-gate mouths if scattered freely.
+    Try verge cells and keep a stamp only when validate() still passes."""
+    cells = lv.cells_of(edge)
+    lv.rng.shuffle(cells)
+    kept = 0
+    for x, y in cells:
+        if kept >= want: break
+        if not lv.prop_fits("lantern", x, y): continue
+        lv.stamp("lantern", x, y)
+        try:
+            lv.validate()
+            kept += 1
+        except SystemExit:
+            w, h, grid = lv.ts.props["lantern"]
+            for j in range(h):
+                for i in range(w):
+                    if grid[j][i] >= 0:
+                        lv.props[y + j, x + i] = -1
+            lv.instances = [(n, ix, iy) for n, ix, iy in lv.instances
+                            if not (n == "lantern" and ix == x and iy == y)]
+    return kept
 
 def landmark(lv, name, x, y):
     """Stamp a set-piece prop at tile (x, y) even on a keep-out (trail
@@ -1279,10 +1416,10 @@ def creature(lv, species, tx, ty, radius, **props):
     place(lv, "creature", tx, ty, species=species, radius=float(radius), **props)
 
 def boulder(lv, tx, ty, push_x, push_y, was=None):
-    """2x2-tile boulder with its top-left at tile (tx, ty); PUSH moves it by
-    (push_x, push_y) tiles"""
+    """3x2 road boulder (same art as the south exit) at tile (tx, ty).
+    Opens in place; pushX/pushY kept for Tiled compat (unused by runtime)."""
     extra = {"pid": f"{was[0] * T}_{was[1] * T}"} if was else {}
-    lv.obj("boulder", tx * T, ty * T, 2 * T, 2 * T, pushX=int(push_x), pushY=int(push_y), **extra)
+    lv.obj("boulder", tx * T, ty * T, 3 * T, 2 * T, pushX=int(push_x), pushY=int(push_y), **extra)
 
 def darkzone(lv, x0, y0, x1, y1, was=None):
     """darkness over tiles x0..x1, y0..y1 (inclusive), with a half-tile fringe"""
@@ -1412,10 +1549,10 @@ def map2():
                    (14, 35), (37, 35), (3, 5), (18, 5), (18, 9), (2, 13), (10, 19), (2, 21), (10, 28),
                    (41, 14), (49, 22), (44, 25), (47, 29), (16, 36), (23, 40), (35, 10), (43, 10)):
         landmark(lv, "street_lamp", x, y)
+    # Street furniture follows the roads; plazas get small authored sets.
     sidewalk = lv.floor & ~road
     curb = sidewalk & lv.dilate(road, 1)
     near_wall = sidewalk & lv.fringe(wall)
-    furniture = (curb | near_wall) & ~lawn
     lv.line_props("street_lamp", [(35, 4), (51, 4)], step=4)
     lv.line_props("street_lamp", [(35, 10), (42, 10)], step=3)
     lv.line_props("street_lamp", [(19, 2), (19, 9)], step=3)
@@ -1425,16 +1562,34 @@ def map2():
     lv.line_props("street_lamp", [(37, 29), (37, 30)], step=1)
     lv.line_props("street_lamp", [(23, 36), (23, 43)], step=3)
     lv.line_props("street_lamp", [(29, 36), (29, 43)], step=3)
-    lv.scatter_on(["planter_small", "bench", "bollard"], 22, furniture)
-    lv.scatter_on(["trash_bin", "hydrant", "vending_machine"], 12, near_wall)
-    lv.scatter_on(["planter_tree", "kiosk", "bus_stop"], 6, near_wall)
-    lv.scatter_on(["planter_tree", "planter_small"], 5, lawn)
-    lv.cluster(["bench", "planter_small"], *P["arch"], 3, radius=3)
-    lv.cluster(["bench", "trash_bin"], *P["voss"], 2, radius=2)
+    lv.line_mix(["bollard", "planter_small"], [(36, 5), (50, 5)], step=3)
+    lv.line_mix(["bollard", "planter_small"], [(36, 9), (41, 9)], step=3)
+    lv.line_mix(["bench", "planter_small"], [(20, 13), (20, 20)], step=3)
+    lv.line_mix(["bench", "planter_small"], [(32, 13), (32, 20)], step=3)
+    lv.line_mix(["bollard", "planter_small"], [(24, 37), (24, 42)], step=3)
+    lv.line_mix(["bollard", "planter_small"], [(28, 37), (28, 42)], step=3)
+    lv.scatter_on(["trash_bin", "hydrant"], 6, near_wall, min_dist=5.0)
+    lv.scatter_on(["vending_machine", "kiosk"], 3, near_wall, min_dist=7.0)
+    lv.scatter_on(["planter_tree"], 4, lawn, min_dist=4.0)
+    lv.vignette(*P["arch"], [
+        ("bench", -1, 1), ("planter_small", 1, 1), ("bench", 0, 2), ("planter_tree", 2, 0),
+    ])
+    lv.vignette(*P["voss"], [
+        ("bench", 1, 0), ("trash_bin", -1, 1), ("bollard", 2, 1),
+    ])
+    lv.vignette(*P["spawn"], [
+        ("planter_small", 2, 1), ("bench", -2, 1), ("bollard", 1, 2),
+    ])
+    lv.vignette(*P["echo7"], [
+        ("bench", 1, -1), ("planter_small", -1, 1), ("planter_tree", 2, 1),
+    ])
+    lv.vignette(*P["town"], [
+        ("planter_small", -2, 0), ("bench", -1, 1), ("bollard", -3, 1),
+    ])
     interior = np.zeros_like(wall)
     interior[1:-1, 1:-1] = (wall[1:-1, 1:-1] & wall[:-2, 1:-1] & wall[2:, 1:-1] & wall[1:-1, :-2] & wall[1:-1, 2:])
-    lv.scatter_on(["rooftop_ac", "solar_panel"], 22, interior, need_floor=False)
-    lv.scatter_on(["rooftop_vent"], 14, interior, need_floor=False)  # animated steam
+    lv.scatter_on(["rooftop_ac", "solar_panel"], 14, interior, need_floor=False, min_dist=3.5)
+    lv.scatter_on(["rooftop_vent"], 8, interior, need_floor=False, min_dist=4.0)
     for name, tx, ty, _ in LOTS:
         lv.building(name, tx, ty)
     place(lv, "spawn", *P["spawn"])
@@ -1464,10 +1619,6 @@ def map2():
     place_entry(lv, "south", P["gate"][0], P["gate"][1] - 0.5)
     place_entry(lv, "east", *P["town"])
     place(lv, "checkpoint", *P["spawn"], label="Arrival Plaza")
-    place(lv, "checkpoint", P["echo7"][0] + 1.5, P["echo7"][1] - 2.5, label="Echo District")
-    place(lv, "checkpoint", 21.5, 14.0, label="Archive Square")
-    place(lv, "checkpoint", P["gate"][0] + 2.0, P["gate"][1] + 0.5, label="South Gate")
-    place(lv, "checkpoint", P["town"][0] - 3.5, P["town"][1] + 1.5, label="Lantern Road")
     place(lv, "examine", P["spawn"][0] + 2.0, P["spawn"][1] + 1.2,
           id="city_arrival_post", title="PLAZA POST",
           text="WEST: market and Echo-7. SOUTH: the Archive Square. EAST: Lantern Gate and the road to Town. "
@@ -1587,14 +1738,23 @@ def map5():
     lv.line_props("street_lamp", [(33, 7), (33, 21)], step=4)
     lv.line_props("street_lamp", [(12, 21), (12, 25)], step=4)
     lv.line_props("street_lamp", [(20, 21), (20, 25)], step=4)
-    lv.scatter_on(["planter_small", "bench", "bollard"], 10, curb | near_wall)
-    lv.scatter_on(["trash_bin", "vending_machine", "planter_tree"], 6, near_wall)
-    lv.cluster(["bench", "planter_small", "planter_tree"], *P["mira"], 3, radius=2)
-    lv.cluster(["bollard", "planter_small"], *P["portal"], 3, radius=2)
+    lv.line_mix(["bollard", "planter_small"], [(13, 10), (13, 16)], step=3)
+    lv.line_mix(["bench", "planter_small"], [(25, 10), (25, 18)], step=3)
+    lv.scatter_on(["trash_bin", "vending_machine"], 3, near_wall, min_dist=5.0)
+    lv.scatter_on(["planter_tree"], 3, curb | near_wall, min_dist=4.5)
+    lv.vignette(*P["mira"], [
+        ("bench", 1, 1), ("planter_small", -1, 1), ("planter_tree", 2, 0), ("bollard", -2, 0),
+    ])
+    lv.vignette(*P["portal"], [
+        ("bollard", -1, 0), ("planter_small", 1, 0), ("bench", 0, 1),
+    ])
+    lv.vignette(*P["spawn"], [
+        ("planter_small", 1, 1), ("bollard", -1, 1),
+    ])
     interior = np.zeros_like(wall)
     interior[1:-1, 1:-1] = (wall[1:-1, 1:-1] & wall[:-2, 1:-1] & wall[2:, 1:-1] & wall[1:-1, :-2] & wall[1:-1, 2:])
-    lv.scatter_on(["rooftop_ac", "solar_panel"], 8, interior, need_floor=False)
-    lv.scatter_on(["rooftop_vent"], 5, interior, need_floor=False)
+    lv.scatter_on(["rooftop_ac", "solar_panel"], 6, interior, need_floor=False, min_dist=3.5)
+    lv.scatter_on(["rooftop_vent"], 4, interior, need_floor=False, min_dist=4.0)
     for name, tx, ty, _ in LOTS:
         lv.building(name, tx, ty)
     place(lv, "spawn", *P["spawn"])
@@ -1608,7 +1768,6 @@ def map5():
     place_entry(lv, "west", 4.5, P["mira"][1])
     place_entry(lv, "north", *P["spawn"])
     place(lv, "checkpoint", *P["spawn"], label="Lantern Gate")
-    place(lv, "checkpoint", *P["portal"], label="Market South")
     place(lv, "examine", P["mira"][0] + 1.6, P["mira"][1] + 0.4,
           id="town_stall", title="MIRA'S STALL",
           text="Salvage and colony trinkets. Pay in glimmer.",
@@ -1691,21 +1850,29 @@ def map3():
     seg_carve(lv.keepout, P["spawn"], (P["spawn"][0], 0.0), 2.6)   # north road to the City stays clear
     for k, (x, y) in P.items():
         disk_carve(lv.keepout, x, y, 2.8); disk_carve(lv.keepout_hard, x, y, 1.6)
-    # Scenery: heavy wreckage against ruin walls; clutter in pockets; lights on path edge
+    # Scenery: wreckage hugs walls; path edges get spaced tech/lights; nodes get dumps.
     fringe = lv.fringe(wall)
     edge = lv.path_edge()
-    pocket = lv.floor & ~lv.keepout & ~lv.keepout_hard
     heavy = ["rubble_large", "wrecked_car_v", "wrecked_car_h", "dumpster", "broken_pillar", "barricade"]
     clutter = ["rubble_small", "barrel_purple", "barrel_toxic", "crate", "drone_wreck", "vending_broken"]
     tech = ["terminal", "steam_vent", "loose_cables"]
-    lv.scatter_on(heavy, 10, fringe)
-    lv.scatter_on(clutter, 10, fringe | pocket)
-    lv.scatter_on(tech, 8, edge | fringe)
-    lv.scatter_on(["steam_vent"], 6, edge | pocket)  # ground vents — animated steam
-    lv.scatter_on(["neon_streetlight"], 6, edge)
-    lv.cluster(["barrel_purple", "crate", "rubble_small"], *P["h2"], 4, radius=2)
-    lv.cluster(["barricade", "rubble_small"], *P["spawn"], 3, radius=3)
-    lv.cluster(["drone_wreck", "barrel_toxic"], *P["portal"], 3, radius=3)
+    lv.scatter_on(heavy, 8, fringe, min_dist=4.5)
+    lv.scatter_on(clutter, 6, fringe, min_dist=3.5)
+    lv.scatter_on(tech, 5, edge, min_dist=4.0)
+    lv.scatter_on(["steam_vent"], 4, edge, min_dist=5.0)
+    lv.scatter_on(["neon_streetlight"], 5, edge, min_dist=5.5)
+    lv.vignette(*P["spawn"], [
+        ("barricade", 1, 1), ("rubble_small", -1, 2), ("crate", 2, 0),
+    ])
+    lv.vignette(*P["h2"], [
+        ("barrel_purple", 0, 1), ("crate", 1, -1), ("rubble_small", -1, 0), ("barrel_toxic", 1, 1),
+    ])
+    lv.vignette(*P["portal"], [
+        ("drone_wreck", 1, 0), ("barrel_toxic", -1, 1), ("rubble_small", 0, 2),
+    ])
+    lv.vignette(*P["key"], [
+        ("broken_pillar", -1, 1), ("loose_cables", 1, 0), ("terminal", 0, -1),
+    ])
     # Aetherian shrine on the SW optional road (landmark before Memory 5 deep wing)
     lv.building("ruin_shrine", 10, 31)
     lv.carve_lots(wall, [(9, 30, 14, 37)],
@@ -1740,8 +1907,6 @@ def map3():
     place_entry(lv, "north", *P["spawn"])
     place(lv, "portal", *P["portal"])
     place(lv, "checkpoint", *P["spawn"], label="Ruined Landing")
-    place(lv, "checkpoint", P["h2"][0], P["h2"][1], label="Central Clearing")
-    place(lv, "checkpoint", P["portal"][0] - 2.5, P["portal"][1] - 2.5, label="Extraction Approach")
     place(lv, "examine", P["spawn"][0] + 1.5, P["spawn"][1] + 1.0,
           id="ruins_landing_mark", title="LANDING MARK",
           text="UEC paint over Aetherian stone: \"Wipe authorized.\" Someone scratched it out. North walks back to the City.",
@@ -1805,18 +1970,26 @@ def map4():
     for k, (x, y) in P.items():
         disk_carve(lv.keepout, x, y, 2.8)
         disk_carve(lv.keepout_hard, x, y, 1.6)
-    # Scenery: pylons/braziers frame the processional hall; soft markers near dais
+    # Scenery: processional frame along the hall; relics clustered at the dais.
     fringe = lv.fringe(wall)
     edge = lv.path_edge()
     dais_edge = lv.floor & lv.dilate(dais, 1) & ~dais
     solemn = ["orb_pylon", "orb_pylon_large", "energy_brazier", "broken_pillar"]
     soft = ["data_crystals", "gold_glyph_stone", "memory_pedestal", "root_bulb", "floor_ring_marker"]
     gear = ["core_terminal", "core_console", "lattice_panel"]
-    lv.scatter_on(solemn, 8, fringe | edge)
-    lv.scatter_on(soft, 8, dais_edge | edge)
-    lv.scatter_on(gear, 4, fringe)
-    lv.cluster(["floor_ring_marker", "gold_glyph_stone"], *P["gaia"], 4, radius=3)
-    lv.cluster(["energy_brazier", "orb_pylon"], *P["portal"], 3, radius=3)
+    lv.scatter_on(solemn, 6, fringe | edge, min_dist=4.0)
+    lv.scatter_on(soft, 5, dais_edge, min_dist=3.5)
+    lv.scatter_on(gear, 3, fringe, min_dist=5.0)
+    lv.vignette(*P["gaia"], [
+        ("floor_ring_marker", -1, 0), ("gold_glyph_stone", 1, 0),
+        ("memory_pedestal", 0, 1), ("data_crystals", -1, 1),
+    ])
+    lv.vignette(*P["portal"], [
+        ("energy_brazier", -1, 0), ("orb_pylon", 1, 0), ("energy_brazier", 0, 1),
+    ])
+    lv.vignette(*P["spawn"], [
+        ("orb_pylon", 1, 1), ("lattice_panel", -1, 0),
+    ])
     place(lv, "spawn", *P["spawn"])
     place(lv, "npc", *P["gaia"], name="gaia")
     place(lv, "health", *P["h1"])
@@ -1826,7 +1999,6 @@ def map4():
     place(lv, "drone", *P["d3"], startAngle=2.5, kind="shield")
     place(lv, "portal", *P["portal"])
     place(lv, "checkpoint", *P["spawn"], label="Core Threshold")
-    place(lv, "checkpoint", *P["gaia"], label="Core Record")
     place(lv, "examine", P["spawn"][0] + 1.5, P["spawn"][1] + 1.2,
           id="core_console", title="CORE CONSOLE",
           text="Activation waits on a living neural match. A remote wipe is already queued.",

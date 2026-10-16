@@ -48,7 +48,7 @@
       "lines": [
         {
           "speaker": "VOSS",
-          "text": "Enough. Show me what you found — before this kills another station.",
+          "text": "Enough. Show me what you found \u2014 before this kills another station.",
           "voice": "audio/voices/cut_ending_a_p2_l1.mp3"
         }
       ]
@@ -70,7 +70,7 @@
       "lines": [
         {
           "speaker": "N",
-          "text": "Kaela opens every memory on his channel: the war they refused, the vote to merge into Gaia, the fear beside the hope — and the child in the woods whose mind became the key.",
+          "text": "Kaela opens every memory on his channel: the war they refused, the vote to merge into Gaia, the fear beside the hope \u2014 and the child in the woods whose mind became the key.",
           "voice": "audio/voices/cut_ending_a_p3_l1.mp3"
         }
       ]
@@ -92,13 +92,13 @@
       "lines": [
         {
           "speaker": "VOSS",
-          "text": "I thought she was Station Seven again — a lattice that wakes and eats a colony. I was hunting software.",
-          "voice": ""
+          "text": "I thought she was Station Seven again \u2014 a lattice that wakes and eats a colony. I was hunting software.",
+          "voice": "audio/voices/cut_ending_a_p4_l1.mp3"
         },
         {
           "speaker": "VOSS",
-          "text": "This is a people who asked to stay. They chose peace over a winnable war. They merged so their sun could not erase them. Your mind is their lock — not a weapon I can purge.",
-          "voice": ""
+          "text": "This is a people who asked to stay. They chose peace over a winnable war. They merged so their sun could not erase them. Your mind is their lock \u2014 not a weapon I can purge.",
+          "voice": "audio/voices/cut_ending_a_p4_l2.mp3"
         },
         {
           "speaker": "VOSS",
@@ -107,7 +107,7 @@
         },
         {
           "speaker": "VOSS",
-          "text": "Station Seven was a wound. This… this is a people. I was wrong about what they were. I will not erase a civilization to quiet my fear.",
+          "text": "Station Seven was a wound. This\u2026 this is a people. I was wrong about what they were. I will not erase a civilization to quiet my fear.",
           "voice": "audio/voices/cut_ending_a_p4_l2.mp3"
         }
       ]
@@ -130,7 +130,7 @@
       "lines": [
         {
           "speaker": "GAIA",
-          "text": "Authorization accepted. The colony will register my presence as soft load. I will learn their threat model — not overwrite it.",
+          "text": "Authorization accepted. The colony will register my presence as soft load. I will learn their threat model \u2014 not overwrite it.",
           "voice": "audio/voices/cut_ending_a_p5_l1.mp3"
         }
       ],

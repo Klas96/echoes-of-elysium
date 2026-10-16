@@ -20,6 +20,25 @@ void main() {
     expect(SaveService.data.glimmer, 2);
   });
 
+  test('enemy levels scale with kind danger and map tier', () {
+    expect(DroneKind.swarm.baseLevel, 1);
+    expect(DroneKind.scout.baseLevel, 2);
+    expect(DroneKind.sniper.baseLevel, 3);
+    expect(DroneKind.shield.baseLevel, 4);
+    expect(EnemyLevels.mapBonus(1), 0);
+    expect(EnemyLevels.mapBonus(2), 1);
+    expect(EnemyLevels.mapBonus(3), 2);
+    expect(EnemyLevels.mapBonus(4), 3);
+    expect(EnemyLevels.forDrone(DroneKind.scout, gameLevel: 1), 2);
+    expect(EnemyLevels.forDrone(DroneKind.shield, gameLevel: 4), 7);
+    expect(EnemyLevels.forSentinel(gameLevel: 2), 8);
+  });
+
+  test('higher enemy level grants more xp', () {
+    Progression.onDroneKilled(DroneKind.scout, enemyLevel: 5);
+    expect(Progression.xp, greaterThan(15));
+  });
+
   test('gear bonuses stack on level', () {
     SaveService.data.level = 4; // +2 damage from levels
     SaveService.data.equipped = {'rifle': 'pulse_optic'}; // +5

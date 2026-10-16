@@ -6,10 +6,14 @@ import '../creatures/bonds.dart';
 import '../creatures/day_cycle.dart';
 import '../creatures/interaction.dart';
 import '../creatures/journal_ui.dart';
+import '../creatures/region_gates.dart';
 import '../game/adventure.dart';
 import '../game/game_state.dart';
+import '../game/memories.dart';
 import '../game/save_service.dart';
+import '../game/story_beats.dart';
 import '../game/well_rested.dart';
+import '../ui/cutscenes.dart';
 import 'room_data.dart';
 import 'room_panel.dart';
 import 'room_services.dart';
@@ -68,7 +72,9 @@ String promptFor(RoomSpot s) => switch (s.kind) {
       'rest' => 'REST',
       'shop' => 'ORDER',
       'errand' => 'TALK',
-      'lore' || 'clue' || 'note' => 'READ',
+      'lore' || 'note' => 'READ',
+      'clue' =>
+        (s.id == 'pond_fragment' || s.id == 'merge_draft') ? 'TAKE' : 'READ',
       'stash' => 'OPEN CHEST',
       'journal' => 'JOURNAL',
       'map' => 'MAP',
@@ -109,7 +115,9 @@ void useSpot(RoomData room, RoomSpot s) {
         Bonds.addGlimmer(5);
         GameToast.show('CLUE LOGGED', body: '+5 glimmer · Field Notes', color: _book, compact: true);
       }
-    case 'archive_library/reading_desk':
+    case 'archive_library/merge_draft':
+      _takeMergeDraft();
+    case 'archive_library/reading_lamp':
       _flavour(RoomText.readingDesk);
     // --- ranger cabin ---
     case 'ranger_cabin/asha_note':
@@ -124,8 +132,49 @@ void useSpot(RoomData room, RoomSpot s) {
       _wallMap();
     case 'ranger_cabin/stove':
       _flavour(RoomText.stove);
+    case 'pond_grotto/pond_fragment':
+      _pondFragment();
+    case 'pond_grotto/drip_wall':
+      _flavour(RoomText.grottoDrip);
+    case 'pond_grotto/pool_edge':
+      _flavour(RoomText.grottoPool);
     default:
       _flavour(_flavourFromNote(s.note));
+  }
+}
+
+void _pondFragment() {
+  if (SaveService.data.collected.contains(woodsPondFragment)) {
+    RoomPanel.show(const RoomPanelData(
+        title: 'Empty alcove', color: _plain, pages: [RoomText.grottoFragmentGone]));
+    return;
+  }
+  SaveService.data.collected.add(woodsPondFragment);
+  GameState.onFragmentCollected();
+  Memories.onFragmentPicked();
+  SfxManager().playChime();
+  RoomPanel.show(const RoomPanelData(
+      title: 'Memory fragment', color: Color(0xFFE8D0FF), pages: [RoomText.grottoFragmentTake]));
+}
+
+/// First Memory Draft on the archive desk — fires Asha's archive_ash beat.
+void _takeMergeDraft() {
+  if (Adventure.hasClue('archive_first_memory')) {
+    RoomPanel.show(const RoomPanelData(
+        title: 'Empty desk', color: _plain, pages: [RoomText.mergeDraftGone]));
+    return;
+  }
+  Adventure.discover('archive_first_memory');
+  Adventure.discover('asha_on_archive');
+  Adventure.setFlag('archive_opened');
+  Bonds.addGlimmer(12);
+  SfxManager().playChime();
+  GameToast.show('DRAFT TAKEN', body: '+12 glimmer · clue logged', color: _archivist, compact: true);
+  RoomPanel.show(const RoomPanelData(
+      title: 'First Memory Draft', color: _archivist, pages: [RoomText.mergeDraftTake]));
+  // Asha on comms (archive_ash) — stacks over the room once the frame settles.
+  if (!Cutscenes.seen(Cutscenes.archiveAsh)) {
+    StoryBeats.onArchiveOpened();
   }
 }
 

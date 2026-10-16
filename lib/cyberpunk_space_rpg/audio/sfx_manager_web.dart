@@ -16,12 +16,42 @@ class SfxManager {
   html.AudioElement? _chime;
   html.AudioElement? _currentVoice;
 
+  double _userVolume = 1.0;
+  bool _enabled = true;
+
+  static const _baseFoot = 0.45;
+  static const _baseDamage = 0.7;
+  static const _basePortal = 0.75;
+  static const _baseShoot = 0.85;
+  static const _baseChime = 0.55;
+  static const _baseVoice = 1.0;
+
+  double get _scale => _enabled ? _userVolume.clamp(0.0, 1.0) : 0.0;
+  bool get _audible => _scale > 0.001;
+
   Future<void> init() async {
     _footstep = _preload('audio/sfx/footstep_grass.mp3');
     _damage = _preload('audio/sfx/damage_hit.mp3');
     _portal = _preload('audio/sfx/portal.mp3');
     _shoot = _preload('audio/sfx/shoot.mp3');
     _chime = _preload('audio/sfx/computer_beep.wav');
+    _applyVolumes();
+  }
+
+  Future<void> applyUserVolume(double volume, {required bool enabled}) async {
+    _userVolume = volume.clamp(0.0, 1.0);
+    _enabled = enabled;
+    _applyVolumes();
+  }
+
+  void _applyVolumes() {
+    final s = _scale;
+    _footstep?.volume = _baseFoot * s;
+    _damage?.volume = _baseDamage * s;
+    _portal?.volume = _basePortal * s;
+    _shoot?.volume = _baseShoot * s;
+    _chime?.volume = _baseChime * s;
+    _currentVoice?.volume = _baseVoice * s;
   }
 
   html.AudioElement _preload(String path) {
@@ -35,6 +65,7 @@ class SfxManager {
   }
 
   void _play(html.AudioElement? el, String label) {
+    if (!_audible) return;
     if (el == null) {
       print('SFX not ready: $label');
       return;
@@ -51,10 +82,16 @@ class SfxManager {
   /// Soft chime for bonds and finds (reuses the computer beep).
   Future<void> playChime() async => _play(_chime, 'chime');
 
+  /// Dialogue / cutscene VO — respects SFX mute / volume.
   Future<void> playVoice(String assetPath) async {
+    if (!_audible) {
+      await stopVoice();
+      return;
+    }
     try {
       _currentVoice?.pause();
-      _currentVoice = html.AudioElement(_url(assetPath))..volume = 1.0;
+      _currentVoice =
+          html.AudioElement(_url(assetPath))..volume = _baseVoice * _scale;
       await _currentVoice!.play();
     } catch (_) {}
   }
