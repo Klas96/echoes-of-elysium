@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/components/ambient_prop_fx.dart';
@@ -13,6 +14,13 @@ void main() {
     final codec = await ui.instantiateImageCodec(File(path).readAsBytesSync());
     final image = (await codec.getNextFrame()).image;
     return (image.width, image.height);
+  }
+
+  Future<(int, int, Uint8List)> rgba(String path) async {
+    final codec = await ui.instantiateImageCodec(File(path).readAsBytesSync());
+    final image = (await codec.getNextFrame()).image;
+    final data = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+    return (image.width, image.height, data!.buffer.asUint8List());
   }
 
   const sprites = 'assets/images/sprites';
@@ -94,6 +102,56 @@ void main() {
     await expectSize(tester, '$sprites/obstacles/story_gate.png', 96, 96);
     await expectSize(tester, '$sprites/obstacles/story_gate_open.png', 96, 96);
     await expectSize(tester, '$sprites/obstacles/story_gate_pulse.png', 192, 96);
+  });
+
+  testWidgets('woods south exit is a woods treeline or the meadow road (#55)', (tester) async {
+    const lockedPath = 'assets/images/obstacles/woods_south_exit_locked.png';
+    const openPath = 'assets/images/obstacles/woods_south_exit_open.png';
+    await expectSize(tester, lockedPath, 160, 64);
+    await expectSize(tester, openPath, 160, 96);
+    await tester.runAsync(() async {
+      final (lw, lh, lpx) = await rgba(lockedPath);
+      expect((lw, lh), (160, 64));
+      var clear = 0;
+      for (var i = 3; i < lpx.length; i += 4) {
+        if (lpx[i] != 255) clear++;
+      }
+      expect(clear, 0, reason: 'locked treeline covers the grass gap');
+
+      final (ow, oh, opx) = await rgba(openPath);
+      expect((ow, oh), (160, 96));
+      // Two-tile dirt road, same columns as the meadow path (tiles 41–42).
+      var offRoad = 0, onRoad = 0;
+      for (var y = 0; y < oh; y++) {
+        for (var x = 0; x < ow; x++) {
+          final a = opx[(y * ow + x) * 4 + 3];
+          final road = x >= 32 && x < 96;
+          if (road && a != 255) onRoad++;
+          if (!road && a != 0) offRoad++;
+        }
+      }
+      expect(onRoad, 0, reason: 'the road column is solid');
+      expect(offRoad, 0, reason: 'grass verges stay the map tiles');
+    });
+    final src = File('lib/cyberpunk_space_rpg/game/custom_map_game.dart').readAsStringSync();
+    expect(src, contains("'obstacles/woods_south_exit_locked.png'"));
+    expect(src, contains("'obstacles/woods_south_exit_open.png'"));
+    final edge = File('lib/cyberpunk_space_rpg/components/map_edge_exit.dart').readAsStringSync();
+    expect(edge, contains('LayerPriority.MAP + 1'));
+    final tmj = jsonDecode(File('assets/images/maps/world.tmj').readAsStringSync()) as Map;
+    final objects = ((tmj['layers'] as List).firstWhere((l) => l['name'] == 'gameplay') as Map)['objects'] as List;
+    final exit = objects.cast<Map>().firstWhere((o) => o['name'] == 'mapexit');
+    expect(exit['width'], 160);
+    expect(exit['height'], 64);
+    expect(exit['x'], 1280);
+    expect(exit['y'], 1344);
+    final boulder = objects.cast<Map>().firstWhere((o) {
+      if (o['name'] != 'abilitygate') return false;
+      final props = {for (final p in (o['properties'] as List).cast<Map>()) p['name']: p['value']};
+      return props['gate'] == 'woods_boulder';
+    });
+    expect(boulder['y'] + boulder['height'], exit['y'], reason: 'boulder sits on the tile north of the exit');
+    expect(boulder['x'], exit['x']);
   });
 
   test('new asset folders are listed in pubspec', () {
