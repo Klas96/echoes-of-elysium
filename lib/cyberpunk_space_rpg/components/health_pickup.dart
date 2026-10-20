@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:bonfire/bonfire.dart';
 import 'package:flutter/material.dart';
+import '../audio/sfx_manager.dart';
 import 'custom_player.dart';
 
 class HealthPickup extends GameDecoration {
@@ -34,6 +35,7 @@ class HealthPickup extends GameDecoration {
       _collected = true;
       CustomPlayer.healthNotifier.value =
           (CustomPlayer.healthNotifier.value + _healAmount).clamp(0, CustomPlayer.maxHealth);
+      SfxManager().playHeal();
       onCollected?.call();
       removeFromParent();
     }
