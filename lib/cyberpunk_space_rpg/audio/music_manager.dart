@@ -115,12 +115,20 @@ class MusicManager {
     }
   }
 
-  /// Resume / replay after a click, tap, or key (browser autoplay unlock).
+  /// Warm / resume the web audio context after a click, tap, or key.
+  ///
+  /// Safe to call before [play] (title screen) and again after map music is
+  /// queued — Chrome often needs [play] itself to run inside a gesture turn.
   Future<void> unlockAfterGesture() async {
-    if (_currentTrack == null || !_shouldPlay) return;
     await _ensureReady();
     final p = _player;
     if (p == null) return;
+    try {
+      // Resume even with no track so later play() is allowed on this context.
+      await p.resume();
+    } catch (_) {}
+    if (_currentTrack == null || !_shouldPlay) return;
+    if (!_awaitingGesture && p.state == PlayerState.playing) return;
     try {
       await p.resume();
       await Future<void>.delayed(const Duration(milliseconds: 40));
@@ -135,6 +143,7 @@ class MusicManager {
       await play(track);
     } catch (e) {
       debugPrint('MusicManager unlock: $e');
+      _awaitingGesture = true;
     }
   }
 
