@@ -76,7 +76,7 @@ String promptFor(RoomSpot s) => switch (s.kind) {
       'clue' =>
         (s.id == 'pond_fragment' || s.id == 'merge_draft') ? 'TAKE' : 'READ',
       'stash' => 'OPEN CHEST',
-      'journal' => 'JOURNAL',
+      'journal' => 'MENU',
       'map' => 'MAP',
       _ => 'EXAMINE',
     };
@@ -125,7 +125,7 @@ void useSpot(RoomData room, RoomSpot s) {
     case 'ranger_cabin/stash_chest':
       _stash();
     case 'ranger_cabin/desk_journal':
-      GameToast.show('JOURNAL',
+      GameToast.show('MENU',
           body: RoomText.journalCount(Bonds.befriendedCount, Bonds.total), color: _asha, compact: true);
       Journal.show();
     case 'ranger_cabin/wall_map':
@@ -169,7 +169,7 @@ void _takeMergeDraft() {
   Adventure.setFlag('archive_opened');
   Bonds.addGlimmer(12);
   SfxManager().playChime();
-  GameToast.show('DRAFT TAKEN', body: '+12 glimmer · clue logged', color: _archivist, compact: true);
+  GameToast.show('DRAFT TAKEN', body: '+12 glimmer · examined', color: _archivist, compact: true);
   RoomPanel.show(const RoomPanelData(
       title: 'First Memory Draft', color: _archivist, pages: [RoomText.mergeDraftTake]));
   // Asha on comms (archive_ash) — stacks over the room once the frame settles.

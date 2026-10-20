@@ -24,7 +24,6 @@ import '../components/story_gate.dart';
 import '../components/ambient_prop_fx.dart';
 import '../components/lamp_light.dart';
 import 'well_rested.dart';
-import '../audio/audio_settings.dart';
 import '../audio/audio_unlock.dart';
 import '../audio/music_manager.dart';
 import '../creatures/bonds.dart';
@@ -1113,7 +1112,7 @@ class IntroScreen extends StatelessWidget {
                         ? 'Tap to move · tap foe to shoot · WASD optional'
                         : kDebugMode
                             ? 'Click pathfind · click foe / T shoot · WASD · Esc · J · I · `'
-                            : 'Click pathfind · click foe / T to shoot · WASD · Esc menu · J · I',
+                            : 'Click pathfind · click foe / T to shoot · WASD · Esc Menu · J · I',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.white24, fontSize: 11, letterSpacing: 1.2)),
                 const SizedBox(height: 10),
@@ -1478,6 +1477,15 @@ Future<void> _startLevel(BonfireGameInterface game, int level) async {
   Equipment.onOpenChanged = onOverlay;
   Shop.onOpenChanged = onOverlay;
   QuestBoard.onOpenChanged = onOverlay;
+  Journal.returnToTitle = (context) async {
+    final nav = Navigator.of(context);
+    Journal.hide();
+    await _leaveMap();
+    nav.pushReplacement(MaterialPageRoute(builder: (_) => const IntroScreen()));
+  };
+  Equipment.openInMenu = () => Journal.show(tab: Journal.tabItems);
+  Equipment.toggleInMenu = Journal.toggleItems;
+  Equipment.hideInMenu = Journal.hide;
   Journal.dismissOthers = () {
     Equipment.open.value = false;
     Shop.open.value = false;
@@ -1582,7 +1590,9 @@ KeyEventResult _handleDebugKey(FocusNode _, KeyEvent event) {
     return KeyEventResult.handled;
   }
   if (event is KeyDownEvent &&
-      (event.logicalKey == LogicalKeyboardKey.keyJ || event.logicalKey == LogicalKeyboardKey.keyM) &&
+      (event.logicalKey == LogicalKeyboardKey.keyJ ||
+          event.logicalKey == LogicalKeyboardKey.keyM ||
+          event.logicalKey == LogicalKeyboardKey.keyP) &&
       !_paused.value) {
     Journal.toggle();
     return KeyEventResult.handled;
@@ -1590,7 +1600,7 @@ KeyEventResult _handleDebugKey(FocusNode _, KeyEvent event) {
   if (event is KeyDownEvent &&
       event.logicalKey == LogicalKeyboardKey.keyI &&
       !_paused.value) {
-    Equipment.toggle();
+    Journal.toggleItems();
     return KeyEventResult.handled;
   }
   if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
@@ -1610,11 +1620,8 @@ KeyEventResult _handleDebugKey(FocusNode _, KeyEvent event) {
       QuestBoard.hide();
       return KeyEventResult.handled;
     }
-  }
-  if (event is KeyDownEvent &&
-      (event.logicalKey == LogicalKeyboardKey.escape ||
-          event.logicalKey == LogicalKeyboardKey.keyP)) {
-    _setPaused(!_paused.value);
+    // Esc with nothing open → journal hub (replaces the old pause menu).
+    Journal.show();
     return KeyEventResult.handled;
   }
   return KeyEventResult.ignored;
@@ -2117,7 +2124,7 @@ class _NpcDialogueLayerState extends State<_NpcDialogueLayer> {
     final gift = choice.giveItem;
     if (gift != null && !Bonds.hasItem(gift) && !Bonds.usedItem(gift)) {
       GameToast.show((itemLabels[gift] ?? gift).toUpperCase(),
-          body: 'Key item · Journal → Clues', color: const Color(0xFFFFE08A), compact: true, item: gift);
+          body: 'Key item · Menu → Items (I)', color: const Color(0xFFFFE08A), compact: true, item: gift);
     }
     if (choice.setFlag == 'mira_showed_board') {
       choice.apply();
@@ -3215,365 +3222,6 @@ class _CyberButton extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Audio settings (pause menu)
-// ---------------------------------------------------------------------------
-
-class _AudioSettingsPanel extends StatelessWidget {
-  const _AudioSettingsPanel();
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: Listenable.merge([
-        AudioSettings.musicVolume,
-        AudioSettings.sfxVolume,
-        AudioSettings.musicOn,
-        AudioSettings.sfxOn,
-      ]),
-      builder: (_, __) => Container(
-        width: double.infinity,
-        padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.03),
-          border: Border.all(color: Colors.white12),
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text('AUDIO',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                    color: Colors.white38,
-                    fontSize: 10,
-                    letterSpacing: 2.5,
-                    fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            _AudioRow(
-              label: 'MUSIC',
-              volume: AudioSettings.musicVolume.value,
-              enabled: AudioSettings.musicOn.value,
-              color: const Color(0xFF00FFCC),
-              onVolume: AudioSettings.setMusicVolume,
-              onEnabled: AudioSettings.setMusicOn,
-            ),
-            const SizedBox(height: 4),
-            _AudioRow(
-              label: 'SFX',
-              volume: AudioSettings.sfxVolume.value,
-              enabled: AudioSettings.sfxOn.value,
-              color: const Color(0xFFFFE08A),
-              onVolume: AudioSettings.setSfxVolume,
-              onEnabled: AudioSettings.setSfxOn,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _AudioRow extends StatelessWidget {
-  final String label;
-  final double volume;
-  final bool enabled;
-  final Color color;
-  final ValueChanged<double> onVolume;
-  final ValueChanged<bool> onEnabled;
-
-  const _AudioRow({
-    required this.label,
-    required this.volume,
-    required this.enabled,
-    required this.color,
-    required this.onVolume,
-    required this.onEnabled,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final pct = (volume * 100).round();
-    return Row(
-      children: [
-        SizedBox(
-          width: 48,
-          child: Text(label,
-              style: TextStyle(
-                  color: color.withValues(alpha: enabled ? 0.9 : 0.35),
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.2)),
-        ),
-        Expanded(
-          // Keep focus off the slider so WASD/arrows stay with the game.
-          child: ExcludeFocus(
-            child: SliderTheme(
-              data: SliderTheme.of(context).copyWith(
-                trackHeight: 2,
-                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-                overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
-                activeTrackColor: color.withValues(alpha: enabled ? 0.85 : 0.25),
-                inactiveTrackColor: Colors.white12,
-                thumbColor: enabled ? color : Colors.white24,
-                overlayColor: color.withValues(alpha: 0.15),
-              ),
-              child: Slider(
-                value: volume,
-                onChanged: enabled ? onVolume : null,
-              ),
-            ),
-          ),
-        ),
-        SizedBox(
-          width: 36,
-          // Keep the stored level visible while muted — the ON/OFF chip
-          // already says OFF (avoid "OFF OFF").
-          child: Text('$pct%',
-              textAlign: TextAlign.right,
-              style: TextStyle(
-                  color: enabled ? Colors.white54 : Colors.white24,
-                  fontSize: 10,
-                  letterSpacing: 0.5)),
-        ),
-        const SizedBox(width: 4),
-        GestureDetector(
-          onTap: () => onEnabled(!enabled),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: (enabled ? color : Colors.white24).withValues(alpha: 0.12),
-              border: Border.all(
-                  color: (enabled ? color : Colors.white24).withValues(alpha: 0.55)),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Text(enabled ? 'ON' : 'OFF',
-                style: TextStyle(
-                    color: enabled ? color : Colors.white38,
-                    fontSize: 9,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1)),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Pause menu (+ collected memories browser)
-// ---------------------------------------------------------------------------
-
-class _PauseMenu extends StatefulWidget {
-  const _PauseMenu();
-
-  @override
-  State<_PauseMenu> createState() => _PauseMenuState();
-}
-
-class _PauseMenuState extends State<_PauseMenu> {
-  bool _memories = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: Colors.black.withValues(alpha: 0.7),
-      alignment: Alignment.center,
-      child: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 440),
-            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 28),
-            decoration: BoxDecoration(
-              color: const Color(0xFF06060F).withValues(alpha: 0.96),
-              border: Border.all(color: const Color(0xFF00FFCC).withValues(alpha: 0.6)),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: _memories
-                ? _CollectedMemoriesPanel(onBack: () => setState(() => _memories = false))
-                : Column(mainAxisSize: MainAxisSize.min, children: [
-                    const Text('PAUSED',
-                        style: TextStyle(
-                            color: Color(0xFF00FFCC),
-                            fontSize: 26,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 6)),
-                    const SizedBox(height: 22),
-                    _CyberButton(
-                      label: 'RESUME',
-                      filled: true,
-                      wide: true,
-                      onTap: () => _setPaused(false),
-                    ),
-                    const SizedBox(height: 12),
-                    _CyberButton(
-                      label: 'JOURNAL',
-                      wide: true,
-                      color: const Color(0xFFE8D0FF),
-                      onTap: () {
-                        _paused.value = false;
-                        Journal.show();
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    _CyberButton(
-                      label: 'GEAR',
-                      wide: true,
-                      color: const Color(0xFFFFE08A),
-                      onTap: () {
-                        _paused.value = false;
-                        Equipment.show();
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    _CyberButton(
-                      label: 'MEMORIES',
-                      wide: true,
-                      color: const Color(0xFF88CCFF),
-                      onTap: () => setState(() => _memories = true),
-                    ),
-                    const SizedBox(height: 12),
-                    _CyberButton(
-                      label: 'MAIN MENU',
-                      wide: true,
-                      color: Colors.white54,
-                      onTap: () async {
-                        final nav = Navigator.of(context);
-                        _setPaused(false);
-                        await _leaveMap();
-                        nav.pushReplacement(
-                            MaterialPageRoute(builder: (_) => const IntroScreen()));
-                      },
-                    ),
-                    const SizedBox(height: 22),
-                    const _AudioSettingsPanel(),
-                    const SizedBox(height: 16),
-                    const AppVersionLabel(fontSize: 10),
-                  ]),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _CollectedMemoriesPanel extends StatelessWidget {
-  final VoidCallback onBack;
-  const _CollectedMemoriesPanel({required this.onBack});
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: Memories.foundNotifier,
-      builder: (_, __) {
-        final found = Memories.found;
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text('COLLECTED MEMORIES',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                    color: Color(0xFF88CCFF),
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 2.5)),
-            const SizedBox(height: 6),
-            Text('${Memories.progressLabel} recovered',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white38, fontSize: 11, letterSpacing: 1)),
-            const SizedBox(height: 14),
-            if (found == 0)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 12),
-                child: Text(
-                  'No memories yet.\nSeek glowing fragments across Elysium.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white54, fontSize: 12, height: 1.45),
-                ),
-              )
-            else
-              for (var i = 1; i <= Memories.total; i++)
-                _MemoryRow(
-                  index: i,
-                  unlocked: Memories.has(i),
-                  onPlay: Memories.has(i)
-                      ? () async {
-                          await Memories.replay(i);
-                        }
-                      : null,
-                ),
-            const SizedBox(height: 14),
-            _CyberButton(
-                label: 'BACK', wide: true, color: Colors.white54, onTap: onBack),
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _MemoryRow extends StatelessWidget {
-  final int index;
-  final bool unlocked;
-  final Future<void> Function()? onPlay;
-  const _MemoryRow({required this.index, required this.unlocked, this.onPlay});
-
-  @override
-  Widget build(BuildContext context) {
-    final roman = ['I', 'II', 'III', 'IV', 'V'][index - 1];
-    final title = unlocked ? Memories.titleFor(index) : '??????';
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onPlay == null ? null : () => onPlay!(),
-          borderRadius: BorderRadius.circular(6),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: unlocked ? 0.05 : 0.02),
-              border: Border.all(
-                  color: unlocked
-                      ? const Color(0xFF88CCFF).withValues(alpha: 0.45)
-                      : Colors.white12),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Row(
-              children: [
-                Text(roman,
-                    style: TextStyle(
-                        color: unlocked ? const Color(0xFF88CCFF) : Colors.white24,
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.5)),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(title,
-                      style: TextStyle(
-                          color: unlocked ? Colors.white70 : Colors.white24,
-                          fontSize: 12,
-                          fontStyle: unlocked ? FontStyle.normal : FontStyle.italic,
-                          letterSpacing: 0.5)),
-                ),
-                if (unlocked)
-                  const Text('REPLAY',
-                      style: TextStyle(
-                          color: Color(0xFF88CCFF),
-                          fontSize: 9,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1.2)),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Calm gameplay UI: respawn fade, checkpoint toast, pause
 // ---------------------------------------------------------------------------
 
@@ -3651,12 +3299,6 @@ class _CalmLayer extends StatelessWidget {
             ),
           ),
         ),
-      ),
-      // Pause menu (scrollable so it fits a phone in landscape)
-      ValueListenableBuilder<bool>(
-        valueListenable: _paused,
-        builder: (ctx, paused, __) =>
-            paused ? const _PauseMenu() : const SizedBox.shrink(),
       ),
     ]);
   }
