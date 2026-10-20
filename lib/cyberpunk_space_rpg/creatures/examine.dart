@@ -121,7 +121,7 @@ class ExamineHotspot extends GameComponent with Interactable {
     GameToast.show(
       title,
       body: loggedClue
-          ? (reward > 0 ? '+$reward glimmer · clue logged' : 'Clue logged · Journal → Clues')
+          ? (reward > 0 ? '+$reward glimmer · examined' : 'Examined')
           : text,
       color: const Color(0xFFAAEEFF),
       compact: true,
