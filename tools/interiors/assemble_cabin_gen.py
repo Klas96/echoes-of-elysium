@@ -27,7 +27,8 @@ COLS = 16
 
 # Cabin tile ids (must match build_rooms.py)
 CABIN, CABIN2 = 4, 5
-MAT = 12
+# Dedicated cabin mat — do not overwrite shared MAT=12 (tea/noodle).
+MAT_CABIN = 15
 W_LOG, W_FIRE = 20, 21
 W_MAP = 24
 J_LOG_L, J_LOG_R = 30, 31
@@ -159,7 +160,7 @@ def assemble_props() -> dict[int, Image.Image]:
         RUG: "cabin_rug.jpg",
         BED_C_H: "cabin_bed_head.jpg",
         BED_C_F: "cabin_bed_foot.jpg",
-        MAT: "cabin_doormat.jpg",
+        MAT_CABIN: "cabin_doormat.jpg",
     }
     out: dict[int, Image.Image] = {}
     for tid, name in mapping.items():

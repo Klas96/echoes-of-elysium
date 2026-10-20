@@ -25,6 +25,7 @@ Rebuild art and JSON together:
 ```
 python3 tools/interiors/assemble_cabin_gen.py
 python3 tools/interiors/assemble_grotto_gen.py
+python3 tools/interiors/assemble_archive_gen.py
 python3 tools/interiors/build_rooms.py
 ```
 
@@ -32,9 +33,10 @@ That script is the layout source. It writes `tileset.png`, each `<id>.png`
 (the baked picture, for review) and each `<id>.json`. The game draws the
 JSON layers, not the PNG. Do not commit @2x previews.
 
-**Cursor-gen pilots:** `ranger_cabin` and `pond_grotto` tiles live under
-`tools/interiors/gen_src/{cabin,grotto}/`, pixelized to 32px. Other rooms
-still use Pillow placeholders until their pass.
+**Cursor-gen pilots:** `ranger_cabin`, `pond_grotto`, and `archive_library`
+tiles live under `tools/interiors/gen_src/{cabin,grotto,archive}/`, pixelized
+to 32px. Tea house and noodle shop still use Pillow placeholders until their
+pass.
 
 ## Tileset
 
@@ -51,8 +53,10 @@ margin 0. Local id `n` is column `n % 16`, row `n ~/ 16`.
 | 10 | floor | pool (solid) |
 | 11 | floor | moss |
 | 12–13 | floor | doormat (inn / cave). Walkable; stepping on it leaves |
+| 14–15 | floor | doormat (archive / cabin). Walkable; stepping on it leaves |
 | 16–25 | floor | walls (N/S face): tea, tea window, noodle, neon, log, hearth, books, cave, map, drip |
 | 26–35 | floor | door jambs (tea, noodle, log, cave, books), left then right |
+| 36 | props | archive runner rug (walkable) |
 | 40–69 | props | counter, urn, pots, tin, table, cushion, bed, plant, screen, chest, draft desk, journal, note, lamp, crate, fridge, bowl, crystal, rock, logs, nightstand, stool, rug, cabin bed, lectern, glyph, barrel, fern |
 | 70–74 | floor | E/W side walls (tea, noodle, log, books, cave) |
 | 75–79 | floor | corner posts (same order) |

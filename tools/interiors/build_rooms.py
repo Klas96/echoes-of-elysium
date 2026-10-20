@@ -722,6 +722,7 @@ STONE, STONE2 = 6, 7
 CAVE, CAVE2 = 8, 9
 POOL, MOSS_F = 10, 11
 MAT, MAT_CAVE = 12, 13
+MAT_ARCHIVE, MAT_CABIN = 14, 15
 W_TEA, W_TEA_WIN = 16, 17
 W_NOODLE, W_NEON = 18, 19
 W_LOG, W_FIRE = 20, 21
@@ -732,6 +733,7 @@ J_NOODLE_L, J_NOODLE_R = 28, 29
 J_LOG_L, J_LOG_R = 30, 31
 J_CAVE_L, J_CAVE_R = 32, 33
 J_BOOK_L, J_BOOK_R = 34, 35
+ARCHIVE_RUG = 36
 # Side + corner companions (E/W / posts). Face walls stay 16–25.
 W_TEA_S, W_NOODLE_S, W_LOG_S, W_BOOKS_S, W_CAVE_S = 70, 71, 72, 73, 74
 W_TEA_C, W_NOODLE_C, W_LOG_C, W_BOOKS_C, W_CAVE_C = 75, 76, 77, 78, 79
@@ -828,6 +830,7 @@ def build_sheet() -> Image.Image:
         CAVE: cave_floor(0), CAVE2: cave_floor(1),
         POOL: pool(), MOSS_F: moss_floor(),
         MAT: mat(False), MAT_CAVE: mat(True),
+        MAT_ARCHIVE: mat(False), MAT_CABIN: mat(False),
         W_TEA: tea_wall(), W_TEA_WIN: tea_window(),
         W_NOODLE: noodle_wall(), W_NEON: neon_wall(),
         W_LOG: log_wall(), W_FIRE: fire_wall(),
@@ -842,6 +845,7 @@ def build_sheet() -> Image.Image:
         J_LOG_L: jamb(log_wall, "l", rgba(140, 100, 60)), J_LOG_R: jamb(log_wall, "r", rgba(140, 100, 60)),
         J_CAVE_L: jamb(cave_wall, "l", CL), J_CAVE_R: jamb(cave_wall, "r", CL),
         J_BOOK_L: jamb(books_wall, "l", SL), J_BOOK_R: jamb(books_wall, "r", SL),
+        ARCHIVE_RUG: rug(),
         COUNTER: counter(), URN: counter("urn"), POTS: counter("pots"), TIN: counter("tin"),
         TABLE: table(), CUSHION: cushion(),
         BED_H: bed(True), BED_F: bed(False),
@@ -864,6 +868,9 @@ def build_sheet() -> Image.Image:
         if W_CAVE in overrides and W_CAVE_S not in overrides:
             tiles[W_CAVE_S] = _side_from_face(overrides[W_CAVE], "cave")
             tiles[W_CAVE_C] = _corner_from_face(overrides[W_CAVE])
+        if W_BOOKS in overrides and W_BOOKS_S not in overrides:
+            tiles[W_BOOKS_S] = _side_from_face(overrides[W_BOOKS], "cave")
+            tiles[W_BOOKS_C] = _corner_from_face(overrides[W_BOOKS])
         print(f"gen overrides: {sorted(overrides)} ({len(overrides)} tiles)")
     rows = max(tiles) // COLS + 1
     sheet = Image.new("RGBA", (COLS * T, rows * T), (0, 0, 0, 0))
@@ -1180,7 +1187,7 @@ def noodle() -> dict:
 
 
 def ranger() -> dict:
-    F, P = shell(W_LOG, W_LOG_S, W_LOG_C, CABIN, MAT, J_LOG_L, J_LOG_R)
+    F, P = shell(W_LOG, W_LOG_S, W_LOG_C, CABIN, MAT_CABIN, J_LOG_L, J_LOG_R)
     for x in (2, 3, 4):
         F[0][x] = W_FIRE
     for x in (5, 6, 7):
@@ -1221,13 +1228,12 @@ def ranger() -> dict:
 
 
 def archive() -> dict:
-    F, P = shell(W_BOOKS, W_BOOKS_S, W_BOOKS_C, STONE, MAT, J_BOOK_L, J_BOOK_R)
+    F, P = shell(W_BOOKS, W_BOOKS_S, W_BOOKS_C, STONE, MAT_ARCHIVE, J_BOOK_L, J_BOOK_R)
     vary(F, STONE, STONE2)
     P[1][9] = LECTERN
     P[2][2] = GLYPH
     P[2][5] = DESK
     P[2][6] = LAMP
-    P[4][4], P[4][5], P[4][6], P[4][7] = RUG, RUG, RUG, RUG
     return room(
         "archive_library",
         "Archive library (Archive Square, opened by the Archivist's seal)",

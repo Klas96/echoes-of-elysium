@@ -1343,14 +1343,14 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
     final dir = (target - origin);
     if (dir.length < 1) return;
     final n = dir.normalized();
-    // Spawn ahead of Kaela so the hitbox is not born inside a wall/foot tile
-    // (on web the hitbox can attach before the bullet moves, deleting the shot).
-    final spawnCenter = origin + n * 18;
+    // Spawn at Kaela (same as pulse). PlayerBullet ignores map hits until
+    // _muzzleClear, so feet/wall tiles do not eat the shot. Spawning far
+    // ahead skipped over melee-range foes and looked like a miss.
     gameRef.add(PlayerBullet(
-      spawnCenter - PlayerBullet.spriteSize / 2,
+      origin - PlayerBullet.spriteSize / 2,
       n,
     ));
-    gameRef.add(MuzzleFlash(spawnCenter, n));
+    gameRef.add(MuzzleFlash(origin + n * 14, n));
     SfxManager().playShoot();
     shotCount++;
     lastShotFrom = origin;
