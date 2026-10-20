@@ -1203,6 +1203,8 @@ Future<void> _travelTo(BuildContext context, TravelDest dest) async {
   final nav = Navigator.of(context);
   final mapId = Travel.mapIdFor(dest.level);
   MapEntryPoint.bySide.clear();
+  // Start next region BGM while we still have a click activation when possible.
+  MusicManager().play(_musicAssetForMap(mapId));
   await _leaveMap(nextMapId: mapId);
   final screen = _screenForMap(mapId);
   if (dest.level == 2) {
@@ -1294,14 +1296,33 @@ Future<void> _activateCoreRecord(BuildContext context) async {
   ));
 }
 
+/// BGM asset for a map — keep in sync with each screen's `onReady` play().
+String _musicAssetForMap(String mapId) {
+  switch (mapId) {
+    case 'world2':
+      return 'assets/audio/music/Neon_Shadows.mp3';
+    case 'world3':
+    case 'world5':
+      return 'assets/audio/music/Neon_Mirage.mp3';
+    case 'world4':
+      return 'assets/audio/music/Echoes_of_the Deep_Mine.mp3';
+    default:
+      return 'assets/audio/music/Whispering_Pines.mp3';
+  }
+}
+
 void _continueGame(BuildContext context) {
   SaveService.prepareResume();
+  // Start BGM inside this click — map [onReady] is too late for autoplay.
+  MusicManager().play(_musicAssetForMap(SaveService.data.mapId));
   Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => _screenForMap(SaveService.data.mapId)));
 }
 
 Future<void> _beginNewGame(BuildContext context) async {
   final nav = Navigator.of(context);
+  // Start BGM before any await so the click's autoplay activation still holds.
+  MusicManager().play(_musicAssetForMap('world'));
   await SaveService.startNewGame();
   nav.pushReplacement(Cutscenes.route(
       id: Cutscenes.awakening, then: (_) => const CustomMapGameScreen()));
