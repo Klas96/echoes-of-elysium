@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 
@@ -511,10 +510,10 @@ class ToastLayer extends StatelessWidget {
 }
 
 
-/// The creature journal: a grid of entries (silhouette until seen, sketch
-/// when seen, portrait + lore when befriended) and a detail panel with the
-/// set-companion button. Portrait phones stack grid over details; landscape
-/// phones put them side by side.
+/// The creature journal: a handheld field tablet with a grid of entries
+/// (silhouette until seen, sketch when seen, portrait + lore when befriended)
+/// and a detail pane with the set-companion button. Wide layouts split list |
+/// detail on one screen; narrow stacks them.
 class JournalOverlay extends StatelessWidget {
   const JournalOverlay({super.key});
 
@@ -542,93 +541,22 @@ class _JournalPanelState extends State<_JournalPanel> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.black.withValues(alpha: 0.75),
+      color: Colors.black.withValues(alpha: 0.78),
       child: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.all(10),
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 940),
+              constraints: const BoxConstraints(maxWidth: 920, maxHeight: 640),
               child: ValueListenableBuilder<int>(
                 valueListenable: Bonds.revision,
                 builder: (_, __, ___) => LayoutBuilder(builder: (context, box) {
-                  final wide = box.maxWidth > box.maxHeight * 1.2 && box.maxWidth >= 600;
-                  if (_tab == 1) {
-                    final clues = _cluesPage(close: !wide);
-                    if (wide) {
-                      final k = min(box.maxWidth / (2 * _BookPage.w), box.maxHeight / (_BookPage.caps + _BookPage.strip));
-                      final n = _BookPage.strips(box.maxHeight, k);
-                      return Row(mainAxisSize: MainAxisSize.min, children: [
-                        _BookPage(right: false, k: k, n: n, child: clues),
-                        _BookPage(
-                          right: true,
-                          k: k,
-                          n: n,
-                          child: Stack(clipBehavior: Clip.none, children: [
-                            const SingleChildScrollView(
-                              padding: EdgeInsets.only(right: 30),
-                              child: _CluesHint(),
-                            ),
-                            Positioned(right: -14, top: -14, child: _closeButton()),
-                          ]),
-                        ),
-                      ]);
-                    }
-                    final k = max(2.0, (box.maxWidth / _BookPage.w).floorToDouble());
-                    return _BookPage(right: true, k: k, n: _BookPage.strips(box.maxHeight, k), child: clues);
-                  }
-                  final grid = _grid(3);
-                  final detail = _Detail(id: _sel);
-                  if (wide) {
-                    // The open book: entries on the left page, details on the
-                    // right. Both halves share one scale; at least one middle
-                    // strip so the pages have room.
-                    final k = min(box.maxWidth / (2 * _BookPage.w), box.maxHeight / (_BookPage.caps + _BookPage.strip));
-                    final n = _BookPage.strips(box.maxHeight, k);
-                    return Row(mainAxisSize: MainAxisSize.min, children: [
-                      _BookPage(
-                        right: false,
-                        k: k,
-                        n: n,
-                        child: Column(children: [
-                          _header(),
-                          Expanded(child: SingleChildScrollView(padding: const EdgeInsets.only(top: 6), child: grid)),
-                        ]),
-                      ),
-                      _BookPage(
-                        right: true,
-                        k: k,
-                        n: n,
-                        child: Stack(clipBehavior: Clip.none, children: [
-                          SingleChildScrollView(padding: const EdgeInsets.only(right: 30), child: detail),
-                          Positioned(right: -14, top: -14, child: _closeButton()),
-                        ]),
-                      ),
-                    ]);
-                  }
-                  // Phones in portrait: a single right-hand page (spine on the
-                  // left), as tall as whole middle strips allow. A whole-number
-                  // scale keeps the pixels crisp (3x on a 412 px phone).
-                  final k = max(2.0, (box.maxWidth / _BookPage.w).floorToDouble());
-                  return _BookPage(
-                    right: true,
-                    k: k,
-                    n: _BookPage.strips(box.maxHeight, k),
-                    child: Column(children: [
-                      _header(close: true),
-                      Expanded(
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.only(top: 6, bottom: 8),
-                          child: Column(children: [
-                            grid,
-                            const SizedBox(height: 10),
-                            Container(height: 1, color: _inkSoft.withValues(alpha: 0.35)),
-                            const SizedBox(height: 10),
-                            detail,
-                          ]),
-                        ),
-                      ),
-                    ]),
+                  final wide =
+                      box.maxWidth > box.maxHeight * 1.15 && box.maxWidth >= 560;
+                  return _TabletShell(
+                    child: _tab == 1
+                        ? _cluesBody(wide: wide)
+                        : _creaturesBody(wide: wide),
                   );
                 }),
               ),
@@ -639,10 +567,78 @@ class _JournalPanelState extends State<_JournalPanel> {
     );
   }
 
+  Widget _creaturesBody({required bool wide}) {
+    final grid = _grid(wide ? 3 : 2);
+    final detail = _Detail(id: _sel);
+    if (wide) {
+      return Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Expanded(
+          flex: 5,
+          child: Column(children: [
+            _header(),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.only(top: 8, right: 8),
+                child: grid,
+              ),
+            ),
+          ]),
+        ),
+        const _TabletDivider(),
+        Expanded(
+          flex: 4,
+          child: Stack(children: [
+            SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(12, 8, 36, 8),
+              child: detail,
+            ),
+            Positioned(right: 0, top: 0, child: _closeButton()),
+          ]),
+        ),
+      ]);
+    }
+    return Column(children: [
+      _header(close: true),
+      Expanded(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.only(top: 8, bottom: 8),
+          child: Column(children: [
+            grid,
+            const SizedBox(height: 12),
+            const _TabletHairline(),
+            const SizedBox(height: 12),
+            detail,
+          ]),
+        ),
+      ),
+    ]);
+  }
+
+  Widget _cluesBody({required bool wide}) {
+    final clues = _cluesPage(close: !wide);
+    if (wide) {
+      return Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Expanded(flex: 5, child: clues),
+        const _TabletDivider(),
+        Expanded(
+          flex: 4,
+          child: Stack(children: [
+            const SingleChildScrollView(
+              padding: EdgeInsets.fromLTRB(12, 8, 36, 8),
+              child: _CluesHint(),
+            ),
+            Positioned(right: 0, top: 0, child: _closeButton()),
+          ]),
+        ),
+      ]);
+    }
+    return clues;
+  }
+
   Widget _closeButton() => IconButton(
         tooltip: 'Close',
         onPressed: Journal.hide,
-        icon: const Icon(Icons.close, color: _inkSoft),
+        icon: Icon(Icons.close, color: _inkSoft.withValues(alpha: 0.9)),
       );
 
   Widget _tabs() {
@@ -653,13 +649,13 @@ class _JournalPanelState extends State<_JournalPanel> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
           decoration: BoxDecoration(
-            color: on ? _inkDark.withValues(alpha: 0.12) : Colors.transparent,
-            border: Border.all(color: on ? _inkDark : _inkSoft.withValues(alpha: 0.4)),
+            color: on ? _teal.withValues(alpha: 0.15) : Colors.transparent,
+            border: Border.all(color: on ? _teal : _inkSoft.withValues(alpha: 0.45)),
             borderRadius: BorderRadius.circular(3),
           ),
           child: Text(label,
               style: TextStyle(
-                  color: on ? _inkDark : _inkSoft,
+                  color: on ? _teal : _inkSoft,
                   fontSize: 10,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 1.2)),
@@ -739,7 +735,7 @@ class _JournalPanelState extends State<_JournalPanel> {
                   ]),
                 ),
               const SizedBox(height: 10),
-              Container(height: 1, color: _inkSoft.withValues(alpha: 0.35)),
+              const _TabletHairline(),
               const SizedBox(height: 10),
             ],
             const Text('JOBS',
@@ -767,7 +763,7 @@ class _JournalPanelState extends State<_JournalPanel> {
                   ),
             ],
             const SizedBox(height: 10),
-            Container(height: 1, color: _inkSoft.withValues(alpha: 0.35)),
+            const _TabletHairline(),
             const SizedBox(height: 10),
             const Text('CLUE BOARD',
                 style: TextStyle(color: _inkDark, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 2)),
@@ -834,92 +830,115 @@ class _CluesHint extends StatelessWidget {
   }
 }
 
-// Journal palette: ink on Designer's parchment pages.
-const _inkDark = Color(0xFF3A2414);
-const _inkSoft = Color(0xFF6B4A2E);
-const _inkGreen = Color(0xFF2F6B3A);
+// Journal palette: teal HUD on dark glass (matches Echoes HUD `#00FFCC`).
+const _inkDark = Color(0xFFE6F7F3);
+const _inkSoft = Color(0xFF8AABB0);
+const _inkGreen = _teal;
+const _screenEdge = Color(0xFF1A2A34);
+const _bezelHi = Color(0xFF3A4555);
+const _bezelLo = Color(0xFF0A0C12);
+const _glass = Color(0xFF0B1218);
+const _cardFace = Color(0xFF121A22);
 
-/// One half of the open journal from Designer's tall-page pieces
-/// (ui_kit.json book_left_vertical / book_right_vertical): a top cap (36 px),
-/// [n] repeats of a seamless 64 px middle strip and a bottom cap (42 px), all
-/// at one uniform scale [k], so nothing is stretched. 36 + n*64 + 42 gives
-/// exact joins.
-class _BookPage extends StatelessWidget {
-  static const double w = 111, top = 36, strip = 64, bottom = 42, caps = top + bottom;
-
-  final bool right;
-  final double k;
-  final int n;
+/// Single handheld field tablet: dark metal bezel + cool glass screen.
+/// Content insets: 14 / 12 / 14 / 12 inside the screen bed.
+class _TabletShell extends StatelessWidget {
   final Widget child;
-  const _BookPage({required this.right, required this.k, required this.n, required this.child});
-
-  /// Middle strips that fit [height] at scale [k] (at least one).
-  static int strips(double height, double k) => max(1, ((height / k - caps) / strip).floor());
-
-  /// Paper area inside each half, in 1x px (measured from the art: the
-  /// right page's paper runs x 5-80, the left page's x 21-104; the bottom
-  /// cap's paper ends 11 px down, above the page curl).
-  EdgeInsets get _content =>
-      right ? EdgeInsets.fromLTRB(9 * k, 9 * k, 33 * k, 33 * k) : EdgeInsets.fromLTRB(24 * k, 9 * k, 9 * k, 33 * k);
+  const _TabletShell({required this.child});
 
   @override
   Widget build(BuildContext context) {
-    final side = right ? 'right' : 'left';
-    Widget piece(String name, {ImageRepeat repeat = ImageRepeat.noRepeat}) => Image.asset(
-          'assets/images/ui/book_${side}_$name@2x.png',
-          scale: 2 / k,
-          repeat: repeat,
-          fit: BoxFit.none,
-          alignment: Alignment.topCenter,
-          filterQuality: FilterQuality.none,
-        );
-    return SizedBox(
-      width: w * k,
-      height: (caps + strip * n) * k,
-      child: Stack(children: [
-        Positioned.fill(
-          child: Column(children: [
-            SizedBox(height: top * k, width: w * k, child: piece('top')),
-            Expanded(child: SizedBox(width: w * k, child: piece('mid', repeat: ImageRepeat.repeatY))),
-            SizedBox(height: bottom * k, width: w * k, child: piece('bottom')),
-          ]),
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF2A303C), Color(0xFF141820), _bezelLo],
         ),
-        Positioned.fill(child: Padding(padding: _content, child: child)),
+        border: Border.all(color: _bezelHi, width: 2),
+        boxShadow: [
+          BoxShadow(color: _teal.withValues(alpha: 0.1), blurRadius: 28, spreadRadius: 1),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.55), blurRadius: 18, offset: const Offset(0, 10)),
+        ],
+      ),
+      padding: const EdgeInsets.fromLTRB(10, 10, 10, 12),
+      child: Column(children: [
+        // Camera / speaker strip
+        Container(
+          width: 40,
+          height: 5,
+          decoration: BoxDecoration(
+            color: const Color(0xFF151820),
+            borderRadius: BorderRadius.circular(3),
+            border: Border.all(color: _bezelHi.withValues(alpha: 0.5)),
+          ),
+          alignment: Alignment.centerRight,
+          padding: const EdgeInsets.only(right: 4),
+          child: Container(
+            width: 4,
+            height: 4,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: _teal.withValues(alpha: 0.55),
+              boxShadow: [BoxShadow(color: _teal.withValues(alpha: 0.35), blurRadius: 4)],
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Expanded(
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              gradient: const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFF0E1820), _glass],
+              ),
+              border: Border.all(color: _teal.withValues(alpha: 0.22)),
+              boxShadow: [
+                BoxShadow(color: Colors.black.withValues(alpha: 0.45), blurRadius: 8, offset: const Offset(0, 2)),
+              ],
+            ),
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+            child: child,
+          ),
+        ),
+        const SizedBox(height: 8),
+        // Home indicator
+        Container(
+          width: 52,
+          height: 4,
+          decoration: BoxDecoration(
+            color: _bezelHi.withValues(alpha: 0.85),
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
       ]),
     );
   }
 }
 
-/// Designer UI kit 9-slice panels (assets/images/ui, from art/ui/ui_kit.json).
-/// The @2x files are drawn at [_f] logical px per 1x source px. Flutter reads
-/// centerSlice in logical image coordinates, so the 1x slice is scaled by [_f].
-class _UiSlice extends StatelessWidget {
-  final String asset;
-  final Rect slice1x; // ui_kit.json flutter_centerSlice (1x)
-  final EdgeInsets padding;
-  final Widget child;
-  final double _f;
-
-  const _UiSlice(this.asset, this.slice1x, this.padding, this.child, [this._f = 1.5]);
-
-  /// insets 12 all round; centerSlice 12,12,109,70.
-  factory _UiSlice.card({required Widget child, EdgeInsets padding = const EdgeInsets.all(12), double scale = 1.5}) =>
-      _UiSlice('assets/images/ui/entry_card@2x.png', const Rect.fromLTWH(12, 12, 109, 70), padding, child, scale);
+class _TabletDivider extends StatelessWidget {
+  const _TabletDivider();
 
   @override
-  Widget build(BuildContext context) => Container(
-        padding: padding,
-        decoration: BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage(asset),
-            centerSlice: Rect.fromLTWH(slice1x.left * _f, slice1x.top * _f, slice1x.width * _f, slice1x.height * _f),
-            scale: 2 / _f,
-            fit: BoxFit.fill,
-            filterQuality: FilterQuality.none,
-          ),
-        ),
-        child: child,
-      );
+  Widget build(BuildContext context) {
+    return Container(
+      width: 1,
+      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+      color: _teal.withValues(alpha: 0.22),
+    );
+  }
+}
+
+class _TabletHairline extends StatelessWidget {
+  const _TabletHairline();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(height: 1, color: _screenEdge);
+  }
 }
 
 String _variant(String id) => Bonds.isBefriended(id) ? '' : (Bonds.isSeen(id) ? 'sketch' : 'silhouette');
@@ -939,12 +958,18 @@ class _Tile extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: LayoutBuilder(builder: (context, box) {
-        // small cards (portrait phones) use the card art at its native size
         final small = box.maxWidth < 100;
         return Stack(children: [
-          _UiSlice.card(
-            scale: small ? 1.0 : 1.5,
-            padding: small ? const EdgeInsets.fromLTRB(6, 6, 6, 9) : const EdgeInsets.fromLTRB(9, 9, 9, 13),
+          Container(
+            padding: small ? const EdgeInsets.fromLTRB(6, 6, 6, 8) : const EdgeInsets.fromLTRB(8, 8, 8, 10),
+            decoration: BoxDecoration(
+              color: _cardFace,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: selected ? _teal : _screenEdge,
+                width: selected ? 2 : 1,
+              ),
+            ),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               AspectRatio(
                 aspectRatio: 1,
@@ -967,27 +992,15 @@ class _Tile extends StatelessWidget {
               ),
             ]),
           ),
-          if (selected)
-            Positioned.fill(
-              child: IgnorePointer(
-                child: Container(
-                  margin: const EdgeInsets.all(3),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: const Color(0xFF1E8C7A), width: 2),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                ),
-              ),
-            ),
           if (companion)
             Positioned(
               right: 6,
               top: 6,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                decoration: BoxDecoration(color: const Color(0xFF1E8C7A), borderRadius: BorderRadius.circular(3)),
+                decoration: BoxDecoration(color: _teal.withValues(alpha: 0.9), borderRadius: BorderRadius.circular(3)),
                 child: const Text('WITH YOU',
-                    style: TextStyle(color: Colors.white, fontSize: 7, fontWeight: FontWeight.bold)),
+                    style: TextStyle(color: Color(0xFF06060F), fontSize: 7, fontWeight: FontWeight.bold)),
               ),
             ),
         ]);
@@ -1007,9 +1020,9 @@ class _Detail extends StatelessWidget {
     final friend = Bonds.isBefriended(id);
     final companion = Bonds.active == id;
     final status = friend ? 'BEFRIENDED' : (known ? 'SEEN' : 'NOT YET SEEN');
-    final statusCol = friend ? _inkGreen : (known ? const Color(0xFF9A6A12) : _inkSoft.withValues(alpha: 0.7));
+    final statusCol = friend ? _inkGreen : (known ? const Color(0xFFE0B050) : _inkSoft.withValues(alpha: 0.7));
     TextStyle label() =>
-        TextStyle(color: _inkSoft.withValues(alpha: 0.85), fontSize: 10, letterSpacing: 2, fontWeight: FontWeight.bold);
+        TextStyle(color: _inkSoft.withValues(alpha: 0.9), fontSize: 10, letterSpacing: 2, fontWeight: FontWeight.bold);
     const body = TextStyle(color: _inkDark, fontSize: 13, height: 1.4);
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(children: [
@@ -1031,7 +1044,7 @@ class _Detail extends StatelessWidget {
         const SizedBox(height: 8),
         Text('GAIA', style: label()),
         const SizedBox(height: 2),
-        Text(s.lore, style: body.copyWith(color: const Color(0xFF2C5A4E))),
+        Text(s.lore, style: body.copyWith(color: _teal.withValues(alpha: 0.85))),
       ],
       const SizedBox(height: 8),
       Text('COMPANION ABILITY', style: label()),
@@ -1049,14 +1062,14 @@ class _Detail extends StatelessWidget {
           TextButton(
             onPressed: () => Bonds.setActive(companion ? null : id),
             style: TextButton.styleFrom(
-              backgroundColor: companion ? const Color(0x1A3A2414) : const Color(0xFF1E8C7A),
-              side: BorderSide(color: companion ? _inkSoft : const Color(0xFF145F53)),
+              backgroundColor: companion ? _teal.withValues(alpha: 0.12) : _teal,
+              side: BorderSide(color: companion ? _inkSoft : const Color(0xFF00C9A0)),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
             ),
             child: Text(companion ? 'SEND HOME' : 'SET AS COMPANION',
                 style: TextStyle(
-                    color: companion ? _inkDark : Colors.white,
+                    color: companion ? _inkDark : _ink,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 1.5,
                     fontSize: 12)),

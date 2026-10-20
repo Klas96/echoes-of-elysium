@@ -249,6 +249,8 @@ void main() {
       }
       expect(File('assets/images/obstacles/stump.png').existsSync(), isFalse);
       expect(File('assets/images/obstacles/bramble.png').existsSync(), isFalse);
+      // Journal chrome is Flutter-drawn tablet glass (#61); book page slices
+      // remain on disk for archive shelf lore panels only.
       for (final side in ['left', 'right']) {
         for (final part in ['top', 'mid', 'bottom']) {
           expect(File('assets/images/ui/book_${side}_$part@2x.png').existsSync(), isTrue, reason: '$side $part');
