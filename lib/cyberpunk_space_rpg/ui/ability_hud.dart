@@ -7,15 +7,17 @@ import '../game/progression.dart';
 import 'hud_layout.dart';
 
 /// Bottom-right combat ability bar (mobile-first; also on desktop).
-/// Phase · Pulse · Ward · Anchor.
+/// Target · Phase · Pulse · Ward · Anchor.
 class AbilityHud extends StatelessWidget {
   const AbilityHud({super.key});
 
+  static const _targetAccent = Color(0xFFFF8866);
   static const _phaseAccent = Color(0xFF88EEFF);
   static const _pulseAccent = Color(0xFF00FFCC);
   static const _wardAccent = Color(0xFFE8D0FF);
   static const _anchorAccent = Color(0xFFAA44FF);
   static const _locked = Color(0xFF8899AA);
+  static final _targetCd = ValueNotifier<double>(0);
 
   @override
   Widget build(BuildContext context) {
@@ -36,6 +38,20 @@ class AbilityHud extends StatelessWidget {
           builder: (_, __, ___) => Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // Always unlocked — browser / touch stand-in for click-foe / T.
+              _AbilityButton(
+                size: btn,
+                label: 'TARGET',
+                hint: 'T',
+                accent: _targetAccent,
+                lockedColor: _locked,
+                unlocked: true,
+                unlockLevel: 1,
+                cooldownLeft: _targetCd,
+                cooldownMax: 1,
+                onTap: () => CustomPlayer.current?.tryAcquireNearest(),
+              ),
+              SizedBox(width: gap),
               _AbilityButton(
                 size: btn,
                 label: 'PHASE',

@@ -89,9 +89,10 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
   static const double clickArrive = 3.5;
   /// Intermediate A* waypoint arrive — a bit looser so lane slides don't jam.
   static const double waypointArrive = 9;
-  /// Click/tap must land near a foe's center to lock attack (LoL-style).
-  /// Generous on web where pointer coords can be a few px off art.
-  static const double clickEnemyRadius = 64;
+  /// World-space fallback when screen pick misses (LoL-style click-to-attack).
+  static const double clickEnemyRadius = 72;
+  /// Screen-space foe pick radius (viewport px) — preferred on web/HiDPI.
+  static const double clickEnemyScreenRadius = 52;
 
   // --- Calm gameplay: no game over, gentle regen -------------------------
   /// Seconds without taking damage before health starts coming back.
@@ -1031,7 +1032,10 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
   void _issueClick(Vector2 screenPos) {
     if (!hasGameRef) return;
     final world = _screenToWorld(screenPos);
-    final foe = _hostileNear(world, clickEnemyRadius);
+    // Prefer screen-space pick so sprite clicks work when camera zoom / web
+    // viewport mapping would miss a tight world-radius test.
+    final foe = _hostileNearScreen(screenPos, clickEnemyScreenRadius) ??
+        _hostileNear(world, clickEnemyRadius);
     if (foe != null) {
       _clearPath(stop: false);
       _useTarget = null;
@@ -1392,7 +1396,41 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
     final s = SentinelDrone.instance;
     if (s != null && s.isMounted && !s.isDead) {
       final dist = (s.position + s.size / 2).distanceTo(world);
-      if (dist < bestD) best = s;
+      if (dist < bestD) {
+        bestD = dist;
+        best = s;
+      }
+    }
+    return best;
+  }
+
+  /// Pick a foe by where its sprite sits on screen (viewport pixels).
+  GameComponent? _hostileNearScreen(Vector2 screen, double radiusPx) {
+    if (!hasGameRef) return null;
+    final zoom = gameRef.camera.zoom;
+    GameComponent? best;
+    var bestD = radiusPx;
+    void consider(GameComponent t, Vector2 center, Vector2 size) {
+      final sp = gameRef.camera.worldToScreen(center);
+      final dist = sp.distanceTo(screen);
+      final pad = max(radiusPx, max(size.x, size.y) * 0.55 * zoom);
+      if (dist < pad && dist < bestD) {
+        bestD = dist;
+        best = t;
+      }
+    }
+
+    for (final d in UECDrone.active) {
+      if (!d.isMounted || d.isDead) continue;
+      consider(d, d.position + d.size / 2, d.size);
+    }
+    for (final pad in DroneSpawnPoint.active) {
+      if (!pad.isMounted || pad.isDead) continue;
+      consider(pad, pad.padCenter, pad.size);
+    }
+    final s = SentinelDrone.instance;
+    if (s != null && s.isMounted && !s.isDead) {
+      consider(s, s.position + s.size / 2, s.size);
     }
     return best;
   }

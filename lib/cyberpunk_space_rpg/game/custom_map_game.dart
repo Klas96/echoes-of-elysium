@@ -1700,6 +1700,16 @@ void _onMapReady(BonfireGameInterface game) {
 /// web, Flame's canvas often eats parent gestures; a sibling overlay still
 /// receives pointer downs so League-style shoot/move works. [translucent] lets
 /// events also reach the game below (focus / Bonfire internals).
+/// Pointer → Bonfire viewport pixels (not raw Flutter local, which drifts on
+/// web when the game canvas and the overlay disagree about size / DPR).
+Vector2 _pointerToViewport(Offset global) {
+  final g = _activeGame;
+  if (g != null) {
+    return g.globalToViewportPosition(Vector2(global.dx, global.dy));
+  }
+  return Vector2(global.dx, global.dy);
+}
+
 Widget _mapPointer({bool checkDialogue = false}) {
   return Positioned.fill(
     child: Listener(
@@ -1713,7 +1723,7 @@ Widget _mapPointer({bool checkDialogue = false}) {
           if (NpcCharacter.activeDialogue.value != null) return;
           if (AIFragment.activeDialogue.value != null) return;
         }
-        final screen = Vector2(e.localPosition.dx, e.localPosition.dy);
+        final screen = _pointerToViewport(e.position);
         final ed = DebugMaskEditor.instance;
         if (ed != null && GameDebug.isOn && ed.onScreenTap(screen)) return;
         if (GameDebug.isOn) {
@@ -1724,7 +1734,7 @@ Widget _mapPointer({bool checkDialogue = false}) {
       onPointerMove: (e) {
         final ed = DebugMaskEditor.instance;
         if (ed == null || !ed.isDragging) return;
-        ed.onScreenPanUpdate(Vector2(e.localPosition.dx, e.localPosition.dy));
+        ed.onScreenPanUpdate(_pointerToViewport(e.position));
       },
       onPointerUp: (_) => DebugMaskEditor.instance?.onScreenPanEnd(),
       onPointerCancel: (_) => DebugMaskEditor.instance?.onScreenPanEnd(),
