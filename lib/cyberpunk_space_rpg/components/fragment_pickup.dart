@@ -20,7 +20,7 @@ class FragmentPickup extends GameDecoration {
   final bool Function()? hidden;
 
   FragmentPickup(Vector2 position, {this.onCollected, this.hidden, this.collectRadius = defaultCollectRadius})
-      : super(position: position, size: Vector2.all(18));
+      : super(position: position, size: Vector2.all(20));
 
   @override
   Future<void> onLoad() async {
@@ -55,6 +55,7 @@ class FragmentPickup extends GameDecoration {
     final cy = size.y / 2;
     final p = sin(_pulse);
 
+    // Purple halo matches the canonical fragment crystal (#58).
     canvas.drawCircle(Offset(cx, cy), 12 + p * 2,
         Paint()
           ..color = const Color(0xFFAA44FF).withValues(alpha: 0.22 + p * 0.06)
@@ -62,7 +63,8 @@ class FragmentPickup extends GameDecoration {
 
     final sprite = _sprite;
     if (sprite != null) {
-      final s = 14.0 + p * 1.5;
+      // 32×32 source; draw a touch larger so the diamond reads on the map.
+      final s = 16.0 + p * 1.5;
       sprite.render(
         canvas,
         position: Vector2(cx - s / 2, cy - s / 2),
