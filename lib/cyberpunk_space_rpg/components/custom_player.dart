@@ -89,7 +89,9 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
   static const double clickArrive = 3.5;
   /// Intermediate A* waypoint arrive — a bit looser so lane slides don't jam.
   static const double waypointArrive = 9;
-  static const double clickEnemyRadius = 36;
+  /// Click/tap must land near a foe's center to lock attack (LoL-style).
+  /// Generous on web where pointer coords can be a few px off art.
+  static const double clickEnemyRadius = 64;
 
   // --- Calm gameplay: no game over, gentle regen -------------------------
   /// Seconds without taking damage before health starts coming back.
@@ -1272,11 +1274,11 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
     return null;
   }
 
+  /// [screen] is viewport-local (same space as the map pointer overlay).
+  /// Use Bonfire's camera math — viewfinder-center math drifts when
+  /// [CameraConfig.moveOnlyMapArea] clamps at map edges, so foe clicks miss.
   Vector2 _screenToWorld(Vector2 screen) {
-    final camCenter = gameRef.camera.viewfinder.position;
-    final screenCenter = gameRef.size / 2;
-    final zoom = gameRef.camera.viewfinder.zoom;
-    return camCenter + (screen - screenCenter) / zoom;
+    return gameRef.camera.screenToWorld(screen);
   }
 
   void _steerToward(Vector2? worldTarget) {

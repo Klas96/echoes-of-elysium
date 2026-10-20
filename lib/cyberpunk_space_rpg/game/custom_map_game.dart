@@ -1672,36 +1672,40 @@ void _onMapReady(BonfireGameInterface game) {
 
 /// Map pointer → mask editor (debug) or click-to-move / click-to-attack.
 ///
-/// Uses [Listener] (not [GestureDetector]) so Flame/Bonfire cannot win the
-/// gesture arena and swallow clicks on Flutter web — that broke League-style
-/// shoot/move in the browser.
-Widget _mapPointer({required Widget child, bool checkDialogue = false}) {
-  return Listener(
-    behavior: HitTestBehavior.translucent,
-    onPointerDown: (e) {
-      AudioUnlock.nudge();
-      // Primary button / touch only (ignore right/middle).
-      if (e.buttons != 0 && (e.buttons & 0x1) == 0) return;
-      if (checkDialogue) {
-        if (NpcCharacter.activeDialogue.value != null) return;
-        if (AIFragment.activeDialogue.value != null) return;
-      }
-      final screen = Vector2(e.localPosition.dx, e.localPosition.dy);
-      final ed = DebugMaskEditor.instance;
-      if (ed != null && GameDebug.isOn && ed.onScreenTap(screen)) return;
-      if (GameDebug.isOn) {
-        DebugMaskEditor.instance?.onScreenPanStart(screen);
-      }
-      CustomPlayer.pendingClick.value = screen;
-    },
-    onPointerMove: (e) {
-      final ed = DebugMaskEditor.instance;
-      if (ed == null || !ed.isDragging) return;
-      ed.onScreenPanUpdate(Vector2(e.localPosition.dx, e.localPosition.dy));
-    },
-    onPointerUp: (_) => DebugMaskEditor.instance?.onScreenPanEnd(),
-    onPointerCancel: (_) => DebugMaskEditor.instance?.onScreenPanEnd(),
-    child: child,
+/// Full-screen [Listener] *above* [BonfireWidget] (not wrapping it). On Flutter
+/// web, Flame's canvas often eats parent gestures; a sibling overlay still
+/// receives pointer downs so League-style shoot/move works. [translucent] lets
+/// events also reach the game below (focus / Bonfire internals).
+Widget _mapPointer({bool checkDialogue = false}) {
+  return Positioned.fill(
+    child: Listener(
+      behavior: HitTestBehavior.translucent,
+      onPointerDown: (e) {
+        AudioUnlock.nudge();
+        // Primary button / touch only (ignore right/middle).
+        // `buttons == 0` is normal for some web pointerdowns and for touch.
+        if (e.buttons != 0 && (e.buttons & 0x1) == 0) return;
+        if (checkDialogue) {
+          if (NpcCharacter.activeDialogue.value != null) return;
+          if (AIFragment.activeDialogue.value != null) return;
+        }
+        final screen = Vector2(e.localPosition.dx, e.localPosition.dy);
+        final ed = DebugMaskEditor.instance;
+        if (ed != null && GameDebug.isOn && ed.onScreenTap(screen)) return;
+        if (GameDebug.isOn) {
+          DebugMaskEditor.instance?.onScreenPanStart(screen);
+        }
+        CustomPlayer.pendingClick.value = screen;
+      },
+      onPointerMove: (e) {
+        final ed = DebugMaskEditor.instance;
+        if (ed == null || !ed.isDragging) return;
+        ed.onScreenPanUpdate(Vector2(e.localPosition.dx, e.localPosition.dy));
+      },
+      onPointerUp: (_) => DebugMaskEditor.instance?.onScreenPanEnd(),
+      onPointerCancel: (_) => DebugMaskEditor.instance?.onScreenPanEnd(),
+      child: const SizedBox.expand(),
+    ),
   );
 }
 
@@ -1737,10 +1741,8 @@ class CustomMapGameScreen extends StatelessWidget {
       child: Scaffold(
         backgroundColor: Colors.black,
         body: Stack(children: [
-          _mapPointer(
-            checkDialogue: true,
-            child: BonfireWidget(
-              focusNode: GameInput.focusNode,
+          BonfireWidget(
+            focusNode: GameInput.focusNode,
             playerControllers: _playerControllers(),
             player: CustomPlayer(Vector2.zero()),
             map: CustomMap('maps/world.tmj', objectsBuilder: _mapObjects('world')),
@@ -1754,7 +1756,8 @@ class CustomMapGameScreen extends StatelessWidget {
               await _startLevel(game, 1);
               MusicManager().play('assets/audio/music/Whispering_Pines.mp3');
             },
-          )),
+          ),
+          _mapPointer(checkDialogue: true),
           const NightTint(),
           const _Vignette(),
           const GameHud(),
@@ -1792,9 +1795,8 @@ class Map2GameScreen extends StatelessWidget {
       child: Scaffold(
         backgroundColor: Colors.black,
         body: Stack(children: [
-          _mapPointer(
-            child: BonfireWidget(
-              focusNode: GameInput.focusNode,
+          BonfireWidget(
+            focusNode: GameInput.focusNode,
             playerControllers: _playerControllers(),
             player: CustomPlayer(Vector2.zero()),
             map: CustomMap('maps/world2.tmj', objectsBuilder: _mapObjects('world2')),
@@ -1809,7 +1811,8 @@ class Map2GameScreen extends StatelessWidget {
               await _startLevel(game, 2);
               MusicManager().play('assets/audio/music/Neon_Shadows.mp3');
             },
-          )),
+          ),
+          _mapPointer(),
           const NightTint(),
           const _Vignette(),
           const GameHud(),
@@ -1852,9 +1855,8 @@ class Map3GameScreen extends StatelessWidget {
       child: Scaffold(
         backgroundColor: Colors.black,
         body: Stack(children: [
-          _mapPointer(
-            child: BonfireWidget(
-              focusNode: GameInput.focusNode,
+          BonfireWidget(
+            focusNode: GameInput.focusNode,
               playerControllers: _playerControllers(),
               player: CustomPlayer(Vector2.zero()),
               map: CustomMap('maps/world3.tmj', objectsBuilder: _mapObjects('world3')),
@@ -1869,7 +1871,7 @@ class Map3GameScreen extends StatelessWidget {
                 MusicManager().play('assets/audio/music/Neon_Mirage.mp3');
               },
             ),
-          ),
+          _mapPointer(),
           const NightTint(),
           const _Vignette(),
           const GameHud(),
@@ -1906,9 +1908,8 @@ class Map4GameScreen extends StatelessWidget {
       child: Scaffold(
         backgroundColor: Colors.black,
         body: Stack(children: [
-          _mapPointer(
-            child: BonfireWidget(
-              focusNode: GameInput.focusNode,
+          BonfireWidget(
+            focusNode: GameInput.focusNode,
               playerControllers: _playerControllers(),
               player: CustomPlayer(Vector2.zero()),
               map: CustomMap('maps/world4.tmj', objectsBuilder: _mapObjects('world4')),
@@ -1923,7 +1924,7 @@ class Map4GameScreen extends StatelessWidget {
                 MusicManager().play('assets/audio/music/Echoes_of_the Deep_Mine.mp3');
               },
             ),
-          ),
+          _mapPointer(),
           const NightTint(),
           const _Vignette(),
           const GameHud(),
@@ -1960,9 +1961,8 @@ class Map5GameScreen extends StatelessWidget {
       child: Scaffold(
         backgroundColor: Colors.black,
         body: Stack(children: [
-          _mapPointer(
-            child: BonfireWidget(
-              focusNode: GameInput.focusNode,
+          BonfireWidget(
+            focusNode: GameInput.focusNode,
               playerControllers: _playerControllers(),
               player: CustomPlayer(Vector2.zero()),
               map: CustomMap('maps/world5.tmj', objectsBuilder: _mapObjects('world5')),
@@ -1977,7 +1977,7 @@ class Map5GameScreen extends StatelessWidget {
                 MusicManager().play('assets/audio/music/Neon_Mirage.mp3');
               },
             ),
-          ),
+          _mapPointer(),
           const NightTint(),
           const _Vignette(),
           const GameHud(),

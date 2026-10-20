@@ -250,10 +250,7 @@ class DebugMaskEditor extends GameComponent {
   }
 
   Vector2 _screenToWorld(Vector2 screen) {
-    final camCenter = gameRef.camera.viewfinder.position;
-    final screenCenter = gameRef.size / 2;
-    final zoom = gameRef.camera.viewfinder.zoom;
-    return camCenter + (screen - screenCenter) / zoom;
+    return gameRef.camera.screenToWorld(screen);
   }
 
   bool onScreenTap(Vector2 screen) {
