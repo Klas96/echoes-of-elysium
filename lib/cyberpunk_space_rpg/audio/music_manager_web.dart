@@ -5,8 +5,8 @@ import 'package:flutter/foundation.dart';
 
 /// Web BGM via a DOM-mounted [html.AudioElement].
 ///
-/// Must start (or unlock) inside a user-gesture turn — browsers block
-/// autoplay once navigation / async gaps have consumed the activation.
+/// Start [play] inside the CONTINUE / BEGIN click — never unlock with a
+/// silent data-URI first (that raced and wiped the real track src).
 class MusicManager {
   static final MusicManager _instance = MusicManager._();
   factory MusicManager() => _instance;
@@ -15,26 +15,25 @@ class MusicManager {
   html.AudioElement? _el;
   String? _currentTrack;
   bool _domReady = false;
+  int _playGen = 0;
 
   double _userVolume = 0.7;
   bool _enabled = true;
   double _mix = 1.0;
   bool _awaitingGesture = false;
 
-  /// Tiny silent wav — unlocks HTMLAudio when no track is chosen yet.
-  static const _silentDataUri =
-      'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
-
   double get _effective =>
       (_enabled ? _userVolume : 0.0) * _mix.clamp(0.0, 1.0);
 
   bool get _shouldPlay => _effective > 0.001;
 
-  /// Resolve against `<base href="/games/echoes-of-elysium/">`.
+  /// Resolve against `<base href>`, encoding each path segment (spaces etc.).
   static String _url(String path) {
     final trimmed =
         path.startsWith('assets/') ? path.substring('assets/'.length) : path;
-    return Uri.base.resolve('assets/assets/$trimmed').toString();
+    final encoded =
+        trimmed.split('/').map(Uri.encodeComponent).join('/');
+    return Uri.base.resolve('assets/assets/$encoded').toString();
   }
 
   void _ensureEl() {
@@ -54,7 +53,6 @@ class MusicManager {
     if (_domReady) return;
     _ensureEl();
     final el = _el!;
-    // Some browsers refuse to play elements that were never inserted.
     if (el.parent == null) {
       html.document.body?.append(el);
     }
@@ -67,8 +65,8 @@ class MusicManager {
     el.volume = _effective.clamp(0.0, 1.0);
   }
 
-  Future<void> _waitReady(html.AudioElement el) async {
-    if (el.readyState >= 2) return; // HAVE_CURRENT_DATA+
+  Future<void> _waitReady(html.AudioElement el, int gen) async {
+    if (el.readyState >= 2) return;
     final done = Completer<void>();
     StreamSubscription? sub;
     Timer? timeout;
@@ -80,11 +78,12 @@ class MusicManager {
     }
 
     sub = el.onCanPlay.listen((_) => finish());
-    timeout = Timer(const Duration(seconds: 4), finish);
+    timeout = Timer(const Duration(seconds: 5), finish);
     await done.future;
+    if (gen != _playGen) return;
   }
 
-  Future<bool> _tryPlay() async {
+  Future<bool> _tryPlay(int gen) async {
     _mountDom();
     final el = _el!;
     _applyVolume();
@@ -94,13 +93,15 @@ class MusicManager {
       return false;
     }
     try {
-      await _waitReady(el);
+      await _waitReady(el, gen);
+      if (gen != _playGen) return false;
       await el.play();
+      if (gen != _playGen) return false;
       _awaitingGesture = el.paused;
       return !_awaitingGesture;
     } catch (e) {
       debugPrint('MusicManager web play blocked: $e');
-      _awaitingGesture = true;
+      if (gen == _playGen) _awaitingGesture = true;
       return false;
     }
   }
@@ -112,7 +113,8 @@ class MusicManager {
     _applyVolume();
     if (_currentTrack == null) return;
     if (_shouldPlay) {
-      await _tryPlay();
+      final gen = _playGen;
+      await _tryPlay(gen);
     } else {
       _el?.pause();
       _awaitingGesture = false;
@@ -120,59 +122,46 @@ class MusicManager {
   }
 
   Future<void> play(String assetPath) async {
+    final gen = ++_playGen;
     _mountDom();
     final el = _el!;
     final url = _url(assetPath);
-    final sameTrack = _currentTrack == assetPath;
-    final sameSrc = el.currentSrc.endsWith(assetPath.split('/').last) ||
-        el.src.endsWith(Uri.parse(url).path);
     _currentTrack = assetPath;
     _applyVolume();
 
-    if (!sameTrack || !sameSrc || el.src.isEmpty || el.src.startsWith('data:')) {
+    final needLoad = el.src.isEmpty ||
+        el.src.startsWith('data:') ||
+        !(el.currentSrc.contains(Uri.encodeComponent(assetPath.split('/').last)) ||
+            el.src.contains(assetPath.split('/').last.split(' ').first));
+    // Always reload when path changes.
+    final sameTrack = el.getAttribute('data-track') == assetPath;
+    if (!sameTrack || needLoad) {
       el.loop = true;
+      el.setAttribute('data-track', assetPath);
       el.src = url;
       el.load();
     }
 
-    final ok = await _tryPlay();
-    if (!ok && _shouldPlay) {
+    final ok = await _tryPlay(gen);
+    if (!ok && _shouldPlay && gen == _playGen) {
       debugPrint('MusicManager web: waiting for gesture ($assetPath)');
     }
   }
 
-  /// Call from clicks/taps/keys so autoplay policy allows playback.
+  /// Resume current track after a gesture. Does **not** invent a silent src.
   Future<void> unlockAfterGesture() async {
-    _mountDom();
-    final el = _el!;
-
-    if (_currentTrack == null) {
-      // Unlock the element with silence so a later [play] is allowed.
-      try {
-        el.loop = false;
-        el.src = _silentDataUri;
-        el.muted = true;
-        await el.play();
-        el.pause();
-        el.currentTime = 0;
-        el.muted = false;
-        el.loop = true;
-      } catch (e) {
-        debugPrint('MusicManager web silent unlock: $e');
-      }
-      return;
-    }
-
-    if (!_shouldPlay) return;
-    final ok = await _tryPlay();
-    if (!ok) {
-      final track = _currentTrack!;
+    if (_currentTrack == null || !_shouldPlay) return;
+    final track = _currentTrack!;
+    final gen = _playGen;
+    final ok = await _tryPlay(gen);
+    if (!ok && gen == _playGen) {
       _currentTrack = null;
       await play(track);
     }
   }
 
   Future<void> stop() async {
+    _playGen++;
     _currentTrack = null;
     _awaitingGesture = false;
     try {

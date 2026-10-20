@@ -1077,8 +1077,9 @@ class IntroScreen extends StatelessWidget {
                             filled: true,
                             wide: true,
                             onTap: () {
-                              AudioUnlock.nudge();
+                              // Play BGM first (gesture-owned), then unlock SFX.
                               _continueGame(context);
+                              AudioUnlock.nudge();
                             },
                           ),
                           const SizedBox(height: 8),
@@ -1092,8 +1093,8 @@ class IntroScreen extends StatelessWidget {
                             wide: true,
                             color: Colors.white54,
                             onTap: () {
-                              AudioUnlock.nudge();
                               _confirmNewGame(context);
+                              AudioUnlock.nudge();
                             },
                           ),
                         ])
@@ -1102,8 +1103,8 @@ class IntroScreen extends StatelessWidget {
                           filled: true,
                           wide: true,
                           onTap: () {
-                            AudioUnlock.nudge();
                             _beginNewGame(context);
+                            AudioUnlock.nudge();
                           },
                         ),
                 ),
@@ -1355,6 +1356,7 @@ Future<void> _confirmNewGame(BuildContext context) async {
       ],
     ),
   );
+  // START OVER is its own gesture — begin music inside that turn.
   if (ok == true && context.mounted) await _beginNewGame(context);
 }
 
@@ -1737,8 +1739,15 @@ Widget _mapPointer({bool checkDialogue = false}) {
         if (GameDebug.isOn) {
           DebugMaskEditor.instance?.onScreenPanStart(screen);
         }
-        // World space — avoids a second, often-wrong conversion in CustomPlayer.
-        CustomPlayer.pendingClick.value = _pointerToWorld(e.position);
+        // World space — handle immediately (gesture turn) so shots fire on web.
+        // Do not also queue pendingClick or _issueClick runs twice.
+        final world = _pointerToWorld(e.position);
+        final kaela = CustomPlayer.current;
+        if (kaela != null) {
+          kaela.handleWorldClick(world);
+        } else {
+          CustomPlayer.pendingClick.value = world;
+        }
       },
       onPointerMove: (e) {
         final ed = DebugMaskEditor.instance;

@@ -1038,6 +1038,17 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
   /// World-space center of the feet collision box (pathfinding agent).
   Vector2 get _feetCenter => rectCollision.centerVector2;
 
+  /// Handle a world-space click from the map pointer (may run in the same
+  /// browser gesture turn — preferred for shoot SFX unlock).
+  void handleWorldClick(Vector2 world) {
+    if (!hasGameRef || isRespawning) return;
+    if (NpcCharacter.activeDialogue.value != null ||
+        AIFragment.activeDialogue.value != null) {
+      return;
+    }
+    _issueClick(world);
+  }
+
   /// [world] is already in map space (pointer overlay converts on web).
   void _issueClick(Vector2 world) {
     if (!hasGameRef) return;
@@ -1058,18 +1069,15 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
       _pathTo(_moveGoal!);
       return;
     }
-    // Ground click: move, and fire toward the click if a foe is in range
-    // (browser-friendly — no need to pixel-hunt the sprite).
+    // Ground click: always fire toward the cursor (browser / twin-stick style),
+    // then path there. Chase-lock still happens when the click hits a foe.
     _attackTarget = null;
     _useTarget = null;
     _steerFallback = false;
+    _tryAutoAttack(_feetCenter, world);
     _moveGoal = world;
     _pathRepathT = 0;
     _pathTo(world);
-    final nearby = _hostileNear(_feetCenter, attackRange);
-    if (nearby != null) {
-      _tryAutoAttack(_feetCenter, world);
-    }
   }
 
   /// Foe near the player that lies toward the click (loose aim assist).
