@@ -14,6 +14,7 @@ class SfxManager {
   html.AudioElement? _portal;
   html.AudioElement? _shoot;
   html.AudioElement? _chime;
+  html.AudioElement? _heal;
   html.AudioElement? _currentVoice;
 
   double _userVolume = 1.0;
@@ -24,6 +25,7 @@ class SfxManager {
   static const _basePortal = 0.75;
   static const _baseShoot = 0.85;
   static const _baseChime = 0.55;
+  static const _baseHeal = 0.7;
   static const _baseVoice = 1.0;
 
   double get _scale => _enabled ? _userVolume.clamp(0.0, 1.0) : 0.0;
@@ -35,6 +37,7 @@ class SfxManager {
     _portal = _preload('audio/sfx/portal.mp3');
     _shoot = _preload('audio/sfx/shoot.mp3');
     _chime = _preload('audio/sfx/computer_beep.wav');
+    _heal = _preload('audio/sfx/health_pickup.mp3');
     _applyVolumes();
   }
 
@@ -48,7 +51,7 @@ class SfxManager {
   /// Does not rewind elements that are already playing (footsteps, etc.).
   Future<void> unlockAfterGesture() async {
     if (_footstep == null) await init();
-    for (final el in [_footstep, _damage, _portal, _shoot, _chime]) {
+    for (final el in [_footstep, _damage, _portal, _shoot, _chime, _heal]) {
       if (el == null) continue;
       try {
         final wasPlaying = !el.paused && el.currentTime > 0;
@@ -70,6 +73,7 @@ class SfxManager {
     _portal?.volume = _basePortal * s;
     _shoot?.volume = _baseShoot * s;
     _chime?.volume = _baseChime * s;
+    _heal?.volume = _baseHeal * s;
     _currentVoice?.volume = _baseVoice * s;
   }
 
@@ -100,6 +104,9 @@ class SfxManager {
 
   /// Soft chime for bonds and finds (reuses the computer beep).
   Future<void> playChime() async => _play(_chime, 'chime');
+
+  /// Health pack / heal pickup.
+  Future<void> playHeal() async => _play(_heal, 'heal');
 
   /// Dialogue / cutscene VO — respects SFX mute / volume.
   Future<void> playVoice(String assetPath) async {

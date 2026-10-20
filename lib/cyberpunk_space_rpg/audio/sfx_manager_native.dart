@@ -18,6 +18,7 @@ class SfxManager {
   AudioPlayer? _portal;
   AudioPlayer? _shoot;
   AudioPlayer? _chime;
+  AudioPlayer? _heal;
   AudioPlayer? _voice;
   bool _ready = false;
   bool _initStarted = false;
@@ -31,12 +32,14 @@ class SfxManager {
   static const _portalAsset = 'audio/sfx/portal.mp3';
   static const _shootAsset = 'audio/sfx/shoot.mp3';
   static const _chimeAsset = 'audio/sfx/computer_beep.wav';
+  static const _healAsset = 'audio/sfx/health_pickup.mp3';
 
   static const _baseFoot = 0.45;
   static const _baseDamage = 0.7;
   static const _basePortal = 0.75;
   static const _baseShoot = 0.85;
   static const _baseChime = 0.55;
+  static const _baseHeal = 0.7;
   static const _baseVoice = 1.0;
 
   static String _asset(String path) =>
@@ -63,6 +66,7 @@ class SfxManager {
       _portal ??= AudioPlayer();
       _shoot ??= AudioPlayer();
       _chime ??= AudioPlayer();
+      _heal ??= AudioPlayer();
       _voice ??= AudioPlayer();
       try {
         await AudioPlayer.global.setAudioContext(mix);
@@ -75,12 +79,14 @@ class SfxManager {
         _safeContext(_portal!, mix),
         _safeContext(_shoot!, mix),
         _safeContext(_chime!, mix),
+        _safeContext(_heal!, mix),
         _safeContext(_voice!, mix),
         _footstep!.setReleaseMode(ReleaseMode.stop),
         _damage!.setReleaseMode(ReleaseMode.stop),
         _portal!.setReleaseMode(ReleaseMode.stop),
         _shoot!.setReleaseMode(ReleaseMode.stop),
         _chime!.setReleaseMode(ReleaseMode.stop),
+        _heal!.setReleaseMode(ReleaseMode.stop),
         _voice!.setReleaseMode(ReleaseMode.stop),
       ]);
       _ready = true;
@@ -120,6 +126,7 @@ class SfxManager {
         if (_portal != null) _portal!.setVolume(_basePortal * s),
         if (_shoot != null) _shoot!.setVolume(_baseShoot * s),
         if (_chime != null) _chime!.setVolume(_baseChime * s),
+        if (_heal != null) _heal!.setVolume(_baseHeal * s),
         if (_voice != null) _voice!.setVolume(_baseVoice * s),
       ]);
     } catch (_) {}
@@ -146,6 +153,7 @@ class SfxManager {
     if (asset == _portalAsset) return _basePortal * s;
     if (asset == _shootAsset) return _baseShoot * s;
     if (asset == _chimeAsset) return _baseChime * s;
+    if (asset == _healAsset) return _baseHeal * s;
     return s;
   }
 
@@ -156,6 +164,9 @@ class SfxManager {
 
   /// Soft chime for bonds and finds (reuses the computer beep).
   Future<void> playChime() async => _playOneShot(_chime, _chimeAsset);
+
+  /// Health pack / heal pickup.
+  Future<void> playHeal() async => _playOneShot(_heal, _healAsset);
 
   /// Dialogue / cutscene VO — respects SFX mute / volume.
   Future<void> playVoice(String assetPath) async {
