@@ -38,7 +38,8 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
   static final ValueNotifier<Vector2> positionNotifier = ValueNotifier(Vector2.zero());
   static final ValueNotifier<int> healthNotifier = ValueNotifier(baseMaxHealth);
   static final ValueNotifier<bool> damageFlash = ValueNotifier(false);
-  /// Screen-space click/tap (League-style: ground = move, foe = attack).
+  /// World-space click/tap (League-style: ground = move, foe = attack).
+  /// Pointer overlay converts through [BonfireGame.screenToWorld] before set.
   static final ValueNotifier<Vector2?> pendingClick = ValueNotifier(null);
 
   /// Legacy alias — some call sites still clear this on pause/cutscene.
@@ -89,10 +90,8 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
   static const double clickArrive = 3.5;
   /// Intermediate A* waypoint arrive — a bit looser so lane slides don't jam.
   static const double waypointArrive = 9;
-  /// World-space fallback when screen pick misses (LoL-style click-to-attack).
-  static const double clickEnemyRadius = 72;
-  /// Screen-space foe pick radius (viewport px) — preferred on web/HiDPI.
-  static const double clickEnemyScreenRadius = 52;
+  /// World-space foe pick radius around the click (LoL-style click-to-attack).
+  static const double clickEnemyRadius = 96;
 
   // --- Calm gameplay: no game over, gentle regen -------------------------
   /// Seconds without taking damage before health starts coming back.
@@ -527,20 +526,30 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
       return false;
     }
     if (!hasGameRef) return false;
-    final foe = _hostilePreferFacing(_feetCenter, attackRange * 2.8);
+    // Wide acquire — browser TARGET button / T should find off-screen-ish foes.
+    final foe = _hostilePreferFacing(_feetCenter, attackRange * 4.5);
     if (foe == null) return false;
+    _lockAttack(foe);
+    return true;
+  }
+
+  void _lockAttack(GameComponent foe) {
     _useTarget = null;
     _steerFallback = false;
     _attackTarget = foe;
+    final tc = _targetCenter(foe);
+    // Shoot immediately if already in range (don't wait for path arrive).
+    if (_feetCenter.distanceTo(tc) <= attackRange) {
+      _tryAutoAttack(_feetCenter, tc);
+    }
     if (_moveKeysHeld || _touchStick) {
       _clearPath(stop: false);
       _moveGoal = null;
-      return true;
+      return;
     }
-    _moveGoal = _targetCenter(foe);
+    _moveGoal = tc;
     _pathRepathT = 0;
-    _pathTo(_moveGoal!);
-    return true;
+    _pathTo(tc);
   }
 
   /// Short dash — Space / HUD. Works while running (WASD, stick, or click-path).
@@ -1029,21 +1038,13 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
   /// World-space center of the feet collision box (pathfinding agent).
   Vector2 get _feetCenter => rectCollision.centerVector2;
 
-  void _issueClick(Vector2 screenPos) {
+  /// [world] is already in map space (pointer overlay converts on web).
+  void _issueClick(Vector2 world) {
     if (!hasGameRef) return;
-    final world = _screenToWorld(screenPos);
-    // Prefer screen-space pick so sprite clicks work when camera zoom / web
-    // viewport mapping would miss a tight world-radius test.
-    final foe = _hostileNearScreen(screenPos, clickEnemyScreenRadius) ??
-        _hostileNear(world, clickEnemyRadius);
+    final foe = _hostileNear(world, clickEnemyRadius) ??
+        _hostileNearClickLine(world);
     if (foe != null) {
-      _clearPath(stop: false);
-      _useTarget = null;
-      _steerFallback = false;
-      _attackTarget = foe;
-      _moveGoal = _targetCenter(foe);
-      _pathRepathT = 0;
-      _pathTo(_moveGoal!);
+      _lockAttack(foe);
       return;
     }
     final use = _useNear(world);
@@ -1057,13 +1058,55 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
       _pathTo(_moveGoal!);
       return;
     }
-    // Ground click: A* move, cancel attack/use.
+    // Ground click: move, and fire toward the click if a foe is in range
+    // (browser-friendly — no need to pixel-hunt the sprite).
     _attackTarget = null;
     _useTarget = null;
     _steerFallback = false;
     _moveGoal = world;
     _pathRepathT = 0;
     _pathTo(world);
+    final nearby = _hostileNear(_feetCenter, attackRange);
+    if (nearby != null) {
+      _tryAutoAttack(_feetCenter, world);
+    }
+  }
+
+  /// Foe near the player that lies toward the click (loose aim assist).
+  GameComponent? _hostileNearClickLine(Vector2 clickWorld) {
+    final origin = _feetCenter;
+    final toClick = clickWorld - origin;
+    if (toClick.length < 8) return null;
+    final aim = toClick.normalized();
+    GameComponent? best;
+    var bestScore = double.infinity;
+    void consider(GameComponent t, Vector2 center) {
+      final delta = center - origin;
+      final dist = delta.length;
+      if (dist > attackRange * 1.35 || dist < 1) return;
+      final dir = delta / dist;
+      final align = aim.dot(dir);
+      if (align < 0.35) return; // must be generally toward the click
+      final score = dist * (1.2 - align);
+      if (score < bestScore) {
+        bestScore = score;
+        best = t;
+      }
+    }
+
+    for (final d in UECDrone.active) {
+      if (!d.isMounted || d.isDead) continue;
+      consider(d, d.position + d.size / 2);
+    }
+    for (final pad in DroneSpawnPoint.active) {
+      if (!pad.isMounted || pad.isDead) continue;
+      consider(pad, pad.padCenter);
+    }
+    final s = SentinelDrone.instance;
+    if (s != null && s.isMounted && !s.isDead) {
+      consider(s, s.position + s.size / 2);
+    }
+    return best;
   }
 
   /// A* around collisions (LoL): off-screen walls count. Unreachable /
@@ -1278,13 +1321,6 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
     return null;
   }
 
-  /// [screen] is viewport-local (same space as the map pointer overlay).
-  /// Use Bonfire's camera math — viewfinder-center math drifts when
-  /// [CameraConfig.moveOnlyMapArea] clamps at map edges, so foe clicks miss.
-  Vector2 _screenToWorld(Vector2 screen) {
-    return gameRef.camera.screenToWorld(screen);
-  }
-
   void _steerToward(Vector2? worldTarget) {
     if (worldTarget == null) {
       onJoystickChangeDirectional(JoystickDirectionalEvent(
@@ -1400,37 +1436,6 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
         bestD = dist;
         best = s;
       }
-    }
-    return best;
-  }
-
-  /// Pick a foe by where its sprite sits on screen (viewport pixels).
-  GameComponent? _hostileNearScreen(Vector2 screen, double radiusPx) {
-    if (!hasGameRef) return null;
-    final zoom = gameRef.camera.zoom;
-    GameComponent? best;
-    var bestD = radiusPx;
-    void consider(GameComponent t, Vector2 center, Vector2 size) {
-      final sp = gameRef.camera.worldToScreen(center);
-      final dist = sp.distanceTo(screen);
-      final pad = max(radiusPx, max(size.x, size.y) * 0.55 * zoom);
-      if (dist < pad && dist < bestD) {
-        bestD = dist;
-        best = t;
-      }
-    }
-
-    for (final d in UECDrone.active) {
-      if (!d.isMounted || d.isDead) continue;
-      consider(d, d.position + d.size / 2, d.size);
-    }
-    for (final pad in DroneSpawnPoint.active) {
-      if (!pad.isMounted || pad.isDead) continue;
-      consider(pad, pad.padCenter, pad.size);
-    }
-    final s = SentinelDrone.instance;
-    if (s != null && s.isMounted && !s.isDead) {
-      consider(s, s.position + s.size / 2, s.size);
     }
     return best;
   }

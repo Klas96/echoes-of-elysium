@@ -6,11 +6,15 @@ import 'sfx_manager.dart';
 class AudioUnlock {
   AudioUnlock._();
 
-  /// Safe on every gesture. Both music and SFX unlocks are re-fired — the
-  /// title-screen tap often runs *before* [MusicManager.play], and a one-shot
-  /// unlock left BGM (and sometimes SFX) silent forever on web.
+  static bool _sfxUnlocked = false;
+
+  /// Music unlock is safe every gesture (idempotent). SFX unlock runs once —
+  /// re-running it was restarting the footstep element on every click.
   static void nudge() {
     MusicManager().unlockAfterGesture();
-    SfxManager().unlockAfterGesture();
+    if (!_sfxUnlocked) {
+      _sfxUnlocked = true;
+      SfxManager().unlockAfterGesture();
+    }
   }
 }

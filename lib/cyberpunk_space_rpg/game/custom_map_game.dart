@@ -1700,12 +1700,20 @@ void _onMapReady(BonfireGameInterface game) {
 /// web, Flame's canvas often eats parent gestures; a sibling overlay still
 /// receives pointer downs so League-style shoot/move works. [translucent] lets
 /// events also reach the game below (focus / Bonfire internals).
-/// Pointer → Bonfire viewport pixels (not raw Flutter local, which drifts on
-/// web when the game canvas and the overlay disagree about size / DPR).
+/// Global pointer → Bonfire viewport pixels (mask editor / debug).
 Vector2 _pointerToViewport(Offset global) {
   final g = _activeGame;
   if (g != null) {
     return g.globalToViewportPosition(Vector2(global.dx, global.dy));
+  }
+  return Vector2(global.dx, global.dy);
+}
+
+/// Global pointer → world (Kaela click-move / click-attack).
+Vector2 _pointerToWorld(Offset global) {
+  final g = _activeGame;
+  if (g != null) {
+    return g.screenToWorld(Vector2(global.dx, global.dy));
   }
   return Vector2(global.dx, global.dy);
 }
@@ -1729,7 +1737,8 @@ Widget _mapPointer({bool checkDialogue = false}) {
         if (GameDebug.isOn) {
           DebugMaskEditor.instance?.onScreenPanStart(screen);
         }
-        CustomPlayer.pendingClick.value = screen;
+        // World space — avoids a second, often-wrong conversion in CustomPlayer.
+        CustomPlayer.pendingClick.value = _pointerToWorld(e.position);
       },
       onPointerMove: (e) {
         final ed = DebugMaskEditor.instance;

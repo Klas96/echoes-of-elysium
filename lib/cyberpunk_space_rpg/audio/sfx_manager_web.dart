@@ -45,11 +45,14 @@ class SfxManager {
   }
 
   /// Unlock HTMLAudioElement playback after a user gesture (autoplay policy).
+  /// Does not rewind elements that are already playing (footsteps, etc.).
   Future<void> unlockAfterGesture() async {
     if (_footstep == null) await init();
     for (final el in [_footstep, _damage, _portal, _shoot, _chime]) {
       if (el == null) continue;
       try {
+        final wasPlaying = !el.paused && el.currentTime > 0;
+        if (wasPlaying) continue;
         el.muted = true;
         await el.play();
         el.pause();
