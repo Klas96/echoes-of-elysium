@@ -17,7 +17,8 @@ class ObstacleMasks {
   static const assetDir = 'assets/images/obstacles';
 
   /// Defaults match the checked-in JSON (and former Dart consts).
-  static List<Rect> boulderClosed = [const Rect.fromLTWH(0, 8, 96, 52)];
+  // Full 3×2 footprint when closed — a top gap let feet slip past nook chokes.
+  static List<Rect> boulderClosed = [const Rect.fromLTWH(0, 0, 96, 64)];
   static List<Rect> boulderOpen = [const Rect.fromLTWH(64, 30, 28, 26)];
   static List<Rect> brambleClosed = [const Rect.fromLTWH(4, 16, 56, 46)];
   static List<Rect> brambleOpen = [

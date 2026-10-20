@@ -1,238 +1,106 @@
 {
- "id": "noodle_shop",
- "title": "Noodle shop on Market Row",
- "image": "noodle_shop.png",
- "size": [
-  16,
-  9
+"id": "noodle_shop",
+"title": "Noodle shop on Market Row",
+"image": "noodle_shop.png",
+"tileset": "tileset.png",
+"sheetCols": 16,
+"size": [12, 8],
+"tile": 32,
+"floor": [
+  [76, 19, 18, 18, 18, 18, 18, 18, 18, 18, 19, 76],
+  [71, 3, 2, 2, 2, 3, 2, 2, 2, 3, 2, 71],
+  [71, 2, 3, 2, 2, 2, 3, 2, 2, 2, 3, 71],
+  [71, 2, 2, 3, 2, 2, 2, 3, 2, 2, 2, 71],
+  [71, 2, 2, 2, 3, 2, 2, 2, 3, 2, 2, 71],
+  [71, 3, 2, 2, 2, 3, 2, 2, 2, 3, 2, 71],
+  [76, 18, 18, 18, 18, 2, 3, 18, 18, 18, 18, 76],
+  [76, 18, 18, 18, 28, 12, 12, 29, 18, 18, 18, 76]
+],
+"props": [
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  [0, 40, 40, 40, 42, 42, 0, 42, 43, 56, 55, 0],
+  [0, 55, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  [0, 55, 0, 57, 0, 0, 0, 0, 57, 0, 55, 0],
+  [0, 0, 62, 0, 0, 0, 0, 0, 0, 62, 68, 0],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+],
+"collision": [
+[0, 0, 12, 1],
+[0, 1, 6, 1],
+[7, 1, 5, 1],
+[0, 2, 2, 2],
+[11, 2, 1, 6],
+[3, 3, 1, 1],
+[8, 3, 1, 1],
+[10, 3, 1, 2],
+[0, 4, 1, 4],
+[2, 4, 1, 1],
+[9, 4, 1, 1],
+[1, 6, 4, 2],
+[7, 6, 4, 2]
  ],
- "tile": 32,
- "collision": [
-  [
-   0,
-   0,
-   16,
-   3
-  ],
-  [
-   0,
-   3,
-   1,
-   6
-  ],
-  [
-   15,
-   3,
-   1,
-   6
-  ],
-  [
-   0,
-   8,
-   7,
-   1
-  ],
-  [
-   9,
-   8,
-   7,
-   1
-  ],
-  [
-   6,
-   7,
-   1,
-   1
-  ],
-  [
-   9,
-   7,
-   1,
-   1
-  ],
-  [
-   4,
-   3,
-   8,
-   1
-  ],
-  [
-   2,
-   3,
-   2,
-   1
-  ],
-  [
-   12,
-   3,
-   1,
-   1
-  ],
-  [
-   13,
-   3,
-   2,
-   1
-  ],
-  [
-   1,
-   3,
-   1,
-   3
-  ],
-  [
-   1,
-   6,
-   1,
-   2
-  ],
-  [
-   14,
-   3,
-   1,
-   5
-  ],
-  [
-   13,
-   6,
-   1,
-   1
-  ],
-  [
-   4,
-   5,
-   2,
-   2
-  ],
-  [
-   10,
-   5,
-   2,
-   2
-  ]
- ],
- "door": [
-  7,
-  8,
-  2,
-  1
- ],
- "spawn": [
-  7,
-  6
- ],
- "npcs": [
-  {
-   "name": "dao",
-   "sprite": "dao",
-   "tile": [
-    7,
-    2
-   ],
-   "role": "cook",
-   "note": "Behind the counter at the stoves (painted out of the art)"
+"door": [5, 7, 2, 1],
+"spawn": [5, 5],
+"npcs": [
+{
+  "name": "dao",
+  "sprite": "dao",
+  "tile": [6, 1],
+  "role": "cook",
+  "note": "At the pass between the pots"
   }
  ],
- "interact": [
-  {
-   "id": "dao",
-   "rect": [
-    6,
-    2,
-    3,
-    2
-   ],
-   "kind": "shop",
-   "note": "Dao's menu for glimmer: ember_broth (faster regen), moss_noodles (faster run), night_bowl (see creatures further at night)"
+"interact": [
+{
+  "id": "dao",
+  "rect": [4, 1, 4, 1],
+  "kind": "shop",
+  "note": "Dao's menu for glimmer: ember_broth (faster regen), moss_noodles (faster run), night_bowl (see creatures further at night)"
   },
-  {
-   "id": "dao_errand",
-   "rect": [
-    6,
-    2,
-    3,
-    2
-   ],
-   "kind": "errand",
-   "note": "Daily: bring one moonflower_bloom from the Woods -> tomorrow's bowl free"
+{
+  "id": "dao_errand",
+  "rect": [4, 1, 4, 1],
+  "kind": "errand",
+  "note": "Daily: bring one moonflower_bloom from the Woods -> tomorrow's bowl free"
   },
-  {
-   "id": "counter_tin",
-   "rect": [
-    9,
-    2,
-    3,
-    2
-   ],
-   "kind": "flavour",
-   "note": "'A tin of chopsticks. One pair is carved with a vine fox.'"
+{
+  "id": "counter_tin",
+  "rect": [8, 1, 1, 1],
+  "kind": "flavour",
+  "note": "'A tin of chopsticks. One pair is carved with a vine fox.'"
   },
-  {
-   "id": "tables",
-   "rect": [
-    4,
-    5,
-    2,
-    2
-   ],
-   "kind": "flavour",
-   "note": "Steaming bowls (also the right table)"
+{
+  "id": "tables",
+  "rect": [3, 3, 1, 1],
+  "kind": "flavour",
+  "note": "Steaming bowls (also the right table)"
   },
-  {
-   "id": "tables_right",
-   "rect": [
-    10,
-    5,
-    2,
-    2
-   ],
-   "kind": "flavour",
-   "note": "Steaming bowls"
+{
+  "id": "tables_right",
+  "rect": [8, 3, 1, 1],
+  "kind": "flavour",
+  "note": "Steaming bowls"
   }
  ],
- "lights": [
-  {
-   "tile": [
-    4,
-    1
-   ],
-   "kind": "warm"
+"lights": [
+{
+  "tile": [4, 1],
+  "kind": "fire"
   },
-  {
-   "tile": [
-    11,
-    1
-   ],
-   "kind": "warm"
+{
+  "tile": [1, 0],
+  "kind": "neon"
   },
-  {
-   "tile": [
-    0,
-    2
-   ],
-   "kind": "warm"
+{
+  "tile": [10, 0],
+  "kind": "neon"
   },
-  {
-   "tile": [
-    7,
-    2
-   ],
-   "kind": "fire"
-  },
-  {
-   "tile": [
-    2,
-    1
-   ],
-   "kind": "neon"
-  },
-  {
-   "tile": [
-    13,
-    1
-   ],
-   "kind": "neon"
+{
+  "tile": [6, 2],
+  "kind": "warm"
   }
  ],
- "walkable_tiles": 39
+"walkable_tiles": 36
 }

@@ -676,7 +676,9 @@ Map<String, ObjectBuilder> _mapObjects(String mapId) => {
           p.size.x > 0 ? p.size.x : 64,
           p.size.y > 0 ? p.size.y : 48,
         );
-        // Woods → City south road: designer locked/open edge art (#55).
+        // Woods → City south road: locked treeline art (#55). When the exit
+        // opens (fragments + boulder), that image simply disappears — no
+        // open-road overlay; the map tiles underneath are the road.
         final woodsSouthCity = mapId == 'world' && dest == 2 && needUnlock;
         return MapEdgeExit(
           p.position,
@@ -692,8 +694,7 @@ Map<String, ObjectBuilder> _mapObjects(String mapId) => {
               .toString(),
           lockedSpritePath:
               woodsSouthCity ? 'obstacles/woods_south_exit_locked.png' : null,
-          openSpritePath:
-              woodsSouthCity ? 'obstacles/woods_south_exit_open.png' : null,
+          openSpritePath: null,
           beforeExit: () {
             final region = GameState.regionIds[GameState.levelForMap(mapId)] ?? '';
             if (!Gates.wantsFarewell(region)) return null;

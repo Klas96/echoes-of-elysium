@@ -1,177 +1,91 @@
 {
- "id": "ranger_cabin",
- "title": "Ranger cabin in the Woods: Asha's place",
- "image": "ranger_cabin.png",
- "size": [
-  16,
-  9
+"id": "ranger_cabin",
+"title": "Ranger cabin in the Woods: Asha's place",
+"image": "ranger_cabin.png",
+"tileset": "tileset.png",
+"sheetCols": 16,
+"size": [12, 8],
+"tile": 32,
+"floor": [
+  [77, 20, 21, 21, 21, 24, 24, 24, 20, 20, 20, 77],
+  [72, 5, 4, 4, 4, 5, 4, 4, 4, 5, 4, 72],
+  [72, 4, 5, 4, 4, 4, 5, 4, 4, 4, 5, 72],
+  [72, 4, 4, 5, 4, 4, 4, 5, 4, 4, 4, 72],
+  [72, 4, 4, 4, 5, 4, 4, 4, 5, 4, 4, 72],
+  [72, 5, 4, 4, 4, 5, 4, 4, 4, 5, 4, 72],
+  [77, 20, 20, 20, 20, 4, 5, 20, 20, 20, 20, 77],
+  [77, 20, 20, 20, 30, 12, 12, 31, 20, 20, 20, 77]
+],
+"props": [
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  [0, 60, 0, 0, 0, 0, 0, 0, 52, 53, 0, 0],
+  [0, 50, 0, 0, 0, 0, 0, 0, 0, 0, 64, 0],
+  [0, 0, 0, 0, 0, 63, 63, 0, 0, 0, 65, 0],
+  [0, 48, 0, 0, 0, 0, 0, 0, 48, 0, 0, 0],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+],
+"collision": [
+[0, 0, 12, 1],
+[0, 1, 2, 2],
+[8, 1, 2, 1],
+[11, 1, 1, 7],
+[10, 2, 1, 2],
+[0, 3, 1, 5],
+[1, 4, 1, 1],
+[8, 4, 1, 1],
+[1, 6, 4, 2],
+[7, 6, 4, 2]
  ],
- "tile": 32,
- "collision": [
-  [
-   0,
-   0,
-   16,
-   3
-  ],
-  [
-   0,
-   3,
-   1,
-   6
-  ],
-  [
-   15,
-   3,
-   1,
-   6
-  ],
-  [
-   0,
-   7,
-   7,
-   2
-  ],
-  [
-   9,
-   7,
-   7,
-   2
-  ],
-  [
-   1,
-   3,
-   2,
-   1
-  ],
-  [
-   9,
-   3,
-   3,
-   1
-  ],
-  [
-   1,
-   4,
-   3,
-   2
-  ],
-  [
-   1,
-   6,
-   2,
-   1
-  ],
-  [
-   12,
-   4,
-   3,
-   3
-  ],
-  [
-   11,
-   6,
-   1,
-   1
-  ]
- ],
- "door": [
-  7,
-  8,
-  2,
-  1
- ],
- "spawn": [
-  7,
-  7
- ],
- "npcs": [],
- "interact": [
-  {
-   "id": "stash_chest",
-   "rect": [
-    1,
-    4,
-    3,
-    2
-   ],
-   "kind": "stash",
-   "note": "Stash between trips (#32)"
+"door": [5, 7, 2, 1],
+"spawn": [5, 5],
+"npcs": [],
+"interact": [
+{
+  "id": "stash_chest",
+  "rect": [1, 2, 1, 1],
+  "kind": "stash",
+  "note": "Stash between trips (#32)"
   },
-  {
-   "id": "desk_journal",
-   "rect": [
-    9,
-    2,
-    2,
-    2
-   ],
-   "kind": "journal",
-   "note": "Creature journal: 'N of 24 creatures befriended'"
+{
+  "id": "desk_journal",
+  "rect": [8, 1, 1, 1],
+  "kind": "journal",
+  "note": "Creature journal: 'N of 24 creatures befriended'"
   },
-  {
-   "id": "asha_note",
-   "rect": [
-    11,
-    2,
-    1,
-    2
-   ],
-   "kind": "note",
-   "note": "'Kaela, use what you need. The chest is yours now. A.'"
+{
+  "id": "asha_note",
+  "rect": [9, 1, 1, 1],
+  "kind": "note",
+  "note": "'Kaela, use what you need. The chest is yours now. A.'"
   },
-  {
-   "id": "wall_map",
-   "rect": [
-    6,
-    0,
-    3,
-    3
-   ],
-   "kind": "map",
-   "note": "Region map: 'Asha has pinned every trail she's walked. A few are still blank.'"
+{
+  "id": "wall_map",
+  "rect": [5, 0, 3, 1],
+  "kind": "map",
+  "note": "Region map: 'Asha has pinned every trail she's walked. A few are still blank.'"
   },
-  {
-   "id": "stove",
-   "rect": [
-    3,
-    0,
-    3,
-    3
-   ],
-   "kind": "flavour",
-   "note": "'Cold ashes and a kettle. It smells of pine.'"
+{
+  "id": "stove",
+  "rect": [2, 0, 3, 1],
+  "kind": "flavour",
+  "note": "'Cold ashes and a kettle. It smells of pine.'"
   }
  ],
- "lights": [
-  {
-   "tile": [
-    4,
-    2
-   ],
-   "kind": "fire"
+"lights": [
+{
+  "tile": [3, 0],
+  "kind": "fire"
   },
-  {
-   "tile": [
-    1,
-    2
-   ],
-   "kind": "warm"
+{
+  "tile": [8, 1],
+  "kind": "warm"
   },
-  {
-   "tile": [
-    14,
-    2
-   ],
-   "kind": "warm"
-  },
-  {
-   "tile": [
-    11,
-    1
-   ],
-   "kind": "warm"
+{
+  "tile": [1, 2],
+  "kind": "warm"
   }
  ],
- "walkable_tiles": 34
+"walkable_tiles": 45
 }

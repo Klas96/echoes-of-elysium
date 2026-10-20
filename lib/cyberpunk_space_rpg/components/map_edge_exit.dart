@@ -157,14 +157,9 @@ class MapEdgeExit extends GameComponent {
     final open = _openSprite;
     if (open != null) {
       open.render(canvas, position: Vector2.zero(), size: size);
-      return;
     }
-    // Soft dust line so the opening reads as a road, not a void.
-    final midY = size.y * 0.55;
-    canvas.drawRect(
-      Rect.fromLTWH(2, midY, size.x - 4, 2),
-      Paint()..color = const Color(0xFF88AACC).withValues(alpha: 0.18),
-    );
+    // Else: draw nothing when open — locked art (e.g. woods treeline) just
+    // disappears and the map road underneath reads as the exit.
   }
 
   /// Dense treeline so a locked south road does not read as walkable grass.

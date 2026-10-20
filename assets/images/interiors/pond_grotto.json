@@ -1,49 +1,80 @@
 {
- "id": "pond_grotto",
- "title": "Pond grotto: a lit cave by the water",
- "image": "pond_grotto.png",
- "size": [
-  16,
-  9
+"id": "pond_grotto",
+"title": "Pond grotto: a lit cave by the water",
+"image": "pond_grotto.png",
+"tileset": "tileset.png",
+"sheetCols": 16,
+"size": [12, 8],
+"tile": 32,
+"floor": [
+  [79, 23, 25, 25, 23, 23, 23, 23, 23, 23, 23, 79],
+  [74, 9, 8, 8, 8, 9, 8, 8, 8, 9, 8, 74],
+  [74, 8, 9, 8, 8, 8, 9, 8, 8, 8, 9, 74],
+  [74, 8, 8, 11, 11, 8, 8, 9, 8, 8, 8, 74],
+  [74, 8, 8, 8, 9, 10, 10, 10, 10, 8, 8, 74],
+  [74, 9, 8, 8, 8, 9, 8, 8, 8, 9, 8, 74],
+  [79, 23, 23, 23, 23, 8, 9, 23, 23, 23, 23, 79],
+  [79, 23, 23, 23, 32, 13, 13, 33, 23, 23, 23, 79]
+],
+"props": [
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  [0, 0, 0, 0, 0, 0, 58, 0, 0, 0, 0, 0],
+  [0, 0, 59, 0, 0, 0, 0, 0, 0, 59, 0, 0],
+  [0, 69, 0, 0, 0, 0, 0, 0, 0, 0, 69, 0],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  [0, 59, 0, 0, 0, 0, 0, 0, 0, 0, 59, 0],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+],
+"collision": [
+[0, 0, 12, 1],
+[0, 1, 1, 7],
+[6, 1, 1, 1],
+[11, 1, 1, 7],
+[2, 2, 1, 1],
+[9, 2, 1, 1],
+[5, 4, 4, 1],
+[1, 5, 1, 3],
+[10, 5, 1, 3],
+[2, 6, 3, 2],
+[7, 6, 3, 2]
  ],
- "tile": 32,
- "collision": [
-  [0, 0, 16, 3],
-  [0, 3, 1, 5],
-  [15, 3, 1, 5],
-  [0, 8, 7, 1],
-  [9, 8, 7, 1],
-  [1, 3, 2, 1],
-  [13, 3, 2, 1],
-  [3, 3, 2, 1],
-  [11, 3, 2, 1]
- ],
- "door": [7, 8, 2, 1],
- "spawn": [7, 7],
- "npcs": [],
- "interact": [
-  {
-   "id": "pond_fragment",
-   "rect": [7, 3, 2, 2],
-   "kind": "clue",
-   "note": "A memory fragment rests in the crystal alcove."
+"door": [5, 7, 2, 1],
+"spawn": [5, 5],
+"npcs": [],
+"interact": [
+{
+  "id": "pond_fragment",
+  "rect": [6, 1, 1, 1],
+  "kind": "clue",
+  "note": "A memory fragment rests in the crystal alcove."
   },
-  {
-   "id": "drip_wall",
-   "rect": [2, 5, 2, 2],
-   "kind": "flavour",
-   "note": "Water ticks from the stone. The Light still hums in the moss."
+{
+  "id": "drip_wall",
+  "rect": [2, 0, 2, 1],
+  "kind": "flavour",
+  "note": "Water ticks from the stone. The Light still hums in the moss."
   },
-  {
-   "id": "pool_edge",
-   "rect": [6, 5, 4, 1],
-   "kind": "flavour",
-   "note": "A shallow pool mirrors the mouth you came through."
+{
+  "id": "pool_edge",
+  "rect": [5, 4, 4, 1],
+  "kind": "flavour",
+  "note": "A shallow pool mirrors the mouth you came through."
   }
  ],
- "lights": [
-  {"tile": [8, 4], "kind": "cyan"},
-  {"tile": [4, 4], "kind": "cyan"},
-  {"tile": [12, 4], "kind": "warm"}
- ]
+"lights": [
+{
+  "tile": [6, 1],
+  "kind": "cyan"
+  },
+{
+  "tile": [3, 3],
+  "kind": "cyan"
+  },
+{
+  "tile": [9, 2],
+  "kind": "warm"
+  }
+ ],
+"walkable_tiles": 45
 }

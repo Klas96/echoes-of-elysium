@@ -267,9 +267,9 @@
       "name": "collision",
       "type": "collision",
       "x": 9.740234375,
-      "y": 111.44921875,
+      "y": 96.0,
       "width": 140.259765625,
-      "height": 34.55078125,
+      "height": 64.0,
       "rotation": 0,
       "visible": true
      }
