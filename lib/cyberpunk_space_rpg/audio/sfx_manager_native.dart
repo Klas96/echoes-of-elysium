@@ -108,6 +108,9 @@ class SfxManager {
     if (_ready) await _applyVolumes();
   }
 
+  /// No-op on native (autoplay is not gated the same way as in browsers).
+  Future<void> unlockAfterGesture() async {}
+
   Future<void> _applyVolumes() async {
     final s = _scale;
     try {

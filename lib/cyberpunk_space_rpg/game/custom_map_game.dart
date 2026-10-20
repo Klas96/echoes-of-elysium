@@ -25,6 +25,7 @@ import '../components/ambient_prop_fx.dart';
 import '../components/lamp_light.dart';
 import 'well_rested.dart';
 import '../audio/audio_settings.dart';
+import '../audio/audio_unlock.dart';
 import '../audio/music_manager.dart';
 import '../creatures/bonds.dart';
 import '../creatures/creature_components.dart';
@@ -1074,7 +1075,10 @@ class IntroScreen extends StatelessWidget {
                             label: 'CONTINUE',
                             filled: true,
                             wide: true,
-                            onTap: () => _continueGame(context),
+                            onTap: () {
+                              AudioUnlock.nudge();
+                              _continueGame(context);
+                            },
                           ),
                           const SizedBox(height: 8),
                           Text(_saveSummary(SaveService.data),
@@ -1086,22 +1090,28 @@ class IntroScreen extends StatelessWidget {
                             label: 'BEGIN JOURNEY',
                             wide: true,
                             color: Colors.white54,
-                            onTap: () => _confirmNewGame(context),
+                            onTap: () {
+                              AudioUnlock.nudge();
+                              _confirmNewGame(context);
+                            },
                           ),
                         ])
                       : _CyberButton(
                           label: 'BEGIN JOURNEY',
                           filled: true,
                           wide: true,
-                          onTap: () => _beginNewGame(context),
+                          onTap: () {
+                            AudioUnlock.nudge();
+                            _beginNewGame(context);
+                          },
                         ),
                 ),
                 SizedBox(height: compact ? 12 : 20),
                 Text(_isTouch
-                        ? 'Tap to move · tap to talk/examine · WASD optional'
+                        ? 'Tap to move · tap foe to shoot · WASD optional'
                         : kDebugMode
-                            ? 'Click pathfind/talk · WASD · Esc menu · J journal · I gear · `'
-                            : 'Click pathfind/talk · WASD · Esc menu · J journal · I gear',
+                            ? 'Click pathfind · click foe / T shoot · WASD · Esc · J · I · `'
+                            : 'Click pathfind · click foe / T to shoot · WASD · Esc menu · J · I',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.white24, fontSize: 11, letterSpacing: 1.2)),
               ],
@@ -1660,32 +1670,37 @@ void _onMapReady(BonfireGameInterface game) {
   game.add(DebugMaskEditor());
 }
 
-/// Map pointer → mask editor (debug) or click-to-move.
+/// Map pointer → mask editor (debug) or click-to-move / click-to-attack.
+///
+/// Uses [Listener] (not [GestureDetector]) so Flame/Bonfire cannot win the
+/// gesture arena and swallow clicks on Flutter web — that broke League-style
+/// shoot/move in the browser.
 Widget _mapPointer({required Widget child, bool checkDialogue = false}) {
-  return GestureDetector(
+  return Listener(
     behavior: HitTestBehavior.translucent,
-    onTapDown: (d) {
+    onPointerDown: (e) {
+      AudioUnlock.nudge();
+      // Primary button / touch only (ignore right/middle).
+      if (e.buttons != 0 && (e.buttons & 0x1) == 0) return;
       if (checkDialogue) {
         if (NpcCharacter.activeDialogue.value != null) return;
         if (AIFragment.activeDialogue.value != null) return;
       }
-      final screen = Vector2(d.localPosition.dx, d.localPosition.dy);
+      final screen = Vector2(e.localPosition.dx, e.localPosition.dy);
       final ed = DebugMaskEditor.instance;
       if (ed != null && GameDebug.isOn && ed.onScreenTap(screen)) return;
+      if (GameDebug.isOn) {
+        DebugMaskEditor.instance?.onScreenPanStart(screen);
+      }
       CustomPlayer.pendingClick.value = screen;
     },
-    onPanStart: (d) {
-      if (!GameDebug.isOn) return;
-      final screen = Vector2(d.localPosition.dx, d.localPosition.dy);
-      DebugMaskEditor.instance?.onScreenPanStart(screen);
-    },
-    onPanUpdate: (d) {
+    onPointerMove: (e) {
       final ed = DebugMaskEditor.instance;
       if (ed == null || !ed.isDragging) return;
-      ed.onScreenPanUpdate(Vector2(d.localPosition.dx, d.localPosition.dy));
+      ed.onScreenPanUpdate(Vector2(e.localPosition.dx, e.localPosition.dy));
     },
-    onPanEnd: (_) => DebugMaskEditor.instance?.onScreenPanEnd(),
-    onPanCancel: () => DebugMaskEditor.instance?.onScreenPanEnd(),
+    onPointerUp: (_) => DebugMaskEditor.instance?.onScreenPanEnd(),
+    onPointerCancel: (_) => DebugMaskEditor.instance?.onScreenPanEnd(),
     child: child,
   );
 }

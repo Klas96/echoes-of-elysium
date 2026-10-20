@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
+import '../audio/audio_unlock.dart';
 import '../components/custom_player.dart';
 import 'debug_mask_editor.dart';
 import 'game_debug.dart';
@@ -55,6 +56,7 @@ class GameInput {
       HardwareKeyboard.instance.logicalKeysPressed.any(_isMove);
 
   static bool _onKey(KeyEvent event) {
+    if (event is KeyDownEvent) AudioUnlock.nudge();
     if (!_isMove(event.logicalKey)) return false;
     if (!overworldKeysEnabled) {
       syncAlternateKeys?.call();

@@ -6,6 +6,7 @@ import 'package:bonfire/map/empty_map.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../audio/audio_unlock.dart';
 import '../audio/sfx_manager.dart';
 import '../components/building.dart';
 import '../components/custom_player.dart';
@@ -346,13 +347,16 @@ class _RoomScreenState extends State<RoomScreen> {
           final maxZ = HudLayout.isTouch ? 3.0 : 3.5;
           final zoom = fit.clamp(minZ, maxZ).toDouble();
           return Stack(children: [
-            GestureDetector(
+            Listener(
               behavior: HitTestBehavior.translucent,
-              onTapDown: (d) {
+              onPointerDown: (e) {
+                AudioUnlock.nudge();
                 if (RoomPanel.isOpen || Journal.open.value) return;
+                if (e.buttons != 0 && (e.buttons & 0x1) == 0) return;
                 final g = _game;
                 if (g == null) return;
-                Interiors.handleRoomClick(g, Vector2(d.localPosition.dx, d.localPosition.dy));
+                Interiors.handleRoomClick(
+                    g, Vector2(e.localPosition.dx, e.localPosition.dy));
               },
               child: BonfireWidget(
               focusNode: Interiors.roomFocus,

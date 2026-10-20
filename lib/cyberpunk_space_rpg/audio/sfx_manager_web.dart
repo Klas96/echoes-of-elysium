@@ -44,6 +44,22 @@ class SfxManager {
     _applyVolumes();
   }
 
+  /// Unlock HTMLAudioElement playback after a user gesture (autoplay policy).
+  Future<void> unlockAfterGesture() async {
+    if (_footstep == null) await init();
+    for (final el in [_footstep, _damage, _portal, _shoot, _chime]) {
+      if (el == null) continue;
+      try {
+        el.muted = true;
+        await el.play();
+        el.pause();
+        el.currentTime = 0;
+        el.muted = false;
+      } catch (_) {}
+    }
+    _applyVolumes();
+  }
+
   void _applyVolumes() {
     final s = _scale;
     _footstep?.volume = _baseFoot * s;
