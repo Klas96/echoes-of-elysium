@@ -104,6 +104,7 @@ class BuildingMasks {
 
   /// Load collision rects from tools JSON into live [buildingDefs] (optional).
   static void loadFromDisk({String? root}) {
+    if (kIsWeb) return;
     final base = root ?? ObstacleMasks.projectRoot();
     if (base == null) return;
     for (final id in buildingDefs.keys) {

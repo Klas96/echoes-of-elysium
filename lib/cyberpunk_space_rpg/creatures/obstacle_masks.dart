@@ -183,7 +183,9 @@ class ObstacleMasks {
   }
 
   /// Walk up from [Directory.current] until pubspec + obstacles dir exist.
+  /// Null on web (`dart:io` [Directory.current] is unsupported in the browser).
   static String? projectRoot() {
+    if (kIsWeb) return null;
     var dir = Directory.current.absolute;
     for (var i = 0; i < 8; i++) {
       final pub = File('${dir.path}/pubspec.yaml');
