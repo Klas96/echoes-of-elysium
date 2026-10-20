@@ -1,11 +1,12 @@
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 
+import '../audio/audio_settings.dart';
 import '../components/lamp_light.dart';
 import '../game/adventure.dart';
+import '../ui/app_version_label.dart';
 import '../ui/hud_layout.dart';
 import '../game/memories.dart';
-import '../game/pause.dart';
 import '../game/quests.dart';
 import '../game/save_service.dart';
 import '../game/well_rested.dart';
@@ -21,22 +22,47 @@ bool get _isTouch => defaultTargetPlatform == TargetPlatform.android || defaultT
 const _teal = Color(0xFF00FFCC);
 const _ink = Color(0xFF06060F);
 
-/// Journal open state. The game screens hook [onOpenChanged] to pause and
-/// resume the engine.
+/// In-game Menu tablet (creatures, quests, items, memories, system).
+/// Game screens hook [onOpenChanged] to pause and resume the engine.
 class Journal {
+  static const tabCreatures = 0;
+  static const tabQuests = 1;
+  static const tabItems = 2;
+  static const tabMemories = 3;
+  static const tabSystem = 4;
+
   static final open = ValueNotifier<bool>(false);
+  /// Bumped when [show] changes tab while already open.
+  static final tabTick = ValueNotifier<int>(0);
   static void Function(bool open)? onOpenChanged;
 
-  /// Entry to show first when opened.
+  /// Creature entry to focus when opened on Creatures.
   static String? focus;
 
   /// Optional: close gear (or other overlays) without resuming.
   static void Function()? dismissOthers;
 
-  static void show({String? entry}) {
+  /// Leave the map and return to the title screen (wired by the map host).
+  static Future<void> Function(BuildContext context)? returnToTitle;
+
+  /// Requested tab (see [tabCreatures]…).
+  static int? focusTab;
+
+  /// Last tab shown by the open panel (for I-key toggle).
+  static int activeTab = tabCreatures;
+
+  static void show({String? entry, int? tab}) {
     focus = entry;
+    if (tab != null) focusTab = tab;
     dismissOthers?.call();
-    if (open.value) return;
+    if (open.value) {
+      if (tab != null) {
+        activeTab = tab;
+        tabTick.value++;
+      }
+      return;
+    }
+    if (tab != null) activeTab = tab;
     open.value = true;
     onOpenChanged?.call(true);
   }
@@ -44,10 +70,19 @@ class Journal {
   static void hide() {
     if (!open.value) return;
     open.value = false;
+    focusTab = null;
     onOpenChanged?.call(false);
   }
 
   static void toggle() => open.value ? hide() : show();
+
+  static void toggleItems() {
+    if (open.value && activeTab == tabItems) {
+      hide();
+    } else {
+      show(tab: tabItems);
+    }
+  }
 }
 
 /// Subtle day/night tint over the game view (under the HUD). At night lamps,
@@ -261,8 +296,7 @@ class _Chip extends StatelessWidget {
       );
 }
 
-/// Single entry for pause / journal / gear (opens the pause menu).
-/// Primary action button — filled Signal Teal so it won't read as a status chip.
+/// Opens the journal tablet (in-game hub). Filled Signal Teal so it won't read as a status chip.
 class _MenuChip extends StatelessWidget {
   final bool compact;
   const _MenuChip({this.compact = false});
@@ -270,7 +304,7 @@ class _MenuChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pad = HudLayout.chipPadding;
-    final icon = Icon(Icons.menu,
+    final icon = Icon(Icons.menu_book_outlined,
         size: HudLayout.chipIcon + 1, color: const Color(0xFF06060F));
     final label = Text('MENU',
         style: TextStyle(
@@ -279,7 +313,7 @@ class _MenuChip extends StatelessWidget {
             fontWeight: FontWeight.w800,
             letterSpacing: 1.2));
     return GestureDetector(
-      onTap: Pause.show,
+      onTap: Journal.show,
       child: Container(
         padding: EdgeInsets.symmetric(
           horizontal: pad.horizontal / 2 + 2,
@@ -535,8 +569,37 @@ class _JournalPanel extends StatefulWidget {
 
 class _JournalPanelState extends State<_JournalPanel> {
   late String _sel = Journal.focus ?? Bonds.active ?? creatureOrder.first;
-  /// 0 = creatures, 1 = clues / items
-  int _tab = 0;
+  late int _tab = (Journal.focusTab ?? Journal.activeTab).clamp(0, Journal.tabSystem);
+
+  @override
+  void initState() {
+    super.initState();
+    Journal.activeTab = _tab;
+    Journal.tabTick.addListener(_onTabTick);
+  }
+
+  @override
+  void dispose() {
+    Journal.tabTick.removeListener(_onTabTick);
+    super.dispose();
+  }
+
+  void _onTabTick() {
+    final t = Journal.focusTab;
+    if (t == null || !mounted) return;
+    setState(() {
+      _tab = t.clamp(0, Journal.tabSystem);
+      Journal.activeTab = _tab;
+    });
+  }
+
+  void _setTab(int i) {
+    setState(() {
+      _tab = i;
+      Journal.activeTab = i;
+      Journal.focusTab = i;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -554,9 +617,13 @@ class _JournalPanelState extends State<_JournalPanel> {
                   final wide =
                       box.maxWidth > box.maxHeight * 1.15 && box.maxWidth >= 560;
                   return _TabletShell(
-                    child: _tab == 1
-                        ? _cluesBody(wide: wide)
-                        : _creaturesBody(wide: wide),
+                    child: switch (_tab) {
+                      Journal.tabQuests => _questsBody(wide: wide),
+                      Journal.tabItems => _itemsBody(wide: wide),
+                      Journal.tabMemories => _memoriesBody(wide: wide),
+                      Journal.tabSystem => _systemBody(wide: wide),
+                      _ => _creaturesBody(wide: wide),
+                    },
                   );
                 }),
               ),
@@ -565,6 +632,13 @@ class _JournalPanelState extends State<_JournalPanel> {
         ),
       ),
     );
+  }
+
+  Widget _itemsBody({required bool wide}) {
+    return Column(children: [
+      _header(close: true),
+      const Expanded(child: EquipmentBody()),
+    ]);
   }
 
   Widget _creaturesBody({required bool wide}) {
@@ -614,25 +688,67 @@ class _JournalPanelState extends State<_JournalPanel> {
     ]);
   }
 
-  Widget _cluesBody({required bool wide}) {
-    final clues = _cluesPage(close: !wide);
+  Widget _questsBody({required bool wide}) {
+    final list = _questsPage(close: !wide);
     if (wide) {
       return Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Expanded(flex: 5, child: clues),
+        Expanded(flex: 5, child: list),
         const _TabletDivider(),
         Expanded(
           flex: 4,
           child: Stack(children: [
             const SingleChildScrollView(
               padding: EdgeInsets.fromLTRB(12, 8, 36, 8),
-              child: _CluesHint(),
+              child: _QuestsHint(),
             ),
             Positioned(right: 0, top: 0, child: _closeButton()),
           ]),
         ),
       ]);
     }
-    return clues;
+    return list;
+  }
+
+  Widget _memoriesBody({required bool wide}) {
+    final list = _memoriesPage(close: !wide);
+    if (wide) {
+      return Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Expanded(flex: 5, child: list),
+        const _TabletDivider(),
+        Expanded(
+          flex: 4,
+          child: Stack(children: [
+            const SingleChildScrollView(
+              padding: EdgeInsets.fromLTRB(12, 8, 36, 8),
+              child: _MemoriesHint(),
+            ),
+            Positioned(right: 0, top: 0, child: _closeButton()),
+          ]),
+        ),
+      ]);
+    }
+    return list;
+  }
+
+  Widget _systemBody({required bool wide}) {
+    final page = _systemPage(close: !wide);
+    if (wide) {
+      return Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Expanded(flex: 5, child: page),
+        const _TabletDivider(),
+        Expanded(
+          flex: 4,
+          child: Stack(children: [
+            const SingleChildScrollView(
+              padding: EdgeInsets.fromLTRB(12, 8, 36, 8),
+              child: _SystemHint(),
+            ),
+            Positioned(right: 0, top: 0, child: _closeButton()),
+          ]),
+        ),
+      ]);
+    }
+    return page;
   }
 
   Widget _closeButton() => IconButton(
@@ -645,7 +761,7 @@ class _JournalPanelState extends State<_JournalPanel> {
     Widget chip(String label, int i) {
       final on = _tab == i;
       return GestureDetector(
-        onTap: () => setState(() => _tab = i),
+        onTap: () => _setTab(i),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
           decoration: BoxDecoration(
@@ -663,16 +779,18 @@ class _JournalPanelState extends State<_JournalPanel> {
       );
     }
 
-    return Row(children: [
-      chip('CREATURES', 0),
-      const SizedBox(width: 6),
-      chip('CLUES', 1),
+    return Wrap(spacing: 6, runSpacing: 4, children: [
+      chip('CREATURES', Journal.tabCreatures),
+      chip('QUESTS', Journal.tabQuests),
+      chip('ITEMS', Journal.tabItems),
+      chip('MEMORIES', Journal.tabMemories),
+      chip('SYSTEM', Journal.tabSystem),
     ]);
   }
 
   Widget _header({bool close = false}) {
     const count = TextStyle(color: _inkSoft, fontSize: 12, fontWeight: FontWeight.w600);
-    final clues = Adventure.found.length;
+    final jobs = Quests.activeJobs.length;
     return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Image.asset('assets/images/ui/tab_paw_32@2x.png', width: 30, height: 30, filterQuality: FilterQuality.none),
       const SizedBox(width: 8),
@@ -680,7 +798,7 @@ class _JournalPanelState extends State<_JournalPanel> {
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           const FittedBox(
             fit: BoxFit.scaleDown,
-            child: Text('JOURNAL',
+            child: Text('MENU',
                 style: TextStyle(color: _inkDark, fontSize: 17, fontWeight: FontWeight.bold, letterSpacing: 3)),
           ),
           const SizedBox(height: 4),
@@ -689,7 +807,7 @@ class _JournalPanelState extends State<_JournalPanel> {
           Wrap(spacing: 10, runSpacing: 0, crossAxisAlignment: WrapCrossAlignment.center, children: [
             Text('Befriended ${Bonds.befriendedCount}/${Bonds.total}', style: count),
             Text('Memories ${Memories.progressLabel}', style: count),
-            Text('Clues $clues/${Adventure.catalog.length}', style: count),
+            Text('Jobs $jobs · ${Quests.turnedInCount} done', style: count),
             Row(mainAxisSize: MainAxisSize.min, children: [
               Image.asset('assets/images/ui/crystal_16@2x.png',
                   width: 14, height: 14, filterQuality: FilterQuality.none),
@@ -703,41 +821,13 @@ class _JournalPanelState extends State<_JournalPanel> {
     ]);
   }
 
-  Widget _cluesPage({bool close = false}) {
-    final found = Adventure.found;
-    final items = Bonds.items.toList()..sort();
+  Widget _questsPage({bool close = false}) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       _header(close: close),
       Expanded(
         child: SingleChildScrollView(
           padding: const EdgeInsets.only(top: 8, bottom: 8, right: 8),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            if (items.isNotEmpty) ...[
-              const Text('KEY ITEMS',
-                  style: TextStyle(color: _inkDark, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 2)),
-              const SizedBox(height: 6),
-              for (final id in items)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: Row(children: [
-                    SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: itemIconAsset(id) == null
-                          ? const Center(child: Text('·', style: TextStyle(color: _inkSoft, fontSize: 12)))
-                          : ItemIcon(id, size: 24),
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(itemLabels[id] ?? id,
-                          style: const TextStyle(color: _inkSoft, fontSize: 12, height: 1.4)),
-                    ),
-                  ]),
-                ),
-              const SizedBox(height: 10),
-              const _TabletHairline(),
-              const SizedBox(height: 10),
-            ],
             const Text('JOBS',
                 style: TextStyle(color: _inkDark, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 2)),
             const SizedBox(height: 6),
@@ -748,7 +838,8 @@ class _JournalPanelState extends State<_JournalPanel> {
               )
             else ...[
               for (final q in Quests.catalog)
-                if (Quests.status(q.id) != QuestStatus.available)
+                if (Quests.status(q.id) != QuestStatus.available &&
+                    Quests.status(q.id) != QuestStatus.locked)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 8),
                     child: Text(
@@ -762,29 +853,82 @@ class _JournalPanelState extends State<_JournalPanel> {
                     ),
                   ),
             ],
-            const SizedBox(height: 10),
-            const _TabletHairline(),
-            const SizedBox(height: 10),
-            const Text('CLUE BOARD',
+          ]),
+        ),
+      ),
+    ]);
+  }
+
+  Widget _memoriesPage({bool close = false}) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      _header(close: close),
+      Expanded(
+        child: AnimatedBuilder(
+          animation: Memories.foundNotifier,
+          builder: (_, __) {
+            final found = Memories.found;
+            return SingleChildScrollView(
+              padding: const EdgeInsets.only(top: 8, bottom: 8, right: 8),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('COLLECTED  ·  ${Memories.progressLabel}',
+                    style: const TextStyle(
+                        color: _inkDark, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 2)),
+                const SizedBox(height: 10),
+                if (found == 0)
+                  const Text(
+                    'No memories yet. Seek glowing fragments across Elysium.',
+                    style: TextStyle(color: _inkSoft, fontSize: 12, height: 1.55),
+                  )
+                else
+                  for (var i = 1; i <= Memories.total; i++)
+                    _JournalMemoryRow(
+                      index: i,
+                      unlocked: Memories.has(i),
+                      onPlay: Memories.has(i) ? () => Memories.replay(i) : null,
+                    ),
+              ]),
+            );
+          },
+        ),
+      ),
+    ]);
+  }
+
+  Widget _systemPage({bool close = false}) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      _header(close: close),
+      Expanded(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.only(top: 8, bottom: 8, right: 8),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            const Text('HUB',
                 style: TextStyle(color: _inkDark, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 2)),
             const SizedBox(height: 8),
-            if (found.isEmpty)
-              const Text(
-                'Examine markers in the world, talk to people, and use key items. Clues you find will collect here.',
-                style: TextStyle(color: _inkSoft, fontSize: 12, height: 1.55),
-              )
-            else
-              for (final c in found)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(c.title,
-                        style: const TextStyle(color: _inkDark, fontSize: 13, fontWeight: FontWeight.w700)),
-                    Text(c.where, style: const TextStyle(color: _inkSoft, fontSize: 10, letterSpacing: 0.5)),
-                    const SizedBox(height: 3),
-                    Text(c.body, style: const TextStyle(color: _inkSoft, fontSize: 12, height: 1.5)),
-                  ]),
-                ),
+            _SystemBtn(
+              label: 'RESUME',
+              filled: true,
+              onTap: Journal.hide,
+            ),
+            const SizedBox(height: 8),
+            _SystemBtn(
+              label: 'ITEMS',
+              color: const Color(0xFFFFE08A),
+              onTap: () => _setTab(Journal.tabItems),
+            ),
+            const SizedBox(height: 8),
+            _SystemBtn(
+              label: 'TITLE SCREEN',
+              color: _inkSoft,
+              onTap: () async {
+                final go = Journal.returnToTitle;
+                if (go == null) return;
+                await go(context);
+              },
+            ),
+            const SizedBox(height: 16),
+            const _JournalAudioPanel(),
+            const SizedBox(height: 12),
+            const AppVersionLabel(fontSize: 10),
           ]),
         ),
       ),
@@ -810,22 +954,271 @@ class _JournalPanelState extends State<_JournalPanel> {
   }
 }
 
-class _CluesHint extends StatelessWidget {
-  const _CluesHint();
+class _QuestsHint extends StatelessWidget {
+  const _QuestsHint();
 
   @override
   Widget build(BuildContext context) {
     return const Padding(
       padding: EdgeInsets.only(top: 8),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('FIELD NOTES',
+        Text('FIELD WORK',
             style: TextStyle(color: _inkDark, fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 2)),
         SizedBox(height: 8),
         Text(
-          'Blue sparkles mark things you can examine. Talk choices can unlock key items — use them at locked doors and terminals.',
+          'Accept jobs at Lantern Town\'s board. Turn them in there when ready. Salvage and key items live under Items (I).',
           style: TextStyle(color: _inkSoft, fontSize: 12, height: 1.55),
         ),
       ]),
+    );
+  }
+}
+
+class _MemoriesHint extends StatelessWidget {
+  const _MemoriesHint();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.only(top: 8),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('ECHOES',
+            style: TextStyle(color: _inkDark, fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 2)),
+        SizedBox(height: 8),
+        Text(
+          'Recovered memory fragments can be replayed here. Seek purple crystals in the world to fill this log.',
+          style: TextStyle(color: _inkSoft, fontSize: 12, height: 1.55),
+        ),
+      ]),
+    );
+  }
+}
+
+class _SystemHint extends StatelessWidget {
+  const _SystemHint();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.only(top: 8),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('FIELD SLATE',
+            style: TextStyle(color: _inkDark, fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 2)),
+        SizedBox(height: 8),
+        Text(
+          'This tablet is your Menu. Esc / J closes it. Items (I) holds salvage and key items. Title Screen saves and leaves the run.',
+          style: TextStyle(color: _inkSoft, fontSize: 12, height: 1.55),
+        ),
+      ]),
+    );
+  }
+}
+
+class _JournalMemoryRow extends StatelessWidget {
+  final int index;
+  final bool unlocked;
+  final Future<void> Function()? onPlay;
+  const _JournalMemoryRow({required this.index, required this.unlocked, this.onPlay});
+
+  @override
+  Widget build(BuildContext context) {
+    final roman = ['I', 'II', 'III', 'IV', 'V'][index - 1];
+    final title = unlocked ? Memories.titleFor(index) : '??????';
+    const accent = Color(0xFF88CCFF);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onPlay == null ? null : () => onPlay!(),
+          borderRadius: BorderRadius.circular(6),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: _cardFace,
+              border: Border.all(color: unlocked ? accent.withValues(alpha: 0.45) : _screenEdge),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Row(
+              children: [
+                Text(roman,
+                    style: TextStyle(
+                        color: unlocked ? accent : _inkSoft.withValues(alpha: 0.45),
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.5)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(title,
+                      style: TextStyle(
+                          color: unlocked ? _inkDark : _inkSoft.withValues(alpha: 0.5),
+                          fontSize: 12,
+                          fontStyle: unlocked ? FontStyle.normal : FontStyle.italic,
+                          letterSpacing: 0.5)),
+                ),
+                if (unlocked)
+                  const Text('REPLAY',
+                      style: TextStyle(
+                          color: accent, fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SystemBtn extends StatelessWidget {
+  final String label;
+  final VoidCallback onTap;
+  final bool filled;
+  final Color color;
+  const _SystemBtn({
+    required this.label,
+    required this.onTap,
+    this.filled = false,
+    this.color = _teal,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: filled ? color : Colors.transparent,
+      borderRadius: BorderRadius.circular(4),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(4),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            border: Border.all(color: filled ? color : color.withValues(alpha: 0.7)),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Text(label,
+              style: TextStyle(
+                  color: filled ? _ink : color,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 2,
+                  fontSize: 13)),
+        ),
+      ),
+    );
+  }
+}
+
+class _JournalAudioPanel extends StatelessWidget {
+  const _JournalAudioPanel();
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: Listenable.merge([
+        AudioSettings.musicVolume,
+        AudioSettings.sfxVolume,
+        AudioSettings.musicOn,
+        AudioSettings.sfxOn,
+      ]),
+      builder: (_, __) => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+        decoration: BoxDecoration(
+          color: _cardFace,
+          border: Border.all(color: _screenEdge),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text('AUDIO',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    color: _inkSoft, fontSize: 10, letterSpacing: 2.5, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            _JournalAudioRow(
+              label: 'MUSIC',
+              volume: AudioSettings.musicVolume.value,
+              enabled: AudioSettings.musicOn.value,
+              color: _teal,
+              onVolume: AudioSettings.setMusicVolume,
+              onEnabled: AudioSettings.setMusicOn,
+            ),
+            const SizedBox(height: 4),
+            _JournalAudioRow(
+              label: 'SFX',
+              volume: AudioSettings.sfxVolume.value,
+              enabled: AudioSettings.sfxOn.value,
+              color: const Color(0xFFFFE08A),
+              onVolume: AudioSettings.setSfxVolume,
+              onEnabled: AudioSettings.setSfxOn,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _JournalAudioRow extends StatelessWidget {
+  final String label;
+  final double volume;
+  final bool enabled;
+  final Color color;
+  final ValueChanged<double> onVolume;
+  final ValueChanged<bool> onEnabled;
+
+  const _JournalAudioRow({
+    required this.label,
+    required this.volume,
+    required this.enabled,
+    required this.color,
+    required this.onVolume,
+    required this.onEnabled,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final pct = (volume * 100).round();
+    return Row(
+      children: [
+        SizedBox(
+          width: 48,
+          child: Text(label,
+              style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
+        ),
+        IconButton(
+          visualDensity: VisualDensity.compact,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          onPressed: () => onEnabled(!enabled),
+          icon: Icon(enabled ? Icons.volume_up : Icons.volume_off,
+              size: 18, color: enabled ? color : _inkSoft),
+        ),
+        Expanded(
+          child: SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              trackHeight: 2,
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+              overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+              activeTrackColor: color.withValues(alpha: enabled ? 0.9 : 0.25),
+              inactiveTrackColor: _inkSoft.withValues(alpha: 0.25),
+              thumbColor: enabled ? color : _inkSoft,
+            ),
+            child: Slider(
+              value: volume.clamp(0.0, 1.0),
+              onChanged: enabled ? onVolume : null,
+            ),
+          ),
+        ),
+        SizedBox(
+          width: 36,
+          child: Text('$pct%',
+              textAlign: TextAlign.right,
+              style: TextStyle(color: _inkSoft.withValues(alpha: 0.9), fontSize: 10)),
+        ),
+      ],
     );
   }
 }
