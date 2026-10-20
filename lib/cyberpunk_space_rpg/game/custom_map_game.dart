@@ -42,6 +42,7 @@ import '../creatures/obstacles.dart';
 import '../ui/cutscenes.dart';
 import '../ui/equipment_ui.dart';
 import '../ui/ability_hud.dart';
+import '../ui/app_version_label.dart';
 import '../ui/hud_layout.dart';
 import '../interiors/meal_chip.dart';
 import '../ui/mmo_feedback.dart';
@@ -1114,6 +1115,8 @@ class IntroScreen extends StatelessWidget {
                             : 'Click pathfind · click foe / T to shoot · WASD · Esc menu · J · I',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.white24, fontSize: 11, letterSpacing: 1.2)),
+                const SizedBox(height: 10),
+                const AppVersionLabel(),
               ],
             ),
           );
@@ -3395,6 +3398,8 @@ class _PauseMenuState extends State<_PauseMenu> {
                     ),
                     const SizedBox(height: 22),
                     const _AudioSettingsPanel(),
+                    const SizedBox(height: 16),
+                    const AppVersionLabel(fontSize: 10),
                   ]),
           ),
         ),
