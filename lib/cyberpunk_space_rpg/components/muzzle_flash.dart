@@ -2,6 +2,7 @@ import 'dart:math';
 import 'dart:ui';
 
 import 'package:bonfire/bonfire.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 /// Short cyan flare at the shot origin — juice without a fake shoot sheet.
@@ -41,15 +42,18 @@ class MuzzleFlash extends GameComponent {
     canvas.translate(cx, cy);
     canvas.rotate(atan2(dir.y, dir.x));
 
+    final flare = Paint()
+      ..color = const Color(0xFF44DDEE).withValues(alpha: 0.4 * fade);
+    if (!kIsWeb) {
+      flare.maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.5);
+    }
     canvas.drawOval(
       Rect.fromCenter(
         center: Offset(5 * stretch, 0),
         width: 16 * stretch,
         height: 9 * fade,
       ),
-      Paint()
-        ..color = const Color(0xFF44DDEE).withValues(alpha: 0.4 * fade)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.5),
+      flare,
     );
     canvas.drawOval(
       Rect.fromCenter(

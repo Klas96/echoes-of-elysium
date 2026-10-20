@@ -1,26 +1,33 @@
 import 'dart:math';
+
 import 'package:bonfire/bonfire.dart';
-import 'package:flutter/material.dart';
 import 'package:bonfire/util/collision_game_component.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/material.dart';
+
 import 'drone_spawn.dart';
-import 'uec_drone.dart';
 import 'sentinel_drone.dart';
+import 'uec_drone.dart';
 import '../game/progression.dart';
 import '../game/well_rested.dart';
 
 enum BulletKind { auto, pulse }
 
-class PlayerBullet extends GameDecoration {
+/// Player projectile. Uses [GameComponent] (not [GameDecoration]) so Bonfire
+/// cannot treat a null animation as finished and remove the shot on web.
+class PlayerBullet extends GameComponent {
   static const double _autoSpeed = 420;
   static const double _pulseSpeed = 520;
   static const double _autoRange = 540;
   static const double _pulseRange = 240;
   static const int _autoDamage = 18;
   static const int _pulseDamage = 28;
-  /// Half-extent used when centering the spawn on Kaela.
   static const double bulletSize = 14;
   static final Vector2 spriteSize = Vector2(28, 12);
   static final Vector2 pulseSpriteSize = Vector2(36, 16);
+
+  /// Ignore map collisions until the shot has cleared Kaela's feet tile.
+  static const double _muzzleClear = 22;
 
   final Vector2 _velocity;
   final double _angle;
@@ -46,18 +53,22 @@ class PlayerBullet extends GameDecoration {
               Progression.bonusDamage,
         ),
         _slowSeconds = kind == BulletKind.pulse ? 1.4 : 0,
-        _pierceLeft = kind == BulletKind.pulse ? 3 : 0,
-        super(
-          position: position,
-          size: (kind == BulletKind.pulse ? pulseSpriteSize : spriteSize)
-              .clone(),
-        );
+        _pierceLeft = kind == BulletKind.pulse ? 3 : 0 {
+    this.position = position;
+    size = (kind == BulletKind.pulse ? pulseSpriteSize : spriteSize).clone();
+    renderAboveComponents = true;
+  }
 
   @override
   Future<void> onLoad() async {
     paint.filterQuality = FilterQuality.none;
     final r = kind == BulletKind.pulse ? 8.0 : 6.0;
-    add(CircleHitbox(radius: r, position: size / 2, anchor: Anchor.center));
+    add(CircleHitbox(
+      radius: r,
+      position: size / 2,
+      anchor: Anchor.center,
+      collisionType: CollisionType.active,
+    ));
     return super.onLoad();
   }
 
@@ -80,27 +91,36 @@ class PlayerBullet extends GameDecoration {
   }
 
   @override
-  void onCollisionStart(Set<Vector2> intersectionPoints, PositionComponent other) {
-    if (!_done) {
-      if (other is UECDrone && !other.isDead) {
-        _hitHostile(other, () {
-          other.takeDamage(_damage, knockbackDir: _velocity);
-          if (_slowSeconds > 0) other.applySlow(_slowSeconds);
-        });
-      } else if (other is SentinelDrone && !other.isDead) {
-        _hitHostile(other, () {
-          other.takeDamage(_damage, knockbackDir: _velocity);
-          if (_slowSeconds > 0) other.applySlow(_slowSeconds);
-        });
-      } else if (other is DroneSpawnPoint && !other.isDead) {
-        _hitHostile(other, () {
-          other.takeDamage(_damage, knockbackDir: _velocity);
-        });
-      } else if (other is TileWithCollision ||
-          other is CollisionMapComponent ||
-          other is GameDecorationWithCollision) {
-        _finish();
-      }
+  void onCollisionStart(
+      Set<Vector2> intersectionPoints, PositionComponent other) {
+    if (_done) {
+      super.onCollisionStart(intersectionPoints, other);
+      return;
+    }
+    // Don't eat our own shots on Kaela / other bullets.
+    if (other is SimplePlayer || other is PlayerBullet) {
+      super.onCollisionStart(intersectionPoints, other);
+      return;
+    }
+    if (other is UECDrone && !other.isDead) {
+      _hitHostile(other, () {
+        other.takeDamage(_damage, knockbackDir: _velocity);
+        if (_slowSeconds > 0) other.applySlow(_slowSeconds);
+      });
+    } else if (other is SentinelDrone && !other.isDead) {
+      _hitHostile(other, () {
+        other.takeDamage(_damage, knockbackDir: _velocity);
+        if (_slowSeconds > 0) other.applySlow(_slowSeconds);
+      });
+    } else if (other is DroneSpawnPoint && !other.isDead) {
+      _hitHostile(other, () {
+        other.takeDamage(_damage, knockbackDir: _velocity);
+      });
+    } else if (_traveled >= _muzzleClear &&
+        (other is TileWithCollision ||
+            other is CollisionMapComponent ||
+            other is GameDecorationWithCollision)) {
+      _finish();
     }
     super.onCollisionStart(intersectionPoints, other);
   }
@@ -122,10 +142,21 @@ class PlayerBullet extends GameDecoration {
     final cx = size.x / 2;
     final cy = size.y / 2;
     final pulse = kind == BulletKind.pulse;
+    // MaskFilter.blur is unreliable on Flutter web — solid shapes only there.
+    final glow = !kIsWeb;
+
     canvas.save();
     canvas.translate(cx, cy);
     canvas.rotate(_angle);
     canvas.translate(-cx, -cy);
+
+    final glowPaint = Paint()
+      ..color = Color(pulse ? 0xFF66FFEE : 0xFF00E5FF)
+          .withValues(alpha: (pulse ? 0.5 : 0.38) * fade);
+    if (glow) {
+      glowPaint.maskFilter =
+          MaskFilter.blur(BlurStyle.normal, pulse ? 7 : 5);
+    }
 
     canvas.drawRRect(
       RRect.fromRectAndRadius(
@@ -135,10 +166,7 @@ class PlayerBullet extends GameDecoration {
             height: pulse ? 14 : 10),
         Radius.circular(pulse ? 7 : 5),
       ),
-      Paint()
-        ..color = Color(pulse ? 0xFF66FFEE : 0xFF00E5FF)
-            .withValues(alpha: (pulse ? 0.5 : 0.38) * fade)
-        ..maskFilter = MaskFilter.blur(BlurStyle.normal, pulse ? 7 : 5),
+      glowPaint,
     );
 
     canvas.drawRRect(
@@ -151,7 +179,7 @@ class PlayerBullet extends GameDecoration {
       ),
       Paint()
         ..color = Color(pulse ? 0xFFAAFFF8 : 0xFF66F0FF)
-            .withValues(alpha: 0.9 * fade),
+            .withValues(alpha: 0.95 * fade),
     );
 
     canvas.drawRRect(
@@ -165,13 +193,12 @@ class PlayerBullet extends GameDecoration {
       Paint()..color = Color.fromRGBO(255, 255, 255, fade),
     );
 
-    canvas.drawCircle(
-      Offset(size.x - 4, cy),
-      pulse ? 4.2 : 3.2,
-      Paint()
-        ..color = const Color(0xFF00FFFF).withValues(alpha: 0.45 * fade)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
-    );
+    final tipGlow = Paint()
+      ..color = const Color(0xFF00FFFF).withValues(alpha: 0.45 * fade);
+    if (glow) {
+      tipGlow.maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
+    }
+    canvas.drawCircle(Offset(size.x - 4, cy), pulse ? 4.2 : 3.2, tipGlow);
     canvas.drawCircle(
       Offset(size.x - 4, cy),
       pulse ? 2.2 : 1.8,

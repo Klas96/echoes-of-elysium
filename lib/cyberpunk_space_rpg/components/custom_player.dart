@@ -1050,10 +1050,10 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
   }
 
   /// [world] is already in map space (pointer overlay converts on web).
+  /// Same League-style rules as Linux / F-Droid: foe click = attack, else move.
   void _issueClick(Vector2 world) {
     if (!hasGameRef) return;
-    final foe = _hostileNear(world, clickEnemyRadius) ??
-        _hostileNearClickLine(world);
+    final foe = _hostileNear(world, clickEnemyRadius);
     if (foe != null) {
       _lockAttack(foe);
       return;
@@ -1069,52 +1069,13 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
       _pathTo(_moveGoal!);
       return;
     }
-    // Ground click: always fire toward the cursor (browser / twin-stick style),
-    // then path there. Chase-lock still happens when the click hits a foe.
+    // Ground click: A* move only — do not shoot / play shoot anim.
     _attackTarget = null;
     _useTarget = null;
     _steerFallback = false;
-    _tryAutoAttack(_feetCenter, world);
     _moveGoal = world;
     _pathRepathT = 0;
     _pathTo(world);
-  }
-
-  /// Foe near the player that lies toward the click (loose aim assist).
-  GameComponent? _hostileNearClickLine(Vector2 clickWorld) {
-    final origin = _feetCenter;
-    final toClick = clickWorld - origin;
-    if (toClick.length < 8) return null;
-    final aim = toClick.normalized();
-    GameComponent? best;
-    var bestScore = double.infinity;
-    void consider(GameComponent t, Vector2 center) {
-      final delta = center - origin;
-      final dist = delta.length;
-      if (dist > attackRange * 1.35 || dist < 1) return;
-      final dir = delta / dist;
-      final align = aim.dot(dir);
-      if (align < 0.35) return; // must be generally toward the click
-      final score = dist * (1.2 - align);
-      if (score < bestScore) {
-        bestScore = score;
-        best = t;
-      }
-    }
-
-    for (final d in UECDrone.active) {
-      if (!d.isMounted || d.isDead) continue;
-      consider(d, d.position + d.size / 2);
-    }
-    for (final pad in DroneSpawnPoint.active) {
-      if (!pad.isMounted || pad.isDead) continue;
-      consider(pad, pad.padCenter);
-    }
-    final s = SentinelDrone.instance;
-    if (s != null && s.isMounted && !s.isDead) {
-      consider(s, s.position + s.size / 2);
-    }
-    return best;
   }
 
   /// A* around collisions (LoL): off-screen walls count. Unreachable /
@@ -1382,11 +1343,14 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
     final dir = (target - origin);
     if (dir.length < 1) return;
     final n = dir.normalized();
+    // Spawn ahead of Kaela so the hitbox is not born inside a wall/foot tile
+    // (on web the hitbox can attach before the bullet moves, deleting the shot).
+    final spawnCenter = origin + n * 18;
     gameRef.add(PlayerBullet(
-      origin - PlayerBullet.spriteSize / 2,
+      spawnCenter - PlayerBullet.spriteSize / 2,
       n,
     ));
-    gameRef.add(MuzzleFlash(origin + n * 12, n));
+    gameRef.add(MuzzleFlash(spawnCenter, n));
     SfxManager().playShoot();
     shotCount++;
     lastShotFrom = origin;
