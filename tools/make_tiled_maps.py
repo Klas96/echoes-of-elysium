@@ -662,11 +662,14 @@ class Level:
             for (x, y) in cells(g): opened[y, x] = True
             if g["name"] == "boulder":
                 px, py = g["props"]["pushX"], g["props"]["pushY"]
-                moved = dict(g, x=g["x"] + px * T, y=g["y"] + py * T)
-                for (x, y) in cells(moved):
-                    if not ok[y, x]:
-                        raise SystemExit(f"boulder at {g['x']},{g['y']} would be pushed onto wall at tile {x},{y}")
-                for (x, y) in cells(moved): opened[y, x] = False
+                # push 0,0 = opens in place (road boulder rolls aside in art
+                # only; the 3×2 mouth stays walkable). Don't re-block it.
+                if px != 0 or py != 0:
+                    moved = dict(g, x=g["x"] + px * T, y=g["y"] + py * T)
+                    for (x, y) in cells(moved):
+                        if not ok[y, x]:
+                            raise SystemExit(f"boulder at {g['x']},{g['y']} would be pushed onto wall at tile {x},{y}")
+                    for (x, y) in cells(moved): opened[y, x] = False
             gained = flood(opened) & ~with_all
             inside = [o for o in objs if any(gained[y, x] for (x, y) in cells(o))]
             if not any(secret(o) for o in inside):
@@ -1130,12 +1133,17 @@ def map1():
     lv.floor = ~wall
     # ---- ability-gated nooks, carved through solid forest after clean_walls
     # Mouth top-left of a 3×2 road boulder (same art as the south exit).
+    # (11, 26) west brookling nook — leave as-is (playtested).
+    # (49, 8) NE stash: keep this mouth (looks good); pocket used to reach the
+    # east map border so you could walk into the camera void — keep it inland.
     nooks = [(49, 8), (11, 26)]
     gated = np.zeros_like(wall)
     for (bx, by) in nooks:
         gated[by:by + 2, bx - 3:bx] = True            # tunnel from the west
         gated[by:by + 2, bx:bx + 3] = True            # 3-wide mouth under the boulder
-        gated[by - 2:by + 4, bx + 3:bx + 7] = True    # nook east of the boulder
+        # Nook east of the boulder — same 2-row height as the mouth. 3 tiles
+        # deep (not 4): on the NE nook a 4-tile pocket hit the map edge.
+        gated[by:by + 2, bx + 3:bx + 6] = True
     # SCENT side-bramble: ridge + moonflowers → 2x2 thorns → hushdeer glade,
     # hidden inside the forest block between the ridge and the crossroads
     gated[8:11, 27:29] = True                         # bramble cells (+ the trail row above)
@@ -1145,11 +1153,26 @@ def map1():
     gated[25:28, 50:52] = True
     gated[28:31, 49:53] = True
     wall &= ~gated
-    # Nook mouths: seal above/below the 3-wide plug so you cannot walk around
-    # the road boulder without PUSH (same idea as the south meadow neck).
+    # Nook mouths: seal two rows above/below the 3-wide plug so you cannot
+    # walk around the road boulder without PUSH (same idea as the south neck).
     for (bx, by) in nooks:
-        wall[by - 1, bx:bx + 3] = True
-        wall[by + 2, bx:bx + 3] = True
+        wall[by - 2:by, bx:bx + 3] = True
+        wall[by + 2:by + 4, bx:bx + 3] = True
+        # No tall pocket: keep the east nook only on the mouth rows.
+        wall[by - 3:by, bx + 3:bx + 6] = True
+        wall[by + 2:by + 5, bx + 3:bx + 6] = True
+        wall[by - 2:by, bx - 1] = True
+        wall[by + 2:by + 4, bx - 1] = True
+        # Cap the pocket's east end with forest so it never opens onto the
+        # map border (NE nook sits one column from the edge).
+        wall[by:by + 2, bx + 6] = True
+    # Woods has no east/west edge exit — keep a 2-tile forest frame so a
+    # carved pocket cannot dump you into the camera void past the map.
+    wall[:, :2] = True
+    wall[:, -2:] = True
+    wall[:2, :] = True
+    # south edge opened later by open_map_edge; leave rows 2.. alone here.
+    # (north stays sealed — no north exit on this map.)
     # Egrove's clearing disk opens flanks around the thorns; seal both sides
     # (and the pocket corners) so the fragment is only entered through the gate.
     wall[26:29, 49] = True
@@ -1348,7 +1371,10 @@ def woods_creatures_and_secrets(lv, nooks):
     creature(lv, "stoneturtle", 44, 12.5, 0.6, netted=True, was=(24.5, 24.5))   # netted on the pond bank
     creature(lv, "vinefox", 47.5, 20.5, 1.2, was=(18.5, 40.5))     # east grove
     creature(lv, "puffcap", 13, 19, 0.0, was=(11.5, 21.5))         # mossy hollow off the west loop
-    creature(lv, "brookling", 15, 26, 0.6, was=(24.5, 21.5))       # west nook (behind PUSH boulder)
+    # Centre of the 2-row east pocket (creature sprite is 1 tile; (15,26)
+    # spilled onto the sealed row above and failed validate). gated=True so
+    # validate allows it behind the PUSH boulder (same as hushdeer).
+    creature(lv, "brookling", 15.5, 26.5, 0.6, gated=True, was=(24.5, 21.5))
     # Night-only inside the glade (vine fox SCENT opens the thorns above).
     creature(lv, "hushdeer", 28, 12.5, 0.8, gated=True, was=(30.0, 33.0))
     place(lv, "pebble", 42.5, 11.5, was=(24.5, 26.5))               # pond shallows, south bank
@@ -1361,9 +1387,11 @@ def woods_creatures_and_secrets(lv, nooks):
     # PUSH: 3×2 road boulders (exit stone). Open in place — pushX unused.
     (b1x, b1y), (b2x, b2y) = nooks
     boulder(lv, b1x, b1y, 0, 0)
-    place(lv, "stash", b1x + 4.5, b1y + 3.5, glimmer=25, was=(26.5, 6.5))
+    # Stash/glyph sit inside the 2-row nook east of the boulder (not south of it).
+    # Pocket is 3 tiles (bx+3..bx+5); centre at bx+4.
+    place(lv, "stash", b1x + 4.0, b1y + 1.0, glimmer=25, was=(26.5, 6.5))
     boulder(lv, b2x, b2y, 0, 0)
-    place(lv, "glyph", b2x + 4.5, b2y + 3.5, glyph="woods_nook", was=(30.5, 41.5))
+    place(lv, "glyph", b2x + 4.0, b2y + 1.0, glyph="woods_nook", was=(30.5, 41.5))
     # LIGHT: dark zones with a glyph inside, off the main trails
     darkzone(lv, 40, 11, 41, 13, was=(27, 26))                     # pond's west bank, under the reeds
     place(lv, "glyph", 40.5, 11.5, glyph="woods_pond", was=(28.5, 27.5))

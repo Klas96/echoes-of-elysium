@@ -11,9 +11,13 @@ Each room JSON is the map: `floor` (opaque ground and walls) and `props`
 pool, and solid props — rugs and ferns do not block. NPCs stand on a floor
 tile; the game blocks that tile itself.
 
+    python3 tools/interiors/assemble_cabin_gen.py    # Cursor-gen cabin
+    python3 tools/interiors/assemble_grotto_gen.py   # Cursor-gen grotto
     python3 tools/interiors/build_rooms.py
 
 Rewrites tileset.png, each room PNG, and each room JSON. Deterministic.
+If tools/interiors/gen_src/<room>/tiles/<id>.png exists, those tiles replace
+the Pillow art for that id (cabin + grotto pilots).
 """
 from __future__ import annotations
 
@@ -24,6 +28,7 @@ from PIL import Image, ImageDraw
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "assets" / "images" / "interiors"
+GEN_SRC = Path(__file__).resolve().parent / "gen_src"
 T = 32
 COLS = 16
 W, H = 12, 8
@@ -204,6 +209,7 @@ def mat(cave: bool = False) -> Image.Image:
 
 
 def wall_panels(base: tuple[int, int, int, int], trim: tuple[int, int, int, int], beam: tuple[int, int, int, int]) -> Image.Image:
+    """North/south face: horizontal beam + panel recesses."""
     im = blank(255)
     fill(im, 0, 0, T, T, base)
     fill(im, 0, 0, T, 5, beam)
@@ -212,11 +218,51 @@ def wall_panels(base: tuple[int, int, int, int], trim: tuple[int, int, int, int]
         fill(im, x, 8, 3, 22, trim)
     fill(im, 7, 12, 7, 12, beam)
     fill(im, 19, 12, 6, 12, beam)
+    # Inner sill (meets the floor) so N/S walls read as standing above the boards.
+    fill(im, 0, T - 4, T, 4, rgba(beam[0] // 2, beam[1] // 2, beam[2] // 2))
+    fill(im, 0, T - 4, T, 1, trim)
+    return im
+
+
+def wall_side_panels(base: tuple[int, int, int, int], trim: tuple[int, int, int, int], beam: tuple[int, int, int, int]) -> Image.Image:
+    """East/west face: vertical posts so side walls are not the same as N/S."""
+    im = blank(255)
+    fill(im, 0, 0, T, T, base)
+    for x in (0, 11, 22):
+        fill(im, x, 0, 10, T, trim if x == 11 else beam)
+        fill(im, x, 0, 1, T, rgba(beam[0] // 2, beam[1] // 2, beam[2] // 2))
+        fill(im, x + 9, 0, 1, T, rgba(min(255, trim[0] + 30), min(255, trim[1] + 20), min(255, trim[2] + 10)))
+    # Soft inner edges (both sides — tile is used on E and W).
+    fill(im, 0, 0, 3, T, rgba(0, 0, 0, 90))
+    fill(im, T - 3, 0, 3, T, rgba(0, 0, 0, 90))
+    return im
+
+
+def wall_corner_post(base: tuple[int, int, int, int], trim: tuple[int, int, int, int]) -> Image.Image:
+    """Dark corner post where N/S and E/W walls meet."""
+    im = blank(255)
+    fill(im, 0, 0, T, T, rgba(base[0] // 2, base[1] // 2, base[2] // 2))
+    fill(im, 6, 6, 20, 20, base)
+    fill(im, 8, 8, 16, 16, trim)
+    fill(im, 10, 10, 12, 12, rgba(trim[0] // 2, trim[1] // 2, trim[2] // 2))
+    # Outer bevel
+    fill(im, 0, 0, T, 2, INK)
+    fill(im, 0, 0, 2, T, INK)
+    fill(im, 0, T - 2, T, 2, INK)
+    fill(im, T - 2, 0, 2, T, INK)
     return im
 
 
 def tea_wall() -> Image.Image:
     return wall_panels(WD, WM, rgba(40, 24, 16))
+
+
+def tea_wall_side() -> Image.Image:
+    return wall_side_panels(WD, WM, rgba(40, 24, 16))
+
+
+def tea_wall_corner() -> Image.Image:
+    return wall_corner_post(WD, WM)
 
 
 def tea_window() -> Image.Image:
@@ -241,6 +287,14 @@ def noodle_wall() -> Image.Image:
     return im
 
 
+def noodle_wall_side() -> Image.Image:
+    return wall_side_panels(rgba(72, 40, 28), rgba(110, 64, 42), rgba(48, 26, 18))
+
+
+def noodle_wall_corner() -> Image.Image:
+    return wall_corner_post(rgba(72, 40, 28), rgba(110, 64, 42))
+
+
 def neon_wall() -> Image.Image:
     im = noodle_wall()
     fill(im, 7, 14, 18, 8, NEON_D)
@@ -251,6 +305,7 @@ def neon_wall() -> Image.Image:
 
 
 def log_wall() -> Image.Image:
+    """North/south: stacked horizontal logs."""
     im = blank(255)
     bark = (rgba(72, 48, 28), rgba(96, 64, 36), rgba(64, 42, 24))
     for i, y in enumerate((0, 11, 22)):
@@ -260,7 +315,29 @@ def log_wall() -> Image.Image:
         fill(im, 0, y + h - 1, T, 1, rgba(36, 22, 14))
         # knot
         disc(im, 8 + i * 7, y + 5, 2, rgba(48, 30, 18))
+    # Floor contact sill
+    fill(im, 0, T - 3, T, 3, rgba(36, 22, 14))
+    fill(im, 0, T - 3, T, 1, rgba(140, 100, 60))
     return im
+
+
+def log_wall_side() -> Image.Image:
+    """East/west: end-grain log posts (not the same horizontal bark)."""
+    im = blank(255)
+    fill(im, 0, 0, T, T, rgba(48, 30, 18))
+    rings = (rgba(140, 100, 60), rgba(96, 64, 36), rgba(72, 48, 28), rgba(48, 30, 18))
+    for cx in (6, 16, 26):
+        for cy in (6, 16, 26):
+            for r, c in zip((5, 3, 1), rings):
+                disc(im, cx, cy, r, c)
+            pix(im, cx, cy, rgba(36, 22, 14))
+    fill(im, 0, 0, 2, T, rgba(0, 0, 0, 100))
+    fill(im, T - 2, 0, 2, T, rgba(0, 0, 0, 100))
+    return im
+
+
+def log_wall_corner() -> Image.Image:
+    return wall_corner_post(rgba(72, 48, 28), rgba(140, 100, 60))
 
 
 def fire_wall() -> Image.Image:
@@ -301,7 +378,17 @@ def books_wall() -> Image.Image:
             fill(im, x, shelf_y, 3, 8, c)
             pix(im, x + 1, shelf_y + 2, CREAM if i % 2 == 0 else WHITE)
             x += 4
+    fill(im, 0, T - 3, T, 3, rgba(16, 12, 18))
+    fill(im, 0, T - 3, T, 1, SM)
     return im
+
+
+def books_wall_side() -> Image.Image:
+    return wall_side_panels(rgba(28, 22, 32), SM, rgba(16, 12, 18))
+
+
+def books_wall_corner() -> Image.Image:
+    return wall_corner_post(rgba(28, 22, 32), SM)
 
 
 def cave_wall() -> Image.Image:
@@ -312,7 +399,28 @@ def cave_wall() -> Image.Image:
     disc(im, 14, 26, 7, rgba(32, 52, 64))
     pix(im, 8, 8, CL)
     pix(im, 24, 14, rgba(20, 24, 32))
+    fill(im, 0, T - 3, T, 3, rgba(6, 10, 16))
     return im
+
+
+def cave_wall_side() -> Image.Image:
+    """East/west: stacked boulder column (not the same face stamp)."""
+    im = blank(255)
+    fill(im, 0, 0, T, T, rgba(10, 18, 28))
+    for cy, r, c in (
+        (6, 7, rgba(28, 44, 58)),
+        (16, 8, rgba(20, 36, 48)),
+        (26, 7, rgba(32, 52, 64)),
+    ):
+        disc(im, 16, cy, r, c)
+        disc(im, 10, cy - 2, r - 2, rgba(c[0] - 6, c[1] - 6, c[2] - 6))
+    fill(im, 0, 0, 3, T, rgba(0, 0, 0, 110))
+    fill(im, T - 3, 0, 3, T, rgba(0, 0, 0, 110))
+    return im
+
+
+def cave_wall_corner() -> Image.Image:
+    return wall_corner_post(rgba(20, 36, 48), CL)
 
 
 def drip_wall() -> Image.Image:
@@ -624,6 +732,9 @@ J_NOODLE_L, J_NOODLE_R = 28, 29
 J_LOG_L, J_LOG_R = 30, 31
 J_CAVE_L, J_CAVE_R = 32, 33
 J_BOOK_L, J_BOOK_R = 34, 35
+# Side + corner companions (E/W / posts). Face walls stay 16–25.
+W_TEA_S, W_NOODLE_S, W_LOG_S, W_BOOKS_S, W_CAVE_S = 70, 71, 72, 73, 74
+W_TEA_C, W_NOODLE_C, W_LOG_C, W_BOOKS_C, W_CAVE_C = 75, 76, 77, 78, 79
 COUNTER, URN, POTS, TIN = 40, 41, 42, 43
 TABLE, CUSHION = 44, 45
 BED_H, BED_F = 46, 47
@@ -636,13 +747,76 @@ BED_C_H, BED_C_F = 64, 65
 LECTERN, GLYPH = 66, 67
 BARREL, FERN = 68, 69
 
-WALLS = set(range(16, 36))
+WALLS = set(range(16, 36)) | set(range(70, 80))
 SOLID_FLOOR = WALLS | {POOL}
 SOLID_PROPS = {
     COUNTER, URN, POTS, TIN, TABLE, CUSHION, BED_H, BED_F, PLANT, SCREEN,
     CHEST, DESK, JOURNAL, NOTE, LAMP, CRATE, FRIDGE, BOWL, CRYSTAL, ROCK,
     LOGS, NIGHT, STOOL, BED_C_H, BED_C_F, LECTERN, GLYPH, BARREL,
 }
+
+
+def load_gen_overrides() -> dict[int, Image.Image]:
+    """Cursor-gen tiles from assemble_*_gen.py under gen_src/<room>/tiles/."""
+    out: dict[int, Image.Image] = {}
+    if not GEN_SRC.is_dir():
+        return out
+    for path in sorted(GEN_SRC.glob("*/tiles/*.png")):
+        if path.name.startswith("_"):
+            continue
+        try:
+            tid = int(path.stem)
+        except ValueError:
+            continue
+        im = Image.open(path).convert("RGBA")
+        if im.size != (T, T):
+            im = im.resize((T, T), Image.Resampling.NEAREST)
+        out[tid] = im
+    return out
+
+
+def _sample_face_colors(face: Image.Image, n: int = 4) -> list[tuple[int, int, int, int]]:
+    """A few opaque colours from a Cursor-gen face wall (palette match)."""
+    px = face.load()
+    seen: list[tuple[int, int, int, int]] = []
+    for y in range(0, T, 4):
+        for x in range(0, T, 4):
+            c = px[x, y]
+            if c[3] < 200:
+                continue
+            if any(sum(abs(c[i] - s[i]) for i in range(3)) < 40 for s in seen):
+                continue
+            seen.append(c)
+            if len(seen) >= n:
+                return seen
+    while len(seen) < n:
+        seen.append(seen[-1] if seen else INK)
+    return seen
+
+
+def _side_from_face(face: Image.Image, kind: str) -> Image.Image:
+    """E/W wall derived from a gen face so cabin/grotto sides share its palette."""
+    cols = _sample_face_colors(face)
+    im = blank(255)
+    fill(im, 0, 0, T, T, cols[-1])
+    if kind == "log":
+        for cx in (6, 16, 26):
+            for cy in (6, 16, 26):
+                for r, c in zip((5, 3, 1), cols):
+                    disc(im, cx, cy, r, c)
+                pix(im, cx, cy, cols[-1])
+    else:
+        for cy, r in ((6, 7), (16, 8), (26, 7)):
+            disc(im, 16, cy, r, cols[0])
+            disc(im, 10, cy - 2, max(2, r - 2), cols[1])
+    fill(im, 0, 0, 3, T, rgba(0, 0, 0, 100))
+    fill(im, T - 3, 0, 3, T, rgba(0, 0, 0, 100))
+    return im
+
+
+def _corner_from_face(face: Image.Image) -> Image.Image:
+    cols = _sample_face_colors(face, 3)
+    return wall_corner_post(cols[-1], cols[0])
 
 
 def build_sheet() -> Image.Image:
@@ -659,6 +833,10 @@ def build_sheet() -> Image.Image:
         W_LOG: log_wall(), W_FIRE: fire_wall(),
         W_BOOKS: books_wall(), W_CAVE: cave_wall(),
         W_MAP: map_wall(), W_DRIP: drip_wall(),
+        W_TEA_S: tea_wall_side(), W_NOODLE_S: noodle_wall_side(),
+        W_LOG_S: log_wall_side(), W_BOOKS_S: books_wall_side(), W_CAVE_S: cave_wall_side(),
+        W_TEA_C: tea_wall_corner(), W_NOODLE_C: noodle_wall_corner(),
+        W_LOG_C: log_wall_corner(), W_BOOKS_C: books_wall_corner(), W_CAVE_C: cave_wall_corner(),
         J_TEA_L: jamb(tea_wall, "l", WH), J_TEA_R: jamb(tea_wall, "r", WH),
         J_NOODLE_L: jamb(noodle_wall, "l", WH), J_NOODLE_R: jamb(noodle_wall, "r", WH),
         J_LOG_L: jamb(log_wall, "l", rgba(140, 100, 60)), J_LOG_R: jamb(log_wall, "r", rgba(140, 100, 60)),
@@ -676,6 +854,17 @@ def build_sheet() -> Image.Image:
         LECTERN: lectern(), GLYPH: glyph(),
         BARREL: barrel(), FERN: fern(),
     }
+    overrides = load_gen_overrides()
+    if overrides:
+        tiles.update(overrides)
+        # Cursor-gen face walls need matching E/W + corners; derive if missing.
+        if W_LOG in overrides and W_LOG_S not in overrides:
+            tiles[W_LOG_S] = _side_from_face(overrides[W_LOG], "log")
+            tiles[W_LOG_C] = _corner_from_face(overrides[W_LOG])
+        if W_CAVE in overrides and W_CAVE_S not in overrides:
+            tiles[W_CAVE_S] = _side_from_face(overrides[W_CAVE], "cave")
+            tiles[W_CAVE_C] = _corner_from_face(overrides[W_CAVE])
+        print(f"gen overrides: {sorted(overrides)} ({len(overrides)} tiles)")
     rows = max(tiles) // COLS + 1
     sheet = Image.new("RGBA", (COLS * T, rows * T), (0, 0, 0, 0))
     for i, tile in tiles.items():
@@ -692,13 +881,34 @@ def blit_tile(dst: Image.Image, tid: int, x: int, y: int) -> None:
     dst.alpha_composite(src, (x * T, y * T))
 
 
-def shell(wall: int, floor: int, mat_id: int, jamb_l: int, jamb_r: int) -> tuple[list[list[int]], list[list[int]]]:
+def shell(
+    face: int,
+    side: int,
+    corner: int,
+    floor: int,
+    mat_id: int,
+    jamb_l: int,
+    jamb_r: int,
+) -> tuple[list[list[int]], list[list[int]]]:
+    """Room perimeter with directional walls (face N/S, side E/W, corner posts).
+
+    Old shells stamped one wall tile on every edge; sides looked like rotated
+    face art and corners had no post. Door gap unchanged.
+    """
     F = [[floor for _ in range(W)] for _ in range(H)]
+    for x in range(W):
+        F[0][x] = face
+        F[H - 2][x] = face
+        F[H - 1][x] = face
     for y in range(H):
-        for x in range(W):
-            edge = x == 0 or x == W - 1 or y == 0 or y >= H - 2
-            if edge:
-                F[y][x] = wall
+        F[y][0] = side
+        F[y][W - 1] = side
+    for y, x in (
+        (0, 0), (0, W - 1),
+        (H - 2, 0), (H - 2, W - 1),
+        (H - 1, 0), (H - 1, W - 1),
+    ):
+        F[y][x] = corner
     # Door gap is two tiles (Kaela is one). Mat is the leave trigger.
     # One-tile-tall frame: Kaela (32px) fills the doorway. The mat row is the
     # leave trigger; the tile north of it is still inside.
@@ -811,6 +1021,38 @@ def check(room: dict) -> None:
     room["walkable_tiles"] = len(floor)
 
 
+def _darken_strip(img: Image.Image, x0: int, y0: int, w: int, h: int, shade: int = 55) -> None:
+    """Multiply RGB toward black on a strip (floor contact shadow)."""
+    px = img.load()
+    for y in range(max(0, y0), min(img.height, y0 + h)):
+        for x in range(max(0, x0), min(img.width, x0 + w)):
+            r, g, b, a = px[x, y]
+            if a < 8:
+                continue
+            px[x, y] = (max(0, r - shade), max(0, g - shade), max(0, b - shade), a)
+
+
+def polish_edges(img: Image.Image, F: list[list[int]]) -> None:
+    """Floor contact shadow beside walls + 1px outer rim against the void."""
+    for y in range(H):
+        for x in range(W):
+            if F[y][x] in WALLS:
+                continue
+            px, py = x * T, y * T
+            if x > 0 and F[y][x - 1] in WALLS:
+                _darken_strip(img, px, py, 4, T, 48)
+            if x < W - 1 and F[y][x + 1] in WALLS:
+                _darken_strip(img, px + T - 4, py, 4, T, 48)
+            if y > 0 and F[y - 1][x] in WALLS:
+                _darken_strip(img, px, py, T, 5, 60)
+            if y < H - 1 and F[y + 1][x] in WALLS:
+                _darken_strip(img, px, py + T - 3, T, 3, 40)
+    # Outer rim so the room does not hard-cut into letterbox black.
+    draw = ImageDraw.Draw(img)
+    draw.rectangle([0, 0, W * T - 1, H * T - 1], outline=INK)
+    draw.rectangle([1, 1, W * T - 2, H * T - 2], outline=rgba(0, 0, 0, 120))
+
+
 def render(F: list[list[int]], P: list[list[int]]) -> Image.Image:
     img = Image.new("RGBA", (W * T, H * T), (0, 0, 0, 255))
     for y in range(H):
@@ -818,6 +1060,7 @@ def render(F: list[list[int]], P: list[list[int]]) -> Image.Image:
             blit_tile(img, F[y][x], x, y)
             if P[y][x]:
                 blit_tile(img, P[y][x], x, y)
+    polish_edges(img, F)
     return img
 
 
@@ -845,7 +1088,7 @@ def room(rid: str, title: str, F, P, spots, npcs, lights) -> dict:
 
 
 def tea() -> dict:
-    F, P = shell(W_TEA, WOOD, MAT, J_TEA_L, J_TEA_R)
+    F, P = shell(W_TEA, W_TEA_S, W_TEA_C, WOOD, MAT, J_TEA_L, J_TEA_R)
     for x in (4, 5, 6):
         F[0][x] = W_TEA_WIN
     vary(F, WOOD, WOOD2)
@@ -890,7 +1133,7 @@ def tea() -> dict:
 
 
 def noodle() -> dict:
-    F, P = shell(W_NOODLE, NOODLE, MAT, J_NOODLE_L, J_NOODLE_R)
+    F, P = shell(W_NOODLE, W_NOODLE_S, W_NOODLE_C, NOODLE, MAT, J_NOODLE_L, J_NOODLE_R)
     F[0][1] = W_NEON
     F[0][10] = W_NEON
     vary(F, NOODLE, NOODLE2)
@@ -937,7 +1180,7 @@ def noodle() -> dict:
 
 
 def ranger() -> dict:
-    F, P = shell(W_LOG, CABIN, MAT, J_LOG_L, J_LOG_R)
+    F, P = shell(W_LOG, W_LOG_S, W_LOG_C, CABIN, MAT, J_LOG_L, J_LOG_R)
     for x in (2, 3, 4):
         F[0][x] = W_FIRE
     for x in (5, 6, 7):
@@ -978,7 +1221,7 @@ def ranger() -> dict:
 
 
 def archive() -> dict:
-    F, P = shell(W_BOOKS, STONE, MAT, J_BOOK_L, J_BOOK_R)
+    F, P = shell(W_BOOKS, W_BOOKS_S, W_BOOKS_C, STONE, MAT, J_BOOK_L, J_BOOK_R)
     vary(F, STONE, STONE2)
     P[1][9] = LECTERN
     P[2][2] = GLYPH
@@ -1015,7 +1258,7 @@ def archive() -> dict:
 
 
 def grotto() -> dict:
-    F, P = shell(W_CAVE, CAVE, MAT_CAVE, J_CAVE_L, J_CAVE_R)
+    F, P = shell(W_CAVE, W_CAVE_S, W_CAVE_C, CAVE, MAT_CAVE, J_CAVE_L, J_CAVE_R)
     F[0][2] = W_DRIP
     F[0][3] = W_DRIP
     vary(F, CAVE, CAVE2)

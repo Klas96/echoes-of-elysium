@@ -176,7 +176,10 @@ class Interiors {
   static Future<void> enterAt(BonfireGameInterface game, String id, Vector2 front) async {
     if (_busy || !canEnter(id)) return;
     _busy = true;
-    const fade = Duration(milliseconds: 650);
+    // Enter a touch slower than exit — walking out used to feel laggy because
+    // we waited a full second fade twice (route reverse + an extra delay).
+    const fadeIn = Duration(milliseconds: 380);
+    const fadeOut = Duration(milliseconds: 260);
     try {
       final room = await load(id);
       final context = game.context;
@@ -186,8 +189,8 @@ class Interiors {
       CustomPlayer.pendingShot.value = null;
       NpcCharacter.nearbyNpc = null;
       NpcCharacter.showPrompt.value = false;
-      // Saved in front of the door: CONTINUE from inside resumes there.
-      await SaveService.saveNow();
+      // Door-front checkpoint for CONTINUE; don't block the fade on disk I/O.
+      SaveService.requestAutosave();
       final wasPaused = game.paused;
       final wePaused = !wasPaused;
       if (wePaused) game.pauseEngine();
@@ -207,9 +210,8 @@ class Interiors {
       GameInput.syncAlternateKeys = () => RoomPlayer.current?.syncMovementFromKeyboard();
       try {
         if (!context.mounted) return;
-        await Navigator.of(context).push(_route(room, fade));
-        // Room Focus still mounted through the reverse fade.
-        await Future<void>.delayed(fade);
+        // Completes after the reverse (exit) transition finishes — no second wait.
+        await Navigator.of(context).push(_route(room, fadeIn, fadeOut));
       } finally {
         current.value = null;
         _leaveRoom = null;
@@ -241,9 +243,10 @@ class Interiors {
     }
   }
 
-  static PageRoute<void> _route(RoomData room, Duration fade) => PageRouteBuilder<void>(
-        transitionDuration: fade,
-        reverseTransitionDuration: fade,
+  static PageRoute<void> _route(RoomData room, Duration fadeIn, Duration fadeOut) =>
+      PageRouteBuilder<void>(
+        transitionDuration: fadeIn,
+        reverseTransitionDuration: fadeOut,
         pageBuilder: (_, __, ___) => RoomScreen(room: room),
         // Fade the overworld to black, then the room in (and back on exit).
         transitionsBuilder: (_, anim, __, child) => Stack(fit: StackFit.expand, children: [
@@ -306,6 +309,9 @@ class _RoomScreenState extends State<RoomScreen> {
     _leaving = true;
     RoomPanel.close();
     Journal.hide();
+    // Stop the indoor Bonfire before the fade-out so teardown work does not
+    // hitch the reverse transition (and the overworld resume after it).
+    _game?.pauseEngine();
     SfxManager().playFootstep();
     Navigator.of(context).pop();
   }
@@ -411,7 +417,7 @@ List<RoomSpot> _usableSpots(RoomData room) {
 
 class RoomBackground extends GameComponent {
   final RoomData room;
-  ui.Image? _sheet;
+  ui.Image? _baked;
   Sprite? _sprite;
   final _paint = Paint()..filterQuality = FilterQuality.none;
 
@@ -428,37 +434,101 @@ class RoomBackground extends GameComponent {
   @override
   Future<void> onLoad() async {
     if (_tiled) {
-      _sheet = await Flame.images.load('interiors/${room.tileset}');
+      // Compose once: per-frame blit of 12×8 floor+props was a hitch indoors.
+      final sheet = await Flame.images.load('interiors/${room.tileset}');
+      _baked = await _bake(sheet);
     } else {
       _sprite = await Sprite.load(room.imagePath);
     }
     return super.onLoad();
   }
 
-  void _blit(Canvas canvas, int id, int tx, int ty) {
-    final sheet = _sheet;
-    if (sheet == null) return;
+  Future<ui.Image> _bake(ui.Image sheet) async {
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
     final s = room.tile.toDouble();
-    final src = Rect.fromLTWH(
-      ((id % room.sheetCols) * room.tile).toDouble(),
-      ((id ~/ room.sheetCols) * room.tile).toDouble(),
-      s,
-      s,
-    );
-    canvas.drawImageRect(sheet, src, Rect.fromLTWH(tx * s, ty * s, s, s), _paint);
+    void blit(int id, int tx, int ty) {
+      final src = Rect.fromLTWH(
+        ((id % room.sheetCols) * room.tile).toDouble(),
+        ((id ~/ room.sheetCols) * room.tile).toDouble(),
+        s,
+        s,
+      );
+      canvas.drawImageRect(sheet, src, Rect.fromLTWH(tx * s, ty * s, s, s), _paint);
+    }
+
+    bool isWall(int id) => (id >= 16 && id < 36) || (id >= 70 && id < 80);
+
+    for (var y = 0; y < room.rows; y++) {
+      final floor = room.floor[y];
+      final props = y < room.props.length ? room.props[y] : const <int>[];
+      for (var x = 0; x < room.cols; x++) {
+        blit(floor[x], x, y);
+        if (x < props.length && props[x] > 0) blit(props[x], x, y);
+      }
+    }
+
+    // Floor contact shadow where walkable tiles meet walls.
+    final shade = Paint()
+      ..color = const Color(0x55000000)
+      ..blendMode = BlendMode.srcOver;
+    for (var y = 0; y < room.rows; y++) {
+      final row = room.floor[y];
+      for (var x = 0; x < room.cols; x++) {
+        if (isWall(row[x])) continue;
+        final px = x * s;
+        final py = y * s;
+        if (x > 0 && isWall(row[x - 1])) {
+          canvas.drawRect(Rect.fromLTWH(px, py, 4, s), shade);
+        }
+        if (x < room.cols - 1 && isWall(row[x + 1])) {
+          canvas.drawRect(Rect.fromLTWH(px + s - 4, py, 4, s), shade);
+        }
+        if (y > 0 && isWall(room.floor[y - 1][x])) {
+          canvas.drawRect(Rect.fromLTWH(px, py, s, 5), shade);
+        }
+        if (y < room.rows - 1 && isWall(room.floor[y + 1][x])) {
+          canvas.drawRect(Rect.fromLTWH(px, py + s - 3, s, 3), shade);
+        }
+      }
+    }
+
+    // Soft outer rim against letterbox black.
+    final rim = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1
+      ..color = const Color(0xFF100806);
+    canvas.drawRect(Rect.fromLTWH(0.5, 0.5, room.widthPx - 1, room.heightPx - 1), rim);
+    final rim2 = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1
+      ..color = const Color(0x66000000);
+    canvas.drawRect(Rect.fromLTWH(1.5, 1.5, room.widthPx - 3, room.heightPx - 3), rim2);
+
+    final picture = recorder.endRecording();
+    try {
+      return await picture.toImage(room.widthPx.round(), room.heightPx.round());
+    } finally {
+      picture.dispose();
+    }
+  }
+
+  @override
+  void onRemove() {
+    final img = _baked;
+    _baked = null;
+    // Defer GPU dispose so it does not stall the exit fade / overworld resume.
+    if (img != null) {
+      Future<void>.microtask(img.dispose);
+    }
+    super.onRemove();
   }
 
   @override
   void render(Canvas canvas) {
-    if (_sheet != null) {
-      for (var y = 0; y < room.rows; y++) {
-        final floor = room.floor[y];
-        final props = y < room.props.length ? room.props[y] : const <int>[];
-        for (var x = 0; x < room.cols; x++) {
-          _blit(canvas, floor[x], x, y);
-          if (x < props.length && props[x] > 0) _blit(canvas, props[x], x, y);
-        }
-      }
+    final baked = _baked;
+    if (baked != null) {
+      canvas.drawImage(baked, Offset.zero, _paint);
     } else {
       _sprite?.render(canvas, size: size, overridePaint: _paint);
     }
@@ -760,6 +830,7 @@ class RoomGlow extends GameComponent {
   final LightKind kind;
   final double radius;
   double _t;
+  final Paint _paint = Paint()..blendMode = BlendMode.plus;
 
   RoomGlow(RoomData room, this.light)
       : kind = switch (light.kind) {
@@ -789,15 +860,14 @@ class RoomGlow extends GameComponent {
     final wobble = 1 - f + f * (0.5 + 0.5 * sin(_t * (kind == LightKind.fire ? 7.3 : 1.3)));
     final a = 0.2 * wobble;
     final c = kind.color;
-    final shader = RadialGradient(colors: [
+    // Reuse paint; rebuild only the gradient (cheap vs recreating Paint).
+    _paint.shader = RadialGradient(colors: [
       c.withValues(alpha: a),
       c.withValues(alpha: a * 0.35),
       c.withValues(alpha: 0),
     ], stops: const [0, 0.45, 1])
         .createShader(Rect.fromCircle(center: Offset.zero, radius: radius));
-    canvas.drawCircle(Offset.zero, radius, Paint()
-      ..shader = shader
-      ..blendMode = BlendMode.plus);
+    canvas.drawCircle(Offset.zero, radius, _paint);
     super.render(canvas);
   }
 }
