@@ -421,3 +421,74 @@ jobs:
             echo "### Website"
             echo "Deployed web ${VERSION_NAME} to https://klasholmgren.se${BASE_HREF} ($(du -sh "$SITE_PATH" | cut -f1))"
           } >> "$GITHUB_STEP_SUMMARY"
+
+  itch:
+    needs: [build, github-release]
+    # Only real tag releases, and only once the itch.io project is configured
+    # (repo variable ITCH_GAME, e.g. klas96/echoes-of-elysium). Skipped otherwise.
+    if: ${{ !cancelled() && vars.ITCH_GAME != '' && needs.build.outputs.dry_run != 'true' && needs.github-release.result == 'success' && startsWith(github.ref, 'refs/tags/v') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      ITCH_GAME: ${{ vars.ITCH_GAME }}
+      VERSION: ${{ needs.build.outputs.version_name }}
+      BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+    steps:
+      - name: Check BUTLER_API_KEY
+        id: check
+        run: |
+          if [ -z "$BUTLER_API_KEY" ]; then
+            echo "::warning::Secret BUTLER_API_KEY is not set - skipping itch.io upload."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/download-artifact@v4
+        if: steps.check.outputs.enabled == 'true'
+        with:
+          name: release-${{ needs.build.outputs.version_name }}
+          path: dist
+
+      - name: Install butler
+        if: steps.check.outputs.enabled == 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/butler"
+          curl -fsSL -o "$RUNNER_TEMP/butler.zip" https://broth.itch.zone/butler/linux-amd64/LATEST/archive/default
+          unzip -q "$RUNNER_TEMP/butler.zip" -d "$RUNNER_TEMP/butler"
+          chmod +x "$RUNNER_TEMP/butler/butler"
+          echo "$RUNNER_TEMP/butler" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/butler/butler" -V
+
+      - name: Prepare itch web build
+        if: steps.check.outputs.enabled == 'true'
+        run: |
+          set -euo pipefail
+          # The build job's web zip uses the default <base href="/">. itch.io serves
+          # HTML5 games from a subpath on its CDN inside an iframe, so make it relative.
+          mkdir -p build/web
+          unzip -q "dist/${{ needs.build.outputs.web_zip }}" -d build/web
+          test -f build/web/index.html
+          sed -i -E 's#<base href="[^"]*">#<base href="./">#' build/web/index.html
+          grep -F '<base href="./">' build/web/index.html
+          rm -f build/web/.last_build_id
+          # Same SFX path workaround as the website job (assets/audio -> assets/assets/audio).
+          if [ ! -e build/web/assets/audio ]; then
+            for d in sfx voices; do
+              if [ -d "build/web/assets/assets/audio/$d" ]; then
+                mkdir -p build/web/assets/audio
+                cp -r "build/web/assets/assets/audio/$d" build/web/assets/audio/
+              fi
+            done
+          fi
+          echo "itch web build: $(du -sh build/web | cut -f1), $(find build/web -type f | wc -l) files"
+
+      - name: butler push (html5 + android)
+        if: steps.check.outputs.enabled == 'true'
+        run: |
+          set -euo pipefail
+          butler push build/web "$ITCH_GAME:html5" --userversion "$VERSION"
+          butler push "dist/${{ needs.build.outputs.apk_name }}" "$ITCH_GAME:android" --userversion "$VERSION"
+          echo "### itch.io" >> "$GITHUB_STEP_SUMMARY"
+          echo "Pushed $VERSION to https://itch.io (channels html5, android) for \`$ITCH_GAME\`" >> "$GITHUB_STEP_SUMMARY"
