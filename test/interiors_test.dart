@@ -373,7 +373,6 @@ void main() {
       expect(Interiors.canEnter('pond_grotto'), isFalse);
       for (final id in ['apartment_block', 'greenhouse', 'ruin_shrine']) {
         expect(Interiors.canEnter(id), isFalse);
-        expect(RoomText.lockedDoors[id], isNotEmpty);
       }
       expect(Adventure.catalog.map((c) => c.id), contains(fieldNotesClue));
     });

@@ -214,6 +214,8 @@ abstract class AbilityGate extends GameComponent with Interactable {
             body: h.line,
             color: h.gaia ? const Color(0xFF00FF88) : const Color(0xFFFFE0A8),
             portrait: h.gaia ? 'assets/images/sprites/npc_gaia.png' : null,
+            // Non-Gaia walk-ups stay compact; Gaia keeps the fuller beat.
+            compact: !h.gaia,
             seconds: h.gaia ? 5 : 3.6);
       }
     }

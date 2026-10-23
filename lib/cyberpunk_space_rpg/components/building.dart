@@ -8,7 +8,6 @@ import '../game/adventure.dart';
 import '../game/game_state.dart';
 import '../interiors/room_scene.dart';
 import '../interiors/room_services.dart';
-import '../interiors/room_text.dart';
 
 /// Sprite size, collision box and door point of a placeable building, in px
 /// from the sprite's top-left. Generated from tools/buildings/<name>.json
@@ -103,14 +102,20 @@ class Building extends GameDecorationWithCollision with Interactable {
 
   void refreshColliders() => applyColliderRects([def.collision]);
 
-  /// Locked-door line (#31, GameConcept), else the building's own.
-  String get flavour => RoomText.lockedDoors[id] ?? def.flavour;
-
   @override
   Vector2 get interactPoint => position + Vector2(def.door.dx, def.door.dy + 8);
 
   @override
   double get interactRadius => id == 'archive_library' ? 36 : 28;
+
+  /// Skip inert locked doors so walk-by note prompts don't fire for no reason.
+  @override
+  bool get canFocus {
+    if (Interiors.canEnter(id)) return true;
+    if (id == 'archive_library') return true;
+    if (id == 'ruin_shrine' && !Adventure.hasClue('shrine_note')) return true;
+    return false;
+  }
 
   @override
   PromptInfo get prompt {
@@ -122,7 +127,7 @@ class Building extends GameDecorationWithCollision with Interactable {
     if (id == 'ruin_shrine' && !Adventure.hasClue('shrine_note')) {
       return const PromptInfo('EXAMINE');
     }
-    return const PromptInfo('EXAMINE');
+    return const PromptInfo.note('');
   }
 
   @override
@@ -148,12 +153,12 @@ class Building extends GameDecorationWithCollision with Interactable {
     if (id == 'ruin_shrine') {
       final first = Adventure.discover('shrine_note');
       GameState.onShrineExamined();
-      if (first) Bonds.addGlimmer(8);
+      if (!first) return;
+      Bonds.addGlimmer(8);
       SfxManager().playChime();
-      GameToast.show(first ? 'SHRINE · +8 GLIMMER · CLUE LOGGED' : 'SHRINE',
-          body: flavour, color: const Color(0xFFCC88FF));
+      GameToast.show('SHRINE · +8 GLIMMER · CLUE LOGGED',
+          color: const Color(0xFFCC88FF), compact: true);
       return;
     }
-    GameToast.show('DOOR', body: flavour, color: const Color(0xFFAACCEE));
   }
 }

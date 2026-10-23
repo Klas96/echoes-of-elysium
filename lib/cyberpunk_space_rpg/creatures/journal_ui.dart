@@ -112,7 +112,7 @@ class CreatureHud extends StatelessWidget {
   Widget build(BuildContext context) {
     final gap = compact ? 6.0 : 8.0;
     final chips = <Widget>[
-      _MenuChip(compact: compact),
+      const _MenuChip(),
       ValueListenableBuilder<int>(
         valueListenable: Bonds.revision,
         builder: (_, __, ___) => _Chip(
@@ -298,20 +298,11 @@ class _Chip extends StatelessWidget {
 
 /// Opens the journal tablet (in-game hub). Filled Signal Teal so it won't read as a status chip.
 class _MenuChip extends StatelessWidget {
-  final bool compact;
-  const _MenuChip({this.compact = false});
+  const _MenuChip();
 
   @override
   Widget build(BuildContext context) {
     final pad = HudLayout.chipPadding;
-    final icon = Icon(Icons.menu_book_outlined,
-        size: HudLayout.chipIcon + 1, color: const Color(0xFF06060F));
-    final label = Text('MENU',
-        style: TextStyle(
-            color: const Color(0xFF06060F),
-            fontSize: HudLayout.chipFont,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 1.2));
     return GestureDetector(
       onTap: Journal.show,
       child: Container(
@@ -330,13 +321,12 @@ class _MenuChip extends StatelessWidget {
             ),
           ],
         ),
-        child: compact
-            ? icon
-            : Row(mainAxisSize: MainAxisSize.min, children: [
-                icon,
-                SizedBox(width: HudLayout.isTouch ? 4 : 6),
-                label,
-              ]),
+        child: Text('MENU',
+            style: TextStyle(
+                color: const Color(0xFF06060F),
+                fontSize: HudLayout.chipFont,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.2)),
       ),
     );
   }
@@ -513,19 +503,23 @@ class ToastLayer extends StatelessWidget {
                               mainAxisSize: MainAxisSize.min,
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(m.title,
-                                    style: TextStyle(
-                                        color: m.color.withValues(alpha: compact ? 0.9 : 1),
-                                        fontSize: compact ? 10 : 11,
-                                        fontWeight: FontWeight.w600,
-                                        letterSpacing: compact ? 1 : 1.5)),
+                                if (m.title.isNotEmpty)
+                                  Text(m.title,
+                                      style: TextStyle(
+                                          color: m.color.withValues(alpha: compact ? 0.9 : 1),
+                                          fontSize: compact ? 10 : 11,
+                                          fontWeight: FontWeight.w600,
+                                          letterSpacing: compact ? 1 : 1.5)),
                                 if (m.body.isNotEmpty) ...[
-                                  SizedBox(height: compact ? 2 : 3),
+                                  if (m.title.isNotEmpty) SizedBox(height: compact ? 2 : 3),
                                   Text(m.body,
                                       maxLines: compact ? 2 : 3,
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
-                                          color: Colors.white.withValues(alpha: compact ? 0.55 : 0.65),
+                                          color: Colors.white.withValues(
+                                              alpha: m.title.isEmpty
+                                                  ? (compact ? 0.75 : 0.85)
+                                                  : (compact ? 0.55 : 0.65)),
                                           fontSize: compact ? 10 : 11,
                                           height: 1.35)),
                                 ],
@@ -792,8 +786,6 @@ class _JournalPanelState extends State<_JournalPanel> {
     const count = TextStyle(color: _inkSoft, fontSize: 12, fontWeight: FontWeight.w600);
     final jobs = Quests.activeJobs.length;
     return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Image.asset('assets/images/ui/tab_paw_32@2x.png', width: 30, height: 30, filterQuality: FilterQuality.none),
-      const SizedBox(width: 8),
       Expanded(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           const FittedBox(

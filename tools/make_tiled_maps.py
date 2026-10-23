@@ -937,22 +937,46 @@ class Level:
               f"{n_col} blocking tiles, reachable floor {int(seen.sum())}")
 
 # --------------------------------------------------------------- sizes used by the code
-SZ = dict(spawn=32, portal=56, npc=30, fragment=18, health=16, drone=24, sentinel=48, checkpoint=32,
+SZ = dict(spawn=32, portal=96, npc=30, fragment=18, health=16, drone=24, sentinel=48, checkpoint=32,
           creature=32, stump=64, stash=32, glyph=24, hidden=24, pebble=16, moonflower=16, examine=20,
           storygate=64, entry=32)
 
+def _edge_sample(lv, side, cx, half):
+    """Ground tile from the corridor centre (not the sidewalk fringe).
+
+    Scanning left→right / top→bottom often hits a road-sidewalk edge piece
+    (city 61/67) and paints the whole mouth as a fake wall strip.
+    """
+    W, H = lv.W, lv.H
+    sample = 1
+    if side in ("south", "north"):
+        sy = min(H - 4, H - 1) if side == "south" else min(3, H - 1)
+        x0, x1 = max(0, cx - half), min(W, cx + half + 1)
+        order = [cx] + [x for x in range(x0, x1) if x != cx]
+        for x in order:
+            if 0 <= x < W and lv.floor[sy, x] and int(lv.ground[sy, x]) >= 0:
+                return int(lv.ground[sy, x])
+    else:
+        sx = min(W - 4, W - 1) if side == "east" else min(3, W - 1)
+        y0, y1 = max(0, cx - half), min(H, cx + half + 1)
+        order = [cx] + [y for y in range(y0, y1) if y != cx]
+        for y in order:
+            if 0 <= y < H and lv.floor[y, sx] and int(lv.ground[y, sx]) >= 0:
+                return int(lv.ground[y, sx])
+    return sample
+
 def open_map_edge(lv, side, cx, half=2):
     """Punch a walkable corridor through the sealed map border (after clean_walls).
-    [side] is north/south/east/west; [cx] is the centre tile along that edge."""
+    [side] is north/south/east/west; [cx] is the centre tile along that edge.
+
+    Only flips [lv.floor] — ground wang tiles stay stale until the caller
+    re-blobs (see [retile_woods_edge] / [retile_city_edge]). A temporary
+    sample fill keeps the layer non-empty if retile is skipped.
+    """
     W, H = lv.W, lv.H
-    # Sample a nearby walkable ground tile to paint into the opening.
-    sample = 1
+    sample = _edge_sample(lv, side, cx, half)
     if side == "south":
         x0, x1 = max(0, cx - half), min(W, cx + half + 1)
-        sy = min(H - 4, H - 1)
-        for x in range(x0, x1):
-            if lv.floor[sy, x]:
-                sample = int(lv.ground[sy, x]); break
         for y in range(H - 3, H):
             for x in range(x0, x1):
                 lv.floor[y, x] = True
@@ -960,20 +984,12 @@ def open_map_edge(lv, side, cx, half=2):
                     lv.ground[y, x] = sample
     elif side == "north":
         x0, x1 = max(0, cx - half), min(W, cx + half + 1)
-        sy = max(3, 0)
-        for x in range(x0, x1):
-            if lv.floor[min(3, H - 1), x]:
-                sample = int(lv.ground[min(3, H - 1), x]); break
         for y in range(0, 3):
             for x in range(x0, x1):
                 lv.floor[y, x] = True
                 lv.ground[y, x] = sample
     elif side == "east":
         y0, y1 = max(0, cx - half), min(H, cx + half + 1)
-        sx = min(W - 4, W - 1)
-        for y in range(y0, y1):
-            if lv.floor[y, sx]:
-                sample = int(lv.ground[y, sx]); break
         for x in range(W - 3, W):
             for y in range(y0, y1):
                 lv.floor[y, x] = True
@@ -981,14 +997,129 @@ def open_map_edge(lv, side, cx, half=2):
                     lv.ground[y, x] = sample
     elif side == "west":
         y0, y1 = max(0, cx - half), min(H, cx + half + 1)
-        sx = max(3, 0)
-        for y in range(y0, y1):
-            if lv.floor[y, min(3, W - 1)]:
-                sample = int(lv.ground[y, min(3, W - 1)]); break
         for x in range(0, 3):
             for y in range(y0, y1):
                 lv.floor[y, x] = True
                 lv.ground[y, x] = sample
+
+def retile_woods_edge(lv, ts, path, water, side, cx, half=2, margin=2):
+    """Re-blob grass-forest / path around a punched woods edge.
+
+    Without this, forest cells still look like interior wall (dense 14/15)
+    flush against the punched grass — no grass-forest edge piece.
+    """
+    W, H = lv.W, lv.H
+    wall = ~lv.floor
+    if side == "south":
+        x0, x1 = max(0, cx - half), min(W, cx + half + 1)
+        # Road continues through the mouth.
+        for y in range(H - 3, H):
+            for x in range(x0, x1):
+                if lv.floor[y, x]:
+                    path[y, x] = True
+        rx0, rx1 = max(0, cx - half - margin), min(W, cx + half + 1 + margin)
+        ry0, ry1 = max(0, H - 3 - margin - 1), H
+    elif side == "north":
+        x0, x1 = max(0, cx - half), min(W, cx + half + 1)
+        for y in range(0, 3):
+            for x in range(x0, x1):
+                if lv.floor[y, x]:
+                    path[y, x] = True
+        rx0, rx1 = max(0, cx - half - margin), min(W, cx + half + 1 + margin)
+        ry0, ry1 = 0, min(H, 3 + margin + 1)
+    elif side == "east":
+        y0, y1 = max(0, cx - half), min(H, cx + half + 1)
+        for x in range(W - 3, W):
+            for y in range(y0, y1):
+                if lv.floor[y, x]:
+                    path[y, x] = True
+        rx0, rx1 = max(0, W - 3 - margin - 1), W
+        ry0, ry1 = max(0, cx - half - margin), min(H, cx + half + 1 + margin)
+    elif side == "west":
+        y0, y1 = max(0, cx - half), min(H, cx + half + 1)
+        for x in range(0, 3):
+            for y in range(y0, y1):
+                if lv.floor[y, x]:
+                    path[y, x] = True
+        rx0, rx1 = 0, min(W, 3 + margin + 1)
+        ry0, ry1 = max(0, cx - half - margin), min(H, cx + half + 1 + margin)
+    else:
+        return
+    path &= lv.floor & ~water
+    for y in range(ry0, ry1):
+        for x in range(rx0, rx1):
+            if wall[y, x] or not (water[y, x] or path[y, x]):
+                lv.ground[y, x] = blob(ts, "grass-forest", wall, x, y, lv.rng)
+            if water[y, x]:
+                lv.ground[y, x] = blob(ts, "grass-water", water, x, y, lv.rng)
+            if path[y, x]:
+                lv.ground[y, x] = blob(ts, "grass-path", path, x, y, lv.rng)
+
+def retile_city_edge(lv, ts, road, lawn, side, cx, half=2, margin=2, plaza=None,
+                     extend_road=True):
+    """Re-blob sidewalk-building / road-sidewalk around a punched city edge.
+
+    Without this, the sealed border keeps interior building tiles (or a bad
+    sample strip) flush on the mouth — same class of bug as [retile_woods_edge].
+    """
+    W, H = lv.W, lv.H
+    wall = ~lv.floor
+    if side == "south":
+        x0, x1 = max(0, cx - half), min(W, cx + half + 1)
+        if extend_road:
+            for y in range(H - 3, H):
+                for x in range(x0, x1):
+                    if lv.floor[y, x]:
+                        road[y, x] = True
+        rx0, rx1 = max(0, cx - half - margin), min(W, cx + half + 1 + margin)
+        ry0, ry1 = max(0, H - 3 - margin - 1), H
+    elif side == "north":
+        x0, x1 = max(0, cx - half), min(W, cx + half + 1)
+        if extend_road:
+            for y in range(0, 3):
+                for x in range(x0, x1):
+                    if lv.floor[y, x]:
+                        road[y, x] = True
+        rx0, rx1 = max(0, cx - half - margin), min(W, cx + half + 1 + margin)
+        ry0, ry1 = 0, min(H, 3 + margin + 1)
+    elif side == "east":
+        y0, y1 = max(0, cx - half), min(H, cx + half + 1)
+        if extend_road:
+            for x in range(W - 3, W):
+                for y in range(y0, y1):
+                    if lv.floor[y, x]:
+                        road[y, x] = True
+        rx0, rx1 = max(0, W - 3 - margin - 1), W
+        ry0, ry1 = max(0, cx - half - margin), min(H, cx + half + 1 + margin)
+    elif side == "west":
+        y0, y1 = max(0, cx - half), min(H, cx + half + 1)
+        if extend_road:
+            for x in range(0, 3):
+                for y in range(y0, y1):
+                    if lv.floor[y, x]:
+                        road[y, x] = True
+        rx0, rx1 = 0, min(W, 3 + margin + 1)
+        ry0, ry1 = max(0, cx - half - margin), min(H, cx + half + 1 + margin)
+    else:
+        return
+    road &= lv.floor
+    if lawn is not None:
+        lawn &= lv.floor & ~road
+    sidewalk = ~road
+    near_lawn = lv.dilate(lawn, 1) if lawn is not None else np.zeros_like(wall)
+    near_rw = lv.dilate(road | wall, 1)
+    for y in range(ry0, ry1):
+        for x in range(rx0, rx1):
+            if wall[y, x]:
+                lv.ground[y, x] = blob(ts, "sidewalk-building", wall, x, y, lv.rng)
+            elif lawn is not None and lawn[y, x]:
+                lv.ground[y, x] = blob(ts, "sidewalk-grass", lawn, x, y, lv.rng)
+            else:
+                lv.ground[y, x] = blob(ts, "road-sidewalk", sidewalk, x, y, lv.rng,
+                                       exclude={4, 5, 6, 7, 8})
+                if (plaza is not None and plaza[y, x]
+                        and not near_lawn[y, x] and not near_rw[y, x]):
+                    lv.ground[y, x] = 12 if (x * 7 + y * 3) % 13 else 13
 
 def place_mapexit(lv, side, cx, dest, entry, half=2, unlock=False, **extra):
     """Trigger strip just inside the opened edge. [entry] = spawn side on dest map."""
@@ -1274,6 +1405,9 @@ def map1():
     # South road out of the woods → City (walk off the map).
     ex = int(P["exit"][0])
     open_map_edge(lv, "south", ex, half=2)
+    # Forest beside the punched mouth must use grass-forest edge tiles (not
+    # dense 14 flush on grass) — retile with path continuing through the exit.
+    retile_woods_edge(lv, ts, path, water, "south", ex, half=2)
     place_mapexit(lv, "south", ex, dest="city", entry="north", half=2, unlock=True,
                   lockedTitle="WOODS EDGE",
                   lockedBody="The road south is blocked. The woods still want something from you.")
@@ -1486,7 +1620,7 @@ def map2():
     rect_carve(road, 34, 6, 52, 9)             # boulevard: plaza → Lantern Gate → Town
     rect_carve(road, 45, 9, 48, 15)            # Lantern Gate street down to the east lot
     rect_carve(road, 35, 17, 45, 19)           # east street: east lot → Archive Square
-    rect_carve(road, 25, 36, 28, 44)           # gate road → Ruins
+    rect_carve(road, 24, 36, 29, 44)           # gate road → Ruins (matches exit half=2)
     floor = np.zeros_like(road)
     rect_carve(floor, 19, 2, 34, 10)           # ARRIVAL PLAZA
     rect_carve(floor, 24, 0, 29, 3)            # north road → Woods edge
@@ -1638,6 +1772,10 @@ def map2():
     open_map_edge(lv, "north", gx, half=2)
     open_map_edge(lv, "south", sx, half=2)
     open_map_edge(lv, "east", ey, half=2)
+    # Re-blob mouths so border building tiles / bad samples don't seal the road.
+    retile_city_edge(lv, ts, road, lawn, "north", gx, half=2, plaza=plaza, extend_road=False)
+    retile_city_edge(lv, ts, road, lawn, "south", sx, half=2, plaza=plaza)
+    retile_city_edge(lv, ts, road, lawn, "east", ey, half=2, plaza=plaza)
     place_mapexit(lv, "north", gx, dest="woods", entry="south", half=2)
     place_mapexit(lv, "south", sx, dest="ruins", entry="north", half=2, unlock=True,
                   lockedTitle="SOUTH ROAD",
@@ -1792,6 +1930,7 @@ def map5():
     # West road back to the City — walk off the map.
     wy = int(P["mira"][1])
     open_map_edge(lv, "west", wy, half=2)
+    retile_city_edge(lv, ts, road, None, "west", wy, half=2)
     place_mapexit(lv, "west", wy, dest="city", entry="east", half=2)
     place_entry(lv, "west", 4.5, P["mira"][1])
     place_entry(lv, "north", *P["spawn"])
@@ -1895,8 +2034,10 @@ def map3():
     lv.vignette(*P["h2"], [
         ("barrel_purple", 0, 1), ("crate", 1, -1), ("rubble_small", -1, 0), ("barrel_toxic", 1, 1),
     ])
+    # Core portal art is sprites/portal.png (circular Aetherian ring) drawn by
+    # PortalComponent — not the city hexpad. Keep the court clear of clutter.
     lv.vignette(*P["portal"], [
-        ("drone_wreck", 1, 0), ("barrel_toxic", -1, 1), ("rubble_small", 0, 2),
+        ("drone_wreck", 2, 0), ("barrel_toxic", -2, 1), ("rubble_small", 0, 3),
     ])
     lv.vignette(*P["key"], [
         ("broken_pillar", -1, 1), ("loose_cables", 1, 0), ("terminal", 0, -1),

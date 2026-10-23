@@ -74,12 +74,6 @@ class RoomText {
   static const grottoDrip = 'Water ticks from the stone. The Light still hums in the moss.';
   static const grottoPool = 'A shallow pool mirrors the mouth you came through.';
 
-  // --- Still-locked doors ---------------------------------------------------
-  static const lockedDoors = {
-    'apartment_block': "Buzzers, none answered. Someone's left a light on, three floors up.",
-    'greenhouse': 'Fogged glass. Something green presses against it from inside.',
-    'ruin_shrine': 'The doorway is carved shut. A glyph above it waits to be read.',
-  };
 }
 
 class FerroRiddle {

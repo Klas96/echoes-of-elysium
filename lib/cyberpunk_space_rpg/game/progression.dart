@@ -214,7 +214,7 @@ class Progression {
       MmoFeedback.pushPop('+$amount XP', color: const Color(0xFFFFE08A));
     }
     if (leveled) {
-      MmoFeedback.pushPop('LEVEL ${_d.level}!', color: const Color(0xFFFFCC66));
+      // Rare beats use toast only (no duplicate pushPop).
       GameToast.show(
         'LEVEL ${_d.level}',
         body: reason ?? '+${bonusHealth} max HP',
@@ -223,7 +223,6 @@ class Progression {
       );
       if (before < Progression.phaseUnlockLevel &&
           _d.level >= Progression.phaseUnlockLevel) {
-        MmoFeedback.pushPop('PHASE UNLOCKED', color: const Color(0xFF88EEFF));
         GameToast.show(
           'PHASE UNLOCKED',
           body: 'Short dash · tap the button or press Space',
@@ -234,7 +233,6 @@ class Progression {
       }
       if (before < Progression.pulseUnlockLevel &&
           _d.level >= Progression.pulseUnlockLevel) {
-        MmoFeedback.pushPop('PULSE UNLOCKED', color: const Color(0xFF00FFCC));
         GameToast.show(
           'PULSE UNLOCKED',
           body: 'Cone burst · tap the button or press Q',
@@ -245,7 +243,6 @@ class Progression {
       }
       if (before < Progression.wardUnlockLevel &&
           _d.level >= Progression.wardUnlockLevel) {
-        MmoFeedback.pushPop('WARD UNLOCKED', color: const Color(0xFFE8D0FF));
         GameToast.show(
           'WARD UNLOCKED',
           body: 'Personal shield · tap the button or press F',
@@ -256,7 +253,6 @@ class Progression {
       }
       if (before < Progression.anchorUnlockLevel &&
           _d.level >= Progression.anchorUnlockLevel) {
-        MmoFeedback.pushPop('ANCHOR UNLOCKED', color: const Color(0xFFAA44FF));
         GameToast.show(
           'ANCHOR UNLOCKED',
           body: 'Radial slow · tap the button or press R',
@@ -333,7 +329,7 @@ class Progression {
     if (item == null) return;
     if (inventory.contains(id)) {
       Bonds.addGlimmer(5);
-      GameToast.show('+5 glimmer', body: 'Duplicate ${item.name}', color: const Color(0xFFFFE08A), compact: true);
+      MmoFeedback.pushPop('+5 ◆ · ${item.name}', color: const Color(0xFFFFE08A));
       return;
     }
     _d.inventory = [...inventory, id];
@@ -343,15 +339,10 @@ class Progression {
       _d.equipped = {...equipped, item.slot.name: id};
     }
     _bump();
+    // Routine loot: pop only (no toast duplicate).
     MmoFeedback.pushPop(
       shouldEquip ? 'Equip · ${item.name}' : 'Loot · ${item.name}',
       color: const Color(0xFF66CCFF),
-    );
-    GameToast.show(
-      shouldEquip ? 'EQUIPPED' : 'LOOT',
-      body: item.name,
-      color: const Color(0xFF66CCFF),
-      compact: true,
     );
   }
 }

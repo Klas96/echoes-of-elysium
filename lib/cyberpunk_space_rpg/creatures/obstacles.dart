@@ -302,13 +302,21 @@ class GlyphTablet extends GameComponent with Interactable {
   @override
   double get interactRadius => 36;
   @override
-  PromptInfo get prompt => const PromptInfo('READ');
+  PromptInfo get prompt =>
+      read ? const PromptInfo.note('Already read') : const PromptInfo('READ');
 
   @override
   void interact() {
-    if (!read) SfxManager().playChime();
+    if (read) return;
+    SfxManager().playChime();
     Bonds.markSecret(id);
-    GameToast.show('GLYPH', body: _glyphLore[glyph] ?? '...', color: const Color(0xFF66FFEE), compact: true);
+    // Lore only — no shouty "GLYPH" title; re-reads stay silent.
+    GameToast.show(
+      '',
+      body: _glyphLore[glyph] ?? '...',
+      color: const Color(0xFF66FFEE),
+      seconds: 3.5,
+    );
   }
 
   @override

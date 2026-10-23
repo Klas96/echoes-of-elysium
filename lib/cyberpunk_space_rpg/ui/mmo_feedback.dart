@@ -40,12 +40,13 @@ class MmoFeedback {
     });
   }
 
+  /// Zone enter banner: title only. [blurb] kept for call-site compat but unused.
   static void enterZone(String title, {String? blurb}) {
     zoneTitle.value = title;
-    zoneBlurb.value = blurb;
+    zoneBlurb.value = null;
     final token = title;
     _zoneClearToken = token;
-    Future.delayed(const Duration(milliseconds: 2800), () {
+    Future.delayed(const Duration(milliseconds: 1600), () {
       if (_zoneClearToken == token) {
         zoneTitle.value = null;
         zoneBlurb.value = null;

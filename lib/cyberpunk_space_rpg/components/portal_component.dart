@@ -1,12 +1,16 @@
 import 'dart:math';
 import 'package:bonfire/bonfire.dart';
 import 'package:flutter/material.dart';
-import '../audio/music_manager.dart';
+import '../audio/sfx_manager.dart';
 import '../game/game_state.dart';
 import '../game/travel.dart';
 
+/// Map travel portal — circular Aetherian ring ([sprites/portal.png]) with a
+/// soft pulse. Cyan for story routes; amber for side hubs (Lantern Town).
 class PortalComponent extends GameDecoration {
-  static const double _radius = 28.0;
+  /// Footprint matches the woods `portal_platform` (3×3 tiles).
+  static const double padSize = 96;
+  static const double _radius = 36;
   final bool Function() canActivate;
   final String overlayId;
   /// Story portals stay cyan; side hubs (Lantern Gate) use amber.
@@ -15,6 +19,7 @@ class PortalComponent extends GameDecoration {
   bool _triggered = false;
   bool _near = false;
   static const double _nearRadius = 320.0;
+  Sprite? _sprite;
 
   PortalComponent(
     Vector2 position, {
@@ -23,7 +28,17 @@ class PortalComponent extends GameDecoration {
     this.accent = const Color(0xFF00FFFF),
   })  : canActivate = canActivate ??
             (() => Travel.portalUsable(GameState.level)),
-        super(position: position, size: Vector2.all(_radius * 2));
+        super(position: position, size: Vector2.all(padSize));
+
+  @override
+  Future<void> onLoad() async {
+    await super.onLoad();
+    try {
+      _sprite = await Sprite.load('sprites/portal.png');
+    } catch (_) {
+      _sprite = null;
+    }
+  }
 
   @override
   void update(double dt) {
@@ -56,54 +71,70 @@ class PortalComponent extends GameDecoration {
   @override
   void render(Canvas canvas) {
     final center = Offset(size.x / 2, size.y / 2);
-    final outerRadius = _radius + sin(_pulse) * 4;
-    final deep = Color.lerp(const Color(0xFF001F3F), accent, 0.35)!;
-    final secondary = Color.lerp(accent, const Color(0xFF7F00FF), 0.45)!;
+    final breath = 0.5 + 0.5 * sin(_pulse);
+    final scale = 1.0 + sin(_pulse) * 0.035;
+    final draw = padSize * scale;
+    final origin = Vector2(center.dx - draw / 2, center.dy - draw / 2);
 
-    // Outer glow rings
-    for (int i = 3; i >= 1; i--) {
-      canvas.drawCircle(
-        center,
-        outerRadius + i * 5,
-        Paint()
-          ..color = accent.withValues(alpha: 0.06 * i)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
-      );
-    }
-
-    // Portal body
+    // Soft ground bloom under the pad.
     canvas.drawCircle(
       center,
-      outerRadius,
-      Paint()..color = deep.withValues(alpha: 0.85),
+      draw * 0.42,
+      Paint()
+        ..color = accent.withValues(alpha: 0.10 + breath * 0.06)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12),
     );
+
+    final sprite = _sprite;
+    if (sprite != null) {
+      final paint = Paint()..filterQuality = FilterQuality.none;
+      // Amber hubs: warm tint over the cyan hexpad.
+      if (accent != const Color(0xFF00FFFF)) {
+        paint.colorFilter = ColorFilter.mode(
+          accent.withValues(alpha: 0.55),
+          BlendMode.modulate,
+        );
+      }
+      sprite.render(
+        canvas,
+        position: origin,
+        size: Vector2.all(draw),
+        overridePaint: paint,
+      );
+    } else {
+      _renderFallback(canvas, center, draw / 2);
+    }
+
+    // Thin spinning rim so the pad still reads as "live".
+    final rim = Paint()
+      ..color = accent.withValues(alpha: 0.35 + breath * 0.25)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: draw * 0.28),
+      _pulse,
+      pi * 1.2,
+      false,
+      rim,
+    );
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: draw * 0.28),
+      _pulse + pi,
+      pi * 1.2,
+      false,
+      rim..color = Color.lerp(accent, const Color(0xFFAA44FF), 0.5)!
+          .withValues(alpha: 0.4),
+    );
+  }
+
+  void _renderFallback(Canvas canvas, Offset center, double outerRadius) {
+    final deep = Color.lerp(const Color(0xFF001F3F), accent, 0.35)!;
+    canvas.drawCircle(center, outerRadius, Paint()..color = deep.withValues(alpha: 0.85));
     canvas.drawCircle(
       center,
       outerRadius * 0.65,
       Paint()..color = accent.withValues(alpha: 0.25 + sin(_pulse) * 0.1),
     );
-
-    // Spinning arc ring
-    final arcPaint = Paint()
-      ..color = accent
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.5;
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: outerRadius),
-      _pulse,
-      pi * 1.4,
-      false,
-      arcPaint,
-    );
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: outerRadius),
-      _pulse + pi,
-      pi * 1.4,
-      false,
-      arcPaint..color = secondary,
-    );
-
-    // Inner bright core
     canvas.drawCircle(
       center,
       6 + sin(_pulse * 2) * 2,

@@ -508,11 +508,11 @@ NpcDialogue _vossDialogue() {
   return NpcDialogue(
     name: 'COMMANDER VOSS  ·  UEC',
     color: const Color(0xFFFF4444),
+    // Must match assets/audio/voices/voss_{1,2,3}.mp3 (Station Seven rewrite).
     lines: const [
-      // VO predates the Station Seven rewrite — keep text in lockstep.
-      'Doctor Kaela Osei. You\'ve caused considerable trouble. I\'m giving you one final chance to walk away.',
-      'Whatever this "Gaia" has told you is fabrication. Alien interference in planetary governance cannot be permitted.',
-      'The Aetherians are a data corruption. Nothing more. Stand down — or be classified as a hostile element.',
+      'Doctor Kaela Osei. Last chance. Hand over the fragments and walk away with your clearance intact.',
+      'Station Seven went dark the last time a lattice woke. I will not bury another colony for an alien ghost story.',
+      'If you reach the Core, understand this: I am not erasing history. I am choosing the living over the dead.',
     ],
     voicePaths: const [
       'audio/voices/voss_1.mp3',

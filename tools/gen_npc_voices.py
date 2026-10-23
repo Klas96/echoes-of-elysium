@@ -132,18 +132,18 @@ LINES: dict[str, tuple[str, str]] = {
         "asha",
         "Then we're still on the same side. Go. Make him hear a people — not a ghost story.",
     ),
-    # Voss — first meeting (legacy VO)
+    # Voss — first meeting (Station Seven rewrite; matches voss_{1,2,3}.mp3)
     "voss_1": (
         "voss",
-        "Doctor Kaela Osei. You've caused considerable trouble. I'm giving you one final chance to walk away.",
+        "Doctor Kaela Osei. Last chance. Hand over the fragments and walk away with your clearance intact.",
     ),
     "voss_2": (
         "voss",
-        'Whatever this "Gaia" has told you is fabrication. Alien interference in planetary governance cannot be permitted.',
+        "Station Seven went dark the last time a lattice woke. I will not bury another colony for an alien ghost story.",
     ),
     "voss_3": (
         "voss",
-        "The Aetherians are a data corruption. Nothing more. Stand down — or be classified as a hostile element.",
+        "If you reach the Core, understand this: I am not erasing history. I am choosing the living over the dead.",
     ),
     # Asha — override held / orders read
     "asha_key_1": (
