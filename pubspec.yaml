@@ -2,7 +2,7 @@ name: cyberpunk_space_rpg
 description: "A new Flutter project."
 publish_to: 'none'
 
-version: 0.3.19+319
+version: 0.4.1+40101
 
 environment:
   sdk: '>=3.2.3 <4.0.0'
