@@ -8,8 +8,10 @@ import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/creatures/bonds.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/creatures/day_cycle.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/creatures/journal_ui.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/game/adventure.dart';
+import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/game/progression.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/game/save_service.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/game/well_rested.dart';
+import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/ui/shop_ui.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/interiors/room_actions.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/interiors/room_data.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/interiors/room_panel.dart';
@@ -342,6 +344,32 @@ void main() {
       expect(Stash.withdrawAll(), 9);
       expect(Bonds.glimmer, 9);
       expect(Stash.stored, 0);
+    });
+
+    test('stash banks spare gear for a glimmer fee', () {
+      Progression.grantGear('scrap_plating');
+      Progression.grantGear('barrier_coil'); // better suit → plating spare
+      expect(Stash.depositable, contains('scrap_plating'));
+      expect(Stash.depositGear('barrier_coil'), isFalse); // equipped
+      Bonds.addGlimmer(Stash.gearDepositFee);
+      final before = Bonds.glimmer;
+      expect(Stash.depositGear('scrap_plating'), isTrue);
+      expect(Bonds.glimmer, before - Stash.gearDepositFee);
+      expect(Progression.inventory, isNot(contains('scrap_plating')));
+      expect(Stash.gear, ['scrap_plating']);
+      expect(Stash.withdrawGear('scrap_plating'), isTrue);
+      expect(Progression.inventory, contains('scrap_plating'));
+      expect(Stash.gear, isEmpty);
+    });
+
+    test('Mira field polish spends glimmer for Well rested', () {
+      WellRested.clear();
+      expect(WellRested.active, isFalse);
+      expect(Shop.buyFieldPolish(), isFalse);
+      Bonds.addGlimmer(Shop.polishPrice);
+      expect(Shop.buyFieldPolish(), isTrue);
+      expect(Bonds.glimmer, 0);
+      expect(WellRested.active, isTrue);
     });
 
     test('inn rest: morning, full HP, well rested, checkpoint at the door', () async {

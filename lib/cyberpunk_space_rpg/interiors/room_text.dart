@@ -61,7 +61,8 @@ class RoomText {
       'The desk is bare. You already carry the First Memory Draft.';
 
   // --- Ranger cabin ---------------------------------------------------------
-  static const ashaNote = 'Kaela, use what you need. The chest is yours now. A.';
+  static const ashaNote =
+      'Kaela, use what you need. Bank glimmer free; spare gear costs a little to store. A.';
   static String journalCount(int n, int total) => '$n of $total creatures befriended';
   static const wallMap = "Asha has pinned every trail she's walked. A few are still blank.";
   static const stove =
