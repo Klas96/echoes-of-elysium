@@ -1,29 +1,90 @@
 import 'dart:math';
 import 'package:bonfire/bonfire.dart';
 import 'package:flutter/material.dart';
-import '../audio/music_manager.dart';
+import '../audio/sfx_manager.dart';
 import '../game/game_state.dart';
 import '../game/travel.dart';
+import 'lamp_light.dart';
 
+/// Map travel gate — a flat cyan ring on the ground (not a crystal shard).
+/// Walk into the glow to travel. Amber tint for Lantern Town side hubs.
+///
+/// Drawn at map-floor priority so Kaela always paints over it.
 class PortalComponent extends GameDecoration {
-  static const double _radius = 28.0;
+  static const double lightW = 48;
+  static const double lightH = 48;
+
+  static const double _activateRadius = 26;
+  static const Color _townAmber = Color(0xFFFFE08A);
+
+  static const _flickerPath = 'sprites/fx/portal_light_flicker.png';
+  static const _stillPath = 'sprites/fx/portal_light.png';
+
   final bool Function() canActivate;
   final String overlayId;
-  /// Story portals stay cyan; side hubs (Lantern Gate) use amber.
   final Color accent;
   double _pulse = 0.0;
   bool _triggered = false;
   bool _near = false;
   static const double _nearRadius = 320.0;
+  Sprite? _frameA;
+  Sprite? _frameB;
+  LampLight? _glow;
 
   PortalComponent(
-    Vector2 position, {
+    Vector2 mapTopLeft, {
     bool Function()? canActivate,
     this.overlayId = 'portalReached',
     this.accent = const Color(0xFF00FFFF),
   })  : canActivate = canActivate ??
             (() => Travel.portalUsable(GameState.level)),
-        super(position: position, size: Vector2.all(_radius * 2));
+        super(position: mapTopLeft, size: Vector2(lightW, lightH));
+
+  Vector2 get _centre => position + size / 2;
+
+  bool get _town => accent == _townAmber;
+
+  /// Floor pad: always under Y-sorted actors (Kaela, NPCs, props).
+  @override
+  int get priority => LayerPriority.MAP + 1;
+
+  @override
+  Future<void> onLoad() async {
+    await super.onLoad();
+    try {
+      final flick = await Flame.images.load(_flickerPath);
+      final fw = flick.width / 2;
+      _frameA = Sprite(flick,
+          srcPosition: Vector2.zero(),
+          srcSize: Vector2(fw, flick.height.toDouble()));
+      _frameB = Sprite(flick,
+          srcPosition: Vector2(fw, 0),
+          srcSize: Vector2(fw, flick.height.toDouble()));
+    } catch (_) {
+      try {
+        _frameA = await Sprite.load(_stillPath);
+        _frameB = _frameA;
+      } catch (_) {
+        _frameA = _frameB = null;
+      }
+    }
+    final c = _centre;
+    _glow = LampLight(
+      Vector2(c.x - 8, c.y - 8),
+      Vector2.all(16),
+      kind: _town ? LightKind.lamp : LightKind.energy,
+      radius: 160,
+      style: _town ? 'warm' : 'neon',
+    );
+    await gameRef.add(_glow!);
+  }
+
+  @override
+  void onRemove() {
+    _glow?.removeFromParent();
+    _glow = null;
+    super.onRemove();
+  }
 
   @override
   void update(double dt) {
@@ -32,21 +93,21 @@ class PortalComponent extends GameDecoration {
 
     final player = gameRef.player;
     if (player == null) return;
-    final dist = ((player.position + player.size / 2) - (position + size / 2)).length;
+    final pc = player.position + player.size / 2;
+    final dist = (pc - _centre).length;
     if (!_near && dist < _nearRadius) {
       _near = true;
       GameState.onNearPortal();
     }
-    // Allow re-entry after the player leaves (or closes the overlay).
     if (_triggered) {
       final overlayOpen = gameRef.overlays.isActive(overlayId);
-      if (!overlayOpen && dist >= _radius * 1.15) {
+      if (!overlayOpen && dist >= _activateRadius * 1.2) {
         _triggered = false;
       }
       return;
     }
     if (!canActivate()) return;
-    if (dist < _radius) {
+    if (dist < _activateRadius) {
       _triggered = true;
       SfxManager().playPortal();
       gameRef.overlays.add(overlayId);
@@ -55,59 +116,41 @@ class PortalComponent extends GameDecoration {
 
   @override
   void render(Canvas canvas) {
-    final center = Offset(size.x / 2, size.y / 2);
-    final outerRadius = _radius + sin(_pulse) * 4;
-    final deep = Color.lerp(const Color(0xFF001F3F), accent, 0.35)!;
-    final secondary = Color.lerp(accent, const Color(0xFF7F00FF), 0.45)!;
-
-    // Outer glow rings
-    for (int i = 3; i >= 1; i--) {
-      canvas.drawCircle(
-        center,
-        outerRadius + i * 5,
-        Paint()
-          ..color = accent.withValues(alpha: 0.06 * i)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
+    final paint = Paint()..filterQuality = FilterQuality.none;
+    if (_town) {
+      paint.colorFilter = ColorFilter.mode(
+        accent.withValues(alpha: 0.55),
+        BlendMode.modulate,
       );
     }
-
-    // Portal body
-    canvas.drawCircle(
-      center,
-      outerRadius,
-      Paint()..color = deep.withValues(alpha: 0.85),
-    );
-    canvas.drawCircle(
-      center,
-      outerRadius * 0.65,
-      Paint()..color = accent.withValues(alpha: 0.25 + sin(_pulse) * 0.1),
-    );
-
-    // Spinning arc ring
-    final arcPaint = Paint()
-      ..color = accent
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.5;
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: outerRadius),
-      _pulse,
-      pi * 1.4,
-      false,
-      arcPaint,
-    );
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: outerRadius),
-      _pulse + pi,
-      pi * 1.4,
-      false,
-      arcPaint..color = secondary,
-    );
-
-    // Inner bright core
-    canvas.drawCircle(
-      center,
-      6 + sin(_pulse * 2) * 2,
-      Paint()..color = Colors.white.withValues(alpha: 0.9),
-    );
+    final spr = (sin(_pulse * 1.6) > 0) ? _frameA : _frameB;
+    if (spr != null) {
+      spr.render(
+        canvas,
+        position: Vector2.zero(),
+        size: size,
+        overridePaint: paint,
+      );
+    } else {
+      // Fallback: flat ring (never a diamond).
+      final c = Offset(size.x / 2, size.y * 0.65);
+      for (final r in [18.0, 12.0, 6.0]) {
+        canvas.drawOval(
+          Rect.fromCenter(center: c, width: r * 2, height: r * 1.2),
+          Paint()
+            ..color = accent.withValues(alpha: 0.35)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2,
+        );
+      }
+      canvas.drawRect(
+        Rect.fromCenter(
+          center: Offset(size.x / 2, size.y * 0.35),
+          width: 6,
+          height: size.y * 0.45,
+        ),
+        Paint()..color = accent.withValues(alpha: 0.55),
+      );
+    }
   }
 }

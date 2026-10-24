@@ -90,14 +90,11 @@ class ExamineHotspot extends GameComponent with Interactable {
       return;
     }
     if (requiresItem != null && !_hasKey && !_done) {
-      final name = itemLabels[requiresItem!] ?? requiresItem!;
-      final body = requiresItem == 'ruins_gate_key'
-          ? 'Find the Aetherian Keystone in the north-east wing, then return here.'
-          : 'Needs $name.';
-      GameToast.show('SEALED', body: body, color: const Color(0xFFFFAABB), compact: true, item: requiresItem);
+      // Hint lives on the interact prompt; don't re-toast every bump.
       GameState.refreshObjective();
       return;
     }
+    final wasDone = _done;
     if (requiresItem != null && _hasKey && !_done && consumeItem) {
       Bonds.useItem(requiresItem!);
     }
@@ -108,7 +105,8 @@ class ExamineHotspot extends GameComponent with Interactable {
       Bonds.giveItem(giveItem!);
       gotItem = giveItem;
     }
-    if (completeQuest != null) Quests.complete(completeQuest!);
+    final questDone = completeQuest != null;
+    if (questDone) Quests.complete(completeQuest!);
     Quests.onExamined(id);
     final loggedClue = clueId != null && Adventure.discover(clueId!);
     var reward = 0;
@@ -117,6 +115,8 @@ class ExamineHotspot extends GameComponent with Interactable {
       Bonds.addGlimmer(reward);
     }
     if (clueId == 'shrine_note') GameState.onShrineExamined();
+    final somethingNew = !wasDone || gotItem != null || loggedClue || questDone;
+    if (!somethingNew) return;
     SfxManager().playChime();
     GameToast.show(
       title,

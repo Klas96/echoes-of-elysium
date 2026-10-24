@@ -23,7 +23,8 @@ only .json/.tsj), and writes:
 Layers per map: "ground" (blob/wang terrain incl. walls), "props" (decor,
 some collide via per-tile collision rects) and an object layer "gameplay"
 with objects named spawn, portal, npc (property name), fragment, health,
-drone (properties startAngle, kind=scout|sniper|shield|swarm), sentinel, checkpoint (property label). Object x/y = component top-left in
+drone (properties startAngle, kind=scout|sniper|shield|swarm), dronespawn (kind + optional nest/max/interval;
+rectangle = spawn area, pad at centre), sentinel, checkpoint (property label). Object x/y = component top-left in
 world px, width/height = component size (same coords the code used before).
 
 M2 (woods only): creature (species, radius in tiles, netted, gated), stump
@@ -576,7 +577,7 @@ class Level:
             for (x, y) in px_cells(*col): bblock[y, x] = True
             # enemies patrol a 70 px circle; keep them well away from walls
             for o in self.objects:
-                if o["name"] in ("drone", "sentinel"):
+                if o["name"] in ("drone", "sentinel", "dronespawn"):
                     ox, oy = o["x"] + o["w"] / 2, o["y"] + o["h"] / 2
                     dx = max(col[0] - ox, 0, ox - col[0] - col[2]); dy = max(col[1] - oy, 0, oy - col[1] - col[3])
                     if (dx * dx + dy * dy) ** 0.5 < 128:
@@ -606,7 +607,7 @@ class Level:
         # enemies outside that reach so the player isn't attacked at the spawn.
         scx, scy = spawn[0]["x"] + spawn[0]["w"] / 2, spawn[0]["y"] + spawn[0]["h"] / 2
         for o in self.objects:
-            if o["name"] in ("drone", "sentinel"):
+            if o["name"] in ("drone", "sentinel", "dronespawn"):
                 d = ((o["x"] + o["w"] / 2 - scx) ** 2 + (o["y"] + o["h"] / 2 - scy) ** 2) ** 0.5
                 if d < 320:
                     raise SystemExit(f"{o['name']} {o['props']} is {d:.0f}px from spawn (< 320)")
@@ -915,7 +916,7 @@ class Level:
         from PIL import ImageDraw
         d = ImageDraw.Draw(im)
         col = dict(spawn=(0, 255, 0), portal=(0, 255, 255), npc=(255, 255, 0), fragment=(200, 80, 255),
-                   health=(0, 255, 120), drone=(255, 60, 60), sentinel=(255, 120, 0),
+                   health=(0, 255, 120), drone=(255, 60, 60), dronespawn=(255, 90, 140), sentinel=(255, 120, 0),
                    checkpoint=(120, 255, 220), creature=(255, 170, 255), stump=(200, 140, 60),
                    boulder=(160, 160, 160), stash=(255, 230, 90), glyph=(90, 255, 255), hidden=(255, 140, 200),
                    darkzone=(40, 40, 120), pebble=(140, 200, 255), moonflower=(240, 240, 255),
@@ -937,22 +938,49 @@ class Level:
               f"{n_col} blocking tiles, reachable floor {int(seen.sum())}")
 
 # --------------------------------------------------------------- sizes used by the code
-SZ = dict(spawn=32, portal=56, npc=30, fragment=18, health=16, drone=24, sentinel=48, checkpoint=32,
+SZ = dict(spawn=32, portal=96, npc=30, fragment=18, health=16, drone=24, sentinel=48, checkpoint=32,
           creature=32, stump=64, stash=32, glyph=24, hidden=24, pebble=16, moonflower=16, examine=20,
           storygate=64, entry=32)
+# Travel light (crystal + pool): centred on the portal tile. Keep in sync with
+# PortalComponent.lightW / lightH.
+PORTAL_LIGHT = (48, 48)
+
+def _edge_sample(lv, side, cx, half):
+    """Ground tile from the corridor centre (not the sidewalk fringe).
+
+    Scanning left→right / top→bottom often hits a road-sidewalk edge piece
+    (city 61/67) and paints the whole mouth as a fake wall strip.
+    """
+    W, H = lv.W, lv.H
+    sample = 1
+    if side in ("south", "north"):
+        sy = min(H - 4, H - 1) if side == "south" else min(3, H - 1)
+        x0, x1 = max(0, cx - half), min(W, cx + half + 1)
+        order = [cx] + [x for x in range(x0, x1) if x != cx]
+        for x in order:
+            if 0 <= x < W and lv.floor[sy, x] and int(lv.ground[sy, x]) >= 0:
+                return int(lv.ground[sy, x])
+    else:
+        sx = min(W - 4, W - 1) if side == "east" else min(3, W - 1)
+        y0, y1 = max(0, cx - half), min(H, cx + half + 1)
+        order = [cx] + [y for y in range(y0, y1) if y != cx]
+        for y in order:
+            if 0 <= y < H and lv.floor[y, sx] and int(lv.ground[y, sx]) >= 0:
+                return int(lv.ground[y, sx])
+    return sample
 
 def open_map_edge(lv, side, cx, half=2):
     """Punch a walkable corridor through the sealed map border (after clean_walls).
-    [side] is north/south/east/west; [cx] is the centre tile along that edge."""
+    [side] is north/south/east/west; [cx] is the centre tile along that edge.
+
+    Only flips [lv.floor] — ground wang tiles stay stale until the caller
+    re-blobs (see [retile_woods_edge] / [retile_city_edge]). A temporary
+    sample fill keeps the layer non-empty if retile is skipped.
+    """
     W, H = lv.W, lv.H
-    # Sample a nearby walkable ground tile to paint into the opening.
-    sample = 1
+    sample = _edge_sample(lv, side, cx, half)
     if side == "south":
         x0, x1 = max(0, cx - half), min(W, cx + half + 1)
-        sy = min(H - 4, H - 1)
-        for x in range(x0, x1):
-            if lv.floor[sy, x]:
-                sample = int(lv.ground[sy, x]); break
         for y in range(H - 3, H):
             for x in range(x0, x1):
                 lv.floor[y, x] = True
@@ -960,20 +988,12 @@ def open_map_edge(lv, side, cx, half=2):
                     lv.ground[y, x] = sample
     elif side == "north":
         x0, x1 = max(0, cx - half), min(W, cx + half + 1)
-        sy = max(3, 0)
-        for x in range(x0, x1):
-            if lv.floor[min(3, H - 1), x]:
-                sample = int(lv.ground[min(3, H - 1), x]); break
         for y in range(0, 3):
             for x in range(x0, x1):
                 lv.floor[y, x] = True
                 lv.ground[y, x] = sample
     elif side == "east":
         y0, y1 = max(0, cx - half), min(H, cx + half + 1)
-        sx = min(W - 4, W - 1)
-        for y in range(y0, y1):
-            if lv.floor[y, sx]:
-                sample = int(lv.ground[y, sx]); break
         for x in range(W - 3, W):
             for y in range(y0, y1):
                 lv.floor[y, x] = True
@@ -981,14 +1001,129 @@ def open_map_edge(lv, side, cx, half=2):
                     lv.ground[y, x] = sample
     elif side == "west":
         y0, y1 = max(0, cx - half), min(H, cx + half + 1)
-        sx = max(3, 0)
-        for y in range(y0, y1):
-            if lv.floor[y, min(3, W - 1)]:
-                sample = int(lv.ground[y, min(3, W - 1)]); break
         for x in range(0, 3):
             for y in range(y0, y1):
                 lv.floor[y, x] = True
                 lv.ground[y, x] = sample
+
+def retile_woods_edge(lv, ts, path, water, side, cx, half=2, margin=2):
+    """Re-blob grass-forest / path around a punched woods edge.
+
+    Without this, forest cells still look like interior wall (dense 14/15)
+    flush against the punched grass — no grass-forest edge piece.
+    """
+    W, H = lv.W, lv.H
+    wall = ~lv.floor
+    if side == "south":
+        x0, x1 = max(0, cx - half), min(W, cx + half + 1)
+        # Road continues through the mouth.
+        for y in range(H - 3, H):
+            for x in range(x0, x1):
+                if lv.floor[y, x]:
+                    path[y, x] = True
+        rx0, rx1 = max(0, cx - half - margin), min(W, cx + half + 1 + margin)
+        ry0, ry1 = max(0, H - 3 - margin - 1), H
+    elif side == "north":
+        x0, x1 = max(0, cx - half), min(W, cx + half + 1)
+        for y in range(0, 3):
+            for x in range(x0, x1):
+                if lv.floor[y, x]:
+                    path[y, x] = True
+        rx0, rx1 = max(0, cx - half - margin), min(W, cx + half + 1 + margin)
+        ry0, ry1 = 0, min(H, 3 + margin + 1)
+    elif side == "east":
+        y0, y1 = max(0, cx - half), min(H, cx + half + 1)
+        for x in range(W - 3, W):
+            for y in range(y0, y1):
+                if lv.floor[y, x]:
+                    path[y, x] = True
+        rx0, rx1 = max(0, W - 3 - margin - 1), W
+        ry0, ry1 = max(0, cx - half - margin), min(H, cx + half + 1 + margin)
+    elif side == "west":
+        y0, y1 = max(0, cx - half), min(H, cx + half + 1)
+        for x in range(0, 3):
+            for y in range(y0, y1):
+                if lv.floor[y, x]:
+                    path[y, x] = True
+        rx0, rx1 = 0, min(W, 3 + margin + 1)
+        ry0, ry1 = max(0, cx - half - margin), min(H, cx + half + 1 + margin)
+    else:
+        return
+    path &= lv.floor & ~water
+    for y in range(ry0, ry1):
+        for x in range(rx0, rx1):
+            if wall[y, x] or not (water[y, x] or path[y, x]):
+                lv.ground[y, x] = blob(ts, "grass-forest", wall, x, y, lv.rng)
+            if water[y, x]:
+                lv.ground[y, x] = blob(ts, "grass-water", water, x, y, lv.rng)
+            if path[y, x]:
+                lv.ground[y, x] = blob(ts, "grass-path", path, x, y, lv.rng)
+
+def retile_city_edge(lv, ts, road, lawn, side, cx, half=2, margin=2, plaza=None,
+                     extend_road=True):
+    """Re-blob sidewalk-building / road-sidewalk around a punched city edge.
+
+    Without this, the sealed border keeps interior building tiles (or a bad
+    sample strip) flush on the mouth — same class of bug as [retile_woods_edge].
+    """
+    W, H = lv.W, lv.H
+    wall = ~lv.floor
+    if side == "south":
+        x0, x1 = max(0, cx - half), min(W, cx + half + 1)
+        if extend_road:
+            for y in range(H - 3, H):
+                for x in range(x0, x1):
+                    if lv.floor[y, x]:
+                        road[y, x] = True
+        rx0, rx1 = max(0, cx - half - margin), min(W, cx + half + 1 + margin)
+        ry0, ry1 = max(0, H - 3 - margin - 1), H
+    elif side == "north":
+        x0, x1 = max(0, cx - half), min(W, cx + half + 1)
+        if extend_road:
+            for y in range(0, 3):
+                for x in range(x0, x1):
+                    if lv.floor[y, x]:
+                        road[y, x] = True
+        rx0, rx1 = max(0, cx - half - margin), min(W, cx + half + 1 + margin)
+        ry0, ry1 = 0, min(H, 3 + margin + 1)
+    elif side == "east":
+        y0, y1 = max(0, cx - half), min(H, cx + half + 1)
+        if extend_road:
+            for x in range(W - 3, W):
+                for y in range(y0, y1):
+                    if lv.floor[y, x]:
+                        road[y, x] = True
+        rx0, rx1 = max(0, W - 3 - margin - 1), W
+        ry0, ry1 = max(0, cx - half - margin), min(H, cx + half + 1 + margin)
+    elif side == "west":
+        y0, y1 = max(0, cx - half), min(H, cx + half + 1)
+        if extend_road:
+            for x in range(0, 3):
+                for y in range(y0, y1):
+                    if lv.floor[y, x]:
+                        road[y, x] = True
+        rx0, rx1 = 0, min(W, 3 + margin + 1)
+        ry0, ry1 = max(0, cx - half - margin), min(H, cx + half + 1 + margin)
+    else:
+        return
+    road &= lv.floor
+    if lawn is not None:
+        lawn &= lv.floor & ~road
+    sidewalk = ~road
+    near_lawn = lv.dilate(lawn, 1) if lawn is not None else np.zeros_like(wall)
+    near_rw = lv.dilate(road | wall, 1)
+    for y in range(ry0, ry1):
+        for x in range(rx0, rx1):
+            if wall[y, x]:
+                lv.ground[y, x] = blob(ts, "sidewalk-building", wall, x, y, lv.rng)
+            elif lawn is not None and lawn[y, x]:
+                lv.ground[y, x] = blob(ts, "sidewalk-grass", lawn, x, y, lv.rng)
+            else:
+                lv.ground[y, x] = blob(ts, "road-sidewalk", sidewalk, x, y, lv.rng,
+                                       exclude={4, 5, 6, 7, 8})
+                if (plaza is not None and plaza[y, x]
+                        and not near_lawn[y, x] and not near_rw[y, x]):
+                    lv.ground[y, x] = 12 if (x * 7 + y * 3) % 13 else 13
 
 def place_mapexit(lv, side, cx, dest, entry, half=2, unlock=False, **extra):
     """Trigger strip just inside the opened edge. [entry] = spawn side on dest map."""
@@ -1054,18 +1189,40 @@ def gate_interact_cell(g):
     ix, iy = art["interact"]
     return (int((g["x"] + ix * g["w"] / art["size"][0]) // T), int((g["y"] + iy * g["h"] / art["size"][1]) // T))
 # min centre distance from a checkpoint to each enemy kind (see validate)
-CP_CLEAR = dict(drone=260, sentinel=300)
+CP_CLEAR = dict(drone=260, sentinel=300, dronespawn=260)
+# Designer spawn rectangle for dronespawn (pad sits at centre). 2×2 tiles —
+# whole rect must be walkable (no props); keep modest so city alleys fit.
+DRONESPAWN_AREA = 64
 
 def place(lv, obj, tx, ty, was=None, **props):
     """place an object whose CENTRE is at tile coords (tx, ty) (floats).
     Extra kwargs become Tiled properties (e.g. kind='sniper', name='gaia').
     was=(tx, ty): where the object sat before the #26 layout pass; its
     old pickup id is kept as property pid so existing saves still know it
-    was collected / solved (the game ids pickups by map position)."""
+    was collected / solved (the game ids pickups by map position).
+
+    Portals are a light source: the glow centre sits on (tx, ty)."""
+    if obj == "portal":
+        w, h = PORTAL_LIGHT
+        x = round(tx * T - w / 2)
+        y = round(ty * T - h / 2)
+        if was is not None:
+            props["pid"] = f"{round(was[0] * T - w / 2)}_{round(was[1] * T - h / 2)}"
+        lv.obj(obj, x, y, w, h, **props)
+        return
     s = SZ[obj]
     if was is not None:
         props["pid"] = f"{round(was[0] * T - s / 2)}_{round(was[1] * T - s / 2)}"
     lv.obj(obj, round(tx * T - s / 2), round(ty * T - s / 2), s, s, **props)
+
+def place_dronespawn(lv, tx, ty, kind, area=DRONESPAWN_AREA, **props):
+    """Destructible one-kind spawn pad (GH #66). Rectangle centred on (tx, ty).
+
+    Properties: kind (required), nest, interval, max, hp, delay, id, level."""
+    w = h = int(area)
+    x = round(tx * T - w / 2)
+    y = round(ty * T - h / 2)
+    lv.obj("dronespawn", x, y, w, h, kind=kind, **props)
 
 def carve_route(lv, pts, half, mask=None):
     m = lv.floor if mask is None else mask
@@ -1119,7 +1276,7 @@ def map1():
         return [P[k] for k in r]
     for r in trails:
         carve_route(lv, route_pts(r), 2.0)
-    big = dict(cross=5.5, asha=4.6, pond=5.2, meadow=4.6, spawn=4.6, egrove=4.4, whollow=3.8)
+    big = dict(cross=5.5, asha=4.6, pond=5.2, meadow=4.6, spawn=4.6, egrove=4.4, whollow=3.8, nest=4.2)
     for k in ("spawn", "h1", "cabin", "ridge", "pond", "cross", "d2", "ebend", "egrove", "whollow",
               "hollow", "swbend", "nest", "asha", "h2", "brook", "meadow", "f3"):
         disk_carve(lv.floor, *P[k], big.get(k, 3.2))
@@ -1269,11 +1426,15 @@ def map1():
     place(lv, "health", *P["h3"], was=(20, 33.5))
     place(lv, "drone", *P["d1"], startAngle=0.0, kind="scout")
     place(lv, "drone", *P["d2"], startAngle=2.1, kind="sniper")
-    place(lv, "drone", P["nest"][0] - 0.3, P["nest"][1] - 0.5, startAngle=1.2, kind="scout", nest=True)
-    place(lv, "drone", P["nest"][0] + 0.6, P["nest"][1] + 0.3, startAngle=3.8, kind="swarm", nest=True)
+    # Nest spur: one-kind pads (GH #66) — scout + swarm for the Town nest job.
+    place_dronespawn(lv, *P["nest"], kind="scout", nest=True, max=2, interval=7)
+    place_dronespawn(lv, P["nest"][0] + 1.6, P["nest"][1] + 0.2, kind="swarm", nest=True, max=1, interval=9)
     # South road out of the woods → City (walk off the map).
     ex = int(P["exit"][0])
     open_map_edge(lv, "south", ex, half=2)
+    # Forest beside the punched mouth must use grass-forest edge tiles (not
+    # dense 14 flush on grass) — retile with path continuing through the exit.
+    retile_woods_edge(lv, ts, path, water, "south", ex, half=2)
     place_mapexit(lv, "south", ex, dest="city", entry="north", half=2, unlock=True,
                   lockedTitle="WOODS EDGE",
                   lockedBody="The road south is blocked. The woods still want something from you.")
@@ -1287,7 +1448,8 @@ def map1():
           text="Hull still warm. Flight log ends mid-sentence: ORBITAL PASS · GAIA DIAG · CHANNEL LOCK — then static. "
                "You woke here. Gaia was already waiting in the trees.",
           clue="skiff_crash")
-    place(lv, "examine", P["spawn"][0] + 1.8, P["spawn"][1] - 0.6,
+    # Keep lore props outside NPC talk radius (72px ≈ 2.25 tiles).
+    place(lv, "examine", P["spawn"][0] - 0.5, P["spawn"][1] + 2.8,
           id="woods_plaque", title="WEATHERED PLAQUE",
           text="\"We asked to stay.\" A second line: \"Bodies to soil. Minds to Gaia.\"",
           clue="gaia_plaque")
@@ -1297,7 +1459,7 @@ def map1():
                "fragments open the road; the trails ring round, so every clearing has two ways in. The road to the City "
                "leaves the south-east meadow. "
                "Do not let the UEC wipe her.")
-    place(lv, "examine", P["asha"][0] - 1.4, P["asha"][1] + 0.8,
+    place(lv, "examine", P["asha"][0] - 3.4, P["asha"][1] + 1.2,
           id="woods_boot", title="UEC BOOT PRINT",
           text="Fresh composite sole marks in the moss after rain.", clue="boot_print")
     place(lv, "examine", P["f1"][0] + 0.6, P["f1"][1] - 0.3,
@@ -1305,9 +1467,9 @@ def map1():
           text="Lantern Town wax seal. Someone meant this for Mira's board.",
           quest="courier_pack")
     place(lv, "stash", P["f1"][0] - 0.6, P["f1"][1] + 1.0, glimmer=12, was=(5.7, 11.0))
-    place(lv, "examine", P["nest"][0] + 1.6, P["nest"][1] - 0.4,
+    place(lv, "examine", P["nest"][0] + 2.4, P["nest"][1] - 0.8,
           id="woods_nest_slate", title="UEC FIELD SLATE",
-          text="Nest roster. Two units. 'Hold the west loop until recall.'",
+          text="Nest roster. Scout and swarm pads online. 'Hold the west loop until recall.'",
           clue="quest_nest_slate")
     place(lv, "examine", P["f3"][0] + 0.5, P["f3"][1],
           id="woods_moonflower_pick", title="MOONFLOWER CLUSTER",
@@ -1486,7 +1648,7 @@ def map2():
     rect_carve(road, 34, 6, 52, 9)             # boulevard: plaza → Lantern Gate → Town
     rect_carve(road, 45, 9, 48, 15)            # Lantern Gate street down to the east lot
     rect_carve(road, 35, 17, 45, 19)           # east street: east lot → Archive Square
-    rect_carve(road, 25, 36, 28, 44)           # gate road → Ruins
+    rect_carve(road, 24, 36, 29, 44)           # gate road → Ruins (matches exit half=2)
     floor = np.zeros_like(road)
     rect_carve(floor, 19, 2, 34, 10)           # ARRIVAL PLAZA
     rect_carve(floor, 24, 0, 29, 3)            # north road → Woods edge
@@ -1638,6 +1800,10 @@ def map2():
     open_map_edge(lv, "north", gx, half=2)
     open_map_edge(lv, "south", sx, half=2)
     open_map_edge(lv, "east", ey, half=2)
+    # Re-blob mouths so border building tiles / bad samples don't seal the road.
+    retile_city_edge(lv, ts, road, lawn, "north", gx, half=2, plaza=plaza, extend_road=False)
+    retile_city_edge(lv, ts, road, lawn, "south", sx, half=2, plaza=plaza)
+    retile_city_edge(lv, ts, road, lawn, "east", ey, half=2, plaza=plaza)
     place_mapexit(lv, "north", gx, dest="woods", entry="south", half=2)
     place_mapexit(lv, "south", sx, dest="ruins", entry="north", half=2, unlock=True,
                   lockedTitle="SOUTH ROAD",
@@ -1655,7 +1821,8 @@ def map2():
           id="city_archive_plaque", title="ARCHIVE PLAQUE",
           text="Sealed by the Archivist. First memory drafts keep here — not the Core itself.",
           clue="city_archive_hint")
-    place(lv, "examine", P["voss"][0] + 2.2, P["voss"][1] + 1.0,
+    # Stay inside the Voss alcove floor (x 16..23) and outside talk radius.
+    place(lv, "examine", P["voss"][0] + 2.5, P["voss"][1] - 1.5,
           id="city_uec_terminal", title="UEC FIELD TERMINAL",
           text="Override accepted. Field orders scroll past.",
           clue="uec_orders", item="uec_override", consume=True, flag="read_uec_orders")
@@ -1671,16 +1838,18 @@ def map2():
     place(lv, "examine", 24.0, 15.5,
           id="city_branch_sign", title="CROSS STREET",
           text="Archive Square. Every street in the old city ends up here.")
-    place(lv, "drone", P["lot"][0] - 1.0, P["lot"][1] - 1.0, startAngle=0.8, kind="scout", nest="city_east_nest")
-    place(lv, "drone", P["lot"][0] + 1.5, P["lot"][1] + 1.5, startAngle=2.6, kind="swarm", nest="city_east_nest")
+    place_dronespawn(lv, 44.5, 17.5, kind="scout",
+                     nest="city_east_nest", max=1, interval=7)
+    place_dronespawn(lv, 47.5, 19.5, kind="swarm",
+                     nest="city_east_nest", max=1, interval=8)
     place(lv, "examine", P["lot"][0] + 0.5, P["lot"][1] - 2.0,
           id="city_east_slate", title="EAST LOT SLATE",
-          text="Nest roster: hold the east lot. Town wants them gone.",
+          text="Nest roster: scout and swarm pads hold the east lot. Town wants them gone.",
           clue="quest_city_east_slate")
-    place(lv, "drone", *P["se"], startAngle=1.5, kind="sniper", nest="city_se_patrol")
+    place_dronespawn(lv, 46.0, 27.0, kind="sniper", nest="city_se_patrol", max=1, interval=10)
     place(lv, "examine", P["se"][0] + 1.0, P["se"][1] + 2.0,
           id="city_se_slate", title="DEAD PATROL PAD",
-          text="Last ping: the patrol alley, south-east. Someone from Town is asking for this pad.",
+          text="Last ping: the sniper pad in the south-east patrol alley. Someone from Town is asking.",
           quest="city_se_patrol")
     place(lv, "examine", *P["cache"],
           id="city_west_cache", title="MARKED CRATE",
@@ -1692,7 +1861,9 @@ def map2():
 
 CITY_RESERVED = ((4.5, 25), (3.5, 27), (7.5, 25), (5.5, 27.5), (3, 23.5), (5.5, 11), (7, 11.5),
                  (46, 19), (45, 18), (47.5, 20.5), (46.5, 17), (45.5, 26.5), (46.5, 28.5),
-                 (46, 5), (46, 10), (35, 19), (24, 15.5), (21.7, 39.5), (28.5, 5.7), (21.5, 14))
+                 (46, 5), (46, 10), (35, 19), (24, 15.5), (21.7, 39.5), (28.5, 5.7), (21.5, 14),
+                 # dronespawn pads (east lot + SE patrol)
+                 (44.5, 17.5), (47.5, 19.5), (46.0, 27.0))
 
 # =============================================================== MAP 5: Lantern Town
 def map5():
@@ -1792,15 +1963,17 @@ def map5():
     # West road back to the City — walk off the map.
     wy = int(P["mira"][1])
     open_map_edge(lv, "west", wy, half=2)
+    retile_city_edge(lv, ts, road, None, "west", wy, half=2)
     place_mapexit(lv, "west", wy, dest="city", entry="east", half=2)
     place_entry(lv, "west", 4.5, P["mira"][1])
     place_entry(lv, "north", *P["spawn"])
     place(lv, "checkpoint", *P["spawn"], label="Lantern Gate")
-    place(lv, "examine", P["mira"][0] + 1.6, P["mira"][1] + 0.4,
+    # Stall / board on the west lane, past talk radius (72px), still walkable.
+    place(lv, "examine", P["mira"][0], P["mira"][1] - 3.3,
           id="town_stall", title="MIRA'S STALL",
           text="Salvage and colony trinkets. Pay in glimmer.",
           shop=True)
-    place(lv, "examine", P["mira"][0] - 1.6, P["mira"][1] + 0.5,
+    place(lv, "examine", P["mira"][0] - 3.5, P["mira"][1],
           id="town_quest_board", title="JOB BOARD",
           text="Chalk and string. Woods and city errands for travellers.",
           board=True)
@@ -1895,8 +2068,10 @@ def map3():
     lv.vignette(*P["h2"], [
         ("barrel_purple", 0, 1), ("crate", 1, -1), ("rubble_small", -1, 0), ("barrel_toxic", 1, 1),
     ])
+    # Core travel gate is a light (crystal + pool) from PortalComponent —
+    # keep the court clear of clutter.
     lv.vignette(*P["portal"], [
-        ("drone_wreck", 1, 0), ("barrel_toxic", -1, 1), ("rubble_small", 0, 2),
+        ("drone_wreck", 2, 0), ("barrel_toxic", -2, 1), ("rubble_small", 0, 3),
     ])
     lv.vignette(*P["key"], [
         ("broken_pillar", -1, 1), ("loose_cables", 1, 0), ("terminal", 0, -1),
@@ -1916,7 +2091,7 @@ def map3():
           id="ruins_gate_key", title="AETHERIAN KEYSTONE",
           text="A cold keystone. The SE gate toward the Core will accept this.",
           give="ruins_gate_key", clue="ruins_keystone")
-    place(lv, "drone", P["key"][0] - 1.2, P["key"][1] + 0.8, startAngle=2.0, kind="shield")
+    place_dronespawn(lv, P["key"][0] - 1.4, P["key"][1] + 1.0, kind="shield", max=2, interval=8)
     # SE keyed gate — spans the full 3-tile choke (cannot walk around).
     lv.obj("storygate", 36 * T, 32 * T, 3 * T, 3 * T, flag="ruins_gate_open")
     place(lv, "examine", 37.5, 31.6,
@@ -1926,8 +2101,7 @@ def map3():
           clue="ruins_gate_open")
     # Memory 5 deep SW path (optional)
     place(lv, "fragment", *P["m5b"])
-    place(lv, "drone", P["m5a"][0] + 0.8, P["m5a"][1] - 0.4, startAngle=1.2, kind="swarm")
-    place(lv, "drone", P["m5b"][0] + 1.0, P["m5b"][1] - 0.6, startAngle=4.0, kind="swarm")
+    place_dronespawn(lv, P["m5a"][0] + 0.4, P["m5a"][1] - 0.2, kind="swarm", max=2, interval=7)
     place(lv, "stash", P["m5a"][0] - 0.8, P["m5a"][1] + 0.5, glimmer=22)
     # North road back to the City; Core still uses a portal (chamber gate).
     open_map_edge(lv, "north", int(P["spawn"][0]), half=2)

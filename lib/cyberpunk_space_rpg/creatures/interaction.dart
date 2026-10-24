@@ -117,20 +117,28 @@ class Interaction {
 }
 
 /// Picks the focused interactable each frame and runs tap/hold input
-/// (E key or the on-screen prompt). NPC talk and AI fragments keep priority.
+/// (E key or the on-screen prompt).
+///
+/// Open dialogue still blocks focus. Merely standing near an NPC / AI fragment
+/// does not — otherwise stashes and examines beside talkers can never be used.
 class InteractionManager extends GameComponent {
   double _held = 0;
   bool _needRelease = false;
   Interactable? _last;
+
+  /// True when an enabled world action (OPEN, EXAMINE, …) is focused — talk
+  /// prompts should yield to it.
+  static bool get hasEnabledFocus {
+    final info = Interaction.info.value;
+    return Interaction.focus.value != null && info != null && info.enabled;
+  }
 
   @override
   void update(double dt) {
     super.update(dt);
     final player = gameRef.player;
     Interactable? best;
-    final busy = NpcCharacter.showPrompt.value ||
-        AIFragment.showPrompt.value ||
-        NpcCharacter.activeDialogue.value != null ||
+    final busy = NpcCharacter.activeDialogue.value != null ||
         AIFragment.activeDialogue.value != null;
     if (player != null && !busy) {
       final pc = player.position + player.size / 2;

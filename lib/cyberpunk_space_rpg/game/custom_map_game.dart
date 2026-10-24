@@ -508,11 +508,11 @@ NpcDialogue _vossDialogue() {
   return NpcDialogue(
     name: 'COMMANDER VOSS  ·  UEC',
     color: const Color(0xFFFF4444),
+    // Must match assets/audio/voices/voss_{1,2,3}.mp3 (Station Seven rewrite).
     lines: const [
-      // VO predates the Station Seven rewrite — keep text in lockstep.
-      'Doctor Kaela Osei. You\'ve caused considerable trouble. I\'m giving you one final chance to walk away.',
-      'Whatever this "Gaia" has told you is fabrication. Alien interference in planetary governance cannot be permitted.',
-      'The Aetherians are a data corruption. Nothing more. Stand down — or be classified as a hostile element.',
+      'Doctor Kaela Osei. Last chance. Hand over the fragments and walk away with your clearance intact.',
+      'Station Seven went dark the last time a lattice woke. I will not bury another colony for an alien ghost story.',
+      'If you reach the Core, understand this: I am not erasing history. I am choosing the living over the dead.',
     ],
     voicePaths: const [
       'audio/voices/voss_1.mp3',
@@ -3318,6 +3318,7 @@ class TalkPrompt extends StatelessWidget {
   const TalkPrompt();
 
   void _interact() {
+    if (InteractionManager.hasEnabledFocus) return;
     AIFragment.nearbyFragment?.interact();
     NpcCharacter.nearbyNpc?.interact();
   }
@@ -3330,13 +3331,20 @@ class TalkPrompt extends StatelessWidget {
         AIFragment.showPrompt,
         NpcCharacter.activeDialogue,
         AIFragment.activeDialogue,
+        Interaction.focus,
+        Interaction.info,
       ]),
       builder: (_, __) {
         final npc = NpcCharacter.showPrompt.value;
         final frag = AIFragment.showPrompt.value;
         final talking = NpcCharacter.activeDialogue.value != null ||
             AIFragment.activeDialogue.value != null;
-        if (talking || (!npc && !frag)) return const SizedBox.shrink();
+        // Prefer OPEN / EXAMINE when a world interactable is in range.
+        if (talking ||
+            InteractionManager.hasEnabledFocus ||
+            (!npc && !frag)) {
+          return const SizedBox.shrink();
+        }
         final action = npc ? 'TALK' : 'INTERACT';
         final label = _isTouch ? action : 'E  $action';
         return Positioned(

@@ -279,8 +279,9 @@ class WildCreature extends CreatureBody with Interactable {
     _lastPlayer = pc.clone();
     final dist = pc.distanceTo(bodyCenter);
 
-    if (alpha > 0.6 && dist < seenRadius * Meals.nightSightMultiplier && Bonds.markSeen(species.id)) {
-      GameToast.show('${species.name} spotted', body: 'Journal', compact: true);
+    // First sighting still marks the journal; no toast spam.
+    if (alpha > 0.6 && dist < seenRadius * Meals.nightSightMultiplier) {
+      Bonds.markSeen(species.id);
     }
     if (alpha <= 0.02) return;
 

@@ -17,6 +17,7 @@ import '../creatures/creature_components.dart' show DayClock;
 import '../creatures/gates.dart';
 import '../creatures/interaction.dart';
 import '../creatures/journal_ui.dart';
+import '../creatures/region_gates.dart' show woodsPondFragment;
 import '../game/adventure.dart';
 import '../game/game_input.dart';
 import '../game/keyboard_guard.dart';
@@ -370,6 +371,8 @@ class _RoomScreenState extends State<RoomScreen> {
                 for (final n in room.npcs) RoomWall(room, RoomRect(n.tx, n.ty, 1, 1)),
                 for (final l in room.lights) RoomGlow(room, l),
                 for (final s in _usableSpots(room)) RoomSpotComponent(room, s),
+                // Same purple crystal as overworld FragmentPickup (#58 look).
+                if (room.id == 'pond_grotto') RoomMemoryFragment(room),
                 InteractionManager(),
                 DayClock(),
               ],
@@ -873,6 +876,83 @@ class RoomGlow extends GameComponent {
         .createShader(Rect.fromCircle(center: Offset.zero, radius: radius));
     canvas.drawCircle(Offset.zero, radius, _paint);
     super.render(canvas);
+  }
+}
+
+/// Pond-grotto memory crystal — same purple [fragment.png] + halo as land
+/// [FragmentPickup], not the cyan tileset prop.
+class RoomMemoryFragment extends GameComponent {
+  final RoomData room;
+  Sprite? _sprite;
+  double _pulse = 0;
+
+  RoomMemoryFragment(this.room) {
+    final match = room.spots.where((s) => s.id == 'pond_fragment');
+    final spot = match.isEmpty ? null : match.first;
+    final tx = spot?.rect.x ?? 6;
+    final ty = spot?.rect.y ?? 1;
+    position = room.tilePx(tx, ty) + Vector2((room.tile - 20) / 2, (room.tile - 20) / 2);
+    size = Vector2.all(20);
+  }
+
+  bool get _taken => SaveService.data.collected.contains(woodsPondFragment);
+
+  @override
+  int get priority => LayerPriority.MAP + 3;
+
+  @override
+  Future<void> onLoad() async {
+    try {
+      _sprite = await Sprite.load('sprites/fragment.png');
+    } catch (_) {
+      _sprite = null;
+    }
+    return super.onLoad();
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    if (!_taken) _pulse += dt * 3.5;
+  }
+
+  @override
+  void render(Canvas canvas) {
+    if (_taken) return;
+    final cx = size.x / 2;
+    final cy = size.y / 2;
+    final p = sin(_pulse);
+
+    canvas.drawCircle(Offset(cx, cy), 12 + p * 2,
+        Paint()
+          ..color = const Color(0xFFAA44FF).withValues(alpha: 0.22 + p * 0.06)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8));
+
+    final sprite = _sprite;
+    if (sprite != null) {
+      final s = 16.0 + p * 1.5;
+      sprite.render(
+        canvas,
+        position: Vector2(cx - s / 2, cy - s / 2),
+        size: Vector2.all(s),
+      );
+      return;
+    }
+
+    final path = Path()
+      ..moveTo(cx, cy - 8)
+      ..lineTo(cx + 5, cy)
+      ..lineTo(cx, cy + 8)
+      ..lineTo(cx - 5, cy)
+      ..close();
+    canvas.drawPath(path, Paint()..color = const Color(0xFFCC66FF));
+    canvas.drawPath(
+        path,
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.35)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.0);
+    canvas.drawCircle(Offset(cx, cy), 2, Paint()..color = Colors.white.withValues(alpha: 0.9));
   }
 }
 
