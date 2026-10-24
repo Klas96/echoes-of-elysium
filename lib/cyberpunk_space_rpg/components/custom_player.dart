@@ -924,8 +924,12 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
     final ePressed = HardwareKeyboard.instance.logicalKeysPressed
         .contains(LogicalKeyboardKey.keyE);
     if (ePressed && !_eWasPressed) {
-      AIFragment.nearbyFragment?.interact();
-      NpcCharacter.nearbyNpc?.interact();
+      // Stash / examine / gates are handled by InteractionManager on E.
+      // Don't also open talk when a closer world action is focused.
+      if (!InteractionManager.hasEnabledFocus) {
+        AIFragment.nearbyFragment?.interact();
+        NpcCharacter.nearbyNpc?.interact();
+      }
     }
     _eWasPressed = ePressed;
   }

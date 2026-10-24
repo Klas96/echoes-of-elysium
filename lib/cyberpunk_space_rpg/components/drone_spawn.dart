@@ -16,8 +16,8 @@ import 'uec_drone.dart';
 /// (designer draws it). A destructible UEC pad sits at the centre — shoot it
 /// enough and the pad dies (saved in [SaveData.collected]) and stops spawning.
 ///
-/// Each pad is locked to **one** [kind] (never mixed). Visuals differ per kind
-/// (procedural placeholders until designer art — see GH #66).
+/// Each pad is locked to **one** [kind] (never mixed). Visuals use per-kind
+/// art under `assets/images/obstacles/drone_spawn_*.png` (GH #66).
 ///
 /// Properties (all optional):
 /// - `kind` — scout | swarm | sniper | shield (default scout); sole spawn type
@@ -49,6 +49,7 @@ class DroneSpawnPoint extends GameDecoration {
   double _timer;
   double _pulse = 0;
   bool _dead = false;
+  Sprite? _sprite;
   final List<UECDrone> _children = [];
   final Random _rng = Random();
 
@@ -76,12 +77,21 @@ class DroneSpawnPoint extends GameDecoration {
   bool get isDead => _dead;
   Vector2 get padCenter => origin + areaSize / 2;
 
-  /// Accent / silhouette for this pad's single enemy type (GH #66).
+  /// Accent / tag for this pad's single enemy type (GH #66).
   _PadStyle get _style => _PadStyle.forKind(kind);
+
+  /// Floor pad: under Y-sorted actors (Kaela, drones), above the tilemap.
+  @override
+  int get priority => LayerPriority.MAP + 1;
 
   @override
   Future<void> onLoad() async {
     active.add(this);
+    try {
+      _sprite = await Sprite.load(_style.spritePath);
+    } catch (_) {
+      _sprite = null;
+    }
     add(RectangleHitbox(
       size: Vector2.all(padSize),
       position: Vector2(
@@ -99,11 +109,6 @@ class DroneSpawnPoint extends GameDecoration {
     active.remove(this);
     super.onRemove();
   }
-
-  @override
-  int get priority => LayerPriority.getComponentPriority(
-        (position.y + size.y * 0.55).floor(),
-      );
 
   void takeDamage(int amount, {Vector2? knockbackDir}) {
     if (_dead || amount <= 0) return;
@@ -205,37 +210,28 @@ class DroneSpawnPoint extends GameDecoration {
     }
 
     // Soft ground bloom under the pad.
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(pad.inflate(6), Radius.circular(style.corner)),
+    canvas.drawCircle(
+      pad.center,
+      padSize * 0.55,
       Paint()
-        ..color = accent.withValues(alpha: 0.12 * glow)
+        ..color = accent.withValues(alpha: 0.14 * glow)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
     );
 
-    // Pad body — shape/fill differs by kind.
-    style.paintBody(canvas, pad, glow);
-
-    // Kind glyph (readability until designer sprites).
-    style.paintGlyph(canvas, pad.center, glow);
-
-    // Tiny kind tag under the pad.
-    final tag = TextPainter(
-      text: TextSpan(
-        text: style.tag,
-        style: TextStyle(
-          color: accent.withValues(alpha: 0.85),
-          fontSize: 7,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0.8,
-          fontFamily: 'monospace',
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    tag.paint(
-      canvas,
-      Offset(pad.center.dx - tag.width / 2, pad.bottom + 2),
-    );
+    final spr = _sprite;
+    if (spr != null) {
+      spr.render(
+        canvas,
+        position: Vector2(pad.left, pad.top),
+        size: Vector2.all(padSize),
+        overridePaint: Paint()
+          ..color = Color.fromRGBO(255, 255, 255, 0.82 + 0.18 * glow),
+      );
+    } else {
+      // Fallback if art failed to load.
+      style.paintBody(canvas, pad, glow);
+      style.paintGlyph(canvas, pad.center, glow);
+    }
 
     // HP bar above pad when damaged.
     if (_hp < maxHp) {
@@ -250,21 +246,17 @@ class DroneSpawnPoint extends GameDecoration {
   }
 }
 
-/// Procedural pad look per [DroneKind] (placeholders for GH #66 art).
+/// Per-[DroneKind] look: sprite path + accent for glow / tag / HP (GH #66).
 class _PadStyle {
   final Color accent;
-  final Color fill;
-  final String tag;
-  final double corner;
+  final String spritePath;
   final double pulseRate;
   final void Function(Canvas canvas, Rect pad, double glow) paintBody;
   final void Function(Canvas canvas, Offset center, double glow) paintGlyph;
 
   const _PadStyle({
     required this.accent,
-    required this.fill,
-    required this.tag,
-    required this.corner,
+    required this.spritePath,
     required this.pulseRate,
     required this.paintBody,
     required this.paintGlyph,
@@ -273,36 +265,28 @@ class _PadStyle {
   static _PadStyle forKind(DroneKind kind) => switch (kind) {
         DroneKind.scout => _PadStyle(
             accent: const Color(0xFFFF8844),
-            fill: const Color(0xCC1A0A08),
-            tag: 'SCOUT',
-            corner: 5,
+            spritePath: 'obstacles/drone_spawn_scout.png',
             pulseRate: 1,
             paintBody: _bodyRounded,
             paintGlyph: _glyphDot,
           ),
         DroneKind.swarm => _PadStyle(
             accent: const Color(0xFFFFCC44),
-            fill: const Color(0xCC141008),
-            tag: 'SWARM',
-            corner: 3,
+            spritePath: 'obstacles/drone_spawn_swarm.png',
             pulseRate: 1.6,
             paintBody: _bodyHexish,
             paintGlyph: _glyphTriple,
           ),
         DroneKind.sniper => _PadStyle(
             accent: const Color(0xFFCC66FF),
-            fill: const Color(0xCC100818),
-            tag: 'SNIPER',
-            corner: 2,
+            spritePath: 'obstacles/drone_spawn_sniper.png',
             pulseRate: 0.7,
             paintBody: _bodyDiamond,
             paintGlyph: _glyphCrosshair,
           ),
         DroneKind.shield => _PadStyle(
             accent: const Color(0xFF44AAFF),
-            fill: const Color(0xCC081018),
-            tag: 'SHIELD',
-            corner: 8,
+            spritePath: 'obstacles/drone_spawn_shield.png',
             pulseRate: 0.85,
             paintBody: _bodyShield,
             paintGlyph: _glyphRing,

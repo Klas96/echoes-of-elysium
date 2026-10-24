@@ -6,6 +6,9 @@ Night light cookies (#35), drawn as holes in NightTint plus an additive glow:
   `lamp_light_flicker.png` 192x96 = 2 flicker frames (preferred if present).
 - `lamp_light_neon.png` / `lamp_light_neon_flicker.png`: cyan variant used by
   City street lamps and Core braziers.
+- `portal_light.png` 48x48 travel gate: flat cyan ring on a stone pad
+  (silhouette is a ground circle — not a purple diamond shard).
+  `portal_light_flicker.png` 96x48 = 2 frames.
 
 Missing files fall back to a procedural cookie, so art can be swapped in with
 no code change.

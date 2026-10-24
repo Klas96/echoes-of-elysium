@@ -3318,6 +3318,7 @@ class TalkPrompt extends StatelessWidget {
   const TalkPrompt();
 
   void _interact() {
+    if (InteractionManager.hasEnabledFocus) return;
     AIFragment.nearbyFragment?.interact();
     NpcCharacter.nearbyNpc?.interact();
   }
@@ -3330,13 +3331,20 @@ class TalkPrompt extends StatelessWidget {
         AIFragment.showPrompt,
         NpcCharacter.activeDialogue,
         AIFragment.activeDialogue,
+        Interaction.focus,
+        Interaction.info,
       ]),
       builder: (_, __) {
         final npc = NpcCharacter.showPrompt.value;
         final frag = AIFragment.showPrompt.value;
         final talking = NpcCharacter.activeDialogue.value != null ||
             AIFragment.activeDialogue.value != null;
-        if (talking || (!npc && !frag)) return const SizedBox.shrink();
+        // Prefer OPEN / EXAMINE when a world interactable is in range.
+        if (talking ||
+            InteractionManager.hasEnabledFocus ||
+            (!npc && !frag)) {
+          return const SizedBox.shrink();
+        }
         final action = npc ? 'TALK' : 'INTERACT';
         final label = _isTouch ? action : 'E  $action';
         return Positioned(
