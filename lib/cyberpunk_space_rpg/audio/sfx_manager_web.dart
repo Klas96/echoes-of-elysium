@@ -35,7 +35,7 @@ class SfxManager {
     _footstep = _preload('audio/sfx/footstep_grass.mp3');
     _damage = _preload('audio/sfx/damage_hit.mp3');
     _portal = _preload('audio/sfx/portal.mp3');
-    _shoot = _preload('audio/sfx/shoot.mp3');
+    _shoot = _preload('audio/sfx/shoot.wav');
     _chime = _preload('audio/sfx/computer_beep.wav');
     _heal = _preload('audio/sfx/health_pickup.mp3');
     _applyVolumes();

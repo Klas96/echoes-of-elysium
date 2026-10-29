@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:io' show Platform;
+
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 
@@ -16,13 +19,19 @@ class SfxManager {
   AudioPlayer? _footstep;
   AudioPlayer? _damage;
   AudioPlayer? _portal;
-  AudioPlayer? _shoot;
   AudioPlayer? _chime;
   AudioPlayer? _heal;
   AudioPlayer? _voice;
+  /// Round-robin so auto-fire never stop/plays the same player twice in a row
+  /// (Android MediaPlayer goes laggy/silent under overlapping stop+play).
+  List<AudioPlayer>? _shootPlayers;
+  Future<List<AudioPlayer>?>? _shootPlayersLoading;
+  int _shootIdx = 0;
   bool _ready = false;
   bool _initStarted = false;
   int _voiceToken = 0;
+  /// Drops stale stop/play chains when the same one-shot is re-triggered.
+  final Map<AudioPlayer, int> _oneShotGen = {};
 
   double _userVolume = 1.0;
   bool _enabled = true;
@@ -30,9 +39,12 @@ class SfxManager {
   static const _footAsset = 'audio/sfx/footstep_grass.mp3';
   static const _damageAsset = 'audio/sfx/damage_hit.mp3';
   static const _portalAsset = 'audio/sfx/portal.mp3';
-  static const _shootAsset = 'audio/sfx/shoot.mp3';
+  /// PCM WAV — Android SoundPool (lowLatency) is unreliable with MP3.
+  static const _shootAsset = 'audio/sfx/shoot.wav';
   static const _chimeAsset = 'audio/sfx/computer_beep.wav';
   static const _healAsset = 'audio/sfx/health_pickup.mp3';
+
+  static const _shootSlots = 4;
 
   static const _baseFoot = 0.45;
   static const _baseDamage = 0.7;
@@ -47,6 +59,10 @@ class SfxManager {
 
   double get _scale => _enabled ? _userVolume.clamp(0.0, 1.0) : 0.0;
   bool get _audible => _scale > 0.001;
+
+  /// SoundPool on Android; MediaPlayer elsewhere (GStreamer hates lowLatency).
+  static PlayerMode get _shootMode =>
+      !kIsWeb && Platform.isAndroid ? PlayerMode.lowLatency : PlayerMode.mediaPlayer;
 
   Future<void> init() async {
     if (_ready) return;
@@ -64,7 +80,6 @@ class SfxManager {
       _footstep ??= AudioPlayer();
       _damage ??= AudioPlayer();
       _portal ??= AudioPlayer();
-      _shoot ??= AudioPlayer();
       _chime ??= AudioPlayer();
       _heal ??= AudioPlayer();
       _voice ??= AudioPlayer();
@@ -77,20 +92,26 @@ class SfxManager {
         _safeContext(_footstep!, mix),
         _safeContext(_damage!, mix),
         _safeContext(_portal!, mix),
-        _safeContext(_shoot!, mix),
         _safeContext(_chime!, mix),
         _safeContext(_heal!, mix),
         _safeContext(_voice!, mix),
+        _footstep!.setPlayerMode(PlayerMode.mediaPlayer),
+        _damage!.setPlayerMode(PlayerMode.mediaPlayer),
+        _portal!.setPlayerMode(PlayerMode.mediaPlayer),
+        _chime!.setPlayerMode(PlayerMode.mediaPlayer),
+        _heal!.setPlayerMode(PlayerMode.mediaPlayer),
+        _voice!.setPlayerMode(PlayerMode.mediaPlayer),
         _footstep!.setReleaseMode(ReleaseMode.stop),
         _damage!.setReleaseMode(ReleaseMode.stop),
         _portal!.setReleaseMode(ReleaseMode.stop),
-        _shoot!.setReleaseMode(ReleaseMode.stop),
         _chime!.setReleaseMode(ReleaseMode.stop),
         _heal!.setReleaseMode(ReleaseMode.stop),
         _voice!.setReleaseMode(ReleaseMode.stop),
       ]);
       _ready = true;
       await _applyVolumes();
+      // Warm shoot slots so the first shot is not a create/decode hitch.
+      unawaited(_ensureShootPlayers());
     } catch (e) {
       debugPrint('SfxManager init: $e');
       // Still mark ready if players exist so VO/SFX can attempt play.
@@ -98,6 +119,34 @@ class SfxManager {
     } finally {
       _initStarted = false;
     }
+  }
+
+  Future<List<AudioPlayer>?> _ensureShootPlayers() async {
+    if (_shootPlayers != null) return _shootPlayers;
+    _shootPlayersLoading ??= () async {
+      try {
+        final mix = GameAudioContexts.mix;
+        final mode = _shootMode;
+        final vol = _baseShoot * _scale;
+        final players = <AudioPlayer>[];
+        for (var i = 0; i < _shootSlots; i++) {
+          final p = AudioPlayer();
+          await p.setPlayerMode(mode);
+          await _safeContext(p, mix);
+          await p.setReleaseMode(ReleaseMode.stop);
+          await p.setSource(AssetSource(_shootAsset));
+          await p.setVolume(vol);
+          players.add(p);
+        }
+        _shootPlayers = players;
+        return players;
+      } catch (e) {
+        debugPrint('SfxManager shoot players: $e');
+        _shootPlayersLoading = null;
+        return null;
+      }
+    }();
+    return _shootPlayersLoading;
   }
 
   Future<void> _safeContext(AudioPlayer p, AudioContext mix) async {
@@ -124,10 +173,11 @@ class SfxManager {
         if (_footstep != null) _footstep!.setVolume(_baseFoot * s),
         if (_damage != null) _damage!.setVolume(_baseDamage * s),
         if (_portal != null) _portal!.setVolume(_basePortal * s),
-        if (_shoot != null) _shoot!.setVolume(_baseShoot * s),
         if (_chime != null) _chime!.setVolume(_baseChime * s),
         if (_heal != null) _heal!.setVolume(_baseHeal * s),
         if (_voice != null) _voice!.setVolume(_baseVoice * s),
+        if (_shootPlayers != null)
+          ..._shootPlayers!.map((p) => p.setVolume(_baseShoot * s)),
       ]);
     } catch (_) {}
   }
@@ -135,11 +185,14 @@ class SfxManager {
   Future<void> _playOneShot(AudioPlayer? player, String asset) async {
     if (!_audible) return;
     if (!_ready) await init();
-    final p = player ?? _footstep;
+    final p = player;
     if (p == null) return;
+    final gen = (_oneShotGen[p] = (_oneShotGen[p] ?? 0) + 1);
     try {
       await p.stop();
+      if (_oneShotGen[p] != gen || !_audible) return;
       await p.setVolume(_volumeForAsset(asset));
+      if (_oneShotGen[p] != gen || !_audible) return;
       await p.play(AssetSource(asset));
     } catch (e) {
       debugPrint('SfxManager play($asset): $e');
@@ -160,7 +213,36 @@ class SfxManager {
   Future<void> playFootstep() async => _playOneShot(_footstep, _footAsset);
   Future<void> playDamage() async => _playOneShot(_damage, _damageAsset);
   Future<void> playPortal() async => _playOneShot(_portal, _portalAsset);
-  Future<void> playShoot() async => _playOneShot(_shoot, _shootAsset);
+
+  Future<void> playShoot() async {
+    if (!_audible) return;
+    if (!_ready) await init();
+    final players = await _ensureShootPlayers();
+    if (players == null || players.isEmpty || !_audible) return;
+    final p = players[_shootIdx++ % players.length];
+    final vol = _baseShoot * _scale;
+    // Return immediately — awaiting stop/seek/resume would serialize auto-fire
+    // and make shots sound laggy / drop when the previous await is still mid-flight.
+    unawaited(_fireShoot(p, vol));
+  }
+
+  Future<void> _fireShoot(AudioPlayer p, double vol) async {
+    try {
+      await p.stop();
+      await p.setVolume(vol);
+      try {
+        await p.seek(Duration.zero);
+      } catch (_) {}
+      await p.resume();
+    } catch (_) {
+      // Source lost / SoundPool quirk — full play reloads the clip.
+      try {
+        await p.play(AssetSource(_shootAsset), volume: vol);
+      } catch (e) {
+        debugPrint('SfxManager playShoot: $e');
+      }
+    }
+  }
 
   /// Soft chime for bonds and finds (reuses the computer beep).
   Future<void> playChime() async => _playOneShot(_chime, _chimeAsset);
