@@ -172,18 +172,20 @@ NpcDialogue _gaiaCoreDialogue() {
 }
 
 NpcDialogue _ashaDialogue() {
+  final jobs = Quests.dialogueChoicesFor('asha');
   if (Adventure.readUecOrders) {
-    return const NpcDialogue(
+    return NpcDialogue(
       name: 'ASHA  ·  EX-UEC',
-      color: Color(0xFFFFAA00),
-      lines: [
+      color: const Color(0xFFFFAA00),
+      lines: const [
         'You burned the key on the truth. Good.',
         'Collateral risk accepted. That\'s the line that made me run. Take it to the Core — Voss needs to hear it from someone who still believes in people.',
       ],
-      voicePaths: [
+      voicePaths: const [
         'audio/voices/asha_orders_1.mp3',
         'audio/voices/asha_orders_2.mp3',
       ],
+      choices: jobs,
     );
   }
   if (Adventure.openedArchive) {
@@ -212,6 +214,7 @@ NpcDialogue _ashaDialogue() {
               'audio/voices/asha_archive_ack.mp3',
             ],
           ),
+        ...jobs,
       ],
     );
   }
@@ -247,36 +250,37 @@ NpcDialogue _ashaDialogue() {
             'audio/voices/asha_2.mp3',
             'audio/voices/asha_3.mp3',
           ],
-    choices: hasKey
-        ? const []
-        : const [
-            DialogueChoice(
-              label: 'ASK FOR THE OVERRIDE KEY',
-              giveItem: 'uec_override',
-              discoverClue: 'override_key',
-              requireNoItem: 'uec_override',
-              replyLines: [
-                'Alright. One key. Use it on a UEC terminal — not on her.',
-                'If you burn it for the truth, good. If you keep it as insurance... I understand.',
-              ],
-              replyVoicePaths: [
-                'audio/voices/asha_give_1.mp3',
-                'audio/voices/asha_give_2.mp3',
-              ],
-            ),
-            DialogueChoice(
-              label: 'TELL HER YOU BELIEVE GAIA',
-              setFlag: 'said_trust_gaia',
-              discoverClue: 'asha_warning',
-              requireFlagUnset: 'said_trust_gaia',
-              replyLines: [
-                'Then prove it. Don\'t make Station Seven happen again.',
-              ],
-              replyVoicePaths: [
-                'audio/voices/asha_trust.mp3',
-              ],
-            ),
+    choices: [
+      if (!hasKey) ...const [
+        DialogueChoice(
+          label: 'ASK FOR THE OVERRIDE KEY',
+          giveItem: 'uec_override',
+          discoverClue: 'override_key',
+          requireNoItem: 'uec_override',
+          replyLines: [
+            'Alright. One key. Use it on a UEC terminal — not on her.',
+            'If you burn it for the truth, good. If you keep it as insurance... I understand.',
           ],
+          replyVoicePaths: [
+            'audio/voices/asha_give_1.mp3',
+            'audio/voices/asha_give_2.mp3',
+          ],
+        ),
+        DialogueChoice(
+          label: 'TELL HER YOU BELIEVE GAIA',
+          setFlag: 'said_trust_gaia',
+          discoverClue: 'asha_warning',
+          requireFlagUnset: 'said_trust_gaia',
+          replyLines: [
+            'Then prove it. Don\'t make Station Seven happen again.',
+          ],
+          replyVoicePaths: [
+            'audio/voices/asha_trust.mp3',
+          ],
+        ),
+      ],
+      ...jobs,
+    ],
   );
 }
 
@@ -294,8 +298,8 @@ NpcDialogue _echo7Dialogue() {
       'audio/voices/echo7_2.mp3',
       'audio/voices/echo7_3.mp3',
     ],
-    choices: const [
-      DialogueChoice(
+    choices: [
+      const DialogueChoice(
         label: 'ASK ABOUT THE FEAR',
         discoverClue: 'echo_split',
         setFlag: 'asked_echo_fear',
@@ -307,7 +311,7 @@ NpcDialogue _echo7Dialogue() {
           'audio/voices/echo7_fear.mp3',
         ],
       ),
-      DialogueChoice(
+      const DialogueChoice(
         label: 'PROMISE TO REMEMBER BOTH',
         setFlag: 'promised_echo',
         requireFlagUnset: 'promised_echo',
@@ -318,7 +322,7 @@ NpcDialogue _echo7Dialogue() {
           'audio/voices/echo7_promise.mp3',
         ],
       ),
-      DialogueChoice(
+      const DialogueChoice(
         label: 'ASK ABOUT THIS STREET',
         setFlag: 'asked_echo_street',
         requireFlagUnset: 'asked_echo_street',
@@ -326,6 +330,7 @@ NpcDialogue _echo7Dialogue() {
           'The Archivist keeps to the square east of here. Any street will take you. From the arrival plaza the boulevard runs east to the Lantern Gate and Lantern Town: Mira\'s board, glimmer, and rest.',
         ],
       ),
+      ...Quests.dialogueChoicesFor('echo7'),
     ],
   );
 }
@@ -382,25 +387,28 @@ NpcDialogue _archivistDialogue() {
             'audio/voices/archivist_post_ready.mp3',
           ],
         ),
+        ...Quests.dialogueChoicesFor('archivist'),
       ],
     );
   }
   if (Adventure.openedArchive) {
-    return const NpcDialogue(
+    return NpcDialogue(
       name: 'THE ARCHIVIST  ·  AETHERIAN',
-      color: Color(0xFFFFDD44),
-      lines: [
+      color: const Color(0xFFFFDD44),
+      lines: const [
         'You read the draft. Good. Carry both the fear and the hope into the Core — or Voss will only hear a weapon.',
         'The vote was a whisper. Let your waking of Gaia be louder — and kinder.',
       ],
-      voicePaths: [
+      voicePaths: const [
         'audio/voices/archivist_after_1.mp3',
         'audio/voices/archivist_after_2.mp3',
       ],
+      choices: Quests.dialogueChoicesFor('archivist'),
     );
   }
   final gaveSeal =
       Bonds.hasItem('archive_seal') || Bonds.usedItem('archive_seal');
+  final archivistJobs = Quests.dialogueChoicesFor('archivist');
   return NpcDialogue(
     name: 'THE ARCHIVIST  ·  AETHERIAN',
     color: const Color(0xFFFFDD44),
@@ -418,47 +426,48 @@ NpcDialogue _archivistDialogue() {
           ? 'audio/voices/archivist_3_seal.mp3'
           : 'audio/voices/archivist_3.mp3',
     ],
-    choices: gaveSeal
-        ? const [
-            DialogueChoice(
-              label: 'ASK ABOUT STATION SEVEN',
-              discoverClue: 'station_seven',
-              setFlag: 'asked_archivist_s7',
-              requireFlagUnset: 'asked_archivist_s7',
-              replyLines: [
-                'Your coalition woke a lattice without consent. We asked. That difference is everything — and also nothing, if the dead cannot speak.',
-              ],
-              replyVoicePaths: [
-                'audio/voices/archivist_s7.mp3',
-              ],
-            ),
-          ]
-        : const [
-            DialogueChoice(
-              label: 'ASK FOR THE ARCHIVE SEAL',
-              giveItem: 'archive_seal',
-              discoverClue: 'archivist_seal',
-              requireNoItem: 'archive_seal',
-              replyLines: [
-                'Take it. The library faces this avenue. Inside is the draft of our first memory — not the Core, but the argument that made it.',
-              ],
-              replyVoicePaths: [
-                'audio/voices/archivist_seal_give.mp3',
-              ],
-            ),
-            DialogueChoice(
-              label: 'ASK ABOUT STATION SEVEN',
-              discoverClue: 'station_seven',
-              setFlag: 'asked_archivist_s7',
-              requireFlagUnset: 'asked_archivist_s7',
-              replyLines: [
-                'Your coalition woke a lattice without consent. We asked. That difference is everything — and also nothing, if the dead cannot speak.',
-              ],
-              replyVoicePaths: [
-                'audio/voices/archivist_s7.mp3',
-              ],
-            ),
+    choices: [
+      if (gaveSeal)
+        const DialogueChoice(
+          label: 'ASK ABOUT STATION SEVEN',
+          discoverClue: 'station_seven',
+          setFlag: 'asked_archivist_s7',
+          requireFlagUnset: 'asked_archivist_s7',
+          replyLines: [
+            'Your coalition woke a lattice without consent. We asked. That difference is everything — and also nothing, if the dead cannot speak.',
           ],
+          replyVoicePaths: [
+            'audio/voices/archivist_s7.mp3',
+          ],
+        )
+      else ...const [
+        DialogueChoice(
+          label: 'ASK FOR THE ARCHIVE SEAL',
+          giveItem: 'archive_seal',
+          discoverClue: 'archivist_seal',
+          requireNoItem: 'archive_seal',
+          replyLines: [
+            'Take it. The library faces this avenue. Inside is the draft of our first memory — not the Core, but the argument that made it.',
+          ],
+          replyVoicePaths: [
+            'audio/voices/archivist_seal_give.mp3',
+          ],
+        ),
+        DialogueChoice(
+          label: 'ASK ABOUT STATION SEVEN',
+          discoverClue: 'station_seven',
+          setFlag: 'asked_archivist_s7',
+          requireFlagUnset: 'asked_archivist_s7',
+          replyLines: [
+            'Your coalition woke a lattice without consent. We asked. That difference is everything — and also nothing, if the dead cannot speak.',
+          ],
+          replyVoicePaths: [
+            'audio/voices/archivist_s7.mp3',
+          ],
+        ),
+      ],
+      ...archivistJobs,
+    ],
   );
 }
 
@@ -553,8 +562,8 @@ NpcDialogue _miraDialogue() {
     color: const Color(0xFFFFE08A),
     lines: const [
       'Lantern Town keeps its lamps lit for travellers like you. UEC patrols rarely bother us here.',
-      'The job board posts woods and city errands — nests, caches, moonflowers. Come back to turn them in.',
-      'I trade glimmer for gear. Portal south when you\'re ready. Check the board if you have time.',
+      'The board lists errands — but Asha, Dao, Echo-7 and the Archivist each settle their own. Talk to them when you\'re done.',
+      'I still watch the east lot. I trade glimmer for gear. Portal south when you\'re ready.',
     ],
     voicePaths: const [
       'audio/voices/mira_1.mp3',
@@ -574,26 +583,27 @@ NpcDialogue _miraDialogue() {
           'audio/voices/mira_archive.mp3',
         ],
       ),
-      DialogueChoice(
+      const DialogueChoice(
         label: 'SHOW ME THE BOARD',
         setFlag: 'mira_showed_board',
-        replyLines: const [
-          'There — chalk and string. Accept a job, do the woods work, come back to turn it in.',
+        replyLines: [
+          'Chalk and string — accept a post if you like. Turn it in with whoever asked, not here.',
         ],
-        replyVoicePaths: const [
+        replyVoicePaths: [
           'audio/voices/mira_board.mp3',
         ],
       ),
-      DialogueChoice(
+      const DialogueChoice(
         label: 'TRADE AT THE STALL',
         setFlag: 'mira_showed_shop',
-        replyLines: const [
+        replyLines: [
           'Browse the stall — salvage and colony trinkets. Pay with glimmer from jobs and finds.',
         ],
-        replyVoicePaths: const [
+        replyVoicePaths: [
           'audio/voices/mira_3.mp3',
         ],
       ),
+      ...Quests.dialogueChoicesFor('mira'),
     ],
   );
 }
@@ -2141,6 +2151,8 @@ class _NpcDialogueLayerState extends State<_NpcDialogueLayer> {
       return;
     }
     choice.apply();
+    if (choice.acceptQuest != null) Quests.accept(choice.acceptQuest!);
+    if (choice.turnInQuest != null) Quests.turnIn(choice.turnInQuest!);
     if (choice.replyLines.isEmpty) {
       _closeDialogue();
       return;
@@ -2387,68 +2399,124 @@ class GameHudState extends State<GameHud> {
                 );
               }
 
-              final statusBlock = Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  KeyedSubtree(
-                    key: const ValueKey('hud-health'),
-                    child: ValueListenableBuilder<int>(
-                      valueListenable: CustomPlayer.healthNotifier,
-                      builder: (_, hp, __) {
-                        final pct = hp / CustomPlayer.maxHealth;
-                        final barColor = pct > 0.5
-                            ? const Color(0xFF00FF88)
-                            : pct > 0.25
-                                ? const Color(0xFFFFAA00)
-                                : const Color(0xFFFF3333);
-                        return ValueListenableBuilder<int>(
-                          valueListenable: Progression.revision,
-                          builder: (_, __, ___) => Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'KAELA  ·  LV ${Progression.level}',
-                                style: TextStyle(
-                                  color: Colors.white54,
-                                  fontSize: HudLayout.statusLabelFont,
-                                  letterSpacing: 2,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              statusBar(fill: pct, color: barColor),
-                              const SizedBox(height: 3),
-                              Text(
-                                '$hp / ${CustomPlayer.maxHealth}',
-                                style: TextStyle(
-                                  color: Colors.white38,
-                                  fontSize: HudLayout.statusMetaFont,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              statusBar(
-                                fill: Progression.xpProgress,
-                                color: const Color(0xFFFFE08A),
-                              ),
-                              const SizedBox(height: 3),
-                              Text(
-                                'XP ${Progression.xp}/${Progression.xpToNext(Progression.level)}'
-                                '${Progression.bonusDamage > 0 ? '  ·  +${Progression.bonusDamage} DMG' : ''}',
-                                style: TextStyle(
-                                  color: Colors.white38,
-                                  fontSize: HudLayout.statusMetaFont,
-                                ),
-                              ),
-                            ],
+              final healthBlock = KeyedSubtree(
+                key: const ValueKey('hud-health'),
+                child: ValueListenableBuilder<int>(
+                  valueListenable: CustomPlayer.healthNotifier,
+                  builder: (_, hp, __) {
+                    final pct = hp / CustomPlayer.maxHealth;
+                    final barColor = pct > 0.5
+                        ? const Color(0xFF00FF88)
+                        : pct > 0.25
+                            ? const Color(0xFFFFAA00)
+                            : const Color(0xFFFF3333);
+                    return ValueListenableBuilder<int>(
+                      valueListenable: Progression.revision,
+                      builder: (_, __, ___) => Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'KAELA  ·  LV ${Progression.level}',
+                            style: TextStyle(
+                              color: Colors.white54,
+                              fontSize: HudLayout.statusLabelFont,
+                              letterSpacing: 2,
+                            ),
                           ),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  CreatureHud(compact: HudLayout.compactChips(box.maxWidth)),
-                ],
+                          const SizedBox(height: 4),
+                          statusBar(fill: pct, color: barColor),
+                          const SizedBox(height: 3),
+                          Text(
+                            '$hp / ${CustomPlayer.maxHealth}',
+                            style: TextStyle(
+                              color: Colors.white38,
+                              fontSize: HudLayout.statusMetaFont,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          statusBar(
+                            fill: Progression.xpProgress,
+                            color: const Color(0xFFFFE08A),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            'XP ${Progression.xp}/${Progression.xpToNext(Progression.level)}'
+                            '${Progression.bonusDamage > 0 ? '  ·  +${Progression.bonusDamage} DMG' : ''}',
+                            style: TextStyle(
+                              color: Colors.white38,
+                              fontSize: HudLayout.statusMetaFont,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
               );
+
+              // Combat loot pops sit with the HP/XP block (not the ability bar).
+              // Landscape: beside the bars so the top row height stays short.
+              // Portrait: under the bars.
+              final popsBlock = ValueListenableBuilder<List<HudPop>>(
+                valueListenable: MmoFeedback.pops,
+                builder: (_, items, __) {
+                  if (items.isEmpty) return const SizedBox.shrink();
+                  final maxLines = wide ? 3 : 4;
+                  return Padding(
+                    padding: EdgeInsets.only(top: wide ? 18 : 4, left: wide ? 8 : 0),
+                    child: IgnorePointer(
+                      child: ConstrainedBox(
+                        key: const ValueKey('hud-pops'),
+                        constraints: BoxConstraints(
+                          maxWidth: HudLayout.popsMaxWidth(screen),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            for (final p in items.reversed.take(maxLines))
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 1),
+                                child: Text(
+                                  p.text,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: MmoFeedback.popStyle(p.color, fontSize: 11),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              );
+
+              final chips = Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: CreatureHud(compact: HudLayout.compactChips(box.maxWidth)),
+              );
+
+              // Portrait: pops under HP. Landscape: pops beside HP so the
+              // tracker row stays short; chips stay under the bars either way.
+              final statusBlock = wide
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [healthBlock, popsBlock],
+                        ),
+                        chips,
+                      ],
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [healthBlock, popsBlock, chips],
+                    );
 
               return Column(
                 key: const ValueKey('hud-top'),
@@ -2548,40 +2616,6 @@ class GameHudState extends State<GameHud> {
           ),
         ),
       ),
-      // Floating +XP / loot pops: right column above the interact prompt
-      Builder(builder: (context) {
-        final screen = MediaQuery.sizeOf(context);
-        return Positioned(
-          right: HudLayout.popsRight(screen),
-          bottom: HudLayout.popsBottom(screen),
-          child: ValueListenableBuilder<List<HudPop>>(
-            valueListenable: MmoFeedback.pops,
-            builder: (_, items, __) {
-              if (items.isEmpty) return const SizedBox.shrink();
-              return IgnorePointer(
-                child: ConstrainedBox(
-                  key: const ValueKey('hud-pops'),
-                  constraints: BoxConstraints(maxWidth: HudLayout.popsMaxWidth(screen)),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      for (final p in items.reversed.take(4))
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 3),
-                          child: Text(p.text,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: MmoFeedback.popStyle(p.color, fontSize: 12)),
-                        ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        );
-      }),
       const AbilityHud(),
     ]);
   }

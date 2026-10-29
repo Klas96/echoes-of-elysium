@@ -24,7 +24,7 @@ void busyState({bool talk = false}) {
   SaveService.data = SaveData(mapId: 'world5', regionId: 'town', glimmer: 1234);
   SaveService.data.bonds['glowmoth'] = {'seen': true, 'befriended': true};
   SaveService.data.activeCompanion = 'glowmoth';
-  for (final id in ['courier_pack', 'drone_nest', 'city_east_nest']) {
+  for (final id in ['drone_nest', 'moonflower_draft', 'city_east_nest']) {
     SaveService.data.setFlag('quest:$id:accepted');
   }
   Quests.revision.value++;

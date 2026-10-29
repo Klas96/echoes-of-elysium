@@ -46,41 +46,24 @@ void main() {
   });
 
   group('ruins / core jobs', () {
-    test('board has 3-5 new ruins/core jobs, each with a journal clue', () {
+    test('board keeps one ruins and one core lore job for the Archivist', () {
       final late = Quests.catalog.where((q) => q.region == 'ruins' || q.region == 'core').toList();
-      expect(late.length, inInclusiveRange(3, 5));
+      expect(late, hasLength(2));
       for (final q in late) {
         expect(Adventure.byId(q.clueId), isNotNull, reason: q.id);
-        expect(q.examineId != null || q.regionKills > 0, isTrue, reason: q.id);
+        expect(q.examineId, isNotNull, reason: q.id);
+        expect(q.giver, 'archivist');
       }
     });
 
-    test('locked until the story reaches the ruins', () {
-      expect(Quests.status('ruins_lattice_sweep'), QuestStatus.locked);
-      expect(Quests.accept('ruins_lattice_sweep'), isFalse);
+    test('locked until the story reaches the ruins / core', () {
+      expect(Quests.status('ruins_shrine_waymarker'), QuestStatus.locked);
+      expect(Quests.accept('ruins_shrine_waymarker'), isFalse);
       SaveService.data.setFlag('sentinelDefeated');
-      expect(Quests.status('ruins_lattice_sweep'), QuestStatus.available);
-      expect(Quests.status('core_static'), QuestStatus.locked);
-      SaveService.data.setFlag('visited:core');
-      expect(Quests.status('core_static'), QuestStatus.available);
-    });
-
-    test('region kills count only in that region and only once accepted', () {
-      SaveService.data.setFlag('sentinelDefeated');
-      Quests.onDroneKilled('ruins'); // not accepted yet
-      Quests.accept('ruins_lattice_sweep');
-      Quests.onDroneKilled('city');
-      expect(Quests.kills('ruins_lattice_sweep'), 0);
-      Quests.onDroneKilled('ruins');
-      Quests.onDroneKilled('ruins');
-      expect(Quests.status('ruins_lattice_sweep'), QuestStatus.accepted);
-      expect(Quests.objectiveHint, contains('(2/3)'));
-      Quests.onDroneKilled('ruins');
-      expect(Quests.status('ruins_lattice_sweep'), QuestStatus.done);
-      final before = Bonds.glimmer;
-      expect(Quests.turnIn('ruins_lattice_sweep'), isTrue);
-      expect(Bonds.glimmer, before + 24);
-      expect(Progression.inventory, contains('barrier_coil'));
+      expect(Quests.status('ruins_shrine_waymarker'), QuestStatus.available);
+      expect(Quests.status('core_console_reading'), QuestStatus.locked);
+      SaveService.data.setFlag('ruins_gate_open');
+      expect(Quests.status('core_console_reading'), QuestStatus.available);
     });
 
     test('examining the marked hotspot completes the job', () {
@@ -90,6 +73,18 @@ void main() {
       Quests.accept('core_console_reading');
       Quests.onExamined('core_console');
       expect(Quests.status('core_console_reading'), QuestStatus.done);
+      expect(Quests.objectiveHint, contains('Archivist'));
+      expect(Quests.turnIn('core_console_reading'), isTrue);
+    });
+
+    test('shrine waymarker completes on examine and turns in at Archivist', () {
+      SaveService.data.setFlag('sentinelDefeated');
+      Quests.accept('ruins_shrine_waymarker');
+      Quests.onExamined('ruins_dead_end');
+      expect(Quests.status('ruins_shrine_waymarker'), QuestStatus.done);
+      final before = Bonds.glimmer;
+      expect(Quests.turnIn('ruins_shrine_waymarker'), isTrue);
+      expect(Bonds.glimmer, before + 20);
     });
   });
 

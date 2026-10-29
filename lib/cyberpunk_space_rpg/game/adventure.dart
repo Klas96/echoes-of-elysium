@@ -73,6 +73,10 @@ class DialogueChoice {
   final String? giveItem;
   final String? setFlag;
   final String? discoverClue;
+  /// Accept this quest id on pick (giver / board jobs).
+  final String? acceptQuest;
+  /// Turn in this quest id on pick (must be done; item gates apply).
+  final String? turnInQuest;
   /// Hide this choice once the flag is already set.
   final String? requireFlagUnset;
   /// Hide once the player already carries or has used this item.
@@ -85,6 +89,8 @@ class DialogueChoice {
     this.giveItem,
     this.setFlag,
     this.discoverClue,
+    this.acceptQuest,
+    this.turnInQuest,
     this.requireFlagUnset,
     this.requireNoItem,
   });
@@ -102,6 +108,8 @@ class DialogueChoice {
     if (giveItem != null) Bonds.giveItem(giveItem!);
     if (setFlag != null) Adventure.setFlag(setFlag!);
     if (discoverClue != null) Adventure.discover(discoverClue!);
+    // acceptQuest / turnInQuest applied by dialogue / panel callers (avoids
+    // adventure ↔ quests import cycle).
   }
 }
 
@@ -175,14 +183,14 @@ class Adventure {
       parts.add(
         'Asha\'s channel still echoes: carry the fear with the hope. Voss heard a people tonight — not only a lattice.');
     }
-    // Quests.turnedInCount imported via save flags to avoid a circular import.
+    // Quests.turnedInCount via save flags to avoid a circular import.
     final jobs = [
-      'quest:courier_pack:turned_in',
       'quest:drone_nest:turned_in',
       'quest:moonflower_draft:turned_in',
       'quest:city_east_nest:turned_in',
-      'quest:city_se_patrol:turned_in',
       'quest:city_west_cache:turned_in',
+      'quest:ruins_shrine_waymarker:turned_in',
+      'quest:core_console_reading:turned_in',
     ].where(flag).length;
     if (jobs >= 2) {
       parts.add(
@@ -339,15 +347,15 @@ class Adventure {
       id: 'quest_courier',
       title: 'Courier Pack Found',
       body:
-          'You recovered a sealed town pack on the west woods trail. Mira\'s board pays for proof that travellers still finish errands.',
-      where: 'Woods · west loop · Town board',
+          'You recovered a sealed town pack on the west woods trail. Proof that travellers still finish errands.',
+      where: 'Woods · west loop',
     ),
     ClueDef(
       id: 'quest_nest',
       title: 'Nest Cleared',
       body:
-          'Two UEC units held the west loop. Their slate called it a nest until recall. Lantern Town sleeps easier with them gone.',
-      where: 'Woods · west loop · Town board',
+          'Two UEC units held the west loop. Their slate called it a nest until recall. Asha sleeps easier with them gone.',
+      where: 'Woods · west loop · Asha',
     ),
     ClueDef(
       id: 'quest_nest_slate',
@@ -360,15 +368,15 @@ class Adventure {
       id: 'quest_moonflower',
       title: 'Moonflower Delivered',
       body:
-          'A bloom from the SCENT trail, cold as glass. Mira needed it for the sick — and for the lamps that keep Town honest.',
-      where: 'Woods · moonflowers · Town board',
+          'A bloom from the SCENT trail, cold as glass. Dao needed it for the sick — and for the lamps that keep Town honest.',
+      where: 'Woods · moonflowers · Dao',
     ),
     ClueDef(
       id: 'quest_city_east',
       title: 'East Lot Cleared',
       body:
-          'The east lot nest is quiet. Town sleeps easier knowing the road from the Lantern Gate is clear.',
-      where: 'City · east lot · Town board',
+          'The east lot nest is quiet. Mira sleeps easier knowing the road from the Lantern Gate is clear.',
+      where: 'City · east lot · Mira',
     ),
     ClueDef(
       id: 'quest_city_east_slate',
@@ -382,49 +390,49 @@ class Adventure {
       title: 'South Alley Sweep',
       body:
           'You recovered the dead patrol pad from the SE alley. Another quiet UEC hole plugged.',
-      where: 'City · SE alley · Town board',
+      where: 'City · SE alley',
     ),
     ClueDef(
       id: 'quest_city_west',
       title: 'West Cache Recovered',
       body:
-          'Trader salvage from the west alley, marked for Mira\'s board. The colony still shares.',
-      where: 'City · west alley · Town board',
+          'Trader salvage from the west alley, marked for Echo-7. The colony still shares.',
+      where: 'City · west alley · Echo-7',
     ),
     ClueDef(
       id: 'quest_ruins_landing',
       title: 'Paint Over Stone',
       body:
           '"Wipe authorized" in UEC paint on Aetherian stone, and someone\'s nails through it. Not everyone in the Coalition signed.',
-      where: 'Ruins · landing mark · Town board',
+      where: 'Ruins · landing mark',
     ),
     ClueDef(
       id: 'quest_ruins_sweep',
       title: 'Lattice Swept',
       body:
           'Three drones down around the old lattice. The scavengers are already back with their carts.',
-      where: 'Ruins · Town board',
+      where: 'Ruins · lattice',
     ),
     ClueDef(
       id: 'quest_ruins_shrine',
       title: 'Shrine Reading',
       body:
-          'The SW waymarker still logs an anomaly past the ruin. Mira pinned the reading next to her prices.',
-      where: 'Ruins · SW waymarker · Town board',
+          'The SW waymarker still logs an anomaly past the ruin. The Archivist filed the reading with the rest.',
+      where: 'Ruins · SW waymarker · Archivist',
     ),
     ClueDef(
       id: 'quest_core_static',
       title: 'Core Quieted',
       body:
           'Two drones fewer in Gaia\'s halls. For a moment the Core sounded almost like breathing.',
-      where: 'Core · Town board',
+      where: 'Core · halls',
     ),
     ClueDef(
       id: 'quest_core_console',
       title: 'Wipe Queue, in Writing',
       body:
-          'The console waits on a living neural match, and a remote wipe is already queued. Mira read it twice and said nothing.',
-      where: 'Core · console · Town board',
+          'The console waits on a living neural match, and a remote wipe is already queued. The Archivist read it twice and said nothing.',
+      where: 'Core · console · Archivist',
     ),
     ClueDef(
       id: 'ruins_keystone',

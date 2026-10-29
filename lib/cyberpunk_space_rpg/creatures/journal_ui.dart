@@ -825,7 +825,7 @@ class _JournalPanelState extends State<_JournalPanel> {
             const SizedBox(height: 6),
             if (Quests.activeJobs.isEmpty && Quests.turnedInCount == 0)
               const Text(
-                'Lantern Town\'s job board posts woods and city errands. Spend glimmer at Mira\'s stall for gear.',
+                'People post errands on Mira\'s board — turn them in with whoever asked. Spend glimmer at her stall for gear.',
                 style: TextStyle(color: _inkSoft, fontSize: 12, height: 1.55),
               )
             else ...[
@@ -837,7 +837,7 @@ class _JournalPanelState extends State<_JournalPanel> {
                     child: Text(
                       '· ${q.title} — ${switch (Quests.status(q.id)) {
                         QuestStatus.accepted => q.acceptedJournalLabel,
-                        QuestStatus.done => 'ready to turn in',
+                        QuestStatus.done => q.returnToLabel.toLowerCase(),
                         QuestStatus.turnedIn => 'done',
                         _ => '',
                       }}',

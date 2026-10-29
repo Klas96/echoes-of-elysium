@@ -10,6 +10,8 @@ import '../creatures/region_gates.dart';
 import '../game/adventure.dart';
 import '../game/game_state.dart';
 import '../game/memories.dart';
+import '../game/progression.dart';
+import '../game/quests.dart';
 import '../game/save_service.dart';
 import '../game/story_beats.dart';
 import '../game/well_rested.dart';
@@ -104,7 +106,7 @@ void useSpot(RoomData room, RoomSpot s) {
       _flavour(RoomText.counterTin);
     // --- archive ---
     case 'archive_library/archivist':
-      RoomPanel.show(const RoomPanelData(title: 'Archivist', color: _archivist, pages: [RoomText.archivist]));
+      _archivistTalk();
     case 'archive_library/book_choosing':
       _readBook(RoomText.bookChoosingTitle, RoomText.bookChoosing);
     case 'archive_library/book_lattice_keys':
@@ -215,6 +217,39 @@ void _ferroTalk() {
   ));
 }
 
+void _archivistTalk() {
+  final pages = <String>[RoomText.archivist];
+  final actions = <RoomAction>[];
+  for (final q in Quests.jobsForGiver('archivist')) {
+    final s = Quests.status(q.id);
+    if (s == QuestStatus.available) {
+      pages.add('${q.title}: ${q.blurb}');
+      actions.add(RoomAction('ACCEPT · ${q.title.toUpperCase()}', () {
+        Quests.accept(q.id);
+        SfxManager().playChime();
+        GameToast.show('JOB', body: q.hint, color: _archivist, compact: true);
+        _archivistTalk();
+      }));
+    } else if (s == QuestStatus.done) {
+      pages.add('You have what I asked for — ${q.title}. Hand it over.');
+      actions.add(RoomAction('TURN IN · ${q.title.toUpperCase()}', () {
+        if (Quests.turnIn(q.id)) {
+          SfxManager().playChime();
+          GameToast.show('JOB DONE',
+              body: '+${q.glimmer} glimmer', color: _archivist, compact: true);
+        }
+        _archivistTalk();
+      }));
+    }
+  }
+  RoomPanel.show(RoomPanelData(
+    title: 'Archivist',
+    color: _archivist,
+    pages: pages,
+    actions: actions,
+  ));
+}
+
 void _daoMenu(String greeting) {
   final free = Meals.freeBowlToday;
   final pages = <String>[
@@ -226,6 +261,33 @@ void _daoMenu(String greeting) {
       RoomAction(free ? '${m.name.toUpperCase()} · FREE' : '${m.name.toUpperCase()} · ${m.price}',
           () => _order(m), enabled: free || Bonds.glimmer >= m.price),
   ];
+  final moon = Quests.def('moonflower_draft');
+  final moonStatus = moon != null ? Quests.status(moon.id) : null;
+  if (moonStatus == QuestStatus.available) {
+    pages.add(
+        'I need a moonflower bloom from the Woods SCENT trail — for the sick, and for honest lamps. Accept the job and bring one back to me.');
+    actions.add(RoomAction('ACCEPT · MOONFLOWER', () {
+      Quests.accept('moonflower_draft');
+      SfxManager().playChime();
+      GameToast.show('JOB', body: 'Pick a moonflower bloom in the Woods', color: _dao, compact: true);
+      _daoMenu(greeting);
+    }));
+  } else if (moonStatus == QuestStatus.done) {
+    final hasBloom = Bonds.hasItem('moonflower_bloom');
+    pages.add(hasBloom
+        ? 'You have the bloom. Hand it over and I\'ll settle up.'
+        : 'Job\'s ready when you bring the moonflower bloom.');
+    if (hasBloom) {
+      actions.add(RoomAction('TURN IN · MOONFLOWER', () {
+        if (Quests.turnIn('moonflower_draft')) {
+          SfxManager().playChime();
+          GameToast.show('JOB DONE',
+              body: '+${moon!.glimmer} glimmer', color: _dao, compact: true);
+        }
+        _daoMenu(greeting);
+      }));
+    }
+  }
   if (DaoErrand.active && DaoErrand.carrying) {
     actions.add(RoomAction('GIVE MOONFLOWER', () {
       if (DaoErrand.deliver()) {
@@ -266,20 +328,102 @@ void _order(Meal m) {
 }
 
 void _stash() {
+  final gearIn = Stash.gear;
+  final spare = Stash.depositable;
+  final gearLine = gearIn.isEmpty
+      ? 'no gear'
+      : '${gearIn.length} gear · ${[
+          for (final id in gearIn) Progression.catalog[id]?.name ?? id
+        ].join(', ')}';
   RoomPanel.show(RoomPanelData(
     title: "Asha's chest",
     color: _asha,
     pages: const [RoomText.ashaNote],
-    footer: 'In the chest: ${Stash.stored} glimmer  ·  Carrying: ${Bonds.glimmer} glimmer',
+    footer:
+        'Chest: ${Stash.stored}◆ · $gearLine  ·  You: ${Bonds.glimmer}◆ · ${spare.length} spare',
     actions: [
-      RoomAction('DEPOSIT ALL', () {
+      RoomAction('DEPOSIT GLIMMER', () {
         final n = Stash.depositAll();
-        if (n > 0) GameToast.show('CHEST', body: 'Stored $n glimmer', color: _asha, compact: true);
+        if (n > 0) {
+          GameToast.show('CHEST', body: 'Stored $n glimmer', color: _asha, compact: true);
+        }
+        _stash();
       }, enabled: Bonds.glimmer > 0),
-      RoomAction('TAKE ALL', () {
+      RoomAction('TAKE GLIMMER', () {
         final n = Stash.withdrawAll();
-        if (n > 0) GameToast.show('CHEST', body: 'Took $n glimmer', color: _asha, compact: true);
+        if (n > 0) {
+          GameToast.show('CHEST', body: 'Took $n glimmer', color: _asha, compact: true);
+        }
+        _stash();
       }, enabled: Stash.stored > 0),
+      RoomAction('STORE GEAR (−${Stash.gearDepositFee}◆)', _stashDepositGear,
+          enabled: spare.isNotEmpty && Bonds.glimmer >= Stash.gearDepositFee),
+      RoomAction('TAKE GEAR', _stashWithdrawGear, enabled: gearIn.isNotEmpty),
+    ],
+  ));
+}
+
+void _stashDepositGear() {
+  final spare = Stash.depositable;
+  if (spare.isEmpty) {
+    _stash();
+    return;
+  }
+  RoomPanel.show(RoomPanelData(
+    title: 'Store spare gear',
+    color: _asha,
+    pages: [
+      'Each piece costs ${Stash.gearDepositFee} glimmer to bank. Equipped kit stays on you.',
+    ],
+    footer: 'You have ${Bonds.glimmer} glimmer',
+    actions: [
+      for (final id in spare)
+        RoomAction(
+          '${Progression.catalog[id]?.name ?? id}  −${Stash.gearDepositFee}◆',
+          () {
+            if (Stash.depositGear(id)) {
+              GameToast.show('CHEST',
+                  body: 'Stored ${Progression.catalog[id]?.name ?? id}',
+                  color: _asha,
+                  compact: true);
+            } else {
+              GameToast.show('CHEST',
+                  body: 'Need ${Stash.gearDepositFee} glimmer',
+                  color: _asha,
+                  compact: true);
+            }
+            _stash();
+          },
+          enabled: Bonds.glimmer >= Stash.gearDepositFee,
+        ),
+      RoomAction('BACK', _stash),
+    ],
+  ));
+}
+
+void _stashWithdrawGear() {
+  final ids = Stash.gear;
+  if (ids.isEmpty) {
+    _stash();
+    return;
+  }
+  RoomPanel.show(RoomPanelData(
+    title: 'Take gear',
+    color: _asha,
+    pages: const ['Pull kit back onto the road. Free.'],
+    footer: 'In the chest: ${ids.length}',
+    actions: [
+      for (final id in ids)
+        RoomAction(Progression.catalog[id]?.name ?? id, () {
+          if (Stash.withdrawGear(id)) {
+            GameToast.show('CHEST',
+                body: 'Took ${Progression.catalog[id]?.name ?? id}',
+                color: _asha,
+                compact: true);
+          }
+          _stash();
+        }),
+      RoomAction('BACK', _stash),
     ],
   ));
 }

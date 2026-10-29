@@ -2,7 +2,9 @@ import 'package:flutter/foundation.dart';
 
 import '../creatures/bonds.dart';
 import '../creatures/day_cycle.dart';
+import '../game/progression.dart';
 import '../game/save_service.dart';
+import '../game/trade.dart';
 import 'room_text.dart';
 
 /// In-game day counter (#31): Ferro's daily rumour and Dao's daily errand.
@@ -207,38 +209,96 @@ class DaoErrand {
   static void useFreeBowl() => _m.remove('freeDay');
 }
 
-/// Asha's chest (#31 + #32): a glimmer stash between trips. Minimal hook:
-/// #32 has no item stash yet, so this banks glimmer only
-/// (`extra.stashGlimmer`).
+/// Asha's chest (#31 + #32): bank glimmer and spare gear between trips.
+///
+/// Save keys: `extra.stashGlimmer` (int), `extra.stashGear` (list of gear ids).
+/// Depositing gear costs [gearDepositFee] glimmer each (economy sink).
 class Stash {
   Stash._();
-  static const _key = 'stashGlimmer';
+  static const _glimmerKey = 'stashGlimmer';
+  static const _gearKey = 'stashGear';
 
-  static int get stored => (SaveService.data.extra[_key] as num?)?.toInt() ?? 0;
+  /// Glimmer charged per gear piece put in the chest.
+  static const gearDepositFee = 2;
 
-  static void _set(int v) {
+  static int get stored =>
+      (SaveService.data.extra[_glimmerKey] as num?)?.toInt() ?? 0;
+
+  static List<String> get gear {
+    final raw = SaveService.data.extra[_gearKey];
+    if (raw is! List) return const [];
+    return [
+      for (final e in raw)
+        if (e is String && Progression.catalog.containsKey(e)) e,
+    ];
+  }
+
+  static void _setGlimmer(int v) {
     if (v <= 0) {
-      SaveService.data.extra.remove(_key);
+      SaveService.data.extra.remove(_glimmerKey);
     } else {
-      SaveService.data.extra[_key] = v;
+      SaveService.data.extra[_glimmerKey] = v;
     }
+  }
+
+  static void _setGear(List<String> ids) {
+    if (ids.isEmpty) {
+      SaveService.data.extra.remove(_gearKey);
+    } else {
+      SaveService.data.extra[_gearKey] = ids;
+    }
+  }
+
+  static void _bump() {
     Bonds.revision.value++;
+    Progression.revision.value++;
     SaveService.requestAutosave();
   }
 
   static int depositAll() {
     final n = Bonds.glimmer;
     if (n <= 0 || !Bonds.spendGlimmer(n)) return 0;
-    _set(stored + n);
+    _setGlimmer(stored + n);
+    _bump();
     return n;
   }
 
   static int withdrawAll() {
     final n = stored;
     if (n <= 0) return 0;
-    _set(0);
+    _setGlimmer(0);
     Bonds.addGlimmer(n);
+    _bump();
     return n;
+  }
+
+  /// Spare (unequipped) gear that can go in the chest.
+  static List<String> get depositable => Trade.spareGear;
+
+  /// Put one spare gear piece in the chest. Pays [gearDepositFee] glimmer.
+  /// Returns false if not spare, already stashed, or can't pay the fee.
+  static bool depositGear(String id) {
+    if (!depositable.contains(id) || gear.contains(id)) return false;
+    if (gearDepositFee > 0 && !Bonds.spendGlimmer(gearDepositFee)) {
+      return false;
+    }
+    SaveService.data.inventory = [
+      for (final g in Progression.inventory)
+        if (g != id) g,
+    ];
+    _setGear([...gear, id]);
+    _bump();
+    return true;
+  }
+
+  /// Take one gear piece out of the chest (free). Returns false if missing
+  /// or Kaela already owns that id.
+  static bool withdrawGear(String id) {
+    if (!gear.contains(id) || Progression.inventory.contains(id)) return false;
+    _setGear([for (final g in gear) if (g != id) g]);
+    SaveService.data.inventory = [...Progression.inventory, id];
+    _bump();
+    return true;
   }
 }
 

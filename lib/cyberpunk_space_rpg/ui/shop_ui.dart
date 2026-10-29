@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../creatures/bonds.dart';
 import '../game/progression.dart';
 import '../game/trade.dart';
+import '../game/well_rested.dart';
 
 bool get _isTouch =>
     defaultTargetPlatform == TargetPlatform.android ||
@@ -35,6 +36,15 @@ class Shop {
     ShopOffer('barrier_coil', 16),
     ShopOffer('lantern_charm', 20),
   ];
+
+  /// Field polish (#32 sink): glimmer → Well rested buff without finding a bed.
+  static const polishPrice = 12;
+
+  static bool buyFieldPolish() {
+    if (!Bonds.spendGlimmer(polishPrice)) return false;
+    WellRested.grant();
+    return true;
+  }
 
   static void show() {
     dismissOthers?.call();
@@ -85,8 +95,13 @@ class _ShopPanel extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: AnimatedBuilder(
-                animation: Listenable.merge(
-                    [Bonds.revision, Progression.revision, Trade.revision, Shop.tab]),
+                animation: Listenable.merge([
+                  Bonds.revision,
+                  Progression.revision,
+                  Trade.revision,
+                  Shop.tab,
+                  WellRested.remaining,
+                ]),
                 builder: (_, __) => Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -117,7 +132,7 @@ class _ShopPanel extends StatelessWidget {
                     ),
                     Text(
                       Shop.tab.value == 0
-                          ? 'Salvage and colony trinkets. Pay in glimmer.'
+                          ? 'Salvage, polish, and colony trinkets. Pay in glimmer.'
                           : 'Mira buys drone junk and spare kit. Changed your mind? Buy it back.',
                       style: const TextStyle(color: Colors.white54, fontSize: 12, height: 1.4),
                     ),
@@ -128,7 +143,7 @@ class _ShopPanel extends StatelessWidget {
                       _tabButton('SELL', 1),
                     ]),
                     const SizedBox(height: 12),
-                    if (Shop.tab.value == 0) ...Shop.offers.map(_offerRow) else ..._sellSection(),
+                    if (Shop.tab.value == 0) ..._buySection() else ..._sellSection(),
                     const SizedBox(height: 8),
                     Align(
                       alignment: Alignment.centerRight,
@@ -180,6 +195,29 @@ class _ShopPanel extends StatelessWidget {
         padding: const EdgeInsets.only(bottom: 10),
         child: Text(text, style: const TextStyle(color: Colors.white24, fontSize: 11)),
       );
+
+  List<Widget> _buySection() {
+    final canPolish = Bonds.glimmer >= Shop.polishPrice;
+    return [
+      _heading('SERVICE'),
+      _tradeRow(
+        title: 'Field polish',
+        blurb: WellRested.active
+            ? 'Already well rested (${WellRested.label}). Tops the buff up.'
+            : 'Quick kit wipe — same Well rested buff as a bed rest.',
+        button: '${Shop.polishPrice}◆',
+        onPressed: canPolish
+            ? () {
+                if (Shop.buyFieldPolish()) {
+                  // revision listenables refresh the panel.
+                }
+              }
+            : null,
+      ),
+      _heading('GEAR'),
+      ...Shop.offers.map(_offerRow),
+    ];
+  }
 
   List<Widget> _sellSection() {
     final junk = Trade.junk;
