@@ -20,6 +20,10 @@ class QuestDef {
   final int glimmer;
   final String? gearId;
   final String clueId;
+  /// Who hands the job out and takes the turn-in (`mira`, `asha`, …).
+  final String giver;
+  /// Display name for board / objective copy.
+  final String giverLabel;
   /// If set, turn-in requires this Bonds item (consumed).
   final String? requiresItem;
   /// How many nest-tagged drone kills complete this job (0 = examine-only).
@@ -45,6 +49,8 @@ class QuestDef {
     required this.region,
     required this.glimmer,
     required this.clueId,
+    required this.giver,
+    required this.giverLabel,
     this.gearId,
     this.requiresItem,
     this.nestKills = 0,
@@ -61,149 +67,103 @@ class QuestDef {
 
   /// Journal line while accepted, e.g. `in city`.
   String get acceptedJournalLabel => 'in $region';
+
+  /// Board / HUD when fieldwork is finished.
+  String get returnToLabel => 'Return to $giverLabel';
 }
 
-/// Lantern Town job board — woods, city, ruins and core loops.
+/// Character-driven jobs — fewer posts, each owned by an NPC (#32).
 class Quests {
   Quests._();
 
   static final revision = ValueNotifier<int>(0);
 
   static const catalog = <QuestDef>[
-    // --- Woods (Phase A) ---
-    QuestDef(
-      id: 'courier_pack',
-      title: 'Lost Courier Pack',
-      blurb:
-          'A runner dropped a sealed pack in the west hollow below the crash site. Bring word that it was found.',
-      hint: 'Woods · west hollow, on the loop below the crash site.',
-      region: 'woods',
-      glimmer: 25,
-      clueId: 'quest_courier',
-    ),
+    // --- Woods ---
     QuestDef(
       id: 'drone_nest',
       title: 'Quiet the Nest',
       blurb:
-          'UEC left a quiet nest mid-woods. Clear the drones and read their field slate.',
+          'Asha wants the west-loop nest quiet. Clear the pads and read their field slate.',
       hint: 'Woods · nest spur off the south-west bend of the west loop.',
       region: 'woods',
       glimmer: 10,
       gearId: 'scrap_plating',
       clueId: 'quest_nest',
+      giver: 'asha',
+      giverLabel: 'Asha',
       nestKills: 2,
     ),
     QuestDef(
       id: 'moonflower_draft',
       title: 'Moonflower for the Sick',
       blurb:
-          'Mira needs a moonflower bloom from the SCENT trail. Pick one and bring it home.',
+          'Dao needs a moonflower bloom from the SCENT trail for the sick — and for honest lamps.',
       hint: 'Woods · south-west trail, just west of Asha\'s camp.',
       region: 'woods',
       glimmer: 15,
       gearId: 'lantern_charm',
       clueId: 'quest_moonflower',
+      giver: 'dao',
+      giverLabel: 'Dao',
       requiresItem: 'moonflower_bloom',
     ),
-    // --- City (Phase B) ---
+    // --- City ---
     QuestDef(
       id: 'city_east_nest',
       title: 'East Lot Nest',
       blurb:
-          'UEC parked a nest on the east lot below the Lantern Gate. Quiet it before they reinforce.',
+          'Mira wants the east lot quiet before UEC reinforces the Lantern Gate road.',
       hint: 'City · east lot, south of the Lantern Gate.',
       region: 'city',
       glimmer: 18,
       gearId: 'pulse_optic',
       clueId: 'quest_city_east',
+      giver: 'mira',
+      giverLabel: 'Mira',
       nestKills: 2,
-    ),
-    QuestDef(
-      id: 'city_se_patrol',
-      title: 'South Alley Sweep',
-      blurb:
-          'A patrol slate went dark in the south-east patrol alley. Find it — and whatever is watching it.',
-      hint: 'City · patrol alley, between the east lot and Sentinel plaza.',
-      region: 'city',
-      glimmer: 20,
-      clueId: 'quest_city_se',
-      nestKills: 1,
     ),
     QuestDef(
       id: 'city_west_cache',
       title: 'West Alley Cache',
       blurb:
-          'Traders stashed a cache in the west lane above Echo district. Recover the marked crate.',
+          'Echo-7 marked a trader cache in the west lane. Recover it before scavengers do.',
       hint: 'City · west lane between Market Row and Echo district.',
       region: 'city',
       glimmer: 22,
       gearId: 'swarm_thrusters',
       clueId: 'quest_city_west',
+      giver: 'echo7',
+      giverLabel: 'Echo-7',
     ),
-    // --- Ruins (Phase C) ---
-    QuestDef(
-      id: 'ruins_landing_rubbing',
-      title: 'Paint Over Stone',
-      blurb:
-          'Someone scratched out a UEC order at the ruined landing. Read what is left before the rain takes it.',
-      hint: 'Ruins · landing mark by the north road.',
-      region: 'ruins',
-      glimmer: 18,
-      clueId: 'quest_ruins_landing',
-      examineId: 'ruins_landing_mark',
-      unlockFlags: ['sentinelDefeated', 'visited:ruins'],
-      lockedHint: 'Opens once the road to the Ruins is clear.',
-    ),
-    QuestDef(
-      id: 'ruins_lattice_sweep',
-      title: 'Lattice Sweep',
-      blurb:
-          'Drones keep circling the old lattice. Down three of them so the scavengers can work.',
-      hint: 'Ruins · any UEC drones.',
-      region: 'ruins',
-      glimmer: 24,
-      gearId: 'barrier_coil',
-      clueId: 'quest_ruins_sweep',
-      regionKills: 3,
-      unlockFlags: ['sentinelDefeated', 'visited:ruins'],
-      lockedHint: 'Opens once the road to the Ruins is clear.',
-    ),
+    // --- Ruins ---
     QuestDef(
       id: 'ruins_shrine_waymarker',
       title: 'Shrine Waymarker',
       blurb:
-          'A dead UEC pad points at an anomaly south-west. Find the waymarker and log the reading for Mira.',
+          'The Archivist wants a reading from the SW waymarker — an anomaly past the clearing.',
       hint: 'Ruins · SW waymarker past the clearing.',
       region: 'ruins',
       glimmer: 20,
       clueId: 'quest_ruins_shrine',
+      giver: 'archivist',
+      giverLabel: 'Archivist',
       examineId: 'ruins_dead_end',
       unlockFlags: ['sentinelDefeated', 'visited:ruins'],
       lockedHint: 'Opens once the road to the Ruins is clear.',
     ),
-    // --- Core (Phase D) ---
-    QuestDef(
-      id: 'core_static',
-      title: 'Core Static',
-      blurb:
-          'UEC drones hum in Gaia\'s halls. Quiet two so the Core can hear itself think.',
-      hint: 'Core · any UEC drones.',
-      region: 'core',
-      glimmer: 28,
-      clueId: 'quest_core_static',
-      regionKills: 2,
-      unlockFlags: ['ruins_gate_open', 'visited:core'],
-      lockedHint: 'Opens once the sealed gate in the Ruins is open.',
-    ),
+    // --- Core ---
     QuestDef(
       id: 'core_console_reading',
       title: 'Console Reading',
       blurb:
-          'Mira wants the wipe queue in writing. Read the Core console and bring back what it says.',
+          'The Archivist wants the wipe queue in writing. Read the Core console and bring word back.',
       hint: 'Core · the console by the dais.',
       region: 'core',
       glimmer: 30,
       clueId: 'quest_core_console',
+      giver: 'archivist',
+      giverLabel: 'Archivist',
       examineId: 'core_console',
       unlockFlags: ['ruins_gate_open', 'visited:core'],
       lockedHint: 'Opens once the sealed gate in the Ruins is open.',
@@ -234,6 +194,49 @@ class Quests {
       if (q.id == id) return q;
     }
     return null;
+  }
+
+  static List<QuestDef> jobsForGiver(String giver) => [
+        for (final q in catalog)
+          if (q.giver == giver) q,
+      ];
+
+  /// ACCEPT / TURN IN choices for an NPC talk (or Dao panel).
+  static List<DialogueChoice> dialogueChoicesFor(String giver) {
+    final out = <DialogueChoice>[];
+    for (final q in jobsForGiver(giver)) {
+      final s = status(q.id);
+      if (s == QuestStatus.available) {
+        out.add(DialogueChoice(
+          label: 'ACCEPT · ${q.title.toUpperCase()}',
+          acceptQuest: q.id,
+          replyLines: [
+            'Good. ${q.hint}',
+            'When it\'s done, come back to me — not the board.',
+          ],
+        ));
+      } else if (s == QuestStatus.done) {
+        final blocked =
+            q.requiresItem != null && !Bonds.hasItem(q.requiresItem!);
+        if (blocked) {
+          out.add(DialogueChoice(
+            label: 'ABOUT · ${q.title.toUpperCase()}',
+            replyLines: const [
+              'Bring the moonflower bloom and I\'ll settle up.',
+            ],
+          ));
+        } else {
+          out.add(DialogueChoice(
+            label: 'TURN IN · ${q.title.toUpperCase()}',
+            turnInQuest: q.id,
+            replyLines: [
+              'That\'s what I needed. ${q.glimmer} glimmer — thank you.',
+            ],
+          ));
+        }
+      }
+    }
+    return out;
   }
 
   static QuestStatus status(String id) {
@@ -277,7 +280,9 @@ class Quests {
         final progress = t > 0 ? ' (${kills(q.id)}/$t)' : '';
         return 'Job: ${q.title}$progress — ${q.hint}';
       }
-      if (s == QuestStatus.done) return 'Job ready: turn in "${q.title}" at the Town board';
+      if (s == QuestStatus.done) {
+        return 'Job ready: ${q.returnToLabel} — "${q.title}"';
+      }
     }
     return null;
   }
@@ -330,7 +335,9 @@ class Quests {
   /// An examine hotspot was used: completes accepted jobs that point at it.
   static void onExamined(String examineId) {
     for (final q in catalog) {
-      if (q.examineId == examineId && status(q.id) == QuestStatus.accepted) complete(q.id);
+      if (q.examineId == examineId && status(q.id) == QuestStatus.accepted) {
+        complete(q.id);
+      }
     }
   }
 

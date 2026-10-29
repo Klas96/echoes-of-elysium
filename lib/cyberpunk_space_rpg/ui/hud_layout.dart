@@ -43,22 +43,13 @@ class HudLayout {
   /// Bottom offset of the TALK / INTERACT / hold prompts.
   static double promptBottom(Size screen) => narrow(screen) ? 24 : 80;
 
-  /// +XP / loot pops: right column just above the prompt in portrait
-  /// (prompt spans nearly full width, so same bottom overlaps); corner in
-  /// landscape.
-  static double popsBottom(Size screen) =>
-      narrow(screen) ? promptBottom(screen) + 92 : 12;
-  /// Leave room for the 4-slot ability bar on the lower-right.
-  static double popsRight(Size screen) => isTouch ? 300.0 : 260.0;
-  static double popsMaxWidth(Size screen) =>
-      min(220, screen.width - popsRight(screen) - 32);
+  /// +XP / loot pops sit with the HP/XP block (beside bars on landscape,
+  /// under them on portrait) — not by the ability bar. See GameHud.
+  static double popsMaxWidth(Size screen) => min(160, screen.width * 0.42);
 
-  /// Toasts: above pops in portrait; above the talk/interact prompt in
-  /// landscape (pops stay bottom-right by the ability bar at [popsBottom]).
+  /// Toasts: clear of the interact prompt (portrait needs more lift).
   static double toastBottom(Size screen, {bool compact = false}) =>
-      narrow(screen)
-          ? popsBottom(screen) + 68
-          : promptBottom(screen) + 72;
+      narrow(screen) ? promptBottom(screen) + 160 : promptBottom(screen) + 72;
 
   /// Max width of the quest tracker (top right) next to the health block.
   static double trackerMaxWidth(double width) => min(220, max(140, (width - 24) * 0.48));

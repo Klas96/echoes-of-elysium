@@ -12,7 +12,7 @@ const _teal = Color(0xFF00FFCC);
 const _amber = Color(0xFFFFE08A);
 const _ink = Color(0xFF06060F);
 
-/// Lantern Town job board overlay.
+/// Lantern Town job board overlay — browse + accept. Turn-in is at the giver.
 class QuestBoard {
   static final open = ValueNotifier<bool>(false);
   static void Function(bool open)? onOpenChanged;
@@ -92,7 +92,7 @@ class _BoardPanel extends StatelessWidget {
                       ],
                     ),
                     const Text(
-                      'Errands for travellers — woods, city, ruins and core. Return here to turn in.',
+                      'Errands from people on the road. Accept here or from them — turn in at the giver.',
                       style: TextStyle(color: Colors.white54, fontSize: 12, height: 1.4),
                     ),
                     const SizedBox(height: 14),
@@ -123,11 +123,11 @@ class _BoardPanel extends StatelessWidget {
     final label = switch (s) {
       QuestStatus.available => 'ACCEPT',
       QuestStatus.accepted => q.acceptedBoardLabel,
-      QuestStatus.done => 'TURN IN',
+      QuestStatus.done => q.returnToLabel.toUpperCase(),
       QuestStatus.turnedIn => 'DONE',
       QuestStatus.locked => 'LOCKED',
     };
-    final canAct = s == QuestStatus.available || s == QuestStatus.done;
+    final canAccept = s == QuestStatus.available;
     final blockedTurnIn = s == QuestStatus.done &&
         q.requiresItem != null &&
         !Bonds.hasItem(q.requiresItem!);
@@ -152,7 +152,7 @@ class _BoardPanel extends StatelessWidget {
                       style: const TextStyle(
                           color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
                   const SizedBox(height: 2),
-                  Text(q.blurb,
+                  Text('From ${q.giverLabel} · ${q.blurb}',
                       style: const TextStyle(color: Colors.white54, fontSize: 11, height: 1.3)),
                   const SizedBox(height: 4),
                   Text(
@@ -160,41 +160,35 @@ class _BoardPanel extends StatelessWidget {
                         ? q.lockedHint
                         : s == QuestStatus.accepted && q.killTarget > 0
                             ? '${q.hint}  ${Quests.kills(q.id)}/${q.killTarget}'
-                            : s == QuestStatus.accepted || s == QuestStatus.done
+                            : s == QuestStatus.accepted
                                 ? q.hint
-                                : 'Reward: ${q.glimmer}◆${q.gearId != null ? ' + gear' : ''}',
+                                : s == QuestStatus.done
+                                    ? (blockedTurnIn
+                                        ? 'Bring the moonflower bloom to ${q.giverLabel}.'
+                                        : q.returnToLabel)
+                                    : 'Reward: ${q.glimmer}◆${q.gearId != null ? ' + gear' : ''}',
                     style: const TextStyle(color: _amber, fontSize: 10, letterSpacing: 0.5),
                   ),
-                  if (blockedTurnIn)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 4),
-                      child: Text('Bring the moonflower bloom to turn in.',
-                          style: TextStyle(color: Color(0xFFFF8866), fontSize: 10)),
-                    ),
                 ],
               ),
             ),
             const SizedBox(width: 10),
             TextButton(
-              onPressed: !canAct || blockedTurnIn
+              onPressed: !canAccept
                   ? null
                   : () {
-                      if (s == QuestStatus.available) {
-                        Quests.accept(q.id);
-                      } else if (s == QuestStatus.done) {
-                        Quests.turnIn(q.id);
-                      }
+                      Quests.accept(q.id);
                     },
               style: TextButton.styleFrom(
-                backgroundColor: _teal.withValues(alpha: canAct && !blockedTurnIn ? 0.18 : 0.06),
+                backgroundColor: _teal.withValues(alpha: canAccept ? 0.18 : 0.06),
                 side: BorderSide(
-                    color: _teal.withValues(alpha: canAct && !blockedTurnIn ? 0.8 : 0.25)),
+                    color: _teal.withValues(alpha: canAccept ? 0.8 : 0.25)),
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               ),
               child: Text(
                 label,
                 style: TextStyle(
-                  color: canAct && !blockedTurnIn ? _teal : Colors.white24,
+                  color: canAccept ? _teal : Colors.white24,
                   fontWeight: FontWeight.bold,
                   fontSize: 11,
                   letterSpacing: 1,
