@@ -903,12 +903,6 @@ class _JournalPanelState extends State<_JournalPanel> {
             ),
             const SizedBox(height: 8),
             _SystemBtn(
-              label: 'ITEMS',
-              color: const Color(0xFFFFE08A),
-              onTap: () => _setTab(Journal.tabItems),
-            ),
-            const SizedBox(height: 8),
-            _SystemBtn(
               label: 'TITLE SCREEN',
               color: _inkSoft,
               onTap: () async {
