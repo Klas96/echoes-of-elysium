@@ -85,9 +85,9 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
       Progression.level >= Progression.wardUnlockLevel;
   static bool get anchorUnlocked =>
       Progression.level >= Progression.anchorUnlockLevel;
-  /// Final click arrive (feet → exact click). Keep tight so Kaela walks
-  /// all the way to where you clicked.
-  static const double clickArrive = 3.5;
+  /// Final click arrive (feet → exact click). Kept modest; actual stop also
+  /// expands by one frame of travel so web dt spikes don't orbit the goal.
+  static const double clickArrive = 5.0;
   /// Intermediate A* waypoint arrive — a bit looser so lane slides don't jam.
   static const double waypointArrive = 9;
   /// World-space foe pick radius around the click (LoL-style click-to-attack).
@@ -148,6 +148,7 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
     _respawnT = 0;
     _teleported = false;
     pendingShot.value = null;
+    _angleSteer = false;
     setupMovementByJoystick(enabled: false);
     stopMove(forceIdle: true);
     respawnFade.value = true;
@@ -170,7 +171,11 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
     if (_respawnT >= fadeOutSeconds + fadeHoldSeconds + fadeInSeconds) {
       _respawnT = -1;
       _grace = respawnGraceSeconds;
-      setupMovementByJoystick(enabled: true);
+      _angleSteer = false;
+      setupMovementByJoystick(
+        moveType: MovementByJoystickType.direction,
+        enabled: true,
+      );
     }
   }
 
@@ -243,6 +248,8 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
   /// Progress watchdog: distance to current waypoint last frame / time stuck.
   double _wpLastDist = double.infinity;
   double _wpStuckT = 0;
+  /// Click-path uses Bonfire angle mode (full 360); WASD stays 8-way.
+  bool _angleSteer = false;
 
   CustomPlayer(Vector2 position) : super(
     position: position,
@@ -1027,7 +1034,7 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
     final goal = _moveGoal;
     if (goal == null) return;
     final to = goal - origin;
-    if (to.length <= clickArrive) {
+    if (to.length <= _finalArrive(dt)) {
       _finishClickMove();
     } else if (_steerFallback) {
       _steerToward(goal);
@@ -1038,6 +1045,9 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
       _finishClickMove();
     }
   }
+
+  /// Stop when feet are inside the click radius, or would overshoot this frame.
+  double _finalArrive(double dt) => max(clickArrive, speed * dt * 1.25);
 
   /// World-space center of the feet collision box (pathfinding agent).
   Vector2 get _feetCenter => rectCollision.centerVector2;
@@ -1139,14 +1149,14 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
     return i;
   }
 
-  double _arriveRadiusForWaypoint(int index) =>
-      index >= _waypoints.length - 1 ? clickArrive : waypointArrive;
+  double _arriveRadiusForWaypoint(int index, double dt) =>
+      index >= _waypoints.length - 1 ? _finalArrive(dt) : waypointArrive;
 
   /// Step along [_waypoints]; hard-stops when the list is done.
   void _followWaypoints(Vector2 origin, double dt) {
     while (_wpIndex < _waypoints.length &&
         origin.distanceTo(_waypoints[_wpIndex]) <=
-            _arriveRadiusForWaypoint(_wpIndex)) {
+            _arriveRadiusForWaypoint(_wpIndex, dt)) {
       _wpIndex++;
       _wpStuckT = 0;
       _wpLastDist = double.infinity;
@@ -1294,8 +1304,20 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
     return null;
   }
 
+  void _setAngleSteer(bool on) {
+    if (_angleSteer == on) return;
+    _angleSteer = on;
+    setupMovementByJoystick(
+      moveType: on
+          ? MovementByJoystickType.angle
+          : MovementByJoystickType.direction,
+      enabled: true,
+    );
+  }
+
   void _steerToward(Vector2? worldTarget) {
     if (worldTarget == null) {
+      _setAngleSteer(false);
       onJoystickChangeDirectional(JoystickDirectionalEvent(
         directional: JoystickMoveDirectional.IDLE,
         intensity: 0,
@@ -1311,32 +1333,15 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
       _steerToward(null);
       return;
     }
-    // 8-way stick so Bonfire's MovementByJoystick stays happy.
-    final n = d.normalized();
-    final JoystickMoveDirectional dir;
-    if (n.y < -0.4 && n.x < -0.4) {
-      dir = JoystickMoveDirectional.MOVE_UP_LEFT;
-    } else if (n.y < -0.4 && n.x > 0.4) {
-      dir = JoystickMoveDirectional.MOVE_UP_RIGHT;
-    } else if (n.y > 0.4 && n.x < -0.4) {
-      dir = JoystickMoveDirectional.MOVE_DOWN_LEFT;
-    } else if (n.y > 0.4 && n.x > 0.4) {
-      dir = JoystickMoveDirectional.MOVE_DOWN_RIGHT;
-    } else if (n.y < -0.4) {
-      dir = JoystickMoveDirectional.MOVE_UP;
-    } else if (n.y > 0.4) {
-      dir = JoystickMoveDirectional.MOVE_DOWN;
-    } else if (n.x < -0.4) {
-      dir = JoystickMoveDirectional.MOVE_LEFT;
-    } else if (n.x > 0.4) {
-      dir = JoystickMoveDirectional.MOVE_RIGHT;
-    } else if (n.y.abs() >= n.x.abs()) {
-      dir = n.y < 0 ? JoystickMoveDirectional.MOVE_UP : JoystickMoveDirectional.MOVE_DOWN;
-    } else {
-      dir = n.x < 0 ? JoystickMoveDirectional.MOVE_LEFT : JoystickMoveDirectional.MOVE_RIGHT;
-    }
+    // Continuous angle (not 8-way): quantized stick directions circle the
+    // last few pixels of a click, especially on web with uneven frame dt.
+    _setAngleSteer(true);
+    var angle = atan2(d.y, d.x);
+    // Bonfire angle mode ignores radAngle == 0 (falls back to directional).
+    if (angle.abs() < 1e-6) angle = 1e-6;
     onJoystickChangeDirectional(JoystickDirectionalEvent(
-      directional: dir,
+      directional: JoystickMoveDirectional.MOVE_RIGHT,
+      radAngle: angle,
       intensity: 1,
       isKeyboard: true,
     ));
@@ -1485,6 +1490,7 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
 
   /// Re-apply Bonfire velocity from keys still held (new map / focus return).
   void syncMovementFromKeyboard() {
+    _setAngleSteer(false);
     final keys = HardwareKeyboard.instance.logicalKeysPressed;
     final up = keys.contains(LogicalKeyboardKey.keyW) ||
         keys.contains(LogicalKeyboardKey.arrowUp);

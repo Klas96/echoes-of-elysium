@@ -1,0 +1,12 @@
+---
+description: How to open/run the game for playtesting
+alwaysApply: true
+---
+
+# Open game
+
+When the user says "open game", "run game", "launch game", or similar:
+
+- Open it in the **browser** with `flutter run -d chrome` (not Linux desktop).
+- If a previous Flutter run is still attached, stop it first, then relaunch Chrome.
+- Only use `flutter run -d linux` when they explicitly ask for the desktop/Linux build.

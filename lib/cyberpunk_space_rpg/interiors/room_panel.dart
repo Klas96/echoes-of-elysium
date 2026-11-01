@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../ui/hud_layout.dart';
+
 /// A button on a [RoomPanelData]: run [onTap]; the panel closes afterwards
 /// unless the action opened another panel.
 @immutable
@@ -123,58 +125,99 @@ class RoomPanelLayer extends StatelessWidget {
         final i = RoomPanel.page.value.clamp(0, d.pages.length - 1);
         final last = i >= d.pages.length - 1;
         final actions = last ? d.actions : const <RoomAction>[];
+        final screen = MediaQuery.sizeOf(context);
+        final outer = HudLayout.dialogueOuter(screen);
+        final pad = HudLayout.dialoguePadding(screen);
+        final compact = HudLayout.dialogueCompact(screen);
         return Positioned(
-          bottom: 20,
-          left: 16,
-          right: 16,
+          bottom: outer.bottom,
+          left: outer.left,
+          right: outer.right,
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 560),
+              constraints: BoxConstraints(
+                maxWidth: HudLayout.dialogueMaxWidth(screen),
+                maxHeight: HudLayout.dialogueMaxHeight(screen),
+              ),
               child: Container(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 10),
+                padding: pad,
                 decoration: BoxDecoration(
                   color: const Color(0xFF0B0806).withValues(alpha: 0.95),
                   border: Border.all(color: d.color, width: 1.5),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(compact ? 8 : 10),
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(d.title.toUpperCase(),
-                        style: TextStyle(
-                            color: d.color, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 3)),
-                    const SizedBox(height: 8),
-                    Text(d.pages[i],
-                        style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.82),
-                            fontSize: 15,
-                            height: 1.6,
-                            fontStyle: d.book ? FontStyle.italic : FontStyle.normal)),
-                    if (d.footer.isNotEmpty && last) ...[
-                      const SizedBox(height: 6),
-                      Text(d.footer, style: const TextStyle(color: Colors.white38, fontSize: 11, height: 1.4)),
-                    ],
-                    if (actions.isNotEmpty) ...[
-                      const SizedBox(height: 10),
-                      Wrap(spacing: 8, runSpacing: 8, children: [
-                        for (final a in actions) _PanelButton(a, d.color),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(d.title.toUpperCase(),
+                          style: TextStyle(
+                              color: d.color,
+                              fontSize: HudLayout.dialogueNameFont(screen),
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: compact ? 2 : 3)),
+                      SizedBox(height: compact ? 6 : 8),
+                      Text(d.pages[i],
+                          style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.82),
+                              fontSize: HudLayout.dialogueBodyFont(screen),
+                              height: HudLayout.dialogueBodyHeight(screen),
+                              fontStyle:
+                                  d.book ? FontStyle.italic : FontStyle.normal)),
+                      if (d.footer.isNotEmpty && last) ...[
+                        SizedBox(height: compact ? 4 : 6),
+                        Text(d.footer,
+                            style: TextStyle(
+                                color: Colors.white38,
+                                fontSize: compact ? 10 : 11,
+                                height: 1.4)),
+                      ],
+                      if (actions.isNotEmpty) ...[
+                        SizedBox(height: compact ? 8 : 10),
+                        Wrap(spacing: 6, runSpacing: 6, children: [
+                          for (final a in actions)
+                            _PanelButton(a, d.color, compact: compact),
+                        ]),
+                      ],
+                      Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+                        TextButton(
+                          onPressed: RoomPanel.close,
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: compact ? 8 : 12,
+                                vertical: compact ? 4 : 8),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: Text(
+                              actions.isNotEmpty
+                                  ? 'LEAVE'
+                                  : (last ? 'CLOSE' : 'SKIP'),
+                              style: TextStyle(
+                                  color: Colors.white38,
+                                  fontSize: compact ? 10 : 11,
+                                  letterSpacing: 1)),
+                        ),
+                        if (!last)
+                          TextButton(
+                            onPressed: RoomPanel.advance,
+                            style: TextButton.styleFrom(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: compact ? 8 : 12,
+                                  vertical: compact ? 4 : 8),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            child: Text('NEXT ›',
+                                style: TextStyle(
+                                    color: d.color,
+                                    fontSize: compact ? 11 : 12,
+                                    letterSpacing: 1)),
+                          ),
                       ]),
                     ],
-                    Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-                      TextButton(
-                        onPressed: RoomPanel.close,
-                        child: Text(actions.isNotEmpty ? 'LEAVE' : (last ? 'CLOSE' : 'SKIP'),
-                            style: const TextStyle(color: Colors.white38, fontSize: 11, letterSpacing: 1)),
-                      ),
-                      if (!last)
-                        TextButton(
-                          onPressed: RoomPanel.advance,
-                          child: Text('NEXT ›',
-                              style: TextStyle(color: d.color, fontSize: 12, letterSpacing: 1)),
-                        ),
-                    ]),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -188,7 +231,8 @@ class RoomPanelLayer extends StatelessWidget {
 class _PanelButton extends StatelessWidget {
   final RoomAction action;
   final Color color;
-  const _PanelButton(this.action, this.color);
+  final bool compact;
+  const _PanelButton(this.action, this.color, {this.compact = false});
 
   @override
   Widget build(BuildContext context) {
@@ -196,14 +240,19 @@ class _PanelButton extends StatelessWidget {
     return GestureDetector(
       onTap: () => RoomPanel.pick(action),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: EdgeInsets.symmetric(
+            horizontal: compact ? 10 : 12, vertical: compact ? 6 : 8),
         decoration: BoxDecoration(
           color: c.withValues(alpha: action.enabled ? 0.16 : 0.05),
           border: Border.all(color: c),
           borderRadius: BorderRadius.circular(4),
         ),
         child: Text(action.label,
-            style: TextStyle(color: c, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+            style: TextStyle(
+                color: c,
+                fontSize: compact ? 11 : 12,
+                fontWeight: FontWeight.bold,
+                letterSpacing: compact ? 1.0 : 1.2)),
       ),
     );
   }

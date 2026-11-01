@@ -85,7 +85,7 @@ class Quests {
       title: 'Quiet the Nest',
       blurb:
           'Asha wants the west-loop nest quiet. Clear the pads and read their field slate.',
-      hint: 'Woods · nest spur off the south-west bend of the west loop.',
+      hint: 'Woods · long spur south off the west-loop bend (past Asha\'s west trail).',
       region: 'woods',
       glimmer: 10,
       gearId: 'scrap_plating',
@@ -212,7 +212,7 @@ class Quests {
           acceptQuest: q.id,
           replyLines: [
             'Good. ${q.hint}',
-            'When it\'s done, come back to me — not the board.',
+            'When it\'s done, come find me again.',
           ],
         ));
       } else if (s == QuestStatus.done) {
@@ -290,8 +290,27 @@ class Quests {
   static bool accept(String id) {
     if (status(id) != QuestStatus.available) return false;
     _d.setFlag(_accepted(id));
+    // Fieldwork done early (e.g. nest cleared before talking to Asha)
+    // should land straight on turn-in.
+    _completeIfFieldworkMet(id);
     _bump();
     return true;
+  }
+
+  static String _examinedFlag(String examineId) => 'quest:$examineId:examined';
+
+  /// After accept, mark done when prior kills / examines already satisfy the job.
+  static void _completeIfFieldworkMet(String id) {
+    final q = def(id);
+    if (q == null) return;
+    if (!_d.flag(_accepted(id))) return;
+    if (_d.flag(_done(id)) || _d.flag(_turnedIn(id))) return;
+    if (q.killTarget > 0 && kills(id) >= q.killTarget) {
+      complete(id);
+      return;
+    }
+    final ex = q.examineId;
+    if (ex != null && _d.flag(_examinedFlag(ex))) complete(id);
   }
 
   static bool complete(String id) {
@@ -325,17 +344,24 @@ class Quests {
     _countKill(q);
   }
 
-  /// Every drone kill: advances accepted "clear N drones in <region>" jobs.
+  /// Destroying a nest spawn pad also quietens the nest (same kill bucket).
+  /// Avoids softlock if pads go down before the job is accepted.
+  static void onNestPadDestroyed(String questId) {
+    onNestDroneKilled(questId);
+  }
+
+  /// Every drone kill: advances "clear N drones in <region>" jobs.
   static void onDroneKilled(String regionId) {
     for (final q in catalog) {
       if (q.regionKills > 0 && q.region == regionId) _countKill(q);
     }
   }
 
-  /// An examine hotspot was used: completes accepted jobs that point at it.
+  /// An examine hotspot was used: remember it, and complete once accepted.
   static void onExamined(String examineId) {
+    _d.setFlag(_examinedFlag(examineId));
     for (final q in catalog) {
-      if (q.examineId == examineId && status(q.id) == QuestStatus.accepted) {
+      if (q.examineId == examineId && _d.flag(_accepted(q.id))) {
         complete(q.id);
       }
     }
@@ -343,12 +369,12 @@ class Quests {
 
   static void _countKill(QuestDef q) {
     final questId = q.id;
-    if (!_d.flag(_accepted(questId))) return;
-    if (_d.flag(_done(questId))) return;
+    if (_d.flag(_done(questId)) || _d.flag(_turnedIn(questId))) return;
+    // Record kills even before accept — clearing the nest early still counts.
     for (var i = 1; i <= q.killTarget; i++) {
       if (!_d.flag(_killFlag(questId, i))) {
         _d.setFlag(_killFlag(questId, i));
-        if (i >= q.killTarget) {
+        if (i >= q.killTarget && _d.flag(_accepted(questId))) {
           complete(questId);
         } else {
           _bump();

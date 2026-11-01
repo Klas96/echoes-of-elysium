@@ -28,7 +28,8 @@ rectangle = spawn area, pad at centre), sentinel, checkpoint (property label). O
 world px, width/height = component size (same coords the code used before).
 
 M2 (woods only): creature (species, radius in tiles, netted, gated), stump
-(the vine fox's sweetroot), pebble (the brookling's river pebble), stash
+(hollow stump scenery), sweetroot (vine fox pickup on grass), pebble
+(the brookling's river pebble), stash
 (glimmer), moonflower (decor), glyph (glyph id), hidden (glimmer; brookling DIG),
 hiddenpath (brambles the vine fox's SCENT opens), boulder (2x2 tiles,
 pushX/pushY in tiles; needs the stone turtle's PUSH) and darkzone (a rect of
@@ -918,6 +919,7 @@ class Level:
         col = dict(spawn=(0, 255, 0), portal=(0, 255, 255), npc=(255, 255, 0), fragment=(200, 80, 255),
                    health=(0, 255, 120), drone=(255, 60, 60), dronespawn=(255, 90, 140), sentinel=(255, 120, 0),
                    checkpoint=(120, 255, 220), creature=(255, 170, 255), stump=(200, 140, 60),
+                   sweetroot=(255, 180, 80),
                    boulder=(160, 160, 160), stash=(255, 230, 90), glyph=(90, 255, 255), hidden=(255, 140, 200),
                    darkzone=(40, 40, 120), pebble=(140, 200, 255), moonflower=(240, 240, 255),
                    hiddenpath=(255, 120, 200), examine=(140, 220, 255))
@@ -939,7 +941,7 @@ class Level:
 
 # --------------------------------------------------------------- sizes used by the code
 SZ = dict(spawn=32, portal=96, npc=30, fragment=18, health=16, drone=24, sentinel=48, checkpoint=32,
-          creature=32, stump=64, stash=32, glyph=24, hidden=24, pebble=16, moonflower=16, examine=20,
+          creature=32, stump=64, sweetroot=32, stash=32, glyph=24, hidden=24, pebble=16, moonflower=16, examine=20,
           storygate=64, entry=32)
 # Travel light (crystal + pool): centred on the portal tile. Keep in sync with
 # PortalComponent.lightW / lightH.
@@ -1242,6 +1244,8 @@ def map1():
         hollow    /     │              \\     east grove (frag)
           │      /      │               \\    │
         sw bend ── ASHA'S CAMP ──── brook ── south meadow ── exit S → City
+          │
+        nest spur (long south walk → UEC pads)
 
     Gaia waits at the crash (NW), Asha at her camp in the middle south, the
     two portal fragments sit on opposite sides (pond NE, east grove E), and
@@ -1249,13 +1253,17 @@ def map1():
     reached two ways, so the trip reads as crossing a forest, not walking a
     hallway south. The south exit keeps Woods↔City travel unchanged."""
     ts = Tileset("woods")
-    lv = Level(ts, 56, 44, seed=11)
+    # Height 54 (+10 vs old 44): longer nest spur south before the pads, and
+    # the City exit stays on the south edge.
+    lv = Level(ts, 56, 54, seed=11)
     lv.rings_min = 2
+    south = lv.H - 0.5  # path punch to the south edge
     P = dict(spawn=(8, 9), gaia=(11, 8), h1=(17, 12), cabin=(19.5, 7.5), ridge=(31, 6),
              pond=(42, 10), f2=(37.41, 11.84), cross=(27, 20), d2=(34, 15.5), ebend=(36, 24),
              egrove=(48.5, 23), f4=(51, 29.5), whollow=(6, 23), f1=(5.5, 21.5), hollow=(13, 19),
-             swbend=(9, 34), nest=(4.5, 39), asha=(24, 33), h2=(23, 26), brook=(32, 35),
-             meadow=(42, 36), h3=(44.5, 30.5), exit=(42, 40), f3=(15, 36), d1=(16, 33.5))
+             swbend=(9, 34), nestbend=(6, 42), nest=(4.5, 49), asha=(24, 33), h2=(23, 26),
+             brook=(32, 35), meadow=(42, 36), h3=(44.5, 30.5), exit=(42, 50), f3=(15, 36),
+             d1=(16, 33.5))
     trails = [
         ["spawn", "h1", "cross"],                   # crash → crossroads
         ["h1", "cabin"],
@@ -1269,19 +1277,20 @@ def map1():
         ["ebend", "brook"],
         ["spawn", "whollow", "swbend", "asha"],     # ring 4: the west loop
         ["whollow", "hollow"],                      # mossy hollow (puffcap)
-        ["swbend", "nest"],                         # nest spur (town job)
+        ["swbend", "nestbend", "nest"],             # nest spur (Asha job) — long south walk
         ["meadow", "exit"],
     ]
     def route_pts(r):
         return [P[k] for k in r]
     for r in trails:
         carve_route(lv, route_pts(r), 2.0)
-    big = dict(cross=5.5, asha=4.6, pond=5.2, meadow=4.6, spawn=4.6, egrove=4.4, whollow=3.8, nest=4.2)
+    big = dict(cross=5.5, asha=4.6, pond=5.2, meadow=4.6, spawn=4.6, egrove=4.4, whollow=3.8,
+               nest=4.8, nestbend=2.8)
     for k in ("spawn", "h1", "cabin", "ridge", "pond", "cross", "d2", "ebend", "egrove", "whollow",
-              "hollow", "swbend", "nest", "asha", "h2", "brook", "meadow", "f3"):
+              "hollow", "swbend", "nestbend", "nest", "asha", "h2", "brook", "meadow", "f3"):
         disk_carve(lv.floor, *P[k], big.get(k, 3.2))
     rect_carve(lv.floor, 16, 2, 24, 9)                # ranger cabin clearing
-    seg_carve(lv.floor, P["exit"], (P["exit"][0], 43.5), 2.0)
+    seg_carve(lv.floor, P["exit"], (P["exit"][0], south), 2.0)
     # secret pockets (walls >= 2 thick around them; see the gates below)
     disk_carve(lv.floor, 4.5, 6.5, 3.4)                # crash scar under the wreck
     disk_carve(lv.floor, 3.5, 30.5, 2.2)              # LIGHT pocket off the west loop
@@ -1335,15 +1344,17 @@ def map1():
     wall[26:29, 49] = True
     wall[26:29, 52] = True
     # Main-route PUSH gate: the south road narrows to a 3-tile neck (rows
-    # 40-41, x 40-42) that the fallen boulder fills
-    wall[40:42, 43] = True
+    # 50-51, x 40-42) that the fallen boulder fills — seal east (and west)
+    # so the nest spur / meadow flanks cannot walk around it.
+    wall[50:52, 43] = True
+    wall[50:52, 39] = True
     lv.floor = ~wall
     water = np.zeros_like(wall); rect_carve(water, 41, 7, 46, 10); water &= lv.floor
     lv.mist = [(42.5, 8.0), (44.5, 8.6)]
     path = np.zeros_like(wall)
     for r in trails:
         carve_route(lv, route_pts(r), 1.1, path)
-    seg_carve(path, P["exit"], (P["exit"][0], 43.5), 1.1)
+    seg_carve(path, P["exit"], (P["exit"][0], south), 1.1)
     disk_carve(path, *P["cross"], 2.6)               # the crossroads reads as a plaza
     path &= lv.floor & ~water
     path = clean_walls(path, border=0) & path
@@ -1426,9 +1437,10 @@ def map1():
     place(lv, "health", *P["h3"], was=(20, 33.5))
     place(lv, "drone", *P["d1"], startAngle=0.0, kind="scout")
     place(lv, "drone", *P["d2"], startAngle=2.1, kind="sniper")
-    # Nest spur: one-kind pads (GH #66) — scout + swarm for the Town nest job.
+    # Nest spur: one-kind pads (GH #66) — scout + swarm for Asha's nest job.
+    # Keep both pads inside the nest clearing (second used to sit on the rim).
     place_dronespawn(lv, *P["nest"], kind="scout", nest=True, max=2, interval=7)
-    place_dronespawn(lv, P["nest"][0] + 1.6, P["nest"][1] + 0.2, kind="swarm", nest=True, max=1, interval=9)
+    place_dronespawn(lv, P["nest"][0] + 1.2, P["nest"][1] - 0.2, kind="swarm", nest=True, max=1, interval=9)
     # South road out of the woods → City (walk off the map).
     ex = int(P["exit"][0])
     open_map_edge(lv, "south", ex, half=2)
@@ -1506,11 +1518,12 @@ def map1():
 # tiles that later get creatures / moonflowers / secrets / quest props (no props there)
 WOODS_RESERVED = ((43.5, 8.5), (44, 12.5), (47.5, 20.5), (13, 19), (40, 12.5), (28, 12.5),
                   (24.5, 7.5), (26.5, 8), (29.5, 8.2), (26.5, 11.5), (29.5, 11.5), (27, 13.5),
-                  (5.5, 21.5), (6.1, 21.2), (4.9, 22.5), (4.5, 39), (6.1, 38.6), (15.5, 36),
-                  (3.5, 30.5), (13.5, 12.5), (37.5, 26), (14, 38), (13, 17), (32.5, 5.5))
+                  (5.5, 21.5), (6.1, 21.2), (4.9, 22.5), (4.5, 49), (6.1, 48.6), (15.5, 36),
+                  (3.5, 30.5), (13.5, 12.5), (37.5, 26), (14, 38), (13, 17), (14.5, 18.5),
+                  (6.0, 42.0), (32.5, 5.5))
 
 # keep props off the main-route gates (x0, y0, x1, y1 tiles, end exclusive)
-GATE_CLEAR = ((35, 10, 40, 15), (49, 24, 53, 31), (39, 38, 44, 42))
+GATE_CLEAR = ((35, 10, 40, 15), (49, 24, 53, 31), (39, 48, 44, 52))
 
 def woods_main_gates(lv):
     """Three friends to get through the Woods (brief-woods-befriend-gates):
@@ -1521,8 +1534,8 @@ def woods_main_gates(lv):
     lv.obj("abilitygate", 36 * T, 11 * T, 3 * T, 2 * T, kind="grotto", gate="woods_grotto",
            ability="light", creature="glowmoth")
     lv.obj("abilitygate", 50 * T, 26 * T, 2 * T, 2 * T, kind="bramble", gate="woods_brambles",
-           ability="scent", creature="vinefox", needs="stump")
-    lv.obj("abilitygate", 40 * T, 40 * T, 3 * T, 2 * T, kind="boulder", gate="woods_boulder",
+           ability="scent", creature="vinefox", needs="sweetroot")
+    lv.obj("abilitygate", 40 * T, 50 * T, 3 * T, 2 * T, kind="boulder", gate="woods_boulder",
            ability="push", creature="stoneturtle")
 
 def woods_creatures_and_secrets(lv, nooks):
@@ -1544,8 +1557,9 @@ def woods_creatures_and_secrets(lv, nooks):
     lv.obj("hiddenpath", 27 * T, 9 * T, 2 * T, 2 * T, pid=f"{29 * T}_{30 * T}")
     for (fx, fy) in ((24.5, 7.5), (26.5, 8), (29.5, 8.2), (26.5, 11.5), (29.5, 11.5), (27, 13.5)):
         place(lv, "moonflower", fx, fy)
-    # the vine fox's sweetroot, under a 2x2 stump in the mossy hollow
+    # hollow stump + sweetroot on grass just south of it (clearer than on-stump art)
     lv.obj("stump", 12 * T, 16 * T, 2 * T, 2 * T)
+    place(lv, "sweetroot", 14.5, 18.5)
     # PUSH: 3×2 road boulders (exit stone). Open in place — pushX unused.
     (b1x, b1y), (b2x, b2y) = nooks
     boulder(lv, b1x, b1y, 0, 0)

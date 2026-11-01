@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../creatures/bonds.dart';
 import '../game/game_debug.dart';
 import '../game/progression.dart';
+import '../game/quests.dart';
 import '../game/save_service.dart';
 import '../ui/mmo_feedback.dart';
 import 'damage_number.dart';
@@ -131,6 +132,8 @@ class DroneSpawnPoint extends GameDecoration {
     const glimmer = 10;
     Bonds.addGlimmer(glimmer);
     Progression.grantXp(xp, reason: 'UEC spawn pad offline.');
+    final nest = nestQuestId;
+    if (nest != null && nest.isNotEmpty) Quests.onNestPadDestroyed(nest);
     MmoFeedback.pushPop('SPAWN DOWN', color: const Color(0xFFFF8866));
     MmoFeedback.pushPop('+$glimmer ◆', color: const Color(0xFF88DDFF));
     gameRef.add(ExplosionEffect(padCenter));

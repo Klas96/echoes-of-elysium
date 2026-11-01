@@ -236,6 +236,7 @@ void main() {
       expect(count('darkzone'), inInclusiveRange(1, 2));
       expect(count('hidden') + count('hiddenpath'), greaterThanOrEqualTo(2));
       expect(count('stump'), 1);
+      expect(count('sweetroot'), 1);
       expect(count('pebble'), 1);
       // Designer's 2x2 stump and bramble art fill their objects exactly
       for (final o in objects.where((o) => o['name'] == 'stump' || o['name'] == 'hiddenpath')) {

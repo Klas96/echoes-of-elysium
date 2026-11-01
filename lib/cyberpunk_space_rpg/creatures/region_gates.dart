@@ -151,7 +151,7 @@ const gateDefs = <String, GateDef>{
     creature: 'vinefox',
     title: 'BRAMBLES',
     blockedHint: 'Thorns. Something with a good nose could find a way through.',
-    gaiaHint: 'Foxes love sweetroot. I felt one growing in the western hollow.',
+    gaiaHint: 'Foxes love sweetroot. I felt one on the grass by the hollow stump, west of the crossroads.',
     action: 'SNIFF A WAY THROUGH',
     openedToast: 'Path found',
     mapId: 'world',
@@ -172,7 +172,7 @@ const gateDefs = <String, GateDef>{
     openedToast: 'Boulder moved',
     mapId: 'world',
     // the boulder and the road south of it, down to the map edge
-    zones: [TileRect(38, 40, 47, 44)],
+    zones: [TileRect(38, 50, 47, 54)],
   ),
 };
 

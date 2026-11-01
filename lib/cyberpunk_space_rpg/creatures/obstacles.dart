@@ -644,18 +644,14 @@ class HiddenPath extends GameComponent with Interactable, PointOfInterest {
   }
 }
 
-/// The vine fox's sweetroot under Designer's 2x2 stump (sweetroot_stump.png,
-/// then sweetroot_stump_plain.png once picked). Only the trunk base collides;
-/// pick it standing just below the trunk.
+/// Hollow stump scenery in the mossy hollow (sweetroot sits on grass nearby
+/// as [SweetrootDrop]). Only the trunk base collides.
 class SweetrootStump extends GameComponent with Interactable {
   /// From sweetroot_stump art (64x64 art px). Mutable for mask editor.
   static Rect collider = const Rect.fromLTWH(16, 30, 32, 25);
   static final pickAt = Vector2(31, 59);
-  static final tuber = Vector2(31, 45);
 
-  Sprite? _full;
   Sprite? _plain;
-  double _t = 0;
 
   SweetrootStump(Vector2 position, [Vector2? size]) {
     this.position = position;
@@ -664,11 +660,8 @@ class SweetrootStump extends GameComponent with Interactable {
 
   double get _k => size.x / 64;
 
-  bool get _taken => Bonds.hasItem('sweetroot') || Bonds.usedItem('sweetroot');
-
   @override
   Future<void> onLoad() async {
-    _full = await Sprite.load('obstacles/sweetroot_stump.png');
     _plain = await Sprite.load('obstacles/sweetroot_stump_plain.png');
     applyColliderRects([collider]);
     return super.onLoad();
@@ -692,33 +685,69 @@ class SweetrootStump extends GameComponent with Interactable {
   @override
   Vector2 get interactPoint => absolutePosition + pickAt * _k;
   @override
-  double get interactRadius => 26;
+  double get interactRadius => 28;
 
   @override
-  PromptInfo get prompt => _taken ? const PromptInfo.note('An old, hollow stump.') : const PromptInfo('PICK SWEETROOT');
+  PromptInfo get prompt => const PromptInfo.note('An old, hollow stump.');
 
   @override
-  void interact() {
-    if (_taken) return;
-    Bonds.giveItem('sweetroot');
-    SfxManager().playChime();
-    GameToast.show('SWEETROOT', color: const Color(0xFFFFC07A), compact: true, item: 'sweetroot');
+  void interact() {}
+
+  @override
+  void render(Canvas canvas) {
+    final paint = Paint()..filterQuality = FilterQuality.none;
+    _plain?.render(canvas, size: size, overridePaint: paint);
+    super.render(canvas);
+  }
+}
+
+/// Vine fox sweetroot on the grass by the hollow stump — static drop art,
+/// walk over to pick up (same feel as [RiverPebble]).
+class SweetrootDrop extends GameComponent {
+  Sprite? _drop;
+  bool _gone;
+
+  SweetrootDrop(Vector2 position)
+      : _gone = Bonds.hasItem('sweetroot') || Bonds.usedItem('sweetroot') {
+    this.position = position;
+    size = Vector2.all(32);
+  }
+
+  @override
+  Future<void> onLoad() async {
+    try {
+      _drop = await Sprite.load('sprites/items/sweetroot_drop.png');
+    } catch (_) {
+      _drop = null;
+    }
+    return super.onLoad();
   }
 
   @override
   void update(double dt) {
     super.update(dt);
-    _t += dt;
+    if (_gone) return;
+    if (_playerCenter(gameRef).distanceTo(absoluteCenter) < 22) {
+      _gone = true;
+      Bonds.giveItem('sweetroot');
+      SfxManager().playChime();
+      GameToast.show('SWEETROOT', color: const Color(0xFFFFC07A), compact: true, item: 'sweetroot');
+    }
   }
 
   @override
   void render(Canvas canvas) {
+    if (_gone) return;
     final paint = Paint()..filterQuality = FilterQuality.none;
-    (_taken ? _plain : _full)?.render(canvas, size: size, overridePaint: paint);
-    if (!_taken && (_t % 3) < 0.5) {
-      final k = sin((_t % 3) / 0.5 * pi);
-      final c = tuber * _k;
-      canvas.drawCircle(Offset(c.x, c.y - 4), 1.5 + k, Paint()..color = Colors.white.withValues(alpha: 0.8 * k));
+    final drop = _drop;
+    if (drop != null) {
+      drop.render(canvas, size: size, overridePaint: paint);
+    } else {
+      canvas.drawCircle(
+        Offset(size.x / 2, size.y / 2),
+        6,
+        Paint()..color = const Color(0xFFFFC07A),
+      );
     }
     super.render(canvas);
   }

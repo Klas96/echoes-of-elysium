@@ -65,6 +65,32 @@ void main() {
     expect(Quests.status('drone_nest'), QuestStatus.done);
   });
 
+  test('nest kills before accept still count on accept', () {
+    Quests.onNestDroneKilled('drone_nest');
+    Quests.onNestDroneKilled('drone_nest');
+    expect(Quests.status('drone_nest'), QuestStatus.available);
+    expect(Quests.kills('drone_nest'), 2);
+    expect(Quests.accept('drone_nest'), isTrue);
+    expect(Quests.status('drone_nest'), QuestStatus.done);
+  });
+
+  test('nest pad destroy counts toward the same kill bucket', () {
+    Quests.onNestPadDestroyed('drone_nest');
+    expect(Quests.kills('drone_nest'), 1);
+    Quests.accept('drone_nest');
+    expect(Quests.status('drone_nest'), QuestStatus.accepted);
+    Quests.onNestPadDestroyed('drone_nest');
+    expect(Quests.status('drone_nest'), QuestStatus.done);
+  });
+
+  test('examine before accept completes on accept', () {
+    Quests.onExamined('core_console');
+    expect(Quests.status('core_console_reading'), QuestStatus.locked);
+    SaveService.data.setFlag('ruins_gate_open');
+    expect(Quests.accept('core_console_reading'), isTrue);
+    expect(Quests.status('core_console_reading'), QuestStatus.done);
+  });
+
   test('city east nest uses its own kill counter', () {
     Quests.accept('city_east_nest');
     Quests.onNestDroneKilled('city_east_nest');

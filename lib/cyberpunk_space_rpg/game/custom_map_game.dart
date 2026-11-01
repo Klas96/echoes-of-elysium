@@ -877,6 +877,7 @@ Map<String, ObjectBuilder> _mapObjects(String mapId) => {
       // Main-route ability gates (brief-woods-befriend-gates)
       'abilitygate': (p) => buildAbilityGate((p.others['gate'] ?? '').toString(), p.position, p.size) ?? _Gone(),
       'stump': (p) => SweetrootStump(p.position, p.size),
+      'sweetroot': (p) => SweetrootDrop(p.position),
       'pebble': (p) => RiverPebble(p.position, id: _pickupId(mapId, 'pebble', p)),
       'moonflower': (p) => Moonflower(p.position),
       // Tile objects: Tiled anchors them bottom-left, so x/y is the sprite's
@@ -1168,10 +1169,13 @@ class IntroScreen extends StatelessWidget {
                   ],
                 );
 
+          // Window can report a tiny height on first frame / short displays;
+          // never pass a negative minHeight into ConstrainedBox.
+          final minH = (box.maxHeight - pad * 2).clamp(0.0, double.infinity);
           return SingleChildScrollView(
             padding: EdgeInsets.all(pad),
             child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: box.maxHeight - pad * 2),
+              constraints: BoxConstraints(minHeight: minH),
               child: Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 1000),
@@ -2190,86 +2194,115 @@ class _NpcDialogueLayerState extends State<_NpcDialogueLayer> {
     if (d == null) return const SizedBox.shrink();
     final isLast = _line >= d.lines.length - 1;
     final choices = isLast ? d.visibleChoices : const <DialogueChoice>[];
+    final screen = MediaQuery.sizeOf(context);
+    final outer = HudLayout.dialogueOuter(screen);
+    final pad = HudLayout.dialoguePadding(screen);
+    final compact = HudLayout.dialogueCompact(screen);
     return Positioned(
-      bottom: 24, left: 24, right: 24,
+      bottom: outer.bottom,
+      left: outer.left,
+      right: outer.right,
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 620),
+          constraints: BoxConstraints(
+            maxWidth: HudLayout.dialogueMaxWidth(screen),
+            maxHeight: HudLayout.dialogueMaxHeight(screen),
+          ),
           child: Container(
-            padding: const EdgeInsets.all(24),
+            padding: pad,
             decoration: BoxDecoration(
               color: const Color(0xFF06060F).withOpacity(0.96),
               border: Border.all(color: d.color, width: 1.5),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(compact ? 8 : 10),
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(d.name,
-                    style: TextStyle(
-                        color: d.color, fontSize: 11,
-                        fontWeight: FontWeight.bold, letterSpacing: 3)),
-                const SizedBox(height: 10),
-                Text(d.lines[_line],
-                    style: const TextStyle(color: Colors.white70, fontSize: 15, height: 1.7)),
-                if (choices.isNotEmpty) ...[
-                  const SizedBox(height: 14),
-                  for (final c in choices) ...[
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: _CyberButton(
-                        label: c.label,
-                        color: d.color,
-                        filled: true,
-                        onTap: () => _pickChoice(c),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(d.name,
+                      style: TextStyle(
+                          color: d.color,
+                          fontSize: HudLayout.dialogueNameFont(screen),
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: compact ? 2 : 3)),
+                  SizedBox(height: compact ? 6 : 10),
+                  Text(d.lines[_line],
+                      style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: HudLayout.dialogueBodyFont(screen),
+                          height: HudLayout.dialogueBodyHeight(screen))),
+                  if (choices.isNotEmpty) ...[
+                    SizedBox(height: compact ? 10 : 14),
+                    for (final c in choices) ...[
+                      Padding(
+                        padding: EdgeInsets.only(bottom: compact ? 6 : 8),
+                        child: _CyberButton(
+                          label: c.label,
+                          color: d.color,
+                          filled: true,
+                          compact: compact,
+                          onTap: () => _pickChoice(c),
+                        ),
                       ),
-                    ),
-                  ],
-                ],
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: _closeDialogue,
-                      child: Text(
-                        choices.isNotEmpty ? 'LEAVE' : 'SKIP',
-                        style: const TextStyle(color: Colors.white24, fontSize: 11),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    if (isLast && d.name.startsWith('MIRA')) ...[
-                      _CyberButton(
-                        label: 'BOARD',
-                        color: d.color,
-                        filled: true,
-                        onTap: () {
-                          _closeDialogue();
-                          QuestBoard.show();
-                        },
-                      ),
-                      const SizedBox(width: 8),
-                      _CyberButton(
-                        label: 'TRADE',
-                        color: d.color,
-                        filled: true,
-                        onTap: () {
-                          _closeDialogue();
-                          Shop.show();
-                        },
-                      ),
-                      const SizedBox(width: 8),
                     ],
-                    if (choices.isEmpty)
-                      _CyberButton(
-                        label: isLast ? 'CLOSE' : 'NEXT ›',
-                        color: d.color,
-                        onTap: _advance,
-                      ),
                   ],
-                ),
-              ],
+                  SizedBox(height: compact ? 4 : 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: _closeDialogue,
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.symmetric(
+                              horizontal: compact ? 8 : 12,
+                              vertical: compact ? 4 : 8),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: Text(
+                          choices.isNotEmpty ? 'LEAVE' : 'SKIP',
+                          style: TextStyle(
+                              color: Colors.white24,
+                              fontSize: compact ? 10 : 11),
+                        ),
+                      ),
+                      SizedBox(width: compact ? 6 : 8),
+                      if (isLast && d.name.startsWith('MIRA')) ...[
+                        _CyberButton(
+                          label: 'BOARD',
+                          color: d.color,
+                          filled: true,
+                          compact: compact,
+                          onTap: () {
+                            _closeDialogue();
+                            QuestBoard.show();
+                          },
+                        ),
+                        SizedBox(width: compact ? 6 : 8),
+                        _CyberButton(
+                          label: 'TRADE',
+                          color: d.color,
+                          filled: true,
+                          compact: compact,
+                          onTap: () {
+                            _closeDialogue();
+                            Shop.show();
+                          },
+                        ),
+                        SizedBox(width: compact ? 6 : 8),
+                      ],
+                      if (choices.isEmpty)
+                        _CyberButton(
+                          label: isLast ? 'CLOSE' : 'NEXT ›',
+                          color: d.color,
+                          compact: compact,
+                          onTap: _advance,
+                        ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -2639,42 +2672,54 @@ class _DialogueOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screen = MediaQuery.sizeOf(context);
+    final compact = HudLayout.dialogueCompact(screen);
+    final pad = HudLayout.dialoguePadding(screen);
     return GestureDetector(
       onTap: () => AIFragment.activeDialogue.value = null,
       child: Container(
         color: Colors.black.withOpacity(0.6),
         alignment: Alignment.center,
         child: Container(
-          margin: const EdgeInsets.all(40),
-          constraints: const BoxConstraints(maxWidth: 500),
-          padding: const EdgeInsets.all(28),
+          margin: EdgeInsets.all(compact ? 16 : 40),
+          constraints: BoxConstraints(
+            maxWidth: HudLayout.dialogueMaxWidth(screen),
+            maxHeight: HudLayout.dialogueMaxHeight(screen),
+          ),
+          padding: pad,
           decoration: BoxDecoration(
             color: const Color(0xFF0D0020),
             border: Border.all(color: const Color(0xFFAA44FF), width: 1.5),
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(compact ? 8 : 10),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(text,
-                  style: const TextStyle(
-                      color: Colors.white70, fontSize: 15, height: 1.75)),
-              const SizedBox(height: 24),
-              _CyberButton(
-                label: 'ABSORB ECHO',
-                color: const Color(0xFFAA44FF),
-                onTap: () {
-                  AIFragment.nearbyFragment?.absorb();
-                  AIFragment.activeDialogue.value = null;
-                },
-              ),
-              const SizedBox(height: 8),
-              TextButton(
-                onPressed: () => AIFragment.activeDialogue.value = null,
-                child: const Text('CLOSE',
-                    style: TextStyle(color: Colors.white38, fontSize: 12)),
-              ),
-            ],
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(text,
+                    style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: HudLayout.dialogueBodyFont(screen),
+                        height: HudLayout.dialogueBodyHeight(screen))),
+                SizedBox(height: compact ? 12 : 24),
+                _CyberButton(
+                  label: 'ABSORB ECHO',
+                  color: const Color(0xFFAA44FF),
+                  compact: compact,
+                  onTap: () {
+                    AIFragment.nearbyFragment?.absorb();
+                    AIFragment.activeDialogue.value = null;
+                  },
+                ),
+                SizedBox(height: compact ? 4 : 8),
+                TextButton(
+                  onPressed: () => AIFragment.activeDialogue.value = null,
+                  child: Text('CLOSE',
+                      style: TextStyle(
+                          color: Colors.white38, fontSize: compact ? 11 : 12)),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -3197,10 +3242,13 @@ class _VictoryScreen extends StatelessWidget {
                   ],
                 );
 
+          // Window can report a tiny height on first frame / short displays;
+          // never pass a negative minHeight into ConstrainedBox.
+          final minH = (box.maxHeight - pad * 2).clamp(0.0, double.infinity);
           return SingleChildScrollView(
             padding: EdgeInsets.all(pad),
             child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: box.maxHeight - pad * 2),
+              constraints: BoxConstraints(minHeight: minH),
               child: Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 1000),
@@ -3223,12 +3271,15 @@ class _CyberButton extends StatelessWidget {
   final bool filled;
   /// Stretch to parent width (pause / stacked menus).
   final bool wide;
+  /// Denser hit targets for talk cards on phone / short screens.
+  final bool compact;
   const _CyberButton({
     required this.label,
     required this.onTap,
     this.color = const Color(0xFF00FFCC),
     this.filled = false,
     this.wide = false,
+    this.compact = false,
   });
 
   @override
@@ -3240,15 +3291,20 @@ class _CyberButton extends StatelessWidget {
         foregroundColor: color,
         side: BorderSide(
           color: color.withValues(alpha: filled ? 1 : 0.85),
-          width: filled ? 2 : 1.5,
+          width: filled ? (compact ? 1.5 : 2) : 1.5,
         ),
         padding: EdgeInsets.symmetric(
-          horizontal: filled ? 40 : 32,
-          vertical: filled ? 18 : 16,
+          horizontal: compact ? (filled ? 14 : 12) : (filled ? 40 : 32),
+          vertical: compact ? (filled ? 9 : 8) : (filled ? 18 : 16),
         ),
-        minimumSize: Size(wide ? double.infinity : 168, filled ? 54 : 50),
+        minimumSize: Size(
+          wide ? double.infinity : (compact ? 0 : 168),
+          compact ? (filled ? 36 : 34) : (filled ? 54 : 50),
+        ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-        tapTargetSize: MaterialTapTargetSize.padded,
+        tapTargetSize: compact
+            ? MaterialTapTargetSize.shrinkWrap
+            : MaterialTapTargetSize.padded,
       ),
       child: Text(
         label,
@@ -3256,8 +3312,8 @@ class _CyberButton extends StatelessWidget {
         style: TextStyle(
           color: color,
           fontWeight: FontWeight.w700,
-          letterSpacing: 2.4,
-          fontSize: filled ? 17 : 15,
+          letterSpacing: compact ? 1.2 : 2.4,
+          fontSize: compact ? (filled ? 12 : 11) : (filled ? 17 : 15),
           height: 1.1,
         ),
       ),
