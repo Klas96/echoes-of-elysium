@@ -1,13 +1,41 @@
 import 'dart:io';
 
+import 'package:bonfire/bonfire.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/game/custom_map_game.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/game/save_service.dart';
+import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/game/story_beats.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/ui/cutscene_player.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/ui/cutscenes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+/// Minimal Bonfire stand-in for StoryBeats overlay pause/resume.
+class _FakeBeatGame implements BonfireGameInterface {
+  _FakeBeatGame(this.context);
+  @override
+  final BuildContext context;
+  @override
+  bool paused = false;
+  int pauses = 0, resumes = 0;
+  @override
+  void pauseEngine() {
+    paused = true;
+    pauses++;
+  }
+
+  @override
+  void resumeEngine() {
+    paused = false;
+    resumes++;
+  }
+
+  @override
+  Player? get player => null;
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
 
 Cutscene _asset(String id) => Cutscene.parse(
       File('assets/cutscenes/$id/$id.json').readAsStringSync(),
@@ -22,6 +50,7 @@ void main() {
     SaveService.data = SaveData();
     SaveService.hasSave.value = false;
     SaveService.snapshot = null;
+    StoryBeats.reset();
   });
 
   group('parsing', () {
@@ -364,6 +393,43 @@ void main() {
           isA<MaterialPageRoute<void>>());
       expect(Cutscenes.route(id: Cutscenes.coalition, then: (_) => const SizedBox()),
           isA<PageRouteBuilder<void>>());
+    });
+
+    testWidgets('coalition journal replay keeps a pre-paused engine paused', (tester) async {
+      late BuildContext ctx;
+      await tester.pumpWidget(MaterialApp(
+        home: Builder(builder: (c) {
+          ctx = c;
+          return const Scaffold(body: Text('GAME'));
+        }),
+      ));
+      final game = _FakeBeatGame(ctx)..paused = true;
+      StoryBeats.attach(game);
+      await Cutscenes.markSeen(Cutscenes.coalition);
+
+      var done = false;
+      StoryBeats.replay(Cutscenes.coalition).then((_) => done = true);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.byType(CutscenePlayer), findsOneWidget);
+      expect(game.pauses, 0, reason: 'journal already held pause');
+
+      await tester.pump(const Duration(seconds: 4)); // precache timeout
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      for (var i = 0; i < 30; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      expect(done, isTrue);
+      expect(find.byType(CutscenePlayer), findsNothing);
+      expect(game.paused, isTrue);
+      expect(game.resumes, 0);
+    });
+
+    test('coalition journal title is listed for the Memories tab section', () async {
+      expect(StoryBeats.titles[Cutscenes.coalition], 'First Contact');
+      expect(Cutscenes.seen(Cutscenes.coalition), isFalse);
+      await Cutscenes.markSeen(Cutscenes.coalition);
+      expect(Cutscenes.seen(Cutscenes.coalition), isTrue);
     });
   });
 }
