@@ -15,6 +15,11 @@ class StoryBeats {
   static BonfireGameInterface? _game;
   static bool _busy = false;
 
+  /// Journal titles for replayable story slideshows (not memory fragments).
+  static const titles = <String, String>{
+    Cutscenes.coalition: 'First Contact',
+  };
+
   static void attach(BonfireGameInterface game) {
     _game = game;
   }
@@ -42,19 +47,44 @@ class StoryBeats {
     WidgetsBinding.instance.scheduleFrame();
   }
 
+  /// First-time overlay: skips if already seen; marks seen when finished.
   static Future<void> playOverGame(BonfireGameInterface game, String id) async {
     if (_busy || Cutscenes.seen(id)) return;
+    await _playOverlay(game, id, markSeenOnFinish: true, resumeLikeMemories: false);
+  }
+
+  /// Journal/menu replay for a slideshow already marked seen. Keeps the engine
+  /// paused when the Menu tablet already held pause (same as [Memories.replay]).
+  static Future<void> replay(String id) async {
+    final game = _game;
+    if (_busy || game == null || !Cutscenes.seen(id) || !game.context.mounted) {
+      return;
+    }
+    await _playOverlay(game, id, markSeenOnFinish: false, resumeLikeMemories: true);
+  }
+
+  static Future<void> _playOverlay(
+    BonfireGameInterface game,
+    String id, {
+    required bool markSeenOnFinish,
+    required bool resumeLikeMemories,
+  }) async {
+    if (_busy) return;
     _busy = true;
     CustomPlayer.pendingShot.value = null;
     Pause.dismissDialogueForStory();
-    if (!game.paused) game.pauseEngine();
+    final wasPaused = game.paused;
+    if (!wasPaused) game.pauseEngine();
     const fade = Duration(milliseconds: 450);
     try {
       await Navigator.of(game.context).push(PageRouteBuilder<void>(
         opaque: false,
         transitionDuration: fade,
         reverseTransitionDuration: fade,
-        pageBuilder: (context, _, __) => _BeatPage(id: id),
+        pageBuilder: (context, _, __) => _BeatPage(
+          id: id,
+          markSeenOnFinish: markSeenOnFinish,
+        ),
         transitionsBuilder: (context, anim, _, child) =>
             FadeTransition(opacity: anim, child: child),
       ));
@@ -65,9 +95,14 @@ class StoryBeats {
         if (!GameInput.overworldKeysEnabled) {
           // archive_ash / memories inside a building — restore room WASD.
           GameInput.reclaim();
+        } else if (resumeLikeMemories) {
+          // Menu replay: leave the engine paused if the journal already held it.
+          GameInput.reclaim();
+          if (!wasPaused) game.resumeEngine();
+          GameInput.reclaim(releaseKeys: false);
         } else {
-          // Always unpause the overworld after a story beat (wasPaused can
-          // stay true after nested pauses and leave Kaela frozen).
+          // Always unpause the overworld after a first-time story beat
+          // (wasPaused can stay true after nested pauses and leave Kaela frozen).
           if (game.paused) game.resumeEngine();
           GameInput.reclaim();
           GameInput.reclaim(releaseKeys: false);
@@ -76,11 +111,19 @@ class StoryBeats {
       _busy = false;
     }
   }
+
+  /// Test hook: forget the live game.
+  @visibleForTesting
+  static void reset() {
+    _game = null;
+    _busy = false;
+  }
 }
 
 class _BeatPage extends StatefulWidget {
-  const _BeatPage({required this.id});
+  const _BeatPage({required this.id, required this.markSeenOnFinish});
   final String id;
+  final bool markSeenOnFinish;
 
   @override
   State<_BeatPage> createState() => _BeatPageState();
@@ -98,7 +141,9 @@ class _BeatPageState extends State<_BeatPage> {
         onFinished: () async {
           if (_closed || !mounted) return;
           _closed = true;
-          await Cutscenes.markSeen(widget.id);
+          if (widget.markSeenOnFinish) {
+            await Cutscenes.markSeen(widget.id);
+          }
           if (mounted) Navigator.of(context).pop();
         },
       ),
