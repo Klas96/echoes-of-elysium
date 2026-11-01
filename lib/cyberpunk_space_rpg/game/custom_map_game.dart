@@ -977,11 +977,23 @@ class _CustomMapGameState extends State<CustomMapGame> with WidgetsBindingObserv
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // Backgrounded (phone home button, app switcher, web tab hidden, window
-    // closing): save where Kaela stands right now.
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.hidden ||
-        state == AppLifecycleState.detached) {
-      if (_activeGame != null) SaveService.saveNow();
+    // closing): save where Kaela stands right now, and silence audio.
+    // mediaPlayer + Android music focus otherwise keeps BGM playing off-screen.
+    switch (state) {
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.paused:
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.detached:
+        MusicManager().pauseForAppLifecycle();
+        SfxManager().pauseForAppLifecycle();
+        if (state != AppLifecycleState.inactive && _activeGame != null) {
+          SaveService.saveNow();
+        }
+        break;
+      case AppLifecycleState.resumed:
+        MusicManager().resumeForAppLifecycle();
+        SfxManager().resumeForAppLifecycle();
+        break;
     }
   }
 

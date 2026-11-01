@@ -233,4 +233,18 @@ class SfxManager {
       await p?.dispose();
     } catch (_) {}
   }
+
+  /// Stop one-shots and VO while the app is backgrounded / inactive.
+  Future<void> pauseForAppLifecycle() async {
+    await stopVoice();
+    for (final p in [_footstep, _damage, _portal, _shoot, _chime, _heal]) {
+      if (p == null) continue;
+      try {
+        await p.stop();
+      } catch (_) {}
+    }
+  }
+
+  /// SFX are one-shots; nothing to resume when returning to foreground.
+  Future<void> resumeForAppLifecycle() async {}
 }
