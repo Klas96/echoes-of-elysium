@@ -9,7 +9,9 @@ import '../ui/hud_layout.dart';
 import '../game/memories.dart';
 import '../game/quests.dart';
 import '../game/save_service.dart';
+import '../game/story_beats.dart';
 import '../game/well_rested.dart';
+import '../ui/cutscenes.dart';
 import '../ui/equipment_ui.dart';
 import '../ui/shop_ui.dart';
 import 'bonds.dart';
@@ -859,6 +861,7 @@ class _JournalPanelState extends State<_JournalPanel> {
           animation: Memories.foundNotifier,
           builder: (_, __) {
             final found = Memories.found;
+            final coalitionSeen = Cutscenes.seen(Cutscenes.coalition);
             return SingleChildScrollView(
               padding: const EdgeInsets.only(top: 8, bottom: 8, right: 8),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -878,6 +881,22 @@ class _JournalPanelState extends State<_JournalPanel> {
                       unlocked: Memories.has(i),
                       onPlay: Memories.has(i) ? () => Memories.replay(i) : null,
                     ),
+                const SizedBox(height: 18),
+                const Text('COALITION',
+                    style: TextStyle(
+                        color: _inkDark, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 2)),
+                const SizedBox(height: 10),
+                if (!coalitionSeen)
+                  const Text(
+                    'No coalition records yet. Reach the City to unlock this briefing.',
+                    style: TextStyle(color: _inkSoft, fontSize: 12, height: 1.55),
+                  )
+                else
+                  _JournalStoryRow(
+                    title: StoryBeats.titles[Cutscenes.coalition] ?? 'Coalition',
+                    unlocked: true,
+                    onPlay: () => StoryBeats.replay(Cutscenes.coalition),
+                  ),
               ]),
             );
           },
@@ -972,7 +991,7 @@ class _MemoriesHint extends StatelessWidget {
             style: TextStyle(color: _inkDark, fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 2)),
         SizedBox(height: 8),
         Text(
-          'Recovered memory fragments can be replayed here. Seek purple crystals in the world to fill this log.',
+          'Recovered memory fragments can be replayed here. Seek purple crystals in the world to fill this log. Coalition briefings unlock separately after you reach the City.',
           style: TextStyle(color: _inkSoft, fontSize: 12, height: 1.55),
         ),
       ]),
@@ -1009,7 +1028,47 @@ class _JournalMemoryRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final roman = ['I', 'II', 'III', 'IV', 'V'][index - 1];
-    final title = unlocked ? Memories.titleFor(index) : '??????';
+    return _JournalReplayRow(
+      leading: roman,
+      title: unlocked ? Memories.titleFor(index) : '??????',
+      unlocked: unlocked,
+      onPlay: onPlay,
+    );
+  }
+}
+
+/// Story slideshow row under MEMORIES (coalition, etc.) — same chrome as memories.
+class _JournalStoryRow extends StatelessWidget {
+  final String title;
+  final bool unlocked;
+  final Future<void> Function()? onPlay;
+  const _JournalStoryRow({required this.title, required this.unlocked, this.onPlay});
+
+  @override
+  Widget build(BuildContext context) {
+    return _JournalReplayRow(
+      leading: '◆',
+      title: unlocked ? title : '??????',
+      unlocked: unlocked,
+      onPlay: onPlay,
+    );
+  }
+}
+
+class _JournalReplayRow extends StatelessWidget {
+  final String leading;
+  final String title;
+  final bool unlocked;
+  final Future<void> Function()? onPlay;
+  const _JournalReplayRow({
+    required this.leading,
+    required this.title,
+    required this.unlocked,
+    this.onPlay,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     const accent = Color(0xFF88CCFF);
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -1027,7 +1086,7 @@ class _JournalMemoryRow extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Text(roman,
+                Text(leading,
                     style: TextStyle(
                         color: unlocked ? accent : _inkSoft.withValues(alpha: 0.45),
                         fontSize: 13,
