@@ -31,8 +31,8 @@ import 'room_services.dart';
 
 /// Enterable building interiors (#31).
 ///
-/// E at an enterable building's door fades to a small tiled room (12×8 of
-/// 32 px, same density as Kaela) built from the JSON floor/props layers
+/// E at an enterable building's door fades to a tiled room (usually 12×8 of
+/// 32 px; tea-house hub is 16×10) built from the JSON floor/props layers
 /// (collision rects, doormat, spawn, NPCs, interact spots, lights). Stepping
 /// onto the doormat fades back out
 /// and puts Kaela one step in front of the same exterior door, facing down.

@@ -98,8 +98,14 @@ void useSpot(RoomData room, RoomSpot s) {
       ], actions: [
         RoomAction('SLEEP', () => InnRest.rest()),
       ]));
+    case 'tea_house/tea_menu':
+      _wenTeaMenu(_metLine('wen', RoomText.wenFirst, RoomText.wenLater));
     case 'tea_house/window_seat':
       _flavour(RoomText.windowSeat);
+    case 'tea_house/lounge_table':
+      _flavour(RoomText.loungeTable);
+    case 'tea_house/rest_screen':
+      _flavour(RoomText.restScreen);
     case 'noodle_shop/dao' || 'noodle_shop/dao_errand':
       _daoMenu(_metLine('dao', RoomText.daoFirst, RoomText.daoLater));
     case 'noodle_shop/counter_tin':
@@ -248,6 +254,39 @@ void _archivistTalk() {
     pages: pages,
     actions: actions,
   ));
+}
+
+void _wenTeaMenu(String greeting) {
+  final pages = <String>[
+    greeting,
+    RoomText.wenTeaBoard,
+    [for (final t in WenTea.menu) '${t.name}: ${t.effect}'].join('\n'),
+  ];
+  RoomPanel.show(RoomPanelData(
+    title: 'Wen',
+    color: _wen,
+    pages: pages,
+    footer: 'Glimmer ${Bonds.glimmer}',
+    actions: [
+      for (final t in WenTea.menu)
+        RoomAction('${t.name.toUpperCase()} · ${t.price}', () => _orderTea(t),
+            enabled: Bonds.glimmer >= t.price),
+    ],
+  ));
+}
+
+void _orderTea(TeaDrink t) {
+  final err = WenTea.order(t.id);
+  if (err != null) {
+    GameToast.show('WEN', body: err, color: _wen, compact: true);
+    return;
+  }
+  final hp = CustomPlayer.healthNotifier.value;
+  final next = (hp + t.heal).clamp(0, CustomPlayer.maxHealth);
+  CustomPlayer.healthNotifier.value = next;
+  SfxManager().playChime();
+  GameToast.show(t.name.toUpperCase(),
+      body: '+${(next - hp).round()} HP · ${t.effect}', color: _wen, compact: true);
 }
 
 void _daoMenu(String greeting) {

@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Bake Kaela-scale tiled interiors (#62).
 
-Rooms are small top-down maps on a 12x8 grid of 32px tiles (384x256), the
-same pixel density as the overworld and as Kaela (32px). One tileset:
+Rooms are small top-down maps on a 12x8 grid of 32px tiles (384x256) by
+default — same pixel density as the overworld and Kaela (32px). The tea
+house hub pilot uses room_size(16, 10). One tileset:
 
   assets/images/interiors/tileset.png   16 columns, 32px, spacing 0 margin 0
 
@@ -22,6 +23,7 @@ the Pillow art for that id (cabin + grotto pilots).
 from __future__ import annotations
 
 import json
+from contextlib import contextmanager
 from pathlib import Path
 
 from PIL import Image, ImageDraw
@@ -31,7 +33,25 @@ OUT = ROOT / "assets" / "images" / "interiors"
 GEN_SRC = Path(__file__).resolve().parent / "gen_src"
 T = 32
 COLS = 16
+# Default domestic grid (#62). The tea-house hub pilot overrides via room_size().
 W, H = 12, 8
+
+
+@contextmanager
+def room_size(w: int, h: int):
+    """Temporarily set the bake grid (door centres on W)."""
+    global W, H
+    old = W, H
+    W, H = w, h
+    try:
+        yield
+    finally:
+        W, H = old
+
+
+def door_x() -> int:
+    """Left tile of the 2-wide south door (centred)."""
+    return W // 2 - 1
 
 # --- palette (same family as the painted rooms, fewer colours) ---
 def rgba(r: int, g: int, b: int, a: int = 255) -> tuple[int, int, int, int]:
@@ -918,13 +938,14 @@ def shell(
         F[y][x] = corner
     # Door gap is two tiles (Kaela is one). Mat is the leave trigger.
     # One-tile-tall frame: Kaela (32px) fills the doorway. The mat row is the
-    # leave trigger; the tile north of it is still inside.
-    F[H - 2][5] = floor
-    F[H - 2][6] = floor
-    F[H - 1][5] = mat_id
-    F[H - 1][6] = mat_id
-    F[H - 1][4] = jamb_l
-    F[H - 1][7] = jamb_r
+    # leave trigger; the tile north of it is still inside. Centred on W.
+    dx = door_x()
+    F[H - 2][dx] = floor
+    F[H - 2][dx + 1] = floor
+    F[H - 1][dx] = mat_id
+    F[H - 1][dx + 1] = mat_id
+    F[H - 1][dx - 1] = jamb_l
+    F[H - 1][dx + 2] = jamb_r
     P = [[0 for _ in range(W)] for _ in range(H)]
     return F, P
 
@@ -1073,6 +1094,7 @@ def render(F: list[list[int]], P: list[list[int]]) -> Image.Image:
 
 def room(rid: str, title: str, F, P, spots, npcs, lights) -> dict:
     mask = solid_map(F, P)
+    dx = door_x()
     data = {
         "id": rid,
         "title": title,
@@ -1084,8 +1106,8 @@ def room(rid: str, title: str, F, P, spots, npcs, lights) -> dict:
         "floor": F,
         "props": P,
         "collision": merge_rects(mask),
-        "door": [5, 7, 2, 1],
-        "spawn": [5, 5],
+        "door": [dx, H - 1, 2, 1],
+        "spawn": [dx, H - 3],
         "npcs": npcs,
         "interact": spots,
         "lights": lights,
@@ -1095,48 +1117,68 @@ def room(rid: str, title: str, F, P, spots, npcs, lights) -> dict:
 
 
 def tea() -> dict:
-    F, P = shell(W_TEA, W_TEA_S, W_TEA_C, WOOD, MAT, J_TEA_L, J_TEA_R)
-    for x in (4, 5, 6):
-        F[0][x] = W_TEA_WIN
-    vary(F, WOOD, WOOD2)
-    P[1][1], P[1][2], P[1][3] = URN, COUNTER, COUNTER
-    P[1][8] = TABLE
-    P[1][10] = BED_H
-    P[2][6] = CUSHION
-    P[2][10] = BED_F
-    P[3][1] = PLANT
-    P[3][3] = SCREEN
-    P[4][9] = NIGHT
-    P[4][10] = PLANT
-    P[4][5], P[4][6] = RUG, RUG
-    return room(
-        "tea_house",
-        "Tea house: the inn at Lantern Gate",
-        F, P,
-        [
-            {"id": "rest_bed", "rect": [10, 1, 1, 2], "kind": "rest",
-             "note": "Wen: sleep here -> save + well_rested"},
-            {"id": "ferro", "rect": [5, 1, 1, 1], "kind": "npc",
-             "note": "Old Ferro: riddle / rumour"},
-            {"id": "wen", "rect": [2, 2, 1, 1], "kind": "npc", "note": "Wen, host"},
-            {"id": "window_seat", "rect": [4, 0, 3, 1], "kind": "flavour",
-             "note": "'Lantern Road runs east from here. The lamps were lit by hand, every one.'"},
-            {"id": "tea_counter", "rect": [1, 1, 3, 1], "kind": "flavour",
-             "note": "The brass urn and tea tins"},
-        ],
-        [
-            {"name": "wen", "sprite": "wen", "tile": [2, 2], "role": "host",
-             "note": "Serves tea from the brass urn on the counter; first-visit / later lines in interiors-text.md"},
-            {"name": "ferro", "sprite": "ferro", "tile": [5, 1], "role": "regular",
-             "note": "By the round window: one riddle or rumour per in-game day"},
-        ],
-        [
-            {"tile": [5, 0], "kind": "warm"},
-            {"tile": [2, 1], "kind": "warm"},
-            {"tile": [8, 1], "kind": "warm"},
-            {"tile": [10, 1], "kind": "warm"},
-        ],
-    )
+    """First hub pilot: wider inn with lounge / tea shop / rest alcove.
+
+    Still one enterable building (Lantern Gate), not a district remake. 16×10
+    keeps the 32px tile language; three zones so talk / shop / rest read as
+    separate places inside one room.
+    """
+    with room_size(16, 10):
+        F, P = shell(W_TEA, W_TEA_S, W_TEA_C, WOOD, MAT, J_TEA_L, J_TEA_R)
+        # North windows over the lounge (centred on the door).
+        for x in (6, 7, 8, 9):
+            F[0][x] = W_TEA_WIN
+        vary(F, WOOD, WOOD2)
+        # West: tea counter + host (talk + shop).
+        P[1][1], P[1][2], P[1][3] = URN, COUNTER, COUNTER
+        P[3][1] = PLANT
+        # Lounge: seating, rug, Ferro by the window.
+        P[1][10] = TABLE
+        P[2][6] = CUSHION
+        P[4][3] = TABLE
+        P[5][3] = STOOL
+        P[4][6], P[4][7] = RUG, RUG
+        P[6][10] = PLANT
+        # East alcove: screen + bed (rest).
+        P[1][12] = SCREEN
+        P[1][14] = BED_H
+        P[2][14] = BED_F
+        P[3][12] = PLANT
+        P[3][14] = NIGHT
+        P[5][14] = PLANT
+        return room(
+            "tea_house",
+            "Tea house: Lantern Gate inn (hub)",
+            F, P,
+            [
+                {"id": "rest_bed", "rect": [14, 1, 1, 2], "kind": "rest",
+                 "note": "Wen: sleep here -> save + well_rested"},
+                {"id": "ferro", "rect": [8, 1, 1, 1], "kind": "npc",
+                 "note": "Old Ferro: riddle / rumour"},
+                {"id": "wen", "rect": [2, 2, 1, 1], "kind": "npc", "note": "Wen, host"},
+                {"id": "tea_menu", "rect": [1, 1, 3, 1], "kind": "shop",
+                 "note": "Wen's tea counter: lantern tea / quiet cup for glimmer"},
+                {"id": "window_seat", "rect": [6, 0, 4, 1], "kind": "flavour",
+                 "note": "'Lantern Road runs east from here. The lamps were lit by hand, every one.'"},
+                {"id": "lounge_table", "rect": [3, 4, 1, 1], "kind": "flavour",
+                 "note": "'A low table between travellers. Cups cool; stories linger.'"},
+                {"id": "rest_screen", "rect": [12, 1, 1, 1], "kind": "flavour",
+                 "note": "'A paper screen softens the alcove. Beyond it, a bed waits.'"},
+            ],
+            [
+                {"name": "wen", "sprite": "wen", "tile": [2, 2], "role": "host",
+                 "note": "Serves tea from the brass urn; talk + ORDER at the counter"},
+                {"name": "ferro", "sprite": "ferro", "tile": [8, 1], "role": "regular",
+                 "note": "By the round window: one riddle or rumour per in-game day"},
+            ],
+            [
+                {"tile": [7, 0], "kind": "warm"},
+                {"tile": [2, 1], "kind": "warm"},
+                {"tile": [10, 1], "kind": "warm"},
+                {"tile": [14, 1], "kind": "warm"},
+                {"tile": [6, 4], "kind": "warm"},
+            ],
+        )
 
 
 def noodle() -> dict:
