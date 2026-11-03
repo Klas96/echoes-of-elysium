@@ -1,23 +1,28 @@
 # Interiors (#31, scaled in #62)
 
-Enterable rooms: `tea_house` (the inn at Lantern Gate), `noodle_shop`
-(Market Row), `archive_library` (after the Archivist's seal),
+Enterable rooms: `tea_house` (Lantern Gate inn — first **hub** pilot),
+`noodle_shop` (Market Row), `archive_library` (after the Archivist's seal),
 `ranger_cabin` (Asha's place in the Woods) and `pond_grotto` (Woods pond
 cave after LIGHT / `woods_grotto`). Every other building door stays locked
 and shows its GameConcept flavour line.
 
+See `docs/hubs.md` for the hub experiment (expand one interior; no district
+remake yet).
+
 ## Grid
 
-Every room is **12×8 tiles of 32 px** (384×256). 32 px is Kaela's height
-and the overworld tile, so a chair, a counter and a door frame are one
-tile and a bed is two. The old 16×9 painted backdrops drew those props at
+Most rooms are **12×8 tiles of 32 px** (384×256). The tea-house hub pilot
+is **16×10** (512×320) with the same 32 px tile language — lounge, tea
+counter shop, and rest alcove in one shell. 32 px is Kaela's height and
+the overworld tile, so a chair, a counter and a door frame are one tile
+and a bed is two. The old 16×9 painted backdrops drew those props at
 illustration scale; she read as a figurine in a hall.
 
 | | |
 |---|---|
 | Tile | 32 px, hard pixels, nearest-neighbour |
-| Room | 12 columns × 8 rows |
-| Door | 2 tiles wide on the south wall. The mat is the south row (`y = 7`, `x = 5..6`). Spawn is `(5, 5)`, one floor tile inside the threshold |
+| Room | 12×8 by default; `tea_house` hub is 16×10 |
+| Door | 2 tiles wide, centred on the south wall. Mat is the south row; spawn is two tiles north of the mat (`door_x`, `H - 3`) |
 | Furniture | 1 tile (counter, table, chest, desk, crystal). Bed is 1×2, head then foot |
 
 Rebuild art and JSON together:
@@ -84,7 +89,7 @@ tile. Collision rects in the JSON are those solid cells, merged.
 |---|---|
 | `id`, `title`, `image` | room id, display name (text before `:` is shown), baked PNG next to the JSON |
 | `tileset`, `sheetCols` | tileset file, columns (16) |
-| `size`, `tile` | `[12, 8]` tiles of 32 px |
+| `size`, `tile` | `[cols, rows]` tiles of 32 px (usually `[12, 8]`; tea hub `[16, 10]`) |
 | `floor`, `props` | row-major tile ids. `props` 0 = nothing |
 | `collision` | solid tile rects `[x, y, w, h]`; everything else is floor |
 | `door` | doormat rect |

@@ -302,6 +302,39 @@ class Stash {
   }
 }
 
+/// Wen's tea counter (hub pilot): cheap cups for glimmer. Heal only — Dao
+/// keeps the road buffs. No persistence beyond the HP change.
+class TeaDrink {
+  final String id, name, effect;
+  final int price, heal;
+  const TeaDrink(this.id, this.name, this.effect, this.price, this.heal);
+}
+
+class WenTea {
+  WenTea._();
+
+  static const menu = [
+    TeaDrink('lantern_tea', 'Lantern tea', 'warms the hands. Restores a little strength.', 4, 18),
+    TeaDrink('quiet_cup', 'Quiet cup', 'settles the road-noise. Restores more.', 6, 28),
+  ];
+
+  static TeaDrink? byId(String? id) {
+    for (final t in menu) {
+      if (t.id == id) return t;
+    }
+    return null;
+  }
+
+  /// Buy a cup. Returns null on success, otherwise why not.
+  static String? order(String id) {
+    final t = byId(id);
+    if (t == null) return 'Not on the board.';
+    if (!Bonds.spendGlimmer(t.price)) return 'Needs ${t.price} glimmer.';
+    // Heal is applied by the caller (needs CustomPlayer); glimmer spent here.
+    return null;
+  }
+}
+
 /// Old Ferro's riddles (#31): one a day. A right answer gets the next
 /// rumour in rotation (none repeats until all are heard) + 5 glimmer and
 /// moves on to the next riddle; a wrong answer brings the same riddle back

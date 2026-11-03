@@ -37,6 +37,10 @@ class RoomText {
   static const ferroRewardGlimmer = 5;
 
   static const windowSeat = 'Lantern Road runs east from here. The lamps were lit by hand, every one.';
+  static const loungeTable = 'A low table between travellers. Cups cool; stories linger.';
+  static const restScreen = 'A paper screen softens the alcove. Beyond it, a bed waits.';
+  static const wenTeaBoard =
+      'The board lists two cups. Pay in glimmer; drink here at the counter.';
 
   // --- Noodle shop on Market Row ------------------------------------------
   static const daoFirst = 'Sit! Eat! You look like a forest walked on you.';
