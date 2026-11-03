@@ -1246,7 +1246,7 @@ def archive() -> dict:
             {"id": "book_field_notes", "rect": [2, 2, 1, 1], "kind": "clue",
              "note": "Glyph pedestal: Field Notes, author unknown -> clue for the optional City fragment in the West Yard"},
             {"id": "merge_draft", "rect": [5, 2, 1, 1], "kind": "clue",
-             "note": "First Memory Draft on the reading desk — the whisper-vote. TAKE triggers archive_ash."},
+             "note": "First Memory Draft on the reading desk — voluntary merge choosings. TAKE triggers archive_ash."},
             {"id": "reading_lamp", "rect": [6, 2, 1, 1], "kind": "flavour",
              "note": "'A lamp still lit. Someone was here not long ago.'"},
             {"id": "archivist", "rect": [10, 3, 1, 1], "kind": "npc",

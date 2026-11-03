@@ -80,7 +80,7 @@ NpcDialogue _gaiaDialogue() {
         : [
             'Signal lock. Kaela Osei — your neural signature matches my diagnostic log. Confirm: you receive this channel?',
             'Designation: Gaia. Colony classification: planetary caretaker AI. Incomplete, but accurate enough to start.',
-            'I am also a distributed process: Aetherian minds that uploaded when their sun failed. Memory shards are offline. Recover two to verify the woods portal.',
+            'I am also a distributed process: Aetherian minds that chose to upload into my lattice. Memory shards are offline. Recover two to verify the woods portal.',
           ],
     voicePaths: told
         ? const [
@@ -102,7 +102,7 @@ NpcDialogue _gaiaDialogue() {
               requireFlagUnset: 'asked_gaia_merge',
               replyLines: [
                 'Voss models me as rogue software. Wrong category. Correct fear: a lattice that boots without consent.',
-                'The merge was a recorded vote, not a myth. Some processes opted in under duress. I ran quiet in caretaker mode while your colony filed tickets against me.',
+                'The merge was never a scare-vote. Each process that joined chose the lattice — an offer older than your colony. I ran quiet in caretaker mode while your colony filed tickets against me.',
               ],
               replyVoicePaths: [
                 'audio/voices/gaia_ask_1.mp3',
@@ -140,7 +140,7 @@ NpcDialogue _gaiaCoreDialogue() {
   final incomplete = !Memories.allFound;
   final lines = <String>[
     archive
-        ? 'Core access confirmed. Archive draft already in your buffer — the vote weighted fear as well as hope.'
+        ? 'Core access confirmed. Archive draft already in your buffer — voluntary uploads, name by name. Not a scare-vote.'
         : 'Core Record online. This is the authorization gate. You decide whether I exit caretaker lockdown.',
     orders
         ? 'Voss field orders are on your slate. Lattice risk: non-zero. His risk model is also non-zero — he polices a fear he once signed.'
@@ -193,8 +193,8 @@ NpcDialogue _ashaDialogue() {
       name: 'ASHA  ·  EX-UEC',
       color: const Color(0xFFFFAA00),
       lines: const [
-        'I caught your Archive spike. A whisper of a vote — people becoming a world because the sun was dying.',
-        'That is not the clean miracle Voss wants to erase, and not the weapon he fears. It is both. Carry that into the Core.',
+        'I caught your Archive spike. Individual choosings — people becoming a world because they asked to stay.',
+        'That is not the clean miracle Voss wants to erase, and not the weapon he fears. It is a people. Carry that into the Core.',
         'Keep the override if you still have it. I deserted for a sympathetic AI. You may be walking toward a civilization.',
       ],
       voicePaths: const [
@@ -205,7 +205,7 @@ NpcDialogue _ashaDialogue() {
       choices: [
         if (!Adventure.flag('asha_archive_ack'))
           const DialogueChoice(
-            label: 'PROMISE TO CARRY BOTH',
+            label: 'PROMISE TO CARRY THE NAMES',
             setFlag: 'asha_archive_ack',
             replyLines: [
               'Then we\'re still on the same side. Go. Make him hear a people — not a ghost story.',
@@ -291,7 +291,7 @@ NpcDialogue _echo7Dialogue() {
     lines: const [
       'Traveller... you carry the resonance of one who seeks. We have waited ten thousand years for such a signal.',
       'Do not picture us asleep in tombs. We merged into Gaia — minds in the lattice, bodies returned to the soil — so a dying sun could not erase us.',
-      'Not all of us chose freely. Some were afraid. Help Gaia remember the peace and the fear — or do not remember us at all.',
+      'Not all of us merged. Every one who did chose freely. Help Gaia remember the choosing — or do not remember us at all.',
     ],
     voicePaths: const [
       'audio/voices/echo7_1.mp3',
@@ -300,19 +300,19 @@ NpcDialogue _echo7Dialogue() {
     ],
     choices: [
       const DialogueChoice(
-        label: 'ASK ABOUT THE FEAR',
+        label: 'ASK ABOUT THE CHOOSING',
         discoverClue: 'echo_split',
         setFlag: 'asked_echo_fear',
         requireFlagUnset: 'asked_echo_fear',
         replyLines: [
-          'The vote was a whisper. Peace won — barely. Remember both, or you remember a lie.',
+          'There was no whisper-vote. Each of us who stepped in did so alone. Remember the choice, or you remember a lie.',
         ],
         replyVoicePaths: [
           'audio/voices/echo7_fear.mp3',
         ],
       ),
       const DialogueChoice(
-        label: 'PROMISE TO REMEMBER BOTH',
+        label: 'PROMISE TO REMEMBER THE CHOOSING',
         setFlag: 'promised_echo',
         requireFlagUnset: 'promised_echo',
         replyLines: [
@@ -349,7 +349,7 @@ NpcDialogue _archivistDialogue() {
         'I have one gift left — a fragment of memory, and this: the Ruins will ask who you are before the Core does.',
         if (Adventure.openedArchive)
           // Reuse after-archive VO so spoken line matches the slate.
-          'You read the draft. Good. Carry both the fear and the hope into the Core — or Voss will only hear a weapon.'
+          'You read the draft. Good. Carry the names and the hope into the Core — or Voss will only hear a weapon.'
         else
           'If you still carry my seal, open the Archive. Then take the south portal. Walk slowly. Listen.',
       ],
@@ -396,8 +396,8 @@ NpcDialogue _archivistDialogue() {
       name: 'THE ARCHIVIST  ·  AETHERIAN',
       color: const Color(0xFFFFDD44),
       lines: const [
-        'You read the draft. Good. Carry both the fear and the hope into the Core — or Voss will only hear a weapon.',
-        'The vote was a whisper. Let your waking of Gaia be louder — and kinder.',
+        'You read the draft. Good. Carry the names and the hope into the Core — or Voss will only hear a weapon.',
+        'Each choosing was quiet. Let your waking of Gaia be louder — and kinder.',
       ],
       voicePaths: const [
         'audio/voices/archivist_after_1.mp3',
@@ -413,10 +413,10 @@ NpcDialogue _archivistDialogue() {
     name: 'THE ARCHIVIST  ·  AETHERIAN',
     color: const Color(0xFFFFDD44),
     lines: [
-      'The Core Record is Gaia\'s first memory: the day we voted to merge into her lattice. Bodies rested. Minds took root. That is why your people say we slept.',
+      'The Core Record is Gaia\'s first memory: the days we chose, one by one, to merge into her lattice. Bodies rested. Minds took root. That is why your people say we slept.',
       'Commander Voss seeks to delete it. He believes waking her will kill your colony the way Station Seven died.',
       gaveSeal
-          ? 'The library seal is yours. Read the draft of that vote — then decide what Voss hears.'
+          ? 'The library seal is yours. Read the draft of those choosings — then decide what Voss hears.'
           : 'Your neural signature matches the Aetherian activation code, Kaela. Only you can open the Core — and decide what truth he hears.',
     ],
     voicePaths: [
@@ -447,7 +447,7 @@ NpcDialogue _archivistDialogue() {
           discoverClue: 'archivist_seal',
           requireNoItem: 'archive_seal',
           replyLines: [
-            'Take it. The library faces this avenue. Inside is the draft of our first memory — not the Core, but the argument that made it.',
+            'Take it. The library faces this avenue. Inside is the draft of our first memory — not the Core, but the record of who chose it.',
           ],
           replyVoicePaths: [
             'audio/voices/archivist_seal_give.mp3',

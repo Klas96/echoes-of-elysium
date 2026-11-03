@@ -56,7 +56,7 @@ class RoomText {
       'A fragment was carried south, toward the alleys where the drones now hum.';
   static const readingDesk = 'A lamp still lit. Someone was here not long ago.';
   static const mergeDraftTake =
-      'Dust lifts off the draft. The vote is there in brittle ink — merge, or become dust that remembers nothing.';
+      'Dust lifts off the draft. Names in brittle ink — each who chose the merge, one mind at a time.';
   static const mergeDraftGone =
       'The desk is bare. You already carry the First Memory Draft.';
 

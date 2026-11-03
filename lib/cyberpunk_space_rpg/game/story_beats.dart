@@ -38,7 +38,7 @@ class StoryBeats {
     WidgetsBinding.instance.scheduleFrame();
   }
 
-  /// First Archive open: Asha on comms reacts to the whisper-vote draft.
+  /// First Archive open: Asha on comms reacts to the voluntary-merge draft.
   static void onArchiveOpened() {
     final game = _game;
     if (game == null || !game.context.mounted) return;
