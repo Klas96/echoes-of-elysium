@@ -5,6 +5,7 @@ import '../audio/audio_settings.dart';
 import '../components/lamp_light.dart';
 import '../game/adventure.dart';
 import '../ui/app_version_label.dart';
+import '../ui/dialog_chrome.dart';
 import '../ui/hud_layout.dart';
 import '../game/memories.dart';
 import '../game/quests.dart';
@@ -361,29 +362,28 @@ class InteractPromptLayer extends StatelessWidget {
             right: 24,
             child: IgnorePointer(
               child: Center(
-                child: Container(
+                child: ConstrainedBox(
                   key: const ValueKey('hud-prompt'),
                   constraints: const BoxConstraints(maxWidth: 360),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.5),
-                    border: Border.all(color: Colors.white12),
-                    borderRadius: BorderRadius.circular(4),
+                  child: DialogChrome.promptShell(
+                    enabled: false,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      if (itemIconAsset(info.item) != null) ...[
+                        ItemIcon(info.item!, size: 16, dim: true),
+                        const SizedBox(width: 6),
+                      ],
+                      Flexible(
+                        child: Text(info.note,
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: DialogChrome.promptStyle(
+                                    compact: false, enabled: false)
+                                .copyWith(fontSize: 10, height: 1.3)),
+                      ),
+                    ]),
                   ),
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    if (itemIconAsset(info.item) != null) ...[
-                      ItemIcon(info.item!, size: 16, dim: true),
-                      const SizedBox(width: 6),
-                    ],
-                    Flexible(
-                      child: Text(info.note,
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              color: Colors.white54, fontSize: 10, fontStyle: FontStyle.italic, height: 1.3)),
-                    ),
-                  ]),
                 ),
               ),
             ),
@@ -405,46 +405,41 @@ class InteractPromptLayer extends StatelessWidget {
               },
               onPointerUp: (_) => Interaction.touchHeld = false,
               onPointerCancel: (_) => Interaction.touchHeld = false,
-              child: Container(
+              child: ConstrainedBox(
                 key: const ValueKey('hud-prompt'),
                 constraints: BoxConstraints(maxWidth: screen.width - 32),
-                padding: EdgeInsets.symmetric(horizontal: _isTouch ? 28 : 14, vertical: _isTouch ? 14 : 6),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.7),
-                  border: Border.all(color: _teal),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  Row(mainAxisSize: MainAxisSize.min, children: [
-                    if (itemIconAsset(info.item) != null) ...[
-                      ItemIcon(info.item!, size: _isTouch ? 24 : 16),
-                      SizedBox(width: _isTouch ? 8 : 6),
-                    ],
-                    Flexible(
-                      child: Text(label,
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                              color: _teal,
-                              fontSize: _isTouch ? 16 : 12,
-                              letterSpacing: 2,
-                              fontWeight: FontWeight.bold)),
-                    ),
-                  ]),
-                  if (hold) ...[
-                    const SizedBox(height: 4),
-                    SizedBox(
-                      width: _isTouch ? 140 : 90,
-                      height: 3,
-                      child: LinearProgressIndicator(
-                        value: Interaction.progress.value,
-                        backgroundColor: Colors.white12,
-                        valueColor: const AlwaysStoppedAnimation(_teal),
+                child: DialogChrome.promptShell(
+                  padding: EdgeInsets.symmetric(
+                      horizontal: _isTouch ? 28 : 14, vertical: _isTouch ? 14 : 6),
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    Row(mainAxisSize: MainAxisSize.min, children: [
+                      if (itemIconAsset(info.item) != null) ...[
+                        ItemIcon(info.item!, size: _isTouch ? 24 : 16),
+                        SizedBox(width: _isTouch ? 8 : 6),
+                      ],
+                      Flexible(
+                        child: Text(label,
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: DialogChrome.promptStyle(
+                                compact: _isTouch, enabled: true)),
                       ),
-                    ),
-                  ],
-                ]),
+                    ]),
+                    if (hold) ...[
+                      const SizedBox(height: 4),
+                      SizedBox(
+                        width: _isTouch ? 140 : 90,
+                        height: 3,
+                        child: LinearProgressIndicator(
+                          value: Interaction.progress.value,
+                          backgroundColor: Colors.white12,
+                          valueColor: const AlwaysStoppedAnimation(DialogChrome.cyan),
+                        ),
+                      ),
+                    ],
+                  ]),
+                ),
               ),
             ),
           ),
@@ -479,56 +474,43 @@ class ToastLayer extends StatelessWidget {
                     child: GestureDetector(
                       key: const ValueKey('hud-toast'),
                       onTap: () => GameToast.current.value = null,
-                      child: Container(
+                      child: ConstrainedBox(
                         constraints: BoxConstraints(maxWidth: compact ? 300 : 340),
-                        padding: EdgeInsets.symmetric(
-                            horizontal: compact ? 10 : 12, vertical: compact ? 6 : 9),
-                        decoration: BoxDecoration(
-                          color: _ink.withValues(alpha: compact ? 0.72 : 0.82),
-                          border: Border.all(color: m.color.withValues(alpha: compact ? 0.45 : 0.55)),
-                          borderRadius: BorderRadius.circular(compact ? 6 : 8),
-                        ),
-                        child: Row(mainAxisSize: MainAxisSize.min, children: [
-                          if (m.portrait == null && itemIconAsset(m.item) != null) ...[
-                            ItemIcon(m.item!, size: compact ? 16 : 32),
-                            SizedBox(width: compact ? 6 : 10),
-                          ],
-                          if (m.portrait != null) ...[
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(6),
-                              child: Image.asset(m.portrait!, width: 44, height: 44, filterQuality: FilterQuality.none),
-                            ),
-                            const SizedBox(width: 10),
-                          ],
-                          Flexible(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                if (m.title.isNotEmpty)
-                                  Text(m.title,
-                                      style: TextStyle(
-                                          color: m.color.withValues(alpha: compact ? 0.9 : 1),
-                                          fontSize: compact ? 10 : 11,
-                                          fontWeight: FontWeight.w600,
-                                          letterSpacing: compact ? 1 : 1.5)),
-                                if (m.body.isNotEmpty) ...[
-                                  if (m.title.isNotEmpty) SizedBox(height: compact ? 2 : 3),
-                                  Text(m.body,
-                                      maxLines: compact ? 2 : 3,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                          color: Colors.white.withValues(
-                                              alpha: m.title.isEmpty
-                                                  ? (compact ? 0.75 : 0.85)
-                                                  : (compact ? 0.55 : 0.65)),
-                                          fontSize: compact ? 10 : 11,
-                                          height: 1.35)),
+                        child: DialogChrome.toastShell(
+                          accent: m.color,
+                          compact: compact,
+                          child: Row(mainAxisSize: MainAxisSize.min, children: [
+                            if (m.portrait == null && itemIconAsset(m.item) != null) ...[
+                              ItemIcon(m.item!, size: compact ? 16 : 32),
+                              SizedBox(width: compact ? 6 : 10),
+                            ],
+                            if (m.portrait != null) ...[
+                              DialogChrome.portrait(m.portrait!, size: compact ? 36 : 44),
+                              const SizedBox(width: 10),
+                            ],
+                            Flexible(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (m.title.isNotEmpty)
+                                    Text(m.title,
+                                        style: DialogChrome.toastTitleStyle(
+                                            m.color, compact: compact)),
+                                  if (m.body.isNotEmpty) ...[
+                                    if (m.title.isNotEmpty) SizedBox(height: compact ? 2 : 3),
+                                    Text(m.body,
+                                        maxLines: compact ? 2 : 3,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: DialogChrome.toastBodyStyle(
+                                            compact: compact,
+                                            alone: m.title.isEmpty)),
+                                  ],
                                 ],
-                              ],
+                              ),
                             ),
-                          ),
-                        ]),
+                          ]),
+                        ),
                       ),
                     ),
                   ),
