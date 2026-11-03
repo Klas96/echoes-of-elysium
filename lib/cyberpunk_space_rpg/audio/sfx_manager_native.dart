@@ -319,11 +319,19 @@ class SfxManager {
   /// Stop one-shots and VO while the app is backgrounded / inactive.
   Future<void> pauseForAppLifecycle() async {
     await stopVoice();
-    for (final p in [_footstep, _damage, _portal, _shoot, _chime, _heal]) {
+    for (final p in [_footstep, _damage, _portal, _chime, _heal]) {
       if (p == null) continue;
       try {
         await p.stop();
       } catch (_) {}
+    }
+    final shootPool = _shootPlayers;
+    if (shootPool != null) {
+      for (final p in shootPool) {
+        try {
+          await p.stop();
+        } catch (_) {}
+      }
     }
   }
 
