@@ -95,7 +95,7 @@ void main() {
     expect(Memories.endingVoss, contains('field-terminal'));
     expect(Memories.endingVoss, contains('archive draft'));
     expect(Memories.endingVoss, contains('murdering a civilization'));
-    expect(Memories.endingLine, contains('vote'));
+    expect(Memories.endingLine, contains('choosings'));
     expect(Adventure.endingCoda, contains('Station Seven orders'));
     expect(Adventure.endingCoda, contains('archive draft'));
   });

@@ -234,7 +234,7 @@ class Memories {
     if (allFound) {
       final buf = StringBuffer(
           'He had treated Gaia like Station Seven — a lattice to erase before it ate a colony. '
-          'The full Core proves otherwise: a people who refused war, voted to merge, and left a living key in you. '
+          'The full Core proves otherwise: a people who refused war, chose to merge one by one, and left a living key in you. '
           'Wiping her would mean murdering a civilization to quiet his fear. So he orders every drone to stand down.');
       if (Adventure.readUecOrders) {
         buf.write(
@@ -242,7 +242,7 @@ class Memories {
       }
       if (Adventure.openedArchive) {
         buf.write(
-            ' The archive draft — fear beside hope — hits harder than any UEC briefing.');
+            ' The archive draft — names beside hope — hits harder than any UEC briefing.');
       }
       return buf.toString();
     }
@@ -255,10 +255,10 @@ class Memories {
   static String get endingLine {
     if (allFound) {
       if (Adventure.openedArchive && Adventure.readUecOrders) {
-        return 'Gaia is fully online — vote, fear, and proof. The colony lives.';
+        return 'Gaia is fully online — choosings, names, and proof. The colony lives.';
       }
       if (Adventure.openedArchive) {
-        return 'Gaia is fully online — including the whisper of a vote. The colony lives.';
+        return 'Gaia is fully online — including the record of who chose. The colony lives.';
       }
       return 'Gaia is fully online. The colony lives — and so do the Aetherians.';
     }
