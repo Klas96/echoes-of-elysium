@@ -861,7 +861,10 @@ class _JournalPanelState extends State<_JournalPanel> {
           animation: Memories.foundNotifier,
           builder: (_, __) {
             final found = Memories.found;
-            final coalitionSeen = Cutscenes.seen(Cutscenes.coalition);
+            final storySeen = [
+              for (final id in StoryBeats.titles.keys)
+                if (Cutscenes.seen(id)) id,
+            ];
             return SingleChildScrollView(
               padding: const EdgeInsets.only(top: 8, bottom: 8, right: 8),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -882,21 +885,22 @@ class _JournalPanelState extends State<_JournalPanel> {
                       onPlay: Memories.has(i) ? () => Memories.replay(i) : null,
                     ),
                 const SizedBox(height: 18),
-                const Text('COALITION',
+                const Text('STORY',
                     style: TextStyle(
                         color: _inkDark, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 2)),
                 const SizedBox(height: 10),
-                if (!coalitionSeen)
+                if (storySeen.isEmpty)
                   const Text(
-                    'No coalition records yet. Reach the City to unlock this briefing.',
+                    'No story records yet. Reach the City, then defeat the Sentinel, to unlock these briefings.',
                     style: TextStyle(color: _inkSoft, fontSize: 12, height: 1.55),
                   )
                 else
-                  _JournalStoryRow(
-                    title: StoryBeats.titles[Cutscenes.coalition] ?? 'Coalition',
-                    unlocked: true,
-                    onPlay: () => StoryBeats.replay(Cutscenes.coalition),
-                  ),
+                  for (final id in storySeen)
+                    _JournalStoryRow(
+                      title: StoryBeats.titles[id] ?? id,
+                      unlocked: true,
+                      onPlay: () => StoryBeats.replay(id),
+                    ),
               ]),
             );
           },
@@ -991,7 +995,7 @@ class _MemoriesHint extends StatelessWidget {
             style: TextStyle(color: _inkDark, fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 2)),
         SizedBox(height: 8),
         Text(
-          'Recovered memory fragments can be replayed here. Seek purple crystals in the world to fill this log. Coalition briefings unlock separately after you reach the City.',
+          'Recovered memory fragments can be replayed here. Seek purple crystals in the world to fill this log. Story briefings unlock separately after you see them in the City.',
           style: TextStyle(color: _inkSoft, fontSize: 12, height: 1.55),
         ),
       ]),
@@ -1037,7 +1041,7 @@ class _JournalMemoryRow extends StatelessWidget {
   }
 }
 
-/// Story slideshow row under MEMORIES (coalition, etc.) — same chrome as memories.
+/// Story slideshow row under MEMORIES (First Contact, Sentinel Falls, …).
 class _JournalStoryRow extends StatelessWidget {
   final String title;
   final bool unlocked;
