@@ -1061,30 +1061,43 @@ def _darken_strip(img: Image.Image, x0: int, y0: int, w: int, h: int, shade: int
 
 
 def polish_edges(img: Image.Image, F: list[list[int]]) -> None:
-    """Floor contact shadow beside walls + 1px outer rim against the void."""
-    for y in range(H):
-        for x in range(W):
+    """Floor contact shadow beside walls + 1px outer rim against the void.
+
+    Uses the floor grid size (not globals) so hub rooms bake at their own
+    dimensions after room_size() has exited.
+    """
+    h = len(F)
+    w = len(F[0]) if F else 0
+    for y in range(h):
+        for x in range(w):
             if F[y][x] in WALLS:
                 continue
             px, py = x * T, y * T
             if x > 0 and F[y][x - 1] in WALLS:
                 _darken_strip(img, px, py, 4, T, 48)
-            if x < W - 1 and F[y][x + 1] in WALLS:
+            if x < w - 1 and F[y][x + 1] in WALLS:
                 _darken_strip(img, px + T - 4, py, 4, T, 48)
             if y > 0 and F[y - 1][x] in WALLS:
                 _darken_strip(img, px, py, T, 5, 60)
-            if y < H - 1 and F[y + 1][x] in WALLS:
+            if y < h - 1 and F[y + 1][x] in WALLS:
                 _darken_strip(img, px, py + T - 3, T, 3, 40)
     # Outer rim so the room does not hard-cut into letterbox black.
     draw = ImageDraw.Draw(img)
-    draw.rectangle([0, 0, W * T - 1, H * T - 1], outline=INK)
-    draw.rectangle([1, 1, W * T - 2, H * T - 2], outline=rgba(0, 0, 0, 120))
+    draw.rectangle([0, 0, w * T - 1, h * T - 1], outline=INK)
+    draw.rectangle([1, 1, w * T - 2, h * T - 2], outline=rgba(0, 0, 0, 120))
 
 
 def render(F: list[list[int]], P: list[list[int]]) -> Image.Image:
-    img = Image.new("RGBA", (W * T, H * T), (0, 0, 0, 255))
-    for y in range(H):
-        for x in range(W):
+    """Bake a preview PNG from floor/props. Size comes from the grids so a
+    16×10 hub still renders after room_size() restores the 12×8 defaults.
+    """
+    h = len(F)
+    w = len(F[0]) if F else 0
+    if len(P) != h or any(len(row) != w for row in F) or any(len(row) != w for row in P):
+        raise SystemExit(f"render: floor/props size mismatch ({w}x{h})")
+    img = Image.new("RGBA", (w * T, h * T), (0, 0, 0, 255))
+    for y in range(h):
+        for x in range(w):
             blit_tile(img, F[y][x], x, y)
             if P[y][x]:
                 blit_tile(img, P[y][x], x, y)
