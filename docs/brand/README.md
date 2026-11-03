@@ -25,3 +25,7 @@ xelatex echoes_of_elysium_graphical_profile.tex
 ```
 
 Requires XeLaTeX plus system fonts Comfortaa and DejaVu. App icon is loaded from `assets/icon/app_icon.png`.
+
+## Portfolio details page
+
+Marketing stills for `klasholmgren.se/echoes-of-elysium.html` live in [`portfolio/`](portfolio/). Sync with `../../tools/sync_portfolio_echoes_assets.sh`.
