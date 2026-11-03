@@ -30,6 +30,8 @@ MAT_ARCHIVE = 14
 W_BOOKS = 22
 J_BOOK_L, J_BOOK_R = 34, 35
 ARCHIVE_RUG = 36
+DESK, LAMP = 51, 54
+LECTERN, GLYPH = 66, 67
 W_BOOKS_S, W_BOOKS_C = 73, 78
 
 
@@ -151,10 +153,16 @@ def rug_tile(src: Path) -> Image.Image:
 
 
 def assemble_props() -> dict[int, Image.Image]:
-    return {
-        MAT_ARCHIVE: mat_tile(GEN / "archive_doormat.jpg"),
-        ARCHIVE_RUG: rug_tile(GEN / "archive_rug.jpg"),
+    mapping = {
+        DESK: "archive_desk.jpg",
+        LAMP: "archive_lamp.jpg",
+        LECTERN: "archive_lectern.jpg",
+        GLYPH: "archive_glyph.jpg",
     }
+    out = {tid: prop_tile(GEN / name, tid) for tid, name in mapping.items()}
+    out[MAT_ARCHIVE] = mat_tile(GEN / "archive_doormat.jpg")
+    out[ARCHIVE_RUG] = rug_tile(GEN / "archive_rug.jpg")
+    return out
 
 
 def patch_sheet(tiles: dict[int, Image.Image]) -> None:
