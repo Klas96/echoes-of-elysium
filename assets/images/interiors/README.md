@@ -23,6 +23,8 @@ illustration scale; she read as a figurine in a hall.
 Rebuild art and JSON together:
 
 ```
+python3 tools/interiors/assemble_tea_gen.py
+python3 tools/interiors/assemble_noodle_gen.py
 python3 tools/interiors/assemble_cabin_gen.py
 python3 tools/interiors/assemble_grotto_gen.py
 python3 tools/interiors/assemble_archive_gen.py
@@ -33,10 +35,11 @@ That script is the layout source. It writes `tileset.png`, each `<id>.png`
 (the baked picture, for review) and each `<id>.json`. The game draws the
 JSON layers, not the PNG. Do not commit @2x previews.
 
-**Cursor-gen pilots:** `ranger_cabin`, `pond_grotto`, and `archive_library`
-tiles live under `tools/interiors/gen_src/{cabin,grotto,archive}/`, pixelized
-to 32px. Tea house and noodle shop still use Pillow placeholders until their
-pass.
+**AI gen_src:** All five rooms (`tea_house`, `noodle_shop`, `ranger_cabin`,
+`pond_grotto`, `archive_library`) use Cursor-generated sources under
+`tools/interiors/gen_src/{tea,noodle,cabin,grotto,archive}/`, pixelized to
+32px hard pixels to match overworld tileset quality (neon cyberpunk /
+night-forest palette).
 
 ## Tileset
 

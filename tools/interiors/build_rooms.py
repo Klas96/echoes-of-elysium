@@ -11,13 +11,16 @@ Each room JSON is the map: `floor` (opaque ground and walls) and `props`
 pool, and solid props — rugs and ferns do not block. NPCs stand on a floor
 tile; the game blocks that tile itself.
 
-    python3 tools/interiors/assemble_cabin_gen.py    # Cursor-gen cabin
-    python3 tools/interiors/assemble_grotto_gen.py   # Cursor-gen grotto
+    python3 tools/interiors/assemble_tea_gen.py
+    python3 tools/interiors/assemble_noodle_gen.py
+    python3 tools/interiors/assemble_cabin_gen.py
+    python3 tools/interiors/assemble_grotto_gen.py
+    python3 tools/interiors/assemble_archive_gen.py
     python3 tools/interiors/build_rooms.py
 
 Rewrites tileset.png, each room PNG, and each room JSON. Deterministic.
 If tools/interiors/gen_src/<room>/tiles/<id>.png exists, those tiles replace
-the Pillow art for that id (cabin + grotto pilots).
+the Pillow art for that id (all five rooms: tea, noodle, cabin, grotto, archive).
 """
 from __future__ import annotations
 

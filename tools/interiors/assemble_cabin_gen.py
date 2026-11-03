@@ -110,15 +110,12 @@ def slice_walls(src: Path) -> dict[int, Image.Image]:
     raw = Image.open(src).convert("RGBA")
     # cabin_wall_sheet is a 5×3 log-wall atlas: hearth, map, doorway among plains.
     cells = grid_cells(raw, 5, 3)
-    # Indices (row-major): hearth ~6, map ~7, doorway ~12; plains elsewhere.
+    # Indices (row-major): hearth ~6, map ~7, doorway ~12; vertical posts 13/14 = jambs.
     log = cells[0]
     fire = cells[6]
     mmap = cells[7]
-    door = cells[12]
-    # Jambs: left/right halves of the doorway cell, stretched to full tile.
-    dw, dh = door.size
-    jl = door.crop((0, 0, dw // 2, dh)).resize((dw, dh), Image.Resampling.NEAREST)
-    jr = door.crop((dw // 2, 0, dw, dh)).resize((dw, dh), Image.Resampling.NEAREST)
+    jl = cells[13]
+    jr = cells[14]
     return {
         W_LOG: opaque_tile(log),
         W_FIRE: opaque_tile(fire),
