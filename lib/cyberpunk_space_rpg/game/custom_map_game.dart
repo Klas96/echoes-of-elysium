@@ -1578,7 +1578,7 @@ Future<void> _startLevel(BonfireGameInterface game, int level) async {
         'YOUR MISSION',
         body:
             'You woke in the skiff wreck.\n'
-            '1) Talk to Gaia (green figure by the crash)\n'
+            '1) Talk to Gaia (cyan hologram by the crash)\n'
             '2) Find Asha at her camp: the woods need friends\n'
             '3) Collect 2 glowing memory fragments, then walk south to the City\n\n'
             'Objective stays on the right TRACKER.',
