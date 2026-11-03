@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../ui/hud_layout.dart';
+import '../ui/dialog_chrome.dart';
 
 /// A button on a [RoomPanelData]: run [onTap]; the panel closes afterwards
 /// unless the action opened another panel.
@@ -126,9 +126,9 @@ class RoomPanelLayer extends StatelessWidget {
         final last = i >= d.pages.length - 1;
         final actions = last ? d.actions : const <RoomAction>[];
         final screen = MediaQuery.sizeOf(context);
-        final outer = HudLayout.dialogueOuter(screen);
-        final pad = HudLayout.dialoguePadding(screen);
-        final compact = HudLayout.dialogueCompact(screen);
+        final outer = DialogChrome.outerOf(screen);
+        final pad = DialogChrome.paddingOf(screen);
+        final compact = DialogChrome.compactOf(screen);
         return Positioned(
           bottom: outer.bottom,
           left: outer.left,
@@ -136,40 +136,29 @@ class RoomPanelLayer extends StatelessWidget {
           child: Center(
             child: ConstrainedBox(
               constraints: BoxConstraints(
-                maxWidth: HudLayout.dialogueMaxWidth(screen),
-                maxHeight: HudLayout.dialogueMaxHeight(screen),
+                maxWidth: DialogChrome.maxWidthOf(screen),
+                maxHeight: DialogChrome.maxHeightOf(screen),
               ),
-              child: Container(
+              child: DialogChrome.panel(
+                accent: d.color,
+                compact: compact,
                 padding: pad,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF0B0806).withValues(alpha: 0.95),
-                  border: Border.all(color: d.color, width: 1.5),
-                  borderRadius: BorderRadius.circular(compact ? 8 : 10),
-                ),
                 child: SingleChildScrollView(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(d.title.toUpperCase(),
-                          style: TextStyle(
-                              color: d.color,
-                              fontSize: HudLayout.dialogueNameFont(screen),
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: compact ? 2 : 3)),
+                      DialogChrome.speakerLabel(d.title, d.color, compact: compact),
                       SizedBox(height: compact ? 6 : 8),
                       Text(d.pages[i],
-                          style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.82),
-                              fontSize: HudLayout.dialogueBodyFont(screen),
-                              height: HudLayout.dialogueBodyHeight(screen),
+                          style: DialogChrome.bodyStyle(compact: compact).copyWith(
                               fontStyle:
                                   d.book ? FontStyle.italic : FontStyle.normal)),
                       if (d.footer.isNotEmpty && last) ...[
                         SizedBox(height: compact ? 4 : 6),
                         Text(d.footer,
                             style: TextStyle(
-                                color: Colors.white38,
+                                color: DialogChrome.mute,
                                 fontSize: compact ? 10 : 11,
                                 height: 1.4)),
                       ],
@@ -195,26 +184,20 @@ class RoomPanelLayer extends StatelessWidget {
                                   ? 'LEAVE'
                                   : (last ? 'CLOSE' : 'SKIP'),
                               style: TextStyle(
-                                  color: Colors.white38,
+                                  color: DialogChrome.mute,
                                   fontSize: compact ? 10 : 11,
                                   letterSpacing: 1)),
                         ),
-                        if (!last)
-                          TextButton(
-                            onPressed: RoomPanel.advance,
-                            style: TextButton.styleFrom(
-                              padding: EdgeInsets.symmetric(
-                                  horizontal: compact ? 8 : 12,
-                                  vertical: compact ? 4 : 8),
-                              minimumSize: Size.zero,
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                            child: Text('NEXT ›',
-                                style: TextStyle(
-                                    color: d.color,
-                                    fontSize: compact ? 11 : 12,
-                                    letterSpacing: 1)),
+                        if (!last) ...[
+                          const SizedBox(width: 6),
+                          DialogChrome.choiceButton(
+                            label: 'NEXT ›',
+                            accent: d.color,
+                            filled: false,
+                            compact: compact,
+                            onTap: RoomPanel.advance,
                           ),
+                        ],
                       ]),
                     ],
                   ),
@@ -236,24 +219,23 @@ class _PanelButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = action.enabled ? color : Colors.white24;
-    return GestureDetector(
-      onTap: () => RoomPanel.pick(action),
-      child: Container(
-        padding: EdgeInsets.symmetric(
-            horizontal: compact ? 10 : 12, vertical: compact ? 6 : 8),
-        decoration: BoxDecoration(
-          color: c.withValues(alpha: action.enabled ? 0.16 : 0.05),
-          border: Border.all(color: c),
-          borderRadius: BorderRadius.circular(4),
+    final c = action.enabled ? color : DialogChrome.mute;
+    if (!action.enabled) {
+      return Opacity(
+        opacity: 0.45,
+        child: DialogChrome.choiceButton(
+          label: action.label,
+          accent: c,
+          compact: compact,
+          onTap: () {},
         ),
-        child: Text(action.label,
-            style: TextStyle(
-                color: c,
-                fontSize: compact ? 11 : 12,
-                fontWeight: FontWeight.bold,
-                letterSpacing: compact ? 1.0 : 1.2)),
-      ),
+      );
+    }
+    return DialogChrome.choiceButton(
+      label: action.label,
+      accent: c,
+      compact: compact,
+      onTap: () => RoomPanel.pick(action),
     );
   }
 }

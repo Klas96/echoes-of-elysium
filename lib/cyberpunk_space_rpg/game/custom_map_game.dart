@@ -39,6 +39,7 @@ import '../creatures/interaction.dart';
 import '../creatures/journal_ui.dart';
 import '../creatures/obstacles.dart';
 import '../ui/cutscenes.dart';
+import '../ui/dialog_chrome.dart';
 import '../ui/equipment_ui.dart';
 import '../ui/ability_hud.dart';
 import '../ui/app_version_label.dart';
@@ -2195,9 +2196,9 @@ class _NpcDialogueLayerState extends State<_NpcDialogueLayer> {
     final isLast = _line >= d.lines.length - 1;
     final choices = isLast ? d.visibleChoices : const <DialogueChoice>[];
     final screen = MediaQuery.sizeOf(context);
-    final outer = HudLayout.dialogueOuter(screen);
-    final pad = HudLayout.dialoguePadding(screen);
-    final compact = HudLayout.dialogueCompact(screen);
+    final outer = DialogChrome.outerOf(screen);
+    final pad = DialogChrome.paddingOf(screen);
+    final compact = DialogChrome.compactOf(screen);
     return Positioned(
       bottom: outer.bottom,
       left: outer.left,
@@ -2205,43 +2206,33 @@ class _NpcDialogueLayerState extends State<_NpcDialogueLayer> {
       child: Center(
         child: ConstrainedBox(
           constraints: BoxConstraints(
-            maxWidth: HudLayout.dialogueMaxWidth(screen),
-            maxHeight: HudLayout.dialogueMaxHeight(screen),
+            maxWidth: DialogChrome.maxWidthOf(screen),
+            maxHeight: DialogChrome.maxHeightOf(screen),
           ),
-          child: Container(
+          child: DialogChrome.panel(
+            accent: d.color,
+            compact: compact,
             padding: pad,
-            decoration: BoxDecoration(
-              color: const Color(0xFF06060F).withOpacity(0.96),
-              border: Border.all(color: d.color, width: 1.5),
-              borderRadius: BorderRadius.circular(compact ? 8 : 10),
-            ),
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(d.name,
-                      style: TextStyle(
-                          color: d.color,
-                          fontSize: HudLayout.dialogueNameFont(screen),
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: compact ? 2 : 3)),
+                  DialogChrome.speakerLabel(d.name, d.color, compact: compact),
                   SizedBox(height: compact ? 6 : 10),
                   Text(d.lines[_line],
-                      style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: HudLayout.dialogueBodyFont(screen),
-                          height: HudLayout.dialogueBodyHeight(screen))),
+                      style: DialogChrome.bodyStyle(compact: compact)),
                   if (choices.isNotEmpty) ...[
                     SizedBox(height: compact ? 10 : 14),
                     for (final c in choices) ...[
                       Padding(
                         padding: EdgeInsets.only(bottom: compact ? 6 : 8),
-                        child: _CyberButton(
+                        child: DialogChrome.choiceButton(
                           label: c.label,
-                          color: d.color,
+                          accent: d.color,
                           filled: true,
                           compact: compact,
+                          wide: true,
                           onTap: () => _pickChoice(c),
                         ),
                       ),
@@ -2263,15 +2254,16 @@ class _NpcDialogueLayerState extends State<_NpcDialogueLayer> {
                         child: Text(
                           choices.isNotEmpty ? 'LEAVE' : 'SKIP',
                           style: TextStyle(
-                              color: Colors.white24,
-                              fontSize: compact ? 10 : 11),
+                              color: DialogChrome.mute,
+                              fontSize: compact ? 10 : 11,
+                              letterSpacing: 1),
                         ),
                       ),
                       SizedBox(width: compact ? 6 : 8),
                       if (isLast && d.name.startsWith('MIRA')) ...[
-                        _CyberButton(
+                        DialogChrome.choiceButton(
                           label: 'BOARD',
-                          color: d.color,
+                          accent: d.color,
                           filled: true,
                           compact: compact,
                           onTap: () {
@@ -2280,9 +2272,9 @@ class _NpcDialogueLayerState extends State<_NpcDialogueLayer> {
                           },
                         ),
                         SizedBox(width: compact ? 6 : 8),
-                        _CyberButton(
+                        DialogChrome.choiceButton(
                           label: 'TRADE',
-                          color: d.color,
+                          accent: d.color,
                           filled: true,
                           compact: compact,
                           onTap: () {
@@ -2293,9 +2285,10 @@ class _NpcDialogueLayerState extends State<_NpcDialogueLayer> {
                         SizedBox(width: compact ? 6 : 8),
                       ],
                       if (choices.isEmpty)
-                        _CyberButton(
+                        DialogChrome.choiceButton(
                           label: isLast ? 'CLOSE' : 'NEXT ›',
-                          color: d.color,
+                          accent: d.color,
+                          filled: false,
                           compact: compact,
                           onTap: _advance,
                         ),
@@ -2673,52 +2666,59 @@ class _DialogueOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screen = MediaQuery.sizeOf(context);
-    final compact = HudLayout.dialogueCompact(screen);
-    final pad = HudLayout.dialoguePadding(screen);
+    final compact = DialogChrome.compactOf(screen);
+    final pad = DialogChrome.paddingOf(screen);
+    // Echo fragments stay magenta-neon — same pixel frame as NPC talk,
+    // not a separate purple-glow Material card.
+    const accent = DialogChrome.magenta;
     return GestureDetector(
       onTap: () => AIFragment.activeDialogue.value = null,
       child: Container(
-        color: Colors.black.withOpacity(0.6),
+        color: Colors.black.withValues(alpha: 0.6),
         alignment: Alignment.center,
         child: Container(
           margin: EdgeInsets.all(compact ? 16 : 40),
           constraints: BoxConstraints(
-            maxWidth: HudLayout.dialogueMaxWidth(screen),
-            maxHeight: HudLayout.dialogueMaxHeight(screen),
+            maxWidth: DialogChrome.maxWidthOf(screen),
+            maxHeight: DialogChrome.maxHeightOf(screen),
           ),
-          padding: pad,
-          decoration: BoxDecoration(
-            color: const Color(0xFF0D0020),
-            border: Border.all(color: const Color(0xFFAA44FF), width: 1.5),
-            borderRadius: BorderRadius.circular(compact ? 8 : 10),
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(text,
-                    style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: HudLayout.dialogueBodyFont(screen),
-                        height: HudLayout.dialogueBodyHeight(screen))),
-                SizedBox(height: compact ? 12 : 24),
-                _CyberButton(
-                  label: 'ABSORB ECHO',
-                  color: const Color(0xFFAA44FF),
-                  compact: compact,
-                  onTap: () {
-                    AIFragment.nearbyFragment?.absorb();
-                    AIFragment.activeDialogue.value = null;
-                  },
-                ),
-                SizedBox(height: compact ? 4 : 8),
-                TextButton(
-                  onPressed: () => AIFragment.activeDialogue.value = null,
-                  child: Text('CLOSE',
-                      style: TextStyle(
-                          color: Colors.white38, fontSize: compact ? 11 : 12)),
-                ),
-              ],
+          child: DialogChrome.panel(
+            accent: accent,
+            compact: compact,
+            padding: pad,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  DialogChrome.speakerLabel('ECHO', accent, compact: compact),
+                  SizedBox(height: compact ? 6 : 10),
+                  Text(text, style: DialogChrome.bodyStyle(compact: compact)),
+                  SizedBox(height: compact ? 12 : 20),
+                  DialogChrome.choiceButton(
+                    label: 'ABSORB ECHO',
+                    accent: accent,
+                    compact: compact,
+                    wide: true,
+                    onTap: () {
+                      AIFragment.nearbyFragment?.absorb();
+                      AIFragment.activeDialogue.value = null;
+                    },
+                  ),
+                  SizedBox(height: compact ? 4 : 8),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () => AIFragment.activeDialogue.value = null,
+                      child: Text('CLOSE',
+                          style: TextStyle(
+                              color: DialogChrome.mute,
+                              fontSize: compact ? 11 : 12,
+                              letterSpacing: 1)),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -3348,22 +3348,22 @@ class _CalmLayer extends StatelessWidget {
                 duration: const Duration(milliseconds: 350),
                 child: text == null
                     ? const SizedBox.shrink()
-                    : Container(
+                    : ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 280),
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.5),
-                          border: Border.all(color: const Color(0xFF66FFAA).withValues(alpha: 0.35)),
-                          borderRadius: BorderRadius.circular(6),
+                        child: DialogChrome.toastShell(
+                          accent: const Color(0xFF66FFAA),
+                          compact: true,
+                          child: Text(text,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              style: DialogChrome.toastBodyStyle(
+                                      compact: true, alone: true)
+                                  .copyWith(
+                                      color: const Color(0xFF66FFAA)
+                                          .withValues(alpha: 0.85),
+                                      letterSpacing: 0.5)),
                         ),
-                        child: Text(text,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                                color: const Color(0xFF66FFAA).withValues(alpha: 0.75),
-                                fontSize: 10,
-                                letterSpacing: 0.5)),
                       ),
               ),
             ),
@@ -3455,21 +3455,13 @@ class TalkPrompt extends StatelessWidget {
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: _interact,
-              child: Container(
-                key: const ValueKey('hud-talk-prompt'),
+              child: DialogChrome.promptShell(
                 padding: EdgeInsets.symmetric(
                     horizontal: _isTouch ? 28 : 14, vertical: _isTouch ? 14 : 6),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.7),
-                  border: Border.all(color: const Color(0xFF00FFCC)),
-                  borderRadius: BorderRadius.circular(4),
-                ),
                 child: Text(label,
-                    style: TextStyle(
-                        color: const Color(0xFF00FFCC),
-                        fontSize: _isTouch ? 16 : 12,
-                        letterSpacing: 2,
-                        fontWeight: FontWeight.bold)),
+                    key: const ValueKey('hud-talk-prompt'),
+                    style: DialogChrome.promptStyle(
+                        compact: _isTouch, enabled: true)),
               ),
             ),
           ),

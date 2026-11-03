@@ -11,6 +11,7 @@ import '../audio/music_manager.dart';
 import '../game/game_debug.dart';
 import '../game/keyboard_guard.dart';
 import 'cutscene_data.dart';
+import 'dialog_chrome.dart';
 
 export 'cutscene_data.dart';
 
@@ -747,70 +748,72 @@ class _Subtitle extends StatelessWidget {
   final double fontSize;
   final bool portrait;
 
-  static const _shadows = [
-    Shadow(color: Colors.black, blurRadius: 6),
-    Shadow(color: Colors.black, blurRadius: 2, offset: Offset(0, 1)),
-  ];
-
   @override
   Widget build(BuildContext context) {
     final speaker = playback.scene.speaker(line.speaker);
     final shown = playback.visibleChars;
+    final accent = speaker.color;
     final style = TextStyle(
-      color: speaker.narrator ? speaker.color : Colors.white,
+      color: speaker.narrator ? accent : DialogChrome.body,
       fontSize: fontSize,
       height: 1.4,
       fontStyle: speaker.narrator ? FontStyle.italic : FontStyle.normal,
       letterSpacing: 0.3,
-      shadows: _shadows,
     );
     final complete = playback.lineComplete;
+    final body = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (speaker.name != null)
+          Padding(
+            padding: EdgeInsets.only(bottom: fontSize * 0.2),
+            child: DialogChrome.speakerLabel(
+              speaker.name!,
+              accent,
+              compact: fontSize < 18,
+            ),
+          ),
+        // Unrevealed tail stays laid out but transparent so typewriter
+        // never reflows.
+        Text.rich(
+          TextSpan(style: style, children: [
+            TextSpan(text: line.text.substring(0, shown)),
+            TextSpan(
+              text: line.text.substring(shown),
+              style: const TextStyle(color: Colors.transparent),
+            ),
+          ]),
+          textAlign: speaker.narrator ? TextAlign.center : TextAlign.left,
+        ),
+        SizedBox(
+          height: fontSize * 0.9,
+          child: complete
+              ? Text('▸',
+                  textAlign: TextAlign.right,
+                  style: TextStyle(
+                    color: DialogChrome.cyan.withValues(
+                        alpha: 0.35 + 0.35 * math.sin(playback.panelTime * 4).abs()),
+                    fontSize: fontSize * 0.6,
+                  ))
+              : null,
+        ),
+      ],
+    );
     return Opacity(
       opacity: (playback.lineAge / 0.25).clamp(0.0, 1.0),
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 820),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (speaker.name != null)
-                Padding(
-                  padding: EdgeInsets.only(bottom: fontSize * 0.25),
-                  child: Text(
-                    speaker.name!,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: speaker.color,
-                      fontSize: fontSize * 0.72,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 3,
-                      shadows: _shadows,
-                    ),
-                  ),
-                ),
-              // The unrevealed tail is laid out but transparent, so the text
-              // never reflows while it types.
-              Text.rich(
-                TextSpan(style: style, children: [
-                  TextSpan(text: line.text.substring(0, shown)),
-                  TextSpan(
-                    text: line.text.substring(shown),
-                    style: const TextStyle(color: Colors.transparent, shadows: []),
-                  ),
-                ]),
-                textAlign: TextAlign.center,
-              ),
-              SizedBox(
-                height: fontSize * 0.9,
-                child: complete
-                    ? Text('▸',
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.35 + 0.35 * math.sin(playback.panelTime * 4).abs()),
-                          fontSize: fontSize * 0.6,
-                        ))
-                    : null,
-              ),
-            ],
+          child: DialogChrome.captionShell(
+            accent: accent,
+            padding: EdgeInsets.fromLTRB(
+              fontSize * 0.7,
+              fontSize * 0.45,
+              fontSize * 0.7,
+              fontSize * 0.3,
+            ),
+            child: body,
           ),
         ),
       ),
