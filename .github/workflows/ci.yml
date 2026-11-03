@@ -43,7 +43,9 @@ jobs:
         run: flutter test
 
       - name: Build web
-        run: flutter build web --release
+        # --no-source-maps: smaller download for itch/CI artifacts (runtime FPS
+        # wins live in lib/; this just keeps release packaging lean).
+        run: flutter build web --release --no-source-maps
 
       # No signing secrets here: release builds fall back to the debug key.
       - name: Build APK

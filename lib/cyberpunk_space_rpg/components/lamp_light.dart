@@ -170,12 +170,16 @@ class NightLights {
   static bool artMatches(LightKind kind, String style) =>
       kind != LightKind.neon || style == 'neon';
 
+  /// Scratch buffer reused by [visible] to avoid a List alloc every paint.
+  static final _visibleScratch = <ScreenLight>[];
+
   /// Lights to draw this frame (on screen and lit), empty by day.
+  /// The returned list is owned by NightLights — copy if retaining.
   static List<ScreenLight> visible(Size screen, double darkness) {
     final cam = camera;
-    if (cam == null || darkness <= 0.01 || _lights.isEmpty) return const [];
+    final out = _visibleScratch..clear();
+    if (cam == null || darkness <= 0.01 || _lights.isEmpty) return out;
     final view = Offset.zero & screen;
-    final out = <ScreenLight>[];
     for (final l in _lights) {
       final style = styleFor(l.kind, l.style);
       final art = cookies[style];
@@ -283,8 +287,21 @@ class _Tick extends ChangeNotifier {
   void tick() => notifyListeners();
 }
 
-/// Copies the camera into [NightLights] once per game update.
+/// Copies the camera into [NightLights] — notifies the Flutter overlay only
+/// when the wash actually needs a new frame (not every Bonfire tick).
+///
+/// Walk lag was dominated by [NightTintPainter]'s saveLayer + cookie draws
+/// being scheduled 60×/s via [NightLights.frame], even in daylight.
 class _CameraProbe extends GameComponent {
+  final Vector2 _camScratch = Vector2.zero();
+  double _lastCamX = double.nan;
+  double _lastCamY = double.nan;
+  double _lastZoom = double.nan;
+  double _lastDarkness = -1;
+  double _flickerAcc = 0;
+  double _notifyAcc = 0;
+  bool _wasLit = false;
+
   @override
   Future<void> onLoad() async {
     await NightLights.ensureCookie();
@@ -295,8 +312,53 @@ class _CameraProbe extends GameComponent {
   void update(double dt) {
     super.update(dt);
     NightLights.clock += dt;
-    NightLights.camera = gameRef.camera.viewfinder.position.clone();
-    NightLights.zoom = gameRef.camera.viewfinder.zoom;
+    final view = gameRef.camera.viewfinder.position;
+    _camScratch.setValues(view.x, view.y);
+    final zoom = gameRef.camera.viewfinder.zoom;
+    final darkness = DayCycle.darkness(DayCycle.time.value);
+    final lit = darkness > 0.01 && NightLights._lights.isNotEmpty;
+
+    // Day / no lamps: one final paint then stop driving CustomPaint.
+    if (!lit) {
+      NightLights.camera ??= _camScratch.clone();
+      NightLights.camera!.setFrom(_camScratch);
+      NightLights.zoom = zoom;
+      if (_wasLit || _lastDarkness < 0) NightLights._notify();
+      _wasLit = false;
+      _lastDarkness = darkness;
+      _lastCamX = _camScratch.x;
+      _lastCamY = _camScratch.y;
+      _lastZoom = zoom;
+      return;
+    }
+
+    // Always keep the latest camera for the next paint; only schedule Flutter
+    // CustomPaint (saveLayer) up to ~30 Hz — walking used to force 60 Hz.
+    NightLights.camera ??= _camScratch.clone();
+    NightLights.camera!.setFrom(_camScratch);
+    NightLights.zoom = zoom;
+
+    _flickerAcc += dt;
+    _notifyAcc += dt;
+    final moved = _lastCamX.isNaN ||
+        (_camScratch.x - _lastCamX).abs() >= 1.0 ||
+        (_camScratch.y - _lastCamY).abs() >= 1.0 ||
+        (zoom - _lastZoom).abs() > 0.001;
+    // Flicker art is 2-frame / soft sine — ~12 Hz is enough while standing.
+    final flickerTick = _flickerAcc >= 1 / 12;
+    final duskShift = (darkness - _lastDarkness).abs() >= 0.01;
+    final rateOk = _notifyAcc >= 1 / 30;
+    if ((!moved && !flickerTick && !duskShift && _wasLit) ||
+        (!rateOk && !duskShift && _wasLit)) {
+      return;
+    }
+    if (flickerTick) _flickerAcc = 0;
+    _notifyAcc = 0;
+    _lastCamX = _camScratch.x;
+    _lastCamY = _camScratch.y;
+    _lastZoom = zoom;
+    _lastDarkness = darkness;
+    _wasLit = true;
     NightLights._notify();
   }
 
@@ -315,6 +377,15 @@ class _CameraProbe extends GameComponent {
 class NightTintPainter extends CustomPainter {
   NightTintPainter() : super(repaint: Listenable.merge([DayCycle.time, NightLights.frame]));
 
+  final _tintPaint = Paint();
+  final _layerPaint = Paint();
+  final _cut = Paint()
+    ..blendMode = BlendMode.dstOut
+    ..filterQuality = FilterQuality.none;
+  final _glow = Paint()
+    ..blendMode = BlendMode.plus
+    ..filterQuality = FilterQuality.none;
+
   @override
   void paint(Canvas canvas, Size size) {
     final t = DayCycle.time.value;
@@ -325,37 +396,35 @@ class NightTintPainter extends CustomPainter {
     final full = Offset.zero & size;
     final lights = NightLights.visible(size, DayCycle.darkness(t));
     if (lights.isEmpty) {
-      if (tint.a > 0) canvas.drawRect(full, Paint()..color = tint);
+      if (tint.a > 0) {
+        _tintPaint.color = tint;
+        canvas.drawRect(full, _tintPaint);
+      }
       return;
     }
     final clock = NightLights.clock;
     // 1) the tint with soft holes punched under each lamp
-    canvas.saveLayer(full, Paint());
-    canvas.drawRect(full, Paint()..color = tint);
-    final cut = Paint()
-      ..blendMode = BlendMode.dstOut
-      ..filterQuality = FilterQuality.none;
+    canvas.saveLayer(full, _layerPaint);
+    _tintPaint.color = tint;
+    canvas.drawRect(full, _tintPaint);
     for (final l in lights) {
-      cut.color = Color.fromRGBO(0, 0, 0, NightLights.cutStrength * l.strength);
-      canvas.drawImageRect(l.cookie.image, l.cookie.src(clock, l.phase), l.rect, cut);
+      _cut.color = Color.fromRGBO(0, 0, 0, NightLights.cutStrength * l.strength);
+      canvas.drawImageRect(l.cookie.image, l.cookie.src(clock, l.phase), l.rect, _cut);
     }
     canvas.restore();
     // 2) coloured additive glow on top
-    final glow = Paint()
-      ..blendMode = BlendMode.plus
-      ..filterQuality = FilterQuality.none;
     for (final l in lights) {
       final a = NightLights.glowStrength * l.strength;
       if (l.tinted) {
-        glow
+        _glow
           ..color = const Color(0xFFFFFFFF)
           ..colorFilter = ColorFilter.mode(l.color.withValues(alpha: a), BlendMode.srcIn);
       } else {
-        glow
+        _glow
           ..colorFilter = null
           ..color = Color.fromRGBO(255, 255, 255, a);
       }
-      canvas.drawImageRect(l.cookie.image, l.cookie.src(clock, l.phase), l.rect, glow);
+      canvas.drawImageRect(l.cookie.image, l.cookie.src(clock, l.phase), l.rect, _glow);
     }
   }
 

@@ -3,6 +3,7 @@ import 'dart:math';
 import 'dart:ui';
 
 import 'package:bonfire/bonfire.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
@@ -22,6 +23,8 @@ class AmbientPropFx extends GameComponent {
   double _t = 0;
   SpriteAnimationTicker? _loop;
   Vector2 _frame = Vector2.all(32);
+  final _spritePaint = Paint()..filterQuality = FilterQuality.none;
+  final _wispPaint = Paint();
 
   AmbientPropFx(Vector2 position, {required this.kind, this.cyan = false}) {
     this.position = position;
@@ -50,6 +53,16 @@ class AmbientPropFx extends GameComponent {
         (position.y + size.y).floor() + 2,
       );
 
+  /// Skip tick/draw when well off camera (city has 12 ambient emitters).
+  bool get _nearCamera {
+    if (!hasGameRef) return true;
+    final cam = gameRef.camera.viewfinder.position;
+    final dx = absoluteCenter.x - cam.x;
+    final dy = absoluteCenter.y - cam.y;
+    // ~half a desktop viewport at worldZoom plus margin.
+    return dx * dx + dy * dy < 480 * 480;
+  }
+
   @override
   Future<void> onLoad() async {
     try {
@@ -70,10 +83,11 @@ class AmbientPropFx extends GameComponent {
       _loop!.update(_rng.nextDouble() * 2);
     } catch (_) {
       _loop = null;
+      // Fewer wisps on web — MaskFilter.blur per particle is costly there.
       final n = switch (_wispKind) {
-        'ember' => 5,
-        'mist' => 4,
-        _ => 6, // steam
+        'ember' => kIsWeb ? 3 : 5,
+        'mist' => kIsWeb ? 2 : 4,
+        _ => kIsWeb ? 3 : 6, // steam
       };
       for (var i = 0; i < n; i++) {
         _parts.add(_Wisp.spawn(_rng, _wispKind, stagger: i / n));
@@ -84,6 +98,7 @@ class AmbientPropFx extends GameComponent {
 
   @override
   void update(double dt) {
+    if (!_nearCamera) return;
     super.update(dt);
     _t += dt;
     if (_loop != null) {
@@ -101,6 +116,7 @@ class AmbientPropFx extends GameComponent {
 
   @override
   void render(Canvas canvas) {
+    if (!_nearCamera) return;
     final cx = size.x / 2;
     final cy = size.y * 0.7;
     final loop = _loop;
@@ -121,7 +137,7 @@ class AmbientPropFx extends GameComponent {
             canvas,
             position: Vector2(left.roundToDouble(), top.roundToDouble()),
             size: _frame,
-            overridePaint: Paint()..filterQuality = FilterQuality.none,
+            overridePaint: _spritePaint,
           );
       return;
     }
@@ -135,16 +151,18 @@ class AmbientPropFx extends GameComponent {
       final alpha = (p.alpha * fade).clamp(0.0, 1.0);
       if (alpha <= 0.01) continue;
       final r = p.radius * (0.55 + u * 0.9);
-      final paint = Paint()
+      _wispPaint
         ..color = p.color.withValues(alpha: alpha)
-        ..maskFilter = MaskFilter.blur(BlurStyle.normal, r * 0.55);
+        ..maskFilter = kIsWeb
+            ? null
+            : MaskFilter.blur(BlurStyle.normal, r * 0.55);
       canvas.drawOval(
         Rect.fromCenter(
           center: Offset(cx + sway + p.ox, cy - rise),
           width: r * (_wispKind == 'ember' ? 0.7 : 1.4),
           height: r * (_wispKind == 'ember' ? 0.9 : 1.8),
         ),
-        paint,
+        _wispPaint,
       );
     }
   }

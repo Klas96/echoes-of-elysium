@@ -1,5 +1,6 @@
 import 'package:bonfire/bonfire.dart';
 import 'package:bonfire/util/collision_game_component.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:math';
@@ -273,12 +274,26 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
     );
   }
 
+  // Reused paints — walking used to allocate MaskFilter+Paint every frame.
+  final _ghostBlur = Paint();
+  final _ghostBody = Paint();
+  final _wardBlur = Paint();
+  final _wardOuter = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 3.4;
+  final _wardInner = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 1.6;
+  final _auraPaint = Paint();
+
   @override
   void render(Canvas canvas) {
     final cx = size.x / 2;
     final cy = size.y / 2;
     final r = size.x / 2;
     final glowColor = isBlocked ? const Color(0xFFFF3333) : const Color(0xFF00FFFF);
+    // MaskFilter.blur is a known web hot path; solid glow keeps the cue.
+    final softGlow = !kIsWeb;
 
     // Phase afterimages (drawn in local space relative to current position).
     for (final g in _phaseGhosts) {
@@ -286,19 +301,18 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
       final local = g.$1 - position;
       canvas.save();
       canvas.translate(local.x, local.y);
-      canvas.drawCircle(
-        Offset(cx, cy),
-        r * 0.85,
-        Paint()
-          ..color = Color.fromRGBO(100, 255, 255, 0.28 * (1 - age))
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5),
-      );
+      _ghostBlur
+        ..color = Color.fromRGBO(100, 255, 255, 0.28 * (1 - age))
+        ..maskFilter =
+            softGlow ? const MaskFilter.blur(BlurStyle.normal, 5) : null;
+      canvas.drawCircle(Offset(cx, cy), r * 0.85, _ghostBlur);
+      _ghostBody.color = Color.fromRGBO(180, 255, 255, 0.22 * (1 - age));
       canvas.drawRRect(
         RRect.fromRectAndRadius(
           Rect.fromCenter(center: Offset(cx, cy), width: size.x * 0.55, height: size.y * 0.7),
           const Radius.circular(4),
         ),
-        Paint()..color = Color.fromRGBO(180, 255, 255, 0.22 * (1 - age)),
+        _ghostBody,
       );
       canvas.restore();
     }
@@ -306,39 +320,25 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
     // Ward shield ring while active — bright so it's obvious in combat.
     if (_wardLeft > 0) {
       final pulse = 0.65 + 0.35 * sin(_wardLeft * 10).abs();
-      canvas.drawCircle(
-        Offset(cx, cy),
-        r + 14,
-        Paint()
-          ..color = const Color(0xFFE8D0FF).withValues(alpha: 0.32 * pulse)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12),
-      );
-      canvas.drawCircle(
-        Offset(cx, cy),
-        r + 11,
-        Paint()
-          ..color = const Color(0xFFAAFFEE).withValues(alpha: 0.85 * pulse)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 3.4,
-      );
-      canvas.drawCircle(
-        Offset(cx, cy),
-        r + 7,
-        Paint()
-          ..color = const Color(0xFFE8D0FF).withValues(alpha: 0.45 * pulse)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.6,
-      );
+      _wardBlur
+        ..color = const Color(0xFFE8D0FF).withValues(alpha: 0.32 * pulse)
+        ..maskFilter =
+            softGlow ? const MaskFilter.blur(BlurStyle.normal, 12) : null;
+      canvas.drawCircle(Offset(cx, cy), r + 14, _wardBlur);
+      _wardOuter.color =
+          const Color(0xFFAAFFEE).withValues(alpha: 0.85 * pulse);
+      canvas.drawCircle(Offset(cx, cy), r + 11, _wardOuter);
+      _wardInner.color =
+          const Color(0xFFE8D0FF).withValues(alpha: 0.45 * pulse);
+      canvas.drawCircle(Offset(cx, cy), r + 7, _wardInner);
     }
 
     // Glow aura (state indicator kept on top of sprite)
-    canvas.drawCircle(
-      Offset(cx, cy),
-      r + 3,
-      Paint()
-        ..color = glowColor.withValues(alpha: 0.22)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
-    );
+    _auraPaint
+      ..color = glowColor.withValues(alpha: softGlow ? 0.22 : 0.28)
+      ..maskFilter =
+          softGlow ? const MaskFilter.blur(BlurStyle.normal, 6) : null;
+    canvas.drawCircle(Offset(cx, cy), r + 3, _auraPaint);
 
     // Brief visual kick opposite the shot — keeps walk art intact.
     if (_shootKickT > 0) {

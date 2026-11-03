@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:bonfire/bonfire.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import '../audio/sfx_manager.dart';
@@ -116,12 +117,15 @@ abstract class CreatureBody extends GameComponent {
   }
 
   void renderGlow(Canvas canvas, Color color, double radius, double a) {
+    // Soft blur is a walk-frame cost on every nearby creature; skip on web.
+    final paint = Paint()..color = color.withValues(alpha: a);
+    if (!kIsWeb) {
+      paint.maskFilter = MaskFilter.blur(BlurStyle.normal, radius * 0.6);
+    }
     canvas.drawCircle(
       Offset(16, species.flying ? 12 : 18),
       radius,
-      Paint()
-        ..color = color.withValues(alpha: a)
-        ..maskFilter = MaskFilter.blur(BlurStyle.normal, radius * 0.6),
+      paint,
     );
   }
 
