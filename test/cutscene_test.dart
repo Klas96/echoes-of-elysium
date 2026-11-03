@@ -425,11 +425,49 @@ void main() {
       expect(game.resumes, 0);
     });
 
-    test('coalition journal title is listed for the Memories tab section', () async {
+    testWidgets('after_sentinel journal replay keeps a pre-paused engine paused', (tester) async {
+      late BuildContext ctx;
+      await tester.pumpWidget(MaterialApp(
+        home: Builder(builder: (c) {
+          ctx = c;
+          return const Scaffold(body: Text('GAME'));
+        }),
+      ));
+      final game = _FakeBeatGame(ctx)..paused = true;
+      StoryBeats.attach(game);
+      await Cutscenes.markSeen(Cutscenes.afterSentinel);
+
+      var done = false;
+      StoryBeats.replay(Cutscenes.afterSentinel).then((_) => done = true);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.byType(CutscenePlayer), findsOneWidget);
+      expect(game.pauses, 0, reason: 'journal already held pause');
+
+      await tester.pump(const Duration(seconds: 4)); // precache timeout
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      for (var i = 0; i < 30; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      expect(done, isTrue);
+      expect(find.byType(CutscenePlayer), findsNothing);
+      expect(game.paused, isTrue);
+      expect(game.resumes, 0);
+    });
+
+    test('story journal titles are listed for the Memories tab STORY section', () async {
       expect(StoryBeats.titles[Cutscenes.coalition], 'First Contact');
+      expect(StoryBeats.titles[Cutscenes.afterSentinel], 'The Sentinel Falls');
+      expect(StoryBeats.titles.keys.toList(), [
+        Cutscenes.coalition,
+        Cutscenes.afterSentinel,
+      ]);
       expect(Cutscenes.seen(Cutscenes.coalition), isFalse);
+      expect(Cutscenes.seen(Cutscenes.afterSentinel), isFalse);
       await Cutscenes.markSeen(Cutscenes.coalition);
+      await Cutscenes.markSeen(Cutscenes.afterSentinel);
       expect(Cutscenes.seen(Cutscenes.coalition), isTrue);
+      expect(Cutscenes.seen(Cutscenes.afterSentinel), isTrue);
     });
   });
 }
