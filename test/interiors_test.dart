@@ -83,8 +83,10 @@ void main() {
       test('$id parses, art matches, every spot and the door are reachable', () {
         final r = _room(id);
         expect(r.id, id);
-        // #62: one domestic grid, 32px so a tile is Kaela's height.
-        expect((r.cols, r.rows, r.tile), (12, 8, 32));
+        // #62: 32px so a tile is Kaela's height. Tea house hub pilot is 16×10;
+        // every other room stays on the domestic 12×8 grid.
+        final expected = id == 'tea_house' ? (16, 10, 32) : (12, 8, 32);
+        expect((r.cols, r.rows, r.tile), expected);
         expect(r.tile, CustomPlayer.sizePlayer.toInt());
         expect(_pngSize('assets/images/interiors/${r.image}'), (r.cols * r.tile, r.rows * r.tile));
         expect(r.tileset, 'tileset.png');
@@ -139,7 +141,9 @@ void main() {
 
     test('rooms have the people and spots from the brief', () {
       expect(_room('tea_house').npcs.map((n) => n.sprite), ['wen', 'ferro']);
-      expect(_room('tea_house').spots.map((s) => s.kind), contains('rest'));
+      expect(_room('tea_house').spots.map((s) => s.kind).toSet(),
+          containsAll(['rest', 'shop', 'npc']));
+      expect(_room('tea_house').spots.map((s) => s.id), contains('tea_menu'));
       expect(_room('noodle_shop').npcs.single.sprite, 'dao');
       expect(_room('archive_library').npcs.single.sprite, 'archivist');
       expect(_room('archive_library').spots.where((s) => s.kind == 'lore' || s.kind == 'clue'), hasLength(4));
@@ -238,6 +242,18 @@ void main() {
   });
 
   group('services', () {
+    test('Wen tea: cups cost glimmer and restore HP', () {
+      CustomPlayer.healthNotifier.value = 40;
+      Bonds.addGlimmer(10);
+      expect(WenTea.order('lantern_tea'), isNull);
+      expect(Bonds.glimmer, 6);
+      // Heal is applied by the panel handler; order only spends glimmer.
+      expect(WenTea.order('missing'), isNotNull);
+      expect(WenTea.order('quiet_cup'), isNull);
+      expect(Bonds.glimmer, 0);
+      expect(WenTea.order('lantern_tea'), isNotNull, reason: 'too poor');
+    });
+
     test('Dao: meals cost glimmer, buff, expire; errand gives a free bowl tomorrow', () {
       Bonds.addGlimmer(10);
       expect(Meals.order('night_bowl'), isNull);
