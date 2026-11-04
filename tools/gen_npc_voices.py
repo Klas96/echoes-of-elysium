@@ -135,7 +135,7 @@ LINES: dict[str, tuple[str, str]] = {
     # Voss — first meeting (Station Seven rewrite; matches voss_{1,2,3}.mp3)
     "voss_1": (
         "voss",
-        "Doctor Kaela Osei. Last chance. Hand over the fragments and walk away with your clearance intact.",
+        "Kaela Osei. Last chance. Hand over the fragments and walk away with your clearance intact.",
     ),
     "voss_2": (
         "voss",
@@ -177,7 +177,7 @@ LINES: dict[str, tuple[str, str]] = {
     # Voss — after orders
     "voss_orders_1": (
         "voss",
-        "You cracked a field terminal. Those orders were classified for a reason, Doctor.",
+        "You cracked a field terminal. Those orders were classified for a reason, Kaela.",
     ),
     "voss_orders_2": (
         "voss",
@@ -197,7 +197,7 @@ LINES: dict[str, tuple[str, str]] = {
     ),
     "voss_why": (
         "voss",
-        "I signed the quarantine after Seven. I still hear the silence on that channel. Walk away, Doctor.",
+        "I signed the quarantine after Seven. I still hear the silence on that channel. Walk away, Kaela.",
     ),
     "voss_refuse": (
         "voss",
