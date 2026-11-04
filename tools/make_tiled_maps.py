@@ -1373,12 +1373,18 @@ def map1():
                 lv.ground[y, x] = blob(ts, "grass-forest", wall, x, y, lv.rng)
             if water[y, x]: lv.ground[y, x] = blob(ts, "grass-water", water, x, y, lv.rng)
             if path[y, x]: lv.ground[y, x] = blob(ts, "grass-path", path, x, y, lv.rng)
-    # NE stash nook: path east end-caps + forest left-edge column at x=54
-    # (blob dither faces the path; full 32×32 collide).
-    lv.ground[8, 53] = 28  # grass-path east end (top)
-    lv.ground[9, 53] = 31  # grass-path east end (bottom)
-    for y in (7, 8, 9, 10):
-        lv.ground[y, 54] = 138  # grass-forest left edge (open west), 32×32 collide
+    # NE stash nook: 2-tile-thick forest wall (x=53–54) so it merges into the
+    # north/south forest bands instead of a skinny edge column. Path ends at x=52.
+    lv.ground[8, 52] = 28   # grass-path east end (top)
+    lv.ground[9, 52] = 31   # grass-path east end (bottom)
+    lv.ground[8, 53] = 138  # left-edge forest (faces path)
+    lv.ground[9, 53] = 138
+    lv.ground[8, 54] = 159  # interior forest (thick body)
+    lv.ground[9, 54] = 159
+    lv.ground[7, 53] = 146  # merge into north forest band
+    lv.ground[7, 54] = 146
+    lv.ground[10, 53] = 141  # merge into south forest band
+    lv.ground[10, 54] = 141
     # keep-out: trails, clearings, gated pockets, the cabin
     for r in trails:
         carve_route(lv, route_pts(r), 2.5, lv.keepout)
