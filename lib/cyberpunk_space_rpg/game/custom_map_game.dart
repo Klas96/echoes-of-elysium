@@ -26,7 +26,6 @@ import '../components/lamp_light.dart';
 import 'well_rested.dart';
 import '../audio/audio_unlock.dart';
 import '../audio/music_manager.dart';
-import '../components/wall_contact_shadow.dart';
 import '../creatures/bonds.dart';
 import '../creatures/creature_components.dart';
 import '../creatures/creature_species.dart';
