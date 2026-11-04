@@ -1373,13 +1373,13 @@ def map1():
                 lv.ground[y, x] = blob(ts, "grass-forest", wall, x, y, lv.rng)
             if water[y, x]: lv.ground[y, x] = blob(ts, "grass-water", water, x, y, lv.rng)
             if path[y, x]: lv.ground[y, x] = blob(ts, "grass-path", path, x, y, lv.rng)
-    # NE stash nook ends at ~54,8. Full dirt on the path end, and a SOLID
-    # full-collision forest column at x=55 (wang edge tiles only collide on
-    # half the cell — player feet slip through). Glue into the bands above/below.
-    lv.ground[8, 54] = 63
-    lv.ground[9, 54] = 63
+    # NE stash nook: solid full-collision forest plug at x=54 (one column west
+    # of the willow trail). Wang edge tiles only half-collide — use 159.
+    # Path ends on full dirt at x=53 against that plug.
+    lv.ground[8, 53] = 63
+    lv.ground[9, 53] = 63
     for y in (7, 8, 9, 10):
-        lv.ground[y, 55] = 159  # grass-forest interior, 32×32 collide
+        lv.ground[y, 54] = 159  # grass-forest interior, 32×32 collide
     # keep-out: trails, clearings, gated pockets, the cabin
     for r in trails:
         carve_route(lv, route_pts(r), 2.5, lv.keepout)
