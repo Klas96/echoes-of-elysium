@@ -26,6 +26,7 @@ import '../components/lamp_light.dart';
 import 'well_rested.dart';
 import '../audio/audio_unlock.dart';
 import '../audio/music_manager.dart';
+import '../components/wall_contact_shadow.dart';
 import '../creatures/bonds.dart';
 import '../creatures/creature_components.dart';
 import '../creatures/creature_species.dart';
@@ -666,6 +667,9 @@ int? _destLevel(String raw) {
     case '5':
     case 'town':
       return 5;
+    case '6':
+    case 'works':
+      return 6;
     default:
       return int.tryParse(raw);
   }
@@ -680,7 +684,7 @@ Map<String, ObjectBuilder> _mapObjects(String mapId) => {
       'mapexit': (p) {
         final dest = _destLevel((p.others['dest'] ?? '').toString());
         if (dest == null) {
-          throw ArgumentError('mapexit on $mapId needs dest=woods|city|town|ruins|core');
+          throw ArgumentError('mapexit on $mapId needs dest=woods|city|town|ruins|core|works');
         }
         final entry = (p.others['entry'] ?? 'north').toString().toLowerCase();
         final needUnlock = p.others['unlock'] == true ||
@@ -1209,6 +1213,7 @@ const _regionNames = {
   'ruins': 'The Ruins',
   'core': 'Gaia\'s Core',
   'town': 'Lantern Town',
+  'works': 'Canal Works',
 };
 
 String _saveSummary(SaveData d) {
@@ -1228,6 +1233,8 @@ Widget _screenForMap(String mapId) {
       return const Map4GameScreen();
     case 'world5':
       return const Map5GameScreen();
+    case 'world6':
+      return const Map6GameScreen();
     default:
       return const CustomMapGameScreen();
   }
@@ -1428,6 +1435,7 @@ Future<void> _activateCoreRecord(BuildContext context) async {
 String _musicAssetForMap(String mapId) {
   switch (mapId) {
     case 'world2':
+    case 'world6':
       return 'assets/audio/music/Neon_Shadows.mp3';
     case 'world3':
     case 'world5':
@@ -1557,6 +1565,7 @@ String _mapAssetForLevel(int level) => switch (level) {
       3 => 'maps/world3.tmj',
       4 => 'maps/world4.tmj',
       5 => 'maps/world5.tmj',
+      6 => 'maps/world6.tmj',
       _ => 'maps/world.tmj',
     };
 
@@ -1566,6 +1575,8 @@ Future<void> _startLevel(BonfireGameInterface game, int level) async {
   BuildingMasks.loadFromDisk();
   // Walls from TMJ (complete) so click-paths go around forests, not through.
   await ClickPathfinder.primeFromAsset(_mapAssetForLevel(level));
+  // Floor contact shadow beside walls (woods-style depth) on every overworld.
+  game.add(WallContactShadow());
   SaveService.snapshot = _snapshot;
   // Companions stay home: the region on screen decides who follows.
   final arrivedFrom = Regions.previous;
@@ -1668,6 +1679,8 @@ Future<void> _startLevel(BonfireGameInterface game, int level) async {
       GameState.resetMap4();
     case 5:
       GameState.resetMap5();
+    case 6:
+      GameState.resetMap6();
     default:
       GameState.resetMap1();
   }
@@ -2181,6 +2194,57 @@ class Map5GameScreen extends StatelessWidget {
                 MusicManager().play('assets/audio/music/Neon_Mirage.mp3');
               },
             ),
+          _mapPointer(),
+          const NightTint(),
+          const _Vignette(),
+          const GameHud(),
+          const _NpcDialogueLayer(),
+          const TalkPrompt(),
+          const InteractPromptLayer(),
+          const ToastLayer(),
+          const _CalmLayer(),
+          if (kDebugMode) _DebugOverlay(),
+          const JournalOverlay(),
+          const EquipmentOverlay(),
+          const ShopOverlay(),
+          const QuestBoardOverlay(),
+        ]),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Map 6 — Canal Works
+// ---------------------------------------------------------------------------
+
+class Map6GameScreen extends StatelessWidget {
+  const Map6GameScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Focus(
+      canRequestFocus: false,
+      onKeyEvent: _handleDebugKey,
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: Stack(children: [
+          BonfireWidget(
+            focusNode: GameInput.focusNode,
+            playerControllers: _playerControllers(),
+            player: CustomPlayer(Vector2.zero()),
+            map: CustomMap('maps/world6.tmj', objectsBuilder: _mapObjects('world6')),
+            cameraConfig: CameraConfig(moveOnlyMapArea: true, zoom: HudLayout.worldZoom),
+            overlayBuilderMap: {
+              'portalReached': (ctx, game) =>
+                  _PortalOverlay(game: game, fromLevel: 6),
+              'edgeTravel': (ctx, game) => _EdgeTravelOverlay(game: game),
+            },
+            onReady: (game) async {
+              await _startLevel(game, 6);
+              MusicManager().play('assets/audio/music/Neon_Shadows.mp3');
+            },
+          ),
           _mapPointer(),
           const NightTint(),
           const _Vignette(),

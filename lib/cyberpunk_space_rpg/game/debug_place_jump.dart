@@ -156,6 +156,23 @@ class DebugPlaceJump {
       spawnX: 464,
       spawnY: 128,
     ),
+    DebugPlace(
+      id: 'works',
+      label: 'Canal Works',
+      group: 'Maps',
+      blurb: 'Junkyard · City SW west',
+      level: 6,
+      spawnX: 1280,
+      spawnY: 496,
+    ),
+    DebugPlace(
+      id: 'city_west',
+      label: 'City · Works yard',
+      group: 'Maps',
+      blurb: 'SW west edge toward Canal Works',
+      level: 2,
+      entrySide: 'west',
+    ),
 
     // —— Interiors ——
     DebugPlace(

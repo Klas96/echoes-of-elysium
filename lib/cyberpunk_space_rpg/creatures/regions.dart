@@ -37,6 +37,7 @@ class Regions {
         'ruins' => 'the Ruins',
         'town' => 'Lantern Town',
         'core' => 'the Core',
+        'works' => 'Canal Works',
         _ => region,
       };
 }

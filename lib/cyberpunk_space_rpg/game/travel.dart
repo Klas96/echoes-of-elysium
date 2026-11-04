@@ -65,6 +65,12 @@ class Travel {
       regionId: 'town',
     ),
     TravelDest(
+      level: 6,
+      title: 'Canal Works',
+      blurb: 'Scrapyard west of the City\'s SW yard — heaps, oil, and dead drones.',
+      regionId: 'works',
+    ),
+    TravelDest(
       level: 3,
       title: 'The Ruins',
       blurb: 'Collapsed Aetherian districts on the road to the Core.',
@@ -95,6 +101,8 @@ class Travel {
         return 4;
       case 5:
         return 2; // leave town → city
+      case 6:
+        return 2; // leave works → city
       default:
         return null;
     }
@@ -111,6 +119,7 @@ class Travel {
       if (d.level == 1) return true; // woods is always a home return
       if (d.level == 2 && fromLevel == 1 && unlocked) return true;
       if (d.level == 5 && fromLevel == 2) return true; // city → town side gate
+      if (d.level == 6 && fromLevel == 2) return true; // city → canal works
       if (d.level == 3 && fromLevel == 2 && unlocked) return true;
       if (d.level == 4 && fromLevel == 3) return true;
       return false;
@@ -137,12 +146,11 @@ class Travel {
       for (final d in available)
         if (d.level != cont?.level) d,
     ];
-    // Prefer Lantern Town near the top of side destinations from the city.
+    // Prefer side hubs near the top of return destinations from the city.
     if (fromLevel == 2) {
       returns.sort((a, b) {
-        if (a.level == 5) return -1;
-        if (b.level == 5) return 1;
-        return 0;
+        int rank(int level) => switch (level) { 5 => 0, 6 => 1, _ => 2 };
+        return rank(a.level).compareTo(rank(b.level));
       });
     }
     return (continueTo: cont, returns: returns);
