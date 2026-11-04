@@ -6,11 +6,12 @@ import '../game/click_pathfinder.dart';
 
 /// Soft floor contact shadow where walkable tiles meet solid walls.
 ///
-/// Matches the woods blob-edge dither and interior room bake: a dark rim on
-/// the floor beside walls so blocked ground reads raised. Light bias is from
-/// the north-west (stronger south / east strips), same as the woods sheet.
+/// Matches the woods blob-edge dither look: a dark rim on the floor beside
+/// walls so blocked ground reads raised. Light bias is from the north-west
+/// (stronger south / east strips).
 ///
-/// Added once per overworld map from [_startLevel] after pathfinding primes.
+/// Added from [_startLevel] on overworlds that lack baked wall-edge art.
+/// Not used on the Woods — that tileset already has the dither.
 class WallContactShadow extends GameComponent {
   static const double _tile = 32;
 

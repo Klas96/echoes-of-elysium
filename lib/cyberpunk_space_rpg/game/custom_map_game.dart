@@ -1575,8 +1575,11 @@ Future<void> _startLevel(BonfireGameInterface game, int level) async {
   BuildingMasks.loadFromDisk();
   // Walls from TMJ (complete) so click-paths go around forests, not through.
   await ClickPathfinder.primeFromAsset(_mapAssetForLevel(level));
-  // Floor contact shadow beside walls (woods-style depth) on every overworld.
-  game.add(WallContactShadow());
+  // Contact shadow on maps that lack woods' baked blob-edge dither.
+  // Woods (level 1) already has that art — do not double it.
+  if (level != 1) {
+    game.add(WallContactShadow());
+  }
   SaveService.snapshot = _snapshot;
   // Companions stay home: the region on screen decides who follows.
   final arrivedFrom = Regions.previous;
