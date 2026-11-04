@@ -163,7 +163,7 @@ jobs:
         id: web
         run: |
           set -euo pipefail
-          flutter build web --release
+          flutter build web --release --no-source-maps
           zip_name="echoes-of-elysium-${{ steps.version.outputs.version_name }}-web.zip"
           (cd build/web && zip -qr "$GITHUB_WORKSPACE/dist/$zip_name" .)
           echo "web_zip=$zip_name" >> "$GITHUB_OUTPUT"
@@ -370,7 +370,7 @@ jobs:
         run: |
           set -euo pipefail
           flutter pub get
-          flutter build web --release --base-href "$BASE_HREF" \
+          flutter build web --release --no-source-maps --base-href "$BASE_HREF" \
             --build-name="$VERSION_NAME" --build-number="$VERSION_CODE"
           rm -f build/web/.last_build_id
           # Workaround: the web SfxManager loads 'assets/audio/...' while Flutter web

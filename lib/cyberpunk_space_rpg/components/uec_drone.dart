@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:bonfire/bonfire.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'custom_player.dart';
 import 'damage_number.dart';
@@ -279,6 +280,18 @@ class UECDrone extends GameDecoration {
 
   Sprite? _sprite;
   SpriteAnimationTicker? _hover;
+  /// Soft-glow / bars reuse paints; MaskFilter.blur is skipped on web.
+  final _auraPaint = Paint();
+  final _barBg = Paint()..color = Colors.black54;
+  final _barFg = Paint();
+  final _shieldRing = Paint()
+    ..color = const Color(0xFF66CCFF)
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 2.2;
+  final _shieldBar = Paint()..color = const Color(0xFF66CCFF);
+  final _spritePaint = Paint()..filterQuality = FilterQuality.none;
+  TextPainter? _levelTp;
+  int? _levelTpFor;
 
   @override
   Future<void> onLoad() async {
@@ -355,16 +368,21 @@ class UECDrone extends GameDecoration {
     return _state == _DroneState.patrol ? base : base * 1.85;
   }
 
-  void _move(Vector2 delta) {
-    final before = position.clone();
-    final ok =
-        DroneBounds.chaseStep(this, delta, origin: _origin, leash: _leash);
+  void _move(Vector2 delta, {bool checkSolids = true}) {
+    final beforeX = position.x;
+    final beforeY = position.y;
+    final ok = DroneBounds.chaseStep(this, delta,
+        origin: _origin, leash: _leash, checkSolids: checkSolids);
     if (!ok) {
       _knockback.setZero();
       return;
     }
     // Partial slide into a wall/leash — stop the shove.
-    if ((position - (before + delta)).length2 > 1) {
+    final intendedX = beforeX + delta.x;
+    final intendedY = beforeY + delta.y;
+    final dx = position.x - intendedX;
+    final dy = position.y - intendedY;
+    if (dx * dx + dy * dy > 1) {
       _knockback.setZero();
     }
   }
@@ -384,7 +402,6 @@ class UECDrone extends GameDecoration {
       return;
     }
     super.update(dt);
-    _hover?.update(dt);
     _pulse += dt * (kind == DroneKind.swarm ? 5.0 : 3.5);
     _attackTimer = max(0, _attackTimer - dt);
     _hushed = max(0, _hushed - dt);
@@ -403,14 +420,37 @@ class UECDrone extends GameDecoration {
       }
     }
 
-    DroneBounds.rescue(this, origin: _origin, leash: _leash);
-
     final player = gameRef.player;
     if (player == null) return;
 
     final toPlayer =
         (player.position + player.size / 2) - (position + size / 2);
     final dist = toPlayer.length;
+
+    // Far idle: skip solid scans + hover ticker. Aggro range unchanged.
+    final farIdle = !isHushed &&
+        _state == _DroneState.patrol &&
+        _knockback.length2 < 1 &&
+        dist > _stats.detectionRadius + 120;
+    if (farIdle) {
+      DroneBounds.rescue(this,
+          origin: _origin, leash: _leash, checkSolids: false);
+      _patrolAngle += dt * (kind == DroneKind.swarm ? 1.2 : 0.7);
+      final radius = kind == DroneKind.swarm ? 40.0 : 70.0;
+      final target = _origin +
+          Vector2(cos(_patrolAngle) * radius, sin(_patrolAngle) * radius);
+      final step = target - position;
+      if (step.length > 1) {
+        _move(
+            step.normalized() *
+                min(_stats.speed * _speedMult * dt, step.length),
+            checkSolids: false);
+      }
+      return;
+    }
+
+    _hover?.update(dt);
+    DroneBounds.rescue(this, origin: _origin, leash: _leash);
 
     if (isHushed) {
       _state = _DroneState.patrol;
@@ -516,42 +556,36 @@ class UECDrone extends GameDecoration {
         ? const Color(0xFF88CC88)
         : (aggro ? _stats.aggroColor : _stats.idleColor);
 
-    // Kind-coloured aura (soft green while HUSHed)
+    // Kind-coloured aura (soft green while HUSHed). Blur is expensive on web.
+    _auraPaint
+      ..color = col.withValues(alpha: 0.18 + sin(_pulse) * 0.07)
+      ..maskFilter =
+          kIsWeb ? null : const MaskFilter.blur(BlurStyle.normal, 7);
     canvas.drawCircle(
       Offset(cx, cy),
       r + (kind == DroneKind.shield && _shield > 0 ? 8 : 5),
-      Paint()
-        ..color = col.withOpacity(0.18 + sin(_pulse) * 0.07)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 7),
+      _auraPaint,
     );
 
     // Shield ring
     if (_shield > 0) {
-      canvas.drawCircle(
-        Offset(cx, cy),
-        r + 3,
-        Paint()
-          ..color = const Color(0xFF66CCFF)
-              .withOpacity(0.35 + sin(_pulse) * 0.1)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 2.2,
-      );
+      _shieldRing.color =
+          const Color(0xFF66CCFF).withValues(alpha: 0.35 + sin(_pulse) * 0.1);
+      canvas.drawCircle(Offset(cx, cy), r + 3, _shieldRing);
     }
 
     final sprite = _hover?.getSprite() ?? _sprite;
     if (sprite != null) {
       final s = _stats.spriteSize;
+      _spritePaint.colorFilter = ColorFilter.mode(
+        Color.lerp(Colors.white, col, aggro ? 0.25 : 0.0)!,
+        BlendMode.modulate,
+      );
       sprite.render(
         canvas,
         position: Vector2(cx - s / 2, cy - s / 2),
         size: Vector2.all(s),
-        overridePaint: Paint()
-          ..filterQuality = FilterQuality.none
-          // Light tint only: the per-kind art already carries the identity.
-          ..colorFilter = ColorFilter.mode(
-            Color.lerp(Colors.white, col, aggro ? 0.25 : 0.0)!,
-            BlendMode.modulate,
-          ),
+        overridePaint: _spritePaint,
       );
     }
 
@@ -560,10 +594,8 @@ class UECDrone extends GameDecoration {
     const barH = 3.0;
     final barX = cx - barW / 2;
     final barY = cy - max(r, _stats.spriteSize / 2) - 6;
-    canvas.drawRect(
-      Rect.fromLTWH(barX, barY, barW, barH),
-      Paint()..color = Colors.black54,
-    );
+    canvas.drawRect(Rect.fromLTWH(barX, barY, barW, barH), _barBg);
+    _barFg.color = _stats.aggroColor;
     canvas.drawRect(
       Rect.fromLTWH(
         barX,
@@ -571,15 +603,12 @@ class UECDrone extends GameDecoration {
         barW * (_health / _maxHp).clamp(0, 1),
         barH,
       ),
-      Paint()..color = _stats.aggroColor,
+      _barFg,
     );
 
     // Shield bar (above HP)
     if (_maxShield > 0) {
-      canvas.drawRect(
-        Rect.fromLTWH(barX, barY - 4, barW, 2),
-        Paint()..color = Colors.black54,
-      );
+      canvas.drawRect(Rect.fromLTWH(barX, barY - 4, barW, 2), _barBg);
       canvas.drawRect(
         Rect.fromLTWH(
           barX,
@@ -587,24 +616,28 @@ class UECDrone extends GameDecoration {
           barW * (_shield / _maxShield).clamp(0, 1),
           2,
         ),
-        Paint()..color = const Color(0xFF66CCFF),
+        _shieldBar,
       );
     }
 
-    final lvTp = TextPainter(
-      text: TextSpan(
-        text: 'LV$enemyLevel',
-        style: TextStyle(
-          color: Colors.white.withOpacity(0.9),
-          fontSize: 8,
-          fontWeight: FontWeight.w700,
-          shadows: const [
-            Shadow(color: Colors.black87, blurRadius: 2, offset: Offset(0, 1)),
-          ],
+    if (_levelTp == null || _levelTpFor != enemyLevel) {
+      _levelTpFor = enemyLevel;
+      _levelTp = TextPainter(
+        text: TextSpan(
+          text: 'LV$enemyLevel',
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.9),
+            fontSize: 8,
+            fontWeight: FontWeight.w700,
+            shadows: const [
+              Shadow(color: Colors.black87, blurRadius: 2, offset: Offset(0, 1)),
+            ],
+          ),
         ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
+        textDirection: TextDirection.ltr,
+      )..layout();
+    }
+    final lvTp = _levelTp!;
     final lvTop = _maxShield > 0 ? barY - 4 : barY;
     lvTp.paint(canvas, Offset(cx - lvTp.width / 2, lvTop - lvTp.height - 1));
 

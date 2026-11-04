@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:bonfire/bonfire.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import '../creatures/interaction.dart';
@@ -463,13 +464,14 @@ class SentinelDrone extends GameDecoration {
     final col = rage ? const Color(0xFFFF2200) : const Color(0xFFFF6600);
     final p = sin(_pulse);
 
-    // Outer pulsing aura
+    // Outer pulsing aura (skip MaskFilter on web — combat FPS).
     canvas.drawCircle(
         Offset(cx, cy),
         r + 12 + p * 5,
         Paint()
           ..color = col.withValues(alpha: 0.14 + p * 0.06)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14));
+          ..maskFilter =
+              kIsWeb ? null : const MaskFilter.blur(BlurStyle.normal, 14));
 
     if (_sprite != null) {
       const s = spriteSize;

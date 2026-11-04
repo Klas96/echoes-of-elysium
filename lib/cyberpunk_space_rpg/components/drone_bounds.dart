@@ -10,27 +10,34 @@ class DroneBounds {
 
   /// Try to apply [delta]. Slides on one axis if the full step is blocked.
   /// Returns false if nothing moved.
+  ///
+  /// When [checkSolids] is false (far off-camera patrol), only map/leash
+  /// bounds are tested — avoids scanning every visible collision each step.
   static bool moveBy(
     GameDecoration drone,
     Vector2 delta, {
     required Vector2 origin,
     required double leash,
     double pad = 24,
+    bool checkSolids = true,
   }) {
     if (delta.length2 < 1e-10) return false;
     final cur = drone.position;
     final full = cur + delta;
-    if (_isFree(drone, full, origin: origin, leash: leash, pad: pad)) {
+    if (_isFree(drone, full,
+        origin: origin, leash: leash, pad: pad, checkSolids: checkSolids)) {
       drone.position.setFrom(full);
       return true;
     }
     final onlyX = Vector2(cur.x + delta.x, cur.y);
-    if (_isFree(drone, onlyX, origin: origin, leash: leash, pad: pad)) {
+    if (_isFree(drone, onlyX,
+        origin: origin, leash: leash, pad: pad, checkSolids: checkSolids)) {
       drone.position.setFrom(onlyX);
       return true;
     }
     final onlyY = Vector2(cur.x, cur.y + delta.y);
-    if (_isFree(drone, onlyY, origin: origin, leash: leash, pad: pad)) {
+    if (_isFree(drone, onlyY,
+        origin: origin, leash: leash, pad: pad, checkSolids: checkSolids)) {
       drone.position.setFrom(onlyY);
       return true;
     }
@@ -45,11 +52,15 @@ class DroneBounds {
     required Vector2 origin,
     required double leash,
     double pad = 24,
+    bool checkSolids = true,
   }) {
-    if (moveBy(drone, delta, origin: origin, leash: leash, pad: pad)) {
+    if (moveBy(drone, delta,
+        origin: origin, leash: leash, pad: pad, checkSolids: checkSolids)) {
       return true;
     }
     if (delta.length2 < 1e-10) return false;
+    // Far idle patrol does not need multi-slip corner solving.
+    if (!checkSolids) return false;
     final n = delta.normalized();
     final len = delta.length;
     final left = Vector2(-n.y, n.x);
@@ -77,11 +88,14 @@ class DroneBounds {
     required Vector2 origin,
     required double leash,
     double pad = 24,
+    bool checkSolids = true,
   }) {
-    if (_isFree(drone, drone.position, origin: origin, leash: leash, pad: pad)) {
+    if (_isFree(drone, drone.position,
+        origin: origin, leash: leash, pad: pad, checkSolids: checkSolids)) {
       return;
     }
-    if (_isFree(drone, origin, origin: origin, leash: leash, pad: pad)) {
+    if (_isFree(drone, origin,
+        origin: origin, leash: leash, pad: pad, checkSolids: checkSolids)) {
       drone.position.setFrom(origin.clone());
       return;
     }
@@ -98,6 +112,7 @@ class DroneBounds {
     required Vector2 origin,
     required double leash,
     required double pad,
+    bool checkSolids = true,
   }) {
     final mapSize = drone.gameRef.map.getMapSize();
     final maxX = max(pad, mapSize.x - drone.size.x - pad);
@@ -110,6 +125,7 @@ class DroneBounds {
     }
     final fromOrigin = (topLeft + drone.size / 2) - (origin + drone.size / 2);
     if (fromOrigin.length > leash) return false;
+    if (!checkSolids) return true;
     return !_hitsSolid(drone, topLeft);
   }
 
