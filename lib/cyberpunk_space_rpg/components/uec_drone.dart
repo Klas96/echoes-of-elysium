@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:bonfire/bonfire.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'custom_player.dart';
 import 'damage_number.dart';
@@ -279,6 +280,8 @@ class UECDrone extends GameDecoration {
 
   Sprite? _sprite;
   SpriteAnimationTicker? _hover;
+  /// Soft-glow / bars reuse paints; MaskFilter.blur is skipped on web.
+  final _auraPaint = Paint();
   final _barBg = Paint()..color = Colors.black54;
   final _barFg = Paint();
   final _shieldRing = Paint()
@@ -553,7 +556,18 @@ class UECDrone extends GameDecoration {
         ? const Color(0xFF88CC88)
         : (aggro ? _stats.aggroColor : _stats.idleColor);
 
-    // Shield ring (gameplay cue) — no soft aura glow around the body.
+    // Kind-coloured aura (soft green while HUSHed). Blur skipped on web.
+    _auraPaint
+      ..color = col.withValues(alpha: 0.18 + sin(_pulse) * 0.07)
+      ..maskFilter =
+          kIsWeb ? null : const MaskFilter.blur(BlurStyle.normal, 7);
+    canvas.drawCircle(
+      Offset(cx, cy),
+      r + (kind == DroneKind.shield && _shield > 0 ? 8 : 5),
+      _auraPaint,
+    );
+
+    // Shield ring
     if (_shield > 0) {
       _shieldRing.color =
           const Color(0xFF66CCFF).withValues(alpha: 0.35 + sin(_pulse) * 0.1);
