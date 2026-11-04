@@ -16,7 +16,8 @@ import os
 import shutil
 import xml.etree.ElementTree as ET
 
-from PIL import Image
+from PIL import Image, ImageFilter
+import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 GEN = os.path.join(HERE, "gen_src", "junkyard")
