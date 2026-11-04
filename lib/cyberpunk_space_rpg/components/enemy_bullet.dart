@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:bonfire/bonfire.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'custom_player.dart';
 
@@ -14,6 +15,8 @@ class EnemyBullet extends GameDecoration {
   final int damage;
   double _traveled = 0;
   bool _hit = false;
+  final _glow = Paint();
+  final _core = Paint();
 
   EnemyBullet(Vector2 position, Vector2 direction, {this.damage = 14})
       : _velocity = direction.normalized() * _speed,
@@ -48,17 +51,12 @@ class EnemyBullet extends GameDecoration {
     final fade = (1.0 - (_traveled / _maxDistance) * 0.5).clamp(0.0, 1.0);
     final cx = size.x / 2;
     final cy = size.y / 2;
-    canvas.drawCircle(
-      Offset(cx, cy),
-      5,
-      Paint()
-        ..color = const Color(0xFFFF6622).withOpacity(0.35 * fade)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
-    );
-    canvas.drawCircle(
-      Offset(cx, cy),
-      2.8,
-      Paint()..color = const Color(0xFFFFAA44).withOpacity(fade),
-    );
+    _glow
+      ..color = const Color(0xFFFF6622).withValues(alpha: 0.35 * fade)
+      ..maskFilter =
+          kIsWeb ? null : const MaskFilter.blur(BlurStyle.normal, 4);
+    canvas.drawCircle(Offset(cx, cy), 5, _glow);
+    _core.color = const Color(0xFFFFAA44).withValues(alpha: fade);
+    canvas.drawCircle(Offset(cx, cy), 2.8, _core);
   }
 }

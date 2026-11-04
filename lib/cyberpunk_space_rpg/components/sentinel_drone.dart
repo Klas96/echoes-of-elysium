@@ -4,6 +4,7 @@ import 'package:bonfire/bonfire.dart';
 import 'package:flutter/material.dart';
 
 import '../creatures/interaction.dart';
+import 'soft_aura.dart';
 import '../game/game_debug.dart';
 import '../game/game_state.dart';
 import '../game/progression.dart';
@@ -463,13 +464,14 @@ class SentinelDrone extends GameDecoration {
     final col = rage ? const Color(0xFFFF2200) : const Color(0xFFFF6600);
     final p = sin(_pulse);
 
-    // Outer pulsing aura
-    canvas.drawCircle(
-        Offset(cx, cy),
-        r + 12 + p * 5,
-        Paint()
-          ..color = col.withValues(alpha: 0.14 + p * 0.06)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14));
+    // Outer pulsing aura — soft radial falloff (no MaskFilter).
+    paintSoftAura(
+      canvas,
+      Offset(cx, cy),
+      r + 18 + p * 6,
+      col,
+      coreAlpha: 0.20 + p * 0.08,
+    );
 
     if (_sprite != null) {
       const s = spriteSize;

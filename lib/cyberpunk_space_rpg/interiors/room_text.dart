@@ -37,6 +37,10 @@ class RoomText {
   static const ferroRewardGlimmer = 5;
 
   static const windowSeat = 'Lantern Road runs east from here. The lamps were lit by hand, every one.';
+  static const loungeTable = 'A low table between travellers. Cups cool; stories linger.';
+  static const restScreen = 'A paper screen softens the alcove. Beyond it, a bed waits.';
+  static const wenTeaBoard =
+      'The board lists two cups. Pay in glimmer; drink here at the counter.';
 
   // --- Noodle shop on Market Row ------------------------------------------
   static const daoFirst = 'Sit! Eat! You look like a forest walked on you.';
@@ -56,7 +60,7 @@ class RoomText {
       'A fragment was carried south, toward the alleys where the drones now hum.';
   static const readingDesk = 'A lamp still lit. Someone was here not long ago.';
   static const mergeDraftTake =
-      'Dust lifts off the draft. The vote is there in brittle ink — merge, or become dust that remembers nothing.';
+      'Dust lifts off the draft. Names in brittle ink — each who chose the merge, one mind at a time.';
   static const mergeDraftGone =
       'The desk is bare. You already carry the First Memory Draft.';
 

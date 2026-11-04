@@ -63,6 +63,25 @@ Props (`name`: tile ids, row-major):
 
 Wangsets: `asphalt-ruin` (mixed, 60 tiles), `asphalt-sludge` (mixed, 60 tiles), `asphalt-metal` (mixed, 61 tiles)
 
+## Canal Works junkyard: `junkyard.png` / `junkyard.tsx`
+256 tiles (16 x 16) — same layout/collision/wang footprints as cyberpunk, AI-painted scrapyard art.
+
+Art sources live in `gen_src/junkyard/` (ground textures + full tilesheet). Rebuild:
+
+    python3 tools/tilesets/make_junkyard.py
+
+| ids | contents |
+|---|---|
+| 0-20 | ground: dirt yard, scrap heaps (collides), oil slicks (collides), salvage plates |
+| 32-78 | blob `dirt-heap` (dirt → scrap heap) collides |
+| 80-126 | blob `dirt-oil` (dirt → oil) collides |
+| 128-174 | blob `dirt-metal` (dirt → plate) |
+| 176+ | props (scrap piles, wrecks, drums, skip bins, yard lamps, …) |
+
+Props: `scrap_pile`, `scrap_heap`, `wreck_car_v`, `wreck_car_h`, `drum_sealed`, `drum_leaking`, `parts_stall`, `broken_vendor`, `weigh_console`, `salvage_board`, `yard_sign`, `scrap_crate`, `skip_bin`, `vent_stack`, `concrete_stub`, `yard_lamp`, `radar_dish`, `drone_hulk`, `tire_wall`, `crane_pad`, `arc_welder`, `cable_tangle`
+
+Used by `world6.tmj` (Canal Works).
+
 ## Gaia's Core room: `core.png` / `core.tsx`
 240 tiles (16 x 15), 116 with collision. Matches the painted Core room (navy flagstones, cyan rim at the void, magenta/purple inlays, green-gold roots, purple orb pylons). The Core Record tree is a separate sprite and isn't in this sheet. Use `floor_ring_marker` and the inlay-dash tiles to build rings around it.
 

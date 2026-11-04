@@ -107,25 +107,22 @@ class AbilityRing extends GameComponent {
     if (_age >= life) removeFromParent();
   }
 
+  final _ring = Paint()..style = PaintingStyle.stroke;
+  final _fill = Paint();
+
   @override
   void render(Canvas canvas) {
     final u = (_age / life).clamp(0.0, 1.0);
     final fade = (1.0 - u);
     final r = maxRadius * (0.2 + 0.8 * u);
     final c = Offset(size.x / 2, size.y / 2);
-    canvas.drawCircle(
-      c,
-      r,
-      Paint()
-        ..color = color.withValues(alpha: 0.55 * fade)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = stroke * fade
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.5),
-    );
-    canvas.drawCircle(
-      c,
-      r * 0.7,
-      Paint()..color = color.withValues(alpha: 0.22 * fade),
-    );
+    _ring
+      ..color = color.withValues(alpha: 0.55 * fade)
+      ..strokeWidth = stroke * fade
+      ..maskFilter =
+          kIsWeb ? null : const MaskFilter.blur(BlurStyle.normal, 2.5);
+    canvas.drawCircle(c, r, _ring);
+    _fill.color = color.withValues(alpha: 0.22 * fade);
+    canvas.drawCircle(c, r * 0.7, _fill);
   }
 }

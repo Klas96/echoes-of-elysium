@@ -82,7 +82,8 @@ void main() {
       for (var i = 0; i < 3; i++) {
         Gates.registerPass('woods_brambles');
       }
-      expect(Gates.registerPass('woods_brambles')!.line, 'Foxes love sweetroot. I felt one growing in the western hollow.');
+      expect(Gates.registerPass('woods_brambles')!.line,
+          'Foxes love sweetroot. I felt one on the grass by the hollow stump, west of the crossroads.');
       expect(Gates.registerPass('woods_boulder')!.line,
           'Far too heavy for one person. Something patient and strong, maybe from the river.');
       Bonds.befriend('stoneturtle');
@@ -301,7 +302,7 @@ void main() {
 
     // positions are the player's top-left in map px (centre = +16)
     test('standing south of the boulder: the boulder opens', () {
-      final d = load(v1({'player': {'x': 41 * 32.0, 'y': 42 * 32.0}}));
+      final d = load(v1({'player': {'x': 41 * 32.0, 'y': 52 * 32.0}}));
       expect(open(d, 'woods_boulder'), isTrue);
       expect(open(d, 'woods_brambles'), isFalse);
     });
@@ -397,7 +398,14 @@ void main() {
       expect(GateArt.boulderRollFps, roll['fps']);
       expect(HiddenPath.closedColliders, rects(json('bramble_closed.json')['collision']));
       expect(HiddenPath.openColliders, rects(json('bramble_open.json')['collision']));
-      for (final f in [GateArt.grottoClosed, GateArt.grottoOpen, GateArt.boulderClosed, GateArt.boulderOpen, GateArt.boulderRoll]) {
+      for (final f in [
+        GateArt.grottoClosed,
+        GateArt.grottoOpen,
+        GateArt.boulderClosed,
+        GateArt.boulderOpen,
+        GateArt.boulderOpenGround,
+        GateArt.boulderRoll,
+      ]) {
         expect(File('assets/images/$f').existsSync(), isTrue, reason: f);
       }
     });

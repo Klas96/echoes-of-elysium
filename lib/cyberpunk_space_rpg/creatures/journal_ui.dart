@@ -5,6 +5,7 @@ import '../audio/audio_settings.dart';
 import '../components/lamp_light.dart';
 import '../game/adventure.dart';
 import '../ui/app_version_label.dart';
+import '../ui/dialog_chrome.dart';
 import '../ui/hud_layout.dart';
 import '../game/memories.dart';
 import '../game/quests.dart';
@@ -88,7 +89,7 @@ class Journal {
 }
 
 /// Subtle day/night tint over the game view (under the HUD). At night lamps,
-/// lanterns and fires cut warm pools into it (see [NightTintPainter]).
+/// lanterns and fires add warm glow pools (see [NightTintPainter]).
 class NightTint extends StatelessWidget {
   const NightTint({super.key});
 
@@ -361,29 +362,28 @@ class InteractPromptLayer extends StatelessWidget {
             right: 24,
             child: IgnorePointer(
               child: Center(
-                child: Container(
+                child: ConstrainedBox(
                   key: const ValueKey('hud-prompt'),
                   constraints: const BoxConstraints(maxWidth: 360),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.5),
-                    border: Border.all(color: Colors.white12),
-                    borderRadius: BorderRadius.circular(4),
+                  child: DialogChrome.promptShell(
+                    enabled: false,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      if (itemIconAsset(info.item) != null) ...[
+                        ItemIcon(info.item!, size: 16, dim: true),
+                        const SizedBox(width: 6),
+                      ],
+                      Flexible(
+                        child: Text(info.note,
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: DialogChrome.promptStyle(
+                                    compact: false, enabled: false)
+                                .copyWith(fontSize: 10, height: 1.3)),
+                      ),
+                    ]),
                   ),
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    if (itemIconAsset(info.item) != null) ...[
-                      ItemIcon(info.item!, size: 16, dim: true),
-                      const SizedBox(width: 6),
-                    ],
-                    Flexible(
-                      child: Text(info.note,
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              color: Colors.white54, fontSize: 10, fontStyle: FontStyle.italic, height: 1.3)),
-                    ),
-                  ]),
                 ),
               ),
             ),
@@ -405,46 +405,41 @@ class InteractPromptLayer extends StatelessWidget {
               },
               onPointerUp: (_) => Interaction.touchHeld = false,
               onPointerCancel: (_) => Interaction.touchHeld = false,
-              child: Container(
+              child: ConstrainedBox(
                 key: const ValueKey('hud-prompt'),
                 constraints: BoxConstraints(maxWidth: screen.width - 32),
-                padding: EdgeInsets.symmetric(horizontal: _isTouch ? 28 : 14, vertical: _isTouch ? 14 : 6),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.7),
-                  border: Border.all(color: _teal),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  Row(mainAxisSize: MainAxisSize.min, children: [
-                    if (itemIconAsset(info.item) != null) ...[
-                      ItemIcon(info.item!, size: _isTouch ? 24 : 16),
-                      SizedBox(width: _isTouch ? 8 : 6),
-                    ],
-                    Flexible(
-                      child: Text(label,
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                              color: _teal,
-                              fontSize: _isTouch ? 16 : 12,
-                              letterSpacing: 2,
-                              fontWeight: FontWeight.bold)),
-                    ),
-                  ]),
-                  if (hold) ...[
-                    const SizedBox(height: 4),
-                    SizedBox(
-                      width: _isTouch ? 140 : 90,
-                      height: 3,
-                      child: LinearProgressIndicator(
-                        value: Interaction.progress.value,
-                        backgroundColor: Colors.white12,
-                        valueColor: const AlwaysStoppedAnimation(_teal),
+                child: DialogChrome.promptShell(
+                  padding: EdgeInsets.symmetric(
+                      horizontal: _isTouch ? 28 : 14, vertical: _isTouch ? 14 : 6),
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    Row(mainAxisSize: MainAxisSize.min, children: [
+                      if (itemIconAsset(info.item) != null) ...[
+                        ItemIcon(info.item!, size: _isTouch ? 24 : 16),
+                        SizedBox(width: _isTouch ? 8 : 6),
+                      ],
+                      Flexible(
+                        child: Text(label,
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: DialogChrome.promptStyle(
+                                compact: _isTouch, enabled: true)),
                       ),
-                    ),
-                  ],
-                ]),
+                    ]),
+                    if (hold) ...[
+                      const SizedBox(height: 4),
+                      SizedBox(
+                        width: _isTouch ? 140 : 90,
+                        height: 3,
+                        child: LinearProgressIndicator(
+                          value: Interaction.progress.value,
+                          backgroundColor: Colors.white12,
+                          valueColor: const AlwaysStoppedAnimation(DialogChrome.cyan),
+                        ),
+                      ),
+                    ],
+                  ]),
+                ),
               ),
             ),
           ),
@@ -479,56 +474,43 @@ class ToastLayer extends StatelessWidget {
                     child: GestureDetector(
                       key: const ValueKey('hud-toast'),
                       onTap: () => GameToast.current.value = null,
-                      child: Container(
+                      child: ConstrainedBox(
                         constraints: BoxConstraints(maxWidth: compact ? 300 : 340),
-                        padding: EdgeInsets.symmetric(
-                            horizontal: compact ? 10 : 12, vertical: compact ? 6 : 9),
-                        decoration: BoxDecoration(
-                          color: _ink.withValues(alpha: compact ? 0.72 : 0.82),
-                          border: Border.all(color: m.color.withValues(alpha: compact ? 0.45 : 0.55)),
-                          borderRadius: BorderRadius.circular(compact ? 6 : 8),
-                        ),
-                        child: Row(mainAxisSize: MainAxisSize.min, children: [
-                          if (m.portrait == null && itemIconAsset(m.item) != null) ...[
-                            ItemIcon(m.item!, size: compact ? 16 : 32),
-                            SizedBox(width: compact ? 6 : 10),
-                          ],
-                          if (m.portrait != null) ...[
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(6),
-                              child: Image.asset(m.portrait!, width: 44, height: 44, filterQuality: FilterQuality.none),
-                            ),
-                            const SizedBox(width: 10),
-                          ],
-                          Flexible(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                if (m.title.isNotEmpty)
-                                  Text(m.title,
-                                      style: TextStyle(
-                                          color: m.color.withValues(alpha: compact ? 0.9 : 1),
-                                          fontSize: compact ? 10 : 11,
-                                          fontWeight: FontWeight.w600,
-                                          letterSpacing: compact ? 1 : 1.5)),
-                                if (m.body.isNotEmpty) ...[
-                                  if (m.title.isNotEmpty) SizedBox(height: compact ? 2 : 3),
-                                  Text(m.body,
-                                      maxLines: compact ? 2 : 3,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                          color: Colors.white.withValues(
-                                              alpha: m.title.isEmpty
-                                                  ? (compact ? 0.75 : 0.85)
-                                                  : (compact ? 0.55 : 0.65)),
-                                          fontSize: compact ? 10 : 11,
-                                          height: 1.35)),
+                        child: DialogChrome.toastShell(
+                          accent: m.color,
+                          compact: compact,
+                          child: Row(mainAxisSize: MainAxisSize.min, children: [
+                            if (m.portrait == null && itemIconAsset(m.item) != null) ...[
+                              ItemIcon(m.item!, size: compact ? 16 : 32),
+                              SizedBox(width: compact ? 6 : 10),
+                            ],
+                            if (m.portrait != null) ...[
+                              DialogChrome.portrait(m.portrait!, size: compact ? 36 : 44),
+                              const SizedBox(width: 10),
+                            ],
+                            Flexible(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (m.title.isNotEmpty)
+                                    Text(m.title,
+                                        style: DialogChrome.toastTitleStyle(
+                                            m.color, compact: compact)),
+                                  if (m.body.isNotEmpty) ...[
+                                    if (m.title.isNotEmpty) SizedBox(height: compact ? 2 : 3),
+                                    Text(m.body,
+                                        maxLines: compact ? 2 : 3,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: DialogChrome.toastBodyStyle(
+                                            compact: compact,
+                                            alone: m.title.isEmpty)),
+                                  ],
                                 ],
-                              ],
+                              ),
                             ),
-                          ),
-                        ]),
+                          ]),
+                        ),
                       ),
                     ),
                   ),
@@ -861,7 +843,10 @@ class _JournalPanelState extends State<_JournalPanel> {
           animation: Memories.foundNotifier,
           builder: (_, __) {
             final found = Memories.found;
-            final coalitionSeen = Cutscenes.seen(Cutscenes.coalition);
+            final storySeen = [
+              for (final id in StoryBeats.titles.keys)
+                if (Cutscenes.seen(id)) id,
+            ];
             return SingleChildScrollView(
               padding: const EdgeInsets.only(top: 8, bottom: 8, right: 8),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -882,21 +867,22 @@ class _JournalPanelState extends State<_JournalPanel> {
                       onPlay: Memories.has(i) ? () => Memories.replay(i) : null,
                     ),
                 const SizedBox(height: 18),
-                const Text('COALITION',
+                const Text('STORY',
                     style: TextStyle(
                         color: _inkDark, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 2)),
                 const SizedBox(height: 10),
-                if (!coalitionSeen)
+                if (storySeen.isEmpty)
                   const Text(
-                    'No coalition records yet. Reach the City to unlock this briefing.',
+                    'No story records yet. Reach the City, then defeat the Sentinel, to unlock these briefings.',
                     style: TextStyle(color: _inkSoft, fontSize: 12, height: 1.55),
                   )
                 else
-                  _JournalStoryRow(
-                    title: StoryBeats.titles[Cutscenes.coalition] ?? 'Coalition',
-                    unlocked: true,
-                    onPlay: () => StoryBeats.replay(Cutscenes.coalition),
-                  ),
+                  for (final id in storySeen)
+                    _JournalStoryRow(
+                      title: StoryBeats.titles[id] ?? id,
+                      unlocked: true,
+                      onPlay: () => StoryBeats.replay(id),
+                    ),
               ]),
             );
           },
@@ -991,7 +977,7 @@ class _MemoriesHint extends StatelessWidget {
             style: TextStyle(color: _inkDark, fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 2)),
         SizedBox(height: 8),
         Text(
-          'Recovered memory fragments can be replayed here. Seek purple crystals in the world to fill this log. Coalition briefings unlock separately after you reach the City.',
+          'Recovered memory fragments can be replayed here. Seek purple crystals in the world to fill this log. Story briefings unlock separately after you see them in the City.',
           style: TextStyle(color: _inkSoft, fontSize: 12, height: 1.55),
         ),
       ]),
@@ -1037,7 +1023,7 @@ class _JournalMemoryRow extends StatelessWidget {
   }
 }
 
-/// Story slideshow row under MEMORIES (coalition, etc.) — same chrome as memories.
+/// Story slideshow row under MEMORIES (First Contact, Sentinel Falls, …).
 class _JournalStoryRow extends StatelessWidget {
   final String title;
   final bool unlocked;

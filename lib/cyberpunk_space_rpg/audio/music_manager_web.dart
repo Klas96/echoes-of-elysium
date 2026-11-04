@@ -22,10 +22,13 @@ class MusicManager {
   double _mix = 1.0;
   bool _awaitingGesture = false;
 
+  /// App left the foreground — keep BGM paused until [resumeForAppLifecycle].
+  bool _pausedByLifecycle = false;
+
   double get _effective =>
       (_enabled ? _userVolume : 0.0) * _mix.clamp(0.0, 1.0);
 
-  bool get _shouldPlay => _effective > 0.001;
+  bool get _shouldPlay => _effective > 0.001 && !_pausedByLifecycle;
 
   /// Resolve against `<base href>`, encoding each path segment (spaces etc.).
   static String _url(String path) {
@@ -168,6 +171,23 @@ class MusicManager {
       _el?.pause();
       if (_el != null) _el!.currentTime = 0;
     } catch (_) {}
+  }
+
+  /// Pause BGM while the app / tab is backgrounded.
+  Future<void> pauseForAppLifecycle() async {
+    _pausedByLifecycle = true;
+    try {
+      _el?.pause();
+    } catch (_) {}
+  }
+
+  /// Resume BGM after returning to the foreground, if settings still allow it.
+  Future<void> resumeForAppLifecycle() async {
+    if (!_pausedByLifecycle) return;
+    _pausedByLifecycle = false;
+    if (_currentTrack == null || !_shouldPlay) return;
+    final gen = _playGen;
+    await _tryPlay(gen);
   }
 
   Future<void> setVolume(double volume) async {

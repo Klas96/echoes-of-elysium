@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "pixel-art": {
+      "command": "/home/klas/.nvm/versions/node/v20.17.0/bin/npx",
+      "args": [
+        "-y",
+        "pxcli-mcp",
+        "--export-dir",
+        "/home/klas/Kod/spcace-adveture/bonfire-rpg/assets/images/sprites/pixelsmith-out"
+      ],
+      "env": {
+        "PATH": "/home/klas/.nvm/versions/node/v20.17.0/bin:/usr/bin:/bin"
+      }
+    }
+  }
+}

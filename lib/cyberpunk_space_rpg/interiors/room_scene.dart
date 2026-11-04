@@ -31,8 +31,8 @@ import 'room_services.dart';
 
 /// Enterable building interiors (#31).
 ///
-/// E at an enterable building's door fades to a small tiled room (12×8 of
-/// 32 px, same density as Kaela) built from the JSON floor/props layers
+/// E at an enterable building's door fades to a tiled room (usually 12×8 of
+/// 32 px; tea-house hub is 16×10) built from the JSON floor/props layers
 /// (collision rects, doormat, spawn, NPCs, interact spots, lights). Stepping
 /// onto the doormat fades back out
 /// and puts Kaela one step in front of the same exterior door, facing down.
@@ -175,8 +175,16 @@ class Interiors {
 
   /// Pause [game], fade into room [id], and on the way out put the player at
   /// [front] (one step before the exterior door) facing down.
-  static Future<void> enterAt(BonfireGameInterface game, String id, Vector2 front) async {
-    if (_busy || !canEnter(id)) return;
+  ///
+  /// [force] skips [canEnter] — debug place-jumper only.
+  static Future<void> enterAt(
+    BonfireGameInterface game,
+    String id,
+    Vector2 front, {
+    bool force = false,
+  }) async {
+    if (_busy || (!force && !canEnter(id))) return;
+    if (!rooms.contains(id)) return;
     _busy = true;
     // Enter a touch slower than exit — walking out used to feel laggy because
     // we waited a full second fade twice (route reverse + an extra delay).

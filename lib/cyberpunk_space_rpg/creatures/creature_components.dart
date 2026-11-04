@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../audio/sfx_manager.dart';
 import '../components/custom_player.dart';
 import '../components/sentinel_drone.dart';
+import '../components/soft_aura.dart';
 import '../components/uec_drone.dart';
 import 'bonds.dart';
 import 'creature_species.dart';
@@ -116,12 +117,13 @@ abstract class CreatureBody extends GameComponent {
   }
 
   void renderGlow(Canvas canvas, Color color, double radius, double a) {
-    canvas.drawCircle(
+    // Radial soft falloff — MaskFilter was a hard disc on web / laggy elsewhere.
+    paintSoftAura(
+      canvas,
       Offset(16, species.flying ? 12 : 18),
       radius,
-      Paint()
-        ..color = color.withValues(alpha: a)
-        ..maskFilter = MaskFilter.blur(BlurStyle.normal, radius * 0.6),
+      color,
+      coreAlpha: a,
     );
   }
 
@@ -375,7 +377,6 @@ class WildCreature extends CreatureBody with Interactable {
     }
     renderBody(canvas);
     if (netted) _renderNet(canvas);
-    if (_happyFor > 0) _renderHearts(canvas);
     super.render(canvas);
   }
 
@@ -392,25 +393,6 @@ class WildCreature extends CreatureBody with Interactable {
     }
     canvas.restore();
     canvas.drawRect(const Rect.fromLTWH(24, 22, 6, 5), Paint()..color = const Color(0xFFFF6666));
-  }
-
-  void _renderHearts(Canvas canvas) {
-    final t = 2.4 - _happyFor;
-    for (var i = 0; i < 3; i++) {
-      final k = ((t * 0.8 + i / 3) % 1);
-      final x = 8.0 + i * 8 + sin((t + i) * 3) * 2;
-      final y = 4 - k * 18;
-      final paint = Paint()..color = const Color(0xFFFF9FC8).withValues(alpha: (1 - k) * 0.9);
-      canvas.drawCircle(Offset(x - 1.5, y), 2, paint);
-      canvas.drawCircle(Offset(x + 1.5, y), 2, paint);
-      canvas.drawPath(
-          Path()
-            ..moveTo(x - 3.4, y + 0.6)
-            ..lineTo(x, y + 4)
-            ..lineTo(x + 3.4, y + 0.6)
-            ..close(),
-          paint);
-    }
   }
 }
 

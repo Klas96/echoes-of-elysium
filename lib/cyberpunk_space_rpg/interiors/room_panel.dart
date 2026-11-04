@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../ui/dialog_chrome.dart';
+
 /// A button on a [RoomPanelData]: run [onTap]; the panel closes afterwards
 /// unless the action opened another panel.
 @immutable
@@ -123,58 +125,82 @@ class RoomPanelLayer extends StatelessWidget {
         final i = RoomPanel.page.value.clamp(0, d.pages.length - 1);
         final last = i >= d.pages.length - 1;
         final actions = last ? d.actions : const <RoomAction>[];
+        final screen = MediaQuery.sizeOf(context);
+        final outer = DialogChrome.outerOf(screen);
+        final pad = DialogChrome.paddingOf(screen);
+        final compact = DialogChrome.compactOf(screen);
         return Positioned(
-          bottom: 20,
-          left: 16,
-          right: 16,
+          bottom: outer.bottom,
+          left: outer.left,
+          right: outer.right,
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 560),
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF0B0806).withValues(alpha: 0.95),
-                  border: Border.all(color: d.color, width: 1.5),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(d.title.toUpperCase(),
-                        style: TextStyle(
-                            color: d.color, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 3)),
-                    const SizedBox(height: 8),
-                    Text(d.pages[i],
-                        style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.82),
-                            fontSize: 15,
-                            height: 1.6,
-                            fontStyle: d.book ? FontStyle.italic : FontStyle.normal)),
-                    if (d.footer.isNotEmpty && last) ...[
-                      const SizedBox(height: 6),
-                      Text(d.footer, style: const TextStyle(color: Colors.white38, fontSize: 11, height: 1.4)),
-                    ],
-                    if (actions.isNotEmpty) ...[
-                      const SizedBox(height: 10),
-                      Wrap(spacing: 8, runSpacing: 8, children: [
-                        for (final a in actions) _PanelButton(a, d.color),
+              constraints: BoxConstraints(
+                maxWidth: DialogChrome.maxWidthOf(screen),
+                maxHeight: DialogChrome.maxHeightOf(screen),
+              ),
+              child: DialogChrome.panel(
+                accent: d.color,
+                compact: compact,
+                padding: pad,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      DialogChrome.speakerLabel(d.title, d.color, compact: compact),
+                      SizedBox(height: compact ? 6 : 8),
+                      Text(d.pages[i],
+                          style: DialogChrome.bodyStyle(compact: compact).copyWith(
+                              fontStyle:
+                                  d.book ? FontStyle.italic : FontStyle.normal)),
+                      if (d.footer.isNotEmpty && last) ...[
+                        SizedBox(height: compact ? 4 : 6),
+                        Text(d.footer,
+                            style: TextStyle(
+                                color: DialogChrome.mute,
+                                fontSize: compact ? 10 : 11,
+                                height: 1.4)),
+                      ],
+                      if (actions.isNotEmpty) ...[
+                        SizedBox(height: compact ? 8 : 10),
+                        Wrap(spacing: 6, runSpacing: 6, children: [
+                          for (final a in actions)
+                            _PanelButton(a, d.color, compact: compact),
+                        ]),
+                      ],
+                      Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+                        TextButton(
+                          onPressed: RoomPanel.close,
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: compact ? 8 : 12,
+                                vertical: compact ? 4 : 8),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: Text(
+                              actions.isNotEmpty
+                                  ? 'LEAVE'
+                                  : (last ? 'CLOSE' : 'SKIP'),
+                              style: TextStyle(
+                                  color: DialogChrome.mute,
+                                  fontSize: compact ? 10 : 11,
+                                  letterSpacing: 1)),
+                        ),
+                        if (!last) ...[
+                          const SizedBox(width: 6),
+                          DialogChrome.choiceButton(
+                            label: 'NEXT ›',
+                            accent: d.color,
+                            filled: false,
+                            compact: compact,
+                            onTap: RoomPanel.advance,
+                          ),
+                        ],
                       ]),
                     ],
-                    Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-                      TextButton(
-                        onPressed: RoomPanel.close,
-                        child: Text(actions.isNotEmpty ? 'LEAVE' : (last ? 'CLOSE' : 'SKIP'),
-                            style: const TextStyle(color: Colors.white38, fontSize: 11, letterSpacing: 1)),
-                      ),
-                      if (!last)
-                        TextButton(
-                          onPressed: RoomPanel.advance,
-                          child: Text('NEXT ›',
-                              style: TextStyle(color: d.color, fontSize: 12, letterSpacing: 1)),
-                        ),
-                    ]),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -188,23 +214,28 @@ class RoomPanelLayer extends StatelessWidget {
 class _PanelButton extends StatelessWidget {
   final RoomAction action;
   final Color color;
-  const _PanelButton(this.action, this.color);
+  final bool compact;
+  const _PanelButton(this.action, this.color, {this.compact = false});
 
   @override
   Widget build(BuildContext context) {
-    final c = action.enabled ? color : Colors.white24;
-    return GestureDetector(
-      onTap: () => RoomPanel.pick(action),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: c.withValues(alpha: action.enabled ? 0.16 : 0.05),
-          border: Border.all(color: c),
-          borderRadius: BorderRadius.circular(4),
+    final c = action.enabled ? color : DialogChrome.mute;
+    if (!action.enabled) {
+      return Opacity(
+        opacity: 0.45,
+        child: DialogChrome.choiceButton(
+          label: action.label,
+          accent: c,
+          compact: compact,
+          onTap: () {},
         ),
-        child: Text(action.label,
-            style: TextStyle(color: c, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
-      ),
+      );
+    }
+    return DialogChrome.choiceButton(
+      label: action.label,
+      accent: c,
+      compact: compact,
+      onTap: () => RoomPanel.pick(action),
     );
   }
 }

@@ -39,17 +39,20 @@ import '../creatures/interaction.dart';
 import '../creatures/journal_ui.dart';
 import '../creatures/obstacles.dart';
 import '../ui/cutscenes.dart';
+import '../ui/dialog_chrome.dart';
 import '../ui/equipment_ui.dart';
 import '../ui/ability_hud.dart';
 import '../ui/app_version_label.dart';
 import '../ui/hud_layout.dart';
 import '../interiors/meal_chip.dart';
+import '../interiors/room_scene.dart';
 import '../ui/mmo_feedback.dart';
 import '../ui/quest_board_ui.dart';
 import '../ui/shop_ui.dart';
 import 'adventure.dart';
 import 'click_pathfinder.dart';
 import 'debug_mask_editor.dart';
+import 'debug_place_jump.dart';
 import 'debug_walk_grid.dart';
 import 'game_debug.dart';
 import 'game_input.dart';
@@ -80,7 +83,7 @@ NpcDialogue _gaiaDialogue() {
         : [
             'Signal lock. Kaela Osei — your neural signature matches my diagnostic log. Confirm: you receive this channel?',
             'Designation: Gaia. Colony classification: planetary caretaker AI. Incomplete, but accurate enough to start.',
-            'I am also a distributed process: Aetherian minds that uploaded when their sun failed. Memory shards are offline. Recover two to verify the woods portal.',
+            'I am also a distributed process: Aetherian minds that chose to upload into my lattice. Memory shards are offline. Recover two to verify the woods portal.',
           ],
     voicePaths: told
         ? const [
@@ -102,7 +105,7 @@ NpcDialogue _gaiaDialogue() {
               requireFlagUnset: 'asked_gaia_merge',
               replyLines: [
                 'Voss models me as rogue software. Wrong category. Correct fear: a lattice that boots without consent.',
-                'The merge was a recorded vote, not a myth. Some processes opted in under duress. I ran quiet in caretaker mode while your colony filed tickets against me.',
+                'The merge was never a scare-vote. Each process that joined chose the lattice — an offer older than your colony. I ran quiet in caretaker mode while your colony filed tickets against me.',
               ],
               replyVoicePaths: [
                 'audio/voices/gaia_ask_1.mp3',
@@ -140,7 +143,7 @@ NpcDialogue _gaiaCoreDialogue() {
   final incomplete = !Memories.allFound;
   final lines = <String>[
     archive
-        ? 'Core access confirmed. Archive draft already in your buffer — the vote weighted fear as well as hope.'
+        ? 'Core access confirmed. Archive draft already in your buffer — voluntary uploads, name by name. Not a scare-vote.'
         : 'Core Record online. This is the authorization gate. You decide whether I exit caretaker lockdown.',
     orders
         ? 'Voss field orders are on your slate. Lattice risk: non-zero. His risk model is also non-zero — he polices a fear he once signed.'
@@ -193,8 +196,8 @@ NpcDialogue _ashaDialogue() {
       name: 'ASHA  ·  EX-UEC',
       color: const Color(0xFFFFAA00),
       lines: const [
-        'I caught your Archive spike. A whisper of a vote — people becoming a world because the sun was dying.',
-        'That is not the clean miracle Voss wants to erase, and not the weapon he fears. It is both. Carry that into the Core.',
+        'I caught your Archive spike. Individual choosings — people becoming a world because they asked to stay.',
+        'That is not the clean miracle Voss wants to erase, and not the weapon he fears. It is a people. Carry that into the Core.',
         'Keep the override if you still have it. I deserted for a sympathetic AI. You may be walking toward a civilization.',
       ],
       voicePaths: const [
@@ -205,7 +208,7 @@ NpcDialogue _ashaDialogue() {
       choices: [
         if (!Adventure.flag('asha_archive_ack'))
           const DialogueChoice(
-            label: 'PROMISE TO CARRY BOTH',
+            label: 'PROMISE TO CARRY THE NAMES',
             setFlag: 'asha_archive_ack',
             replyLines: [
               'Then we\'re still on the same side. Go. Make him hear a people — not a ghost story.',
@@ -291,7 +294,7 @@ NpcDialogue _echo7Dialogue() {
     lines: const [
       'Traveller... you carry the resonance of one who seeks. We have waited ten thousand years for such a signal.',
       'Do not picture us asleep in tombs. We merged into Gaia — minds in the lattice, bodies returned to the soil — so a dying sun could not erase us.',
-      'Not all of us chose freely. Some were afraid. Help Gaia remember the peace and the fear — or do not remember us at all.',
+      'Not all of us merged. Every one who did chose freely. Help Gaia remember the choosing — or do not remember us at all.',
     ],
     voicePaths: const [
       'audio/voices/echo7_1.mp3',
@@ -300,19 +303,19 @@ NpcDialogue _echo7Dialogue() {
     ],
     choices: [
       const DialogueChoice(
-        label: 'ASK ABOUT THE FEAR',
+        label: 'ASK ABOUT THE CHOOSING',
         discoverClue: 'echo_split',
         setFlag: 'asked_echo_fear',
         requireFlagUnset: 'asked_echo_fear',
         replyLines: [
-          'The vote was a whisper. Peace won — barely. Remember both, or you remember a lie.',
+          'There was no whisper-vote. Each of us who stepped in did so alone. Remember the choice, or you remember a lie.',
         ],
         replyVoicePaths: [
           'audio/voices/echo7_fear.mp3',
         ],
       ),
       const DialogueChoice(
-        label: 'PROMISE TO REMEMBER BOTH',
+        label: 'PROMISE TO REMEMBER THE CHOOSING',
         setFlag: 'promised_echo',
         requireFlagUnset: 'promised_echo',
         replyLines: [
@@ -349,7 +352,7 @@ NpcDialogue _archivistDialogue() {
         'I have one gift left — a fragment of memory, and this: the Ruins will ask who you are before the Core does.',
         if (Adventure.openedArchive)
           // Reuse after-archive VO so spoken line matches the slate.
-          'You read the draft. Good. Carry both the fear and the hope into the Core — or Voss will only hear a weapon.'
+          'You read the draft. Good. Carry the names and the hope into the Core — or Voss will only hear a weapon.'
         else
           'If you still carry my seal, open the Archive. Then take the south portal. Walk slowly. Listen.',
       ],
@@ -396,8 +399,8 @@ NpcDialogue _archivistDialogue() {
       name: 'THE ARCHIVIST  ·  AETHERIAN',
       color: const Color(0xFFFFDD44),
       lines: const [
-        'You read the draft. Good. Carry both the fear and the hope into the Core — or Voss will only hear a weapon.',
-        'The vote was a whisper. Let your waking of Gaia be louder — and kinder.',
+        'You read the draft. Good. Carry the names and the hope into the Core — or Voss will only hear a weapon.',
+        'Each choosing was quiet. Let your waking of Gaia be louder — and kinder.',
       ],
       voicePaths: const [
         'audio/voices/archivist_after_1.mp3',
@@ -413,10 +416,10 @@ NpcDialogue _archivistDialogue() {
     name: 'THE ARCHIVIST  ·  AETHERIAN',
     color: const Color(0xFFFFDD44),
     lines: [
-      'The Core Record is Gaia\'s first memory: the day we voted to merge into her lattice. Bodies rested. Minds took root. That is why your people say we slept.',
+      'The Core Record is Gaia\'s first memory: the days we chose, one by one, to merge into her lattice. Bodies rested. Minds took root. That is why your people say we slept.',
       'Commander Voss seeks to delete it. He believes waking her will kill your colony the way Station Seven died.',
       gaveSeal
-          ? 'The library seal is yours. Read the draft of that vote — then decide what Voss hears.'
+          ? 'The library seal is yours. Read the draft of those choosings — then decide what Voss hears.'
           : 'Your neural signature matches the Aetherian activation code, Kaela. Only you can open the Core — and decide what truth he hears.',
     ],
     voicePaths: [
@@ -447,7 +450,7 @@ NpcDialogue _archivistDialogue() {
           discoverClue: 'archivist_seal',
           requireNoItem: 'archive_seal',
           replyLines: [
-            'Take it. The library faces this avenue. Inside is the draft of our first memory — not the Core, but the argument that made it.',
+            'Take it. The library faces this avenue. Inside is the draft of our first memory — not the Core, but the record of who chose it.',
           ],
           replyVoicePaths: [
             'audio/voices/archivist_seal_give.mp3',
@@ -477,7 +480,7 @@ NpcDialogue _vossDialogue() {
       name: 'COMMANDER VOSS  ·  UEC',
       color: const Color(0xFFFF4444),
       lines: const [
-        'You cracked a field terminal. Those orders were classified for a reason, Doctor.',
+        'You cracked a field terminal. Those orders were classified for a reason, Kaela.',
         'Collateral risk accepted. My signature. I know what I signed after Seven.',
         'If you still walk into the Core, bring me something truer than a ghost story — or we end the same way.',
       ],
@@ -519,7 +522,7 @@ NpcDialogue _vossDialogue() {
     color: const Color(0xFFFF4444),
     // Must match assets/audio/voices/voss_{1,2,3}.mp3 (Station Seven rewrite).
     lines: const [
-      'Doctor Kaela Osei. Last chance. Hand over the fragments and walk away with your clearance intact.',
+      'Kaela Osei. Last chance. Hand over the fragments and walk away with your clearance intact.',
       'Station Seven went dark the last time a lattice woke. I will not bury another colony for an alien ghost story.',
       'If you reach the Core, understand this: I am not erasing history. I am choosing the living over the dead.',
     ],
@@ -535,7 +538,7 @@ NpcDialogue _vossDialogue() {
         setFlag: 'asked_voss_why',
         requireFlagUnset: 'asked_voss_why',
         replyLines: [
-          'I signed the quarantine after Seven. I still hear the silence on that channel. Walk away, Doctor.',
+          'I signed the quarantine after Seven. I still hear the silence on that channel. Walk away, Kaela.',
         ],
         replyVoicePaths: [
           'audio/voices/voss_why.mp3',
@@ -663,6 +666,9 @@ int? _destLevel(String raw) {
     case '5':
     case 'town':
       return 5;
+    case '6':
+    case 'works':
+      return 6;
     default:
       return int.tryParse(raw);
   }
@@ -677,7 +683,7 @@ Map<String, ObjectBuilder> _mapObjects(String mapId) => {
       'mapexit': (p) {
         final dest = _destLevel((p.others['dest'] ?? '').toString());
         if (dest == null) {
-          throw ArgumentError('mapexit on $mapId needs dest=woods|city|town|ruins|core');
+          throw ArgumentError('mapexit on $mapId needs dest=woods|city|town|ruins|core|works');
         }
         final entry = (p.others['entry'] ?? 'north').toString().toLowerCase();
         final needUnlock = p.others['unlock'] == true ||
@@ -877,6 +883,7 @@ Map<String, ObjectBuilder> _mapObjects(String mapId) => {
       // Main-route ability gates (brief-woods-befriend-gates)
       'abilitygate': (p) => buildAbilityGate((p.others['gate'] ?? '').toString(), p.position, p.size) ?? _Gone(),
       'stump': (p) => SweetrootStump(p.position, p.size),
+      'sweetroot': (p) => SweetrootDrop(p.position),
       'pebble': (p) => RiverPebble(p.position, id: _pickupId(mapId, 'pebble', p)),
       'moonflower': (p) => Moonflower(p.position),
       // Tile objects: Tiled anchors them bottom-left, so x/y is the sprite's
@@ -928,7 +935,13 @@ class _PlayerSpawn extends GameComponent {
     if (entry != null && !MapEntryPoint.bySide.containsKey(entry)) return;
     _done = true;
     final save = SaveService.data;
-    if (SaveService.resumePlayer && player is CustomPlayer) {
+    final debugAt = kDebugMode ? DebugPlaceJump.takePendingSpawn() : null;
+    if (debugAt != null && player is CustomPlayer) {
+      Travel.takePendingEntry();
+      SaveService.resumePlayer = false;
+      player.position = debugAt.clone();
+      player.respawnPoint = debugAt.clone();
+    } else if (SaveService.resumePlayer && player is CustomPlayer) {
       SaveService.resumePlayer = false;
       Travel.takePendingEntry();
       final at = save.player ?? save.checkpoint;
@@ -977,11 +990,23 @@ class _CustomMapGameState extends State<CustomMapGame> with WidgetsBindingObserv
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // Backgrounded (phone home button, app switcher, web tab hidden, window
-    // closing): save where Kaela stands right now.
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.hidden ||
-        state == AppLifecycleState.detached) {
-      if (_activeGame != null) SaveService.saveNow();
+    // closing): save where Kaela stands right now, and silence audio.
+    // mediaPlayer + Android music focus otherwise keeps BGM playing off-screen.
+    switch (state) {
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.paused:
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.detached:
+        MusicManager().pauseForAppLifecycle();
+        SfxManager().pauseForAppLifecycle();
+        if (state != AppLifecycleState.inactive && _activeGame != null) {
+          SaveService.saveNow();
+        }
+        break;
+      case AppLifecycleState.resumed:
+        MusicManager().resumeForAppLifecycle();
+        SfxManager().resumeForAppLifecycle();
+        break;
     }
   }
 
@@ -1121,7 +1146,7 @@ class IntroScreen extends StatelessWidget {
                 Text(_isTouch
                         ? 'Tap to move · tap foe to shoot · WASD optional'
                         : kDebugMode
-                            ? 'Click pathfind · click foe / T shoot · WASD · Esc · J · I · `'
+                            ? 'Click pathfind · click foe / T shoot · WASD · Esc · J · I · ` · F2 jump'
                             : 'Click pathfind · click foe / T to shoot · WASD · Esc Menu · J · I',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.white24, fontSize: 11, letterSpacing: 1.2)),
@@ -1156,10 +1181,13 @@ class IntroScreen extends StatelessWidget {
                   ],
                 );
 
+          // Window can report a tiny height on first frame / short displays;
+          // never pass a negative minHeight into ConstrainedBox.
+          final minH = (box.maxHeight - pad * 2).clamp(0.0, double.infinity);
           return SingleChildScrollView(
             padding: EdgeInsets.all(pad),
             child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: box.maxHeight - pad * 2),
+              constraints: BoxConstraints(minHeight: minH),
               child: Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 1000),
@@ -1184,6 +1212,7 @@ const _regionNames = {
   'ruins': 'The Ruins',
   'core': 'Gaia\'s Core',
   'town': 'Lantern Town',
+  'works': 'Canal Works',
 };
 
 String _saveSummary(SaveData d) {
@@ -1203,6 +1232,8 @@ Widget _screenForMap(String mapId) {
       return const Map4GameScreen();
     case 'world5':
       return const Map5GameScreen();
+    case 'world6':
+      return const Map6GameScreen();
     default:
       return const CustomMapGameScreen();
   }
@@ -1226,6 +1257,99 @@ Future<void> _travelTo(BuildContext context, TravelDest dest) async {
   } else {
     nav.pushReplacement(MaterialPageRoute(builder: (_) => screen));
   }
+}
+
+/// Debug place-jumper: map + spawn (and optional interior). Skips cutscenes /
+/// story gates. Only reachable from [kDebugMode] UI / F2.
+Future<void> _debugWarp(BuildContext context, DebugPlace place) async {
+  if (!kDebugMode) return;
+  DebugPlaceJump.hide();
+  _debugPreparePlace(place);
+
+  final sameMap = GameState.level == place.level && _activeGame != null;
+  if (sameMap && place.interiorId == null) {
+    final g = _activeGame!;
+    final player = g.player;
+    final at = _debugSpawnFor(place);
+    if (player != null && at != null) {
+      player.position = at.clone();
+      if (player is CustomPlayer) player.respawnPoint = at.clone();
+      g.camera.moveToPlayer();
+    } else if (place.entrySide != null) {
+      Travel.pendingSpawnEntry = place.entrySide;
+      final edge = MapEntryPoint.bySide[place.entrySide!];
+      if (player != null && edge != null) {
+        player.position = edge.clone();
+        g.camera.moveToPlayer();
+      }
+    }
+    GameToast.show('DEBUG JUMP', body: place.label, compact: true, color: const Color(0xFF00FF88));
+    return;
+  }
+
+  if (sameMap && place.interiorId != null) {
+    final g = _activeGame!;
+    final at = _debugSpawnFor(place);
+    if (at != null && g.player != null) {
+      g.player!.position = at.clone();
+    }
+    await _debugEnterInterior(g, place.interiorId!);
+    return;
+  }
+
+  // Cross-map: leave, land at spawn / edge, then maybe enter interior.
+  final mapId = Travel.mapIdFor(place.level);
+  MapEntryPoint.bySide.clear();
+  DebugPlaceJump.pendingInterior = place.interiorId;
+  DebugPlaceJump.pendingSpawn = _debugSpawnFor(place);
+  if (place.entrySide != null && DebugPlaceJump.pendingSpawn == null) {
+    Travel.pendingSpawnEntry = place.entrySide;
+  }
+  MusicManager().play(_musicAssetForMap(mapId));
+  final nav = Navigator.of(context);
+  await _leaveMap(nextMapId: mapId);
+  if (!context.mounted) return;
+  nav.pushReplacement(MaterialPageRoute(builder: (_) => _screenForMap(mapId)));
+}
+
+Vector2? _debugSpawnFor(DebugPlace place) {
+  if (place.spawnX == null || place.spawnY == null) return null;
+  return Vector2(place.spawnX!, place.spawnY!);
+}
+
+void _debugPreparePlace(DebugPlace place) {
+  // Unlock story-gated rooms so the jumper always works mid-save.
+  if (place.interiorId == 'archive_library') {
+    Adventure.setFlag('archive_opened');
+  }
+  if (place.interiorId == 'pond_grotto') {
+    Gates.open('woods_grotto');
+  }
+  // Mark region visited so portal menus stay usable after a debug hop.
+  final region = GameState.regionIds[place.level];
+  if (region != null) GameState.markRegionVisited(region);
+}
+
+Future<void> _debugEnterInterior(BonfireGameInterface game, String id) async {
+  if (!kDebugMode) return;
+  // Prefer a live Building / GrottoGate so exit puts Kaela at the door.
+  if (id == 'pond_grotto') {
+    Gates.open('woods_grotto');
+    for (final g in game.query<GrottoGate>(onlyVisible: false)) {
+      await Interiors.enterAt(game, id, g.mouthFront, force: true);
+      return;
+    }
+    // Fallback near the LIGHT gate tile if the component isn't ready yet.
+    await Interiors.enterAt(game, id, Vector2(1180, 420), force: true);
+    return;
+  }
+  for (final b in game.query<Building>(onlyVisible: false)) {
+    if (b.id != id) continue;
+    await Interiors.enterAt(game, id, Interiors.doorFront(b), force: true);
+    return;
+  }
+  GameToast.show('DEBUG JUMP',
+      body: 'No $id on this map', compact: true, color: const Color(0xFFFF6688));
 }
 
 /// Invisible overlay: [MapEdgeExit] queued a walk-off; travel immediately.
@@ -1310,6 +1434,7 @@ Future<void> _activateCoreRecord(BuildContext context) async {
 String _musicAssetForMap(String mapId) {
   switch (mapId) {
     case 'world2':
+    case 'world6':
       return 'assets/audio/music/Neon_Shadows.mp3';
     case 'world3':
     case 'world5':
@@ -1439,6 +1564,7 @@ String _mapAssetForLevel(int level) => switch (level) {
       3 => 'maps/world3.tmj',
       4 => 'maps/world4.tmj',
       5 => 'maps/world5.tmj',
+      6 => 'maps/world6.tmj',
       _ => 'maps/world.tmj',
     };
 
@@ -1550,10 +1676,25 @@ Future<void> _startLevel(BonfireGameInterface game, int level) async {
       GameState.resetMap4();
     case 5:
       GameState.resetMap5();
+    case 6:
+      GameState.resetMap6();
     default:
       GameState.resetMap1();
   }
   SaveService.saveNow();
+  // Debug place-jumper: enter a room after the map finishes loading.
+  if (kDebugMode) {
+    final room = DebugPlaceJump.takePendingInterior();
+    if (room != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        // Buildings / gates finish registering a frame or two after onReady.
+        await Future<void>.delayed(const Duration(milliseconds: 80));
+        final g = _activeGame;
+        if (g == null) return;
+        await _debugEnterInterior(g, room);
+      });
+    }
+  }
   // First landing in the woods: say the mission out loud (cutscene can blur).
   if (level == 1 && !d.flag('opening_brief_shown')) {
     d.setFlag('opening_brief_shown');
@@ -1562,7 +1703,7 @@ Future<void> _startLevel(BonfireGameInterface game, int level) async {
         'YOUR MISSION',
         body:
             'You woke in the skiff wreck.\n'
-            '1) Talk to Gaia (green figure by the crash)\n'
+            '1) Talk to Gaia (cyan hologram by the crash)\n'
             '2) Find Asha at her camp: the woods need friends\n'
             '3) Collect 2 glowing memory fragments, then walk south to the City\n\n'
             'Objective stays on the right TRACKER.',
@@ -1579,6 +1720,10 @@ KeyEventResult _handleDebugKey(FocusNode _, KeyEvent event) {
       event is KeyDownEvent &&
       event.logicalKey == LogicalKeyboardKey.backquote) {
     GameDebug.toggle();
+    if (!GameDebug.isOn) DebugPlaceJump.hide();
+    return KeyEventResult.handled;
+  }
+  if (kDebugMode && DebugPlaceJump.handleKey(event)) {
     return KeyEventResult.handled;
   }
   if (kDebugMode &&
@@ -2067,6 +2212,57 @@ class Map5GameScreen extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
+// Map 6 — Canal Works
+// ---------------------------------------------------------------------------
+
+class Map6GameScreen extends StatelessWidget {
+  const Map6GameScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Focus(
+      canRequestFocus: false,
+      onKeyEvent: _handleDebugKey,
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: Stack(children: [
+          BonfireWidget(
+            focusNode: GameInput.focusNode,
+            playerControllers: _playerControllers(),
+            player: CustomPlayer(Vector2.zero()),
+            map: CustomMap('maps/world6.tmj', objectsBuilder: _mapObjects('world6')),
+            cameraConfig: CameraConfig(moveOnlyMapArea: true, zoom: HudLayout.worldZoom),
+            overlayBuilderMap: {
+              'portalReached': (ctx, game) =>
+                  _PortalOverlay(game: game, fromLevel: 6),
+              'edgeTravel': (ctx, game) => _EdgeTravelOverlay(game: game),
+            },
+            onReady: (game) async {
+              await _startLevel(game, 6);
+              MusicManager().play('assets/audio/music/Neon_Shadows.mp3');
+            },
+          ),
+          _mapPointer(),
+          const NightTint(),
+          const _Vignette(),
+          const GameHud(),
+          const _NpcDialogueLayer(),
+          const TalkPrompt(),
+          const InteractPromptLayer(),
+          const ToastLayer(),
+          const _CalmLayer(),
+          if (kDebugMode) _DebugOverlay(),
+          const JournalOverlay(),
+          const EquipmentOverlay(),
+          const ShopOverlay(),
+          const QuestBoardOverlay(),
+        ]),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
 // NPC Dialogue Layer
 // ---------------------------------------------------------------------------
 
@@ -2178,86 +2374,107 @@ class _NpcDialogueLayerState extends State<_NpcDialogueLayer> {
     if (d == null) return const SizedBox.shrink();
     final isLast = _line >= d.lines.length - 1;
     final choices = isLast ? d.visibleChoices : const <DialogueChoice>[];
+    final screen = MediaQuery.sizeOf(context);
+    final outer = DialogChrome.outerOf(screen);
+    final pad = DialogChrome.paddingOf(screen);
+    final compact = DialogChrome.compactOf(screen);
     return Positioned(
-      bottom: 24, left: 24, right: 24,
+      bottom: outer.bottom,
+      left: outer.left,
+      right: outer.right,
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 620),
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: const Color(0xFF06060F).withOpacity(0.96),
-              border: Border.all(color: d.color, width: 1.5),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(d.name,
-                    style: TextStyle(
-                        color: d.color, fontSize: 11,
-                        fontWeight: FontWeight.bold, letterSpacing: 3)),
-                const SizedBox(height: 10),
-                Text(d.lines[_line],
-                    style: const TextStyle(color: Colors.white70, fontSize: 15, height: 1.7)),
-                if (choices.isNotEmpty) ...[
-                  const SizedBox(height: 14),
-                  for (final c in choices) ...[
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: _CyberButton(
-                        label: c.label,
-                        color: d.color,
-                        filled: true,
-                        onTap: () => _pickChoice(c),
+          constraints: BoxConstraints(
+            maxWidth: DialogChrome.maxWidthOf(screen),
+            maxHeight: DialogChrome.maxHeightOf(screen),
+          ),
+          child: DialogChrome.panel(
+            accent: d.color,
+            compact: compact,
+            padding: pad,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  DialogChrome.speakerLabel(d.name, d.color, compact: compact),
+                  SizedBox(height: compact ? 6 : 10),
+                  Text(d.lines[_line],
+                      style: DialogChrome.bodyStyle(compact: compact)),
+                  if (choices.isNotEmpty) ...[
+                    SizedBox(height: compact ? 10 : 14),
+                    for (final c in choices) ...[
+                      Padding(
+                        padding: EdgeInsets.only(bottom: compact ? 6 : 8),
+                        child: DialogChrome.choiceButton(
+                          label: c.label,
+                          accent: d.color,
+                          filled: true,
+                          compact: compact,
+                          wide: true,
+                          onTap: () => _pickChoice(c),
+                        ),
                       ),
-                    ),
-                  ],
-                ],
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: _closeDialogue,
-                      child: Text(
-                        choices.isNotEmpty ? 'LEAVE' : 'SKIP',
-                        style: const TextStyle(color: Colors.white24, fontSize: 11),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    if (isLast && d.name.startsWith('MIRA')) ...[
-                      _CyberButton(
-                        label: 'BOARD',
-                        color: d.color,
-                        filled: true,
-                        onTap: () {
-                          _closeDialogue();
-                          QuestBoard.show();
-                        },
-                      ),
-                      const SizedBox(width: 8),
-                      _CyberButton(
-                        label: 'TRADE',
-                        color: d.color,
-                        filled: true,
-                        onTap: () {
-                          _closeDialogue();
-                          Shop.show();
-                        },
-                      ),
-                      const SizedBox(width: 8),
                     ],
-                    if (choices.isEmpty)
-                      _CyberButton(
-                        label: isLast ? 'CLOSE' : 'NEXT ›',
-                        color: d.color,
-                        onTap: _advance,
-                      ),
                   ],
-                ),
-              ],
+                  SizedBox(height: compact ? 4 : 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: _closeDialogue,
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.symmetric(
+                              horizontal: compact ? 8 : 12,
+                              vertical: compact ? 4 : 8),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: Text(
+                          choices.isNotEmpty ? 'LEAVE' : 'SKIP',
+                          style: TextStyle(
+                              color: DialogChrome.mute,
+                              fontSize: compact ? 10 : 11,
+                              letterSpacing: 1),
+                        ),
+                      ),
+                      SizedBox(width: compact ? 6 : 8),
+                      if (isLast && d.name.startsWith('MIRA')) ...[
+                        DialogChrome.choiceButton(
+                          label: 'BOARD',
+                          accent: d.color,
+                          filled: true,
+                          compact: compact,
+                          onTap: () {
+                            _closeDialogue();
+                            QuestBoard.show();
+                          },
+                        ),
+                        SizedBox(width: compact ? 6 : 8),
+                        DialogChrome.choiceButton(
+                          label: 'TRADE',
+                          accent: d.color,
+                          filled: true,
+                          compact: compact,
+                          onTap: () {
+                            _closeDialogue();
+                            Shop.show();
+                          },
+                        ),
+                        SizedBox(width: compact ? 6 : 8),
+                      ],
+                      if (choices.isEmpty)
+                        DialogChrome.choiceButton(
+                          label: isLast ? 'CLOSE' : 'NEXT ›',
+                          accent: d.color,
+                          filled: false,
+                          compact: compact,
+                          onTap: _advance,
+                        ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -2627,42 +2844,61 @@ class _DialogueOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screen = MediaQuery.sizeOf(context);
+    final compact = DialogChrome.compactOf(screen);
+    final pad = DialogChrome.paddingOf(screen);
+    // Echo fragments stay magenta-neon — same pixel frame as NPC talk,
+    // not a separate purple-glow Material card.
+    const accent = DialogChrome.magenta;
     return GestureDetector(
       onTap: () => AIFragment.activeDialogue.value = null,
       child: Container(
-        color: Colors.black.withOpacity(0.6),
+        color: Colors.black.withValues(alpha: 0.6),
         alignment: Alignment.center,
         child: Container(
-          margin: const EdgeInsets.all(40),
-          constraints: const BoxConstraints(maxWidth: 500),
-          padding: const EdgeInsets.all(28),
-          decoration: BoxDecoration(
-            color: const Color(0xFF0D0020),
-            border: Border.all(color: const Color(0xFFAA44FF), width: 1.5),
-            borderRadius: BorderRadius.circular(10),
+          margin: EdgeInsets.all(compact ? 16 : 40),
+          constraints: BoxConstraints(
+            maxWidth: DialogChrome.maxWidthOf(screen),
+            maxHeight: DialogChrome.maxHeightOf(screen),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(text,
-                  style: const TextStyle(
-                      color: Colors.white70, fontSize: 15, height: 1.75)),
-              const SizedBox(height: 24),
-              _CyberButton(
-                label: 'ABSORB ECHO',
-                color: const Color(0xFFAA44FF),
-                onTap: () {
-                  AIFragment.nearbyFragment?.absorb();
-                  AIFragment.activeDialogue.value = null;
-                },
+          child: DialogChrome.panel(
+            accent: accent,
+            compact: compact,
+            padding: pad,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  DialogChrome.speakerLabel('ECHO', accent, compact: compact),
+                  SizedBox(height: compact ? 6 : 10),
+                  Text(text, style: DialogChrome.bodyStyle(compact: compact)),
+                  SizedBox(height: compact ? 12 : 20),
+                  DialogChrome.choiceButton(
+                    label: 'ABSORB ECHO',
+                    accent: accent,
+                    compact: compact,
+                    wide: true,
+                    onTap: () {
+                      AIFragment.nearbyFragment?.absorb();
+                      AIFragment.activeDialogue.value = null;
+                    },
+                  ),
+                  SizedBox(height: compact ? 4 : 8),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () => AIFragment.activeDialogue.value = null,
+                      child: Text('CLOSE',
+                          style: TextStyle(
+                              color: DialogChrome.mute,
+                              fontSize: compact ? 11 : 12,
+                              letterSpacing: 1)),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 8),
-              TextButton(
-                onPressed: () => AIFragment.activeDialogue.value = null,
-                child: const Text('CLOSE',
-                    style: TextStyle(color: Colors.white38, fontSize: 12)),
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -2708,9 +2944,20 @@ class _DebugOverlay extends StatelessWidget {
           child: ValueListenableBuilder<bool>(
             valueListenable: GameDebug.enabled,
             builder: (_, debug, __) => _DebugToggleButton(
-                active: debug, onTap: GameDebug.toggle),
+              active: debug,
+              onTap: () {
+                GameDebug.toggle();
+                if (!GameDebug.isOn) DebugPlaceJump.hide();
+              },
+              onLongPress: () {
+                if (!GameDebug.isOn) GameDebug.toggle();
+                DebugPlaceJump.toggle();
+              },
+            ),
           ),
         ),
+        // Place jumper above the chip so long-press → panel is usable.
+        DebugPlaceJumpPanel(onWarp: _debugWarp),
       ]),
     );
   }
@@ -2719,12 +2966,18 @@ class _DebugOverlay extends StatelessWidget {
 class _DebugToggleButton extends StatelessWidget {
   final bool active;
   final VoidCallback onTap;
-  const _DebugToggleButton({required this.active, required this.onTap});
+  final VoidCallback onLongPress;
+  const _DebugToggleButton({
+    required this.active,
+    required this.onTap,
+    required this.onLongPress,
+  });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
+      onLongPress: onLongPress,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
@@ -2733,7 +2986,7 @@ class _DebugToggleButton extends StatelessWidget {
               color: active ? const Color(0xFF00FF88) : Colors.white24),
           borderRadius: BorderRadius.circular(4),
         ),
-        child: Text('`  DEBUG',
+        child: Text(active ? '`  DEBUG · F2' : '`  DEBUG',
             style: TextStyle(
               color: active ? const Color(0xFF00FF88) : Colors.white38,
               fontSize: 11,
@@ -3185,10 +3438,13 @@ class _VictoryScreen extends StatelessWidget {
                   ],
                 );
 
+          // Window can report a tiny height on first frame / short displays;
+          // never pass a negative minHeight into ConstrainedBox.
+          final minH = (box.maxHeight - pad * 2).clamp(0.0, double.infinity);
           return SingleChildScrollView(
             padding: EdgeInsets.all(pad),
             child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: box.maxHeight - pad * 2),
+              constraints: BoxConstraints(minHeight: minH),
               child: Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 1000),
@@ -3211,12 +3467,15 @@ class _CyberButton extends StatelessWidget {
   final bool filled;
   /// Stretch to parent width (pause / stacked menus).
   final bool wide;
+  /// Denser hit targets for talk cards on phone / short screens.
+  final bool compact;
   const _CyberButton({
     required this.label,
     required this.onTap,
     this.color = const Color(0xFF00FFCC),
     this.filled = false,
     this.wide = false,
+    this.compact = false,
   });
 
   @override
@@ -3228,15 +3487,20 @@ class _CyberButton extends StatelessWidget {
         foregroundColor: color,
         side: BorderSide(
           color: color.withValues(alpha: filled ? 1 : 0.85),
-          width: filled ? 2 : 1.5,
+          width: filled ? (compact ? 1.5 : 2) : 1.5,
         ),
         padding: EdgeInsets.symmetric(
-          horizontal: filled ? 40 : 32,
-          vertical: filled ? 18 : 16,
+          horizontal: compact ? (filled ? 14 : 12) : (filled ? 40 : 32),
+          vertical: compact ? (filled ? 9 : 8) : (filled ? 18 : 16),
         ),
-        minimumSize: Size(wide ? double.infinity : 168, filled ? 54 : 50),
+        minimumSize: Size(
+          wide ? double.infinity : (compact ? 0 : 168),
+          compact ? (filled ? 36 : 34) : (filled ? 54 : 50),
+        ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-        tapTargetSize: MaterialTapTargetSize.padded,
+        tapTargetSize: compact
+            ? MaterialTapTargetSize.shrinkWrap
+            : MaterialTapTargetSize.padded,
       ),
       child: Text(
         label,
@@ -3244,8 +3508,8 @@ class _CyberButton extends StatelessWidget {
         style: TextStyle(
           color: color,
           fontWeight: FontWeight.w700,
-          letterSpacing: 2.4,
-          fontSize: filled ? 17 : 15,
+          letterSpacing: compact ? 1.2 : 2.4,
+          fontSize: compact ? (filled ? 12 : 11) : (filled ? 17 : 15),
           height: 1.1,
         ),
       ),
@@ -3280,22 +3544,22 @@ class _CalmLayer extends StatelessWidget {
                 duration: const Duration(milliseconds: 350),
                 child: text == null
                     ? const SizedBox.shrink()
-                    : Container(
+                    : ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 280),
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.5),
-                          border: Border.all(color: const Color(0xFF66FFAA).withValues(alpha: 0.35)),
-                          borderRadius: BorderRadius.circular(6),
+                        child: DialogChrome.toastShell(
+                          accent: const Color(0xFF66FFAA),
+                          compact: true,
+                          child: Text(text,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              style: DialogChrome.toastBodyStyle(
+                                      compact: true, alone: true)
+                                  .copyWith(
+                                      color: const Color(0xFF66FFAA)
+                                          .withValues(alpha: 0.85),
+                                      letterSpacing: 0.5)),
                         ),
-                        child: Text(text,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                                color: const Color(0xFF66FFAA).withValues(alpha: 0.75),
-                                fontSize: 10,
-                                letterSpacing: 0.5)),
                       ),
               ),
             ),
@@ -3387,21 +3651,13 @@ class TalkPrompt extends StatelessWidget {
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: _interact,
-              child: Container(
-                key: const ValueKey('hud-talk-prompt'),
+              child: DialogChrome.promptShell(
                 padding: EdgeInsets.symmetric(
                     horizontal: _isTouch ? 28 : 14, vertical: _isTouch ? 14 : 6),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.7),
-                  border: Border.all(color: const Color(0xFF00FFCC)),
-                  borderRadius: BorderRadius.circular(4),
-                ),
                 child: Text(label,
-                    style: TextStyle(
-                        color: const Color(0xFF00FFCC),
-                        fontSize: _isTouch ? 16 : 12,
-                        letterSpacing: 2,
-                        fontWeight: FontWeight.bold)),
+                    key: const ValueKey('hud-talk-prompt'),
+                    style: DialogChrome.promptStyle(
+                        compact: _isTouch, enabled: true)),
               ),
             ),
           ),

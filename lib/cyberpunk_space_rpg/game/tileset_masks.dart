@@ -23,6 +23,7 @@ class TilesetMasks {
       3 => 'cyberpunk',
       4 => 'core',
       5 => 'city',
+      6 => 'junkyard',
       _ => 'woods',
     };
   }
@@ -141,7 +142,7 @@ class TilesetMasks {
       final tsx = '$root/tools/tilesets/$tileset.tsx';
       await _patchTsj(tsj, tileId, rects);
       if (File(tsx).existsSync()) await _patchTsx(tsx, tileId, rects);
-      for (final map in ['world', 'world2', 'world3', 'world4', 'world5']) {
+      for (final map in ['world', 'world2', 'world3', 'world4', 'world5', 'world6']) {
         final tmj = '$root/assets/images/maps/$map.tmj';
         if (File(tmj).existsSync()) {
           await _patchTmj(tmj, tileset, tileId, rects);

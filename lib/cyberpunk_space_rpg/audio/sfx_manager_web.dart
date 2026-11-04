@@ -35,7 +35,7 @@ class SfxManager {
     _footstep = _preload('audio/sfx/footstep_grass.mp3');
     _damage = _preload('audio/sfx/damage_hit.mp3');
     _portal = _preload('audio/sfx/portal.mp3');
-    _shoot = _preload('audio/sfx/shoot.mp3');
+    _shoot = _preload('audio/sfx/shoot.wav');
     _chime = _preload('audio/sfx/computer_beep.wav');
     _heal = _preload('audio/sfx/health_pickup.mp3');
     _applyVolumes();
@@ -128,4 +128,19 @@ class SfxManager {
       _currentVoice = null;
     } catch (_) {}
   }
+
+  /// Stop one-shots and VO while the app / tab is backgrounded.
+  Future<void> pauseForAppLifecycle() async {
+    await stopVoice();
+    for (final el in [_footstep, _damage, _portal, _shoot, _chime, _heal]) {
+      if (el == null) continue;
+      try {
+        el.pause();
+        el.currentTime = 0;
+      } catch (_) {}
+    }
+  }
+
+  /// SFX are one-shots; nothing to resume when returning to foreground.
+  Future<void> resumeForAppLifecycle() async {}
 }

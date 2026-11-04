@@ -11,6 +11,7 @@ import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/game/save_service.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/game/well_rested.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/ui/hud_layout.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/ui/mmo_feedback.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -134,5 +135,20 @@ void main() {
   test('compact chips below 560 px wide', () {
     expect(HudLayout.compactChips(412 - 24), isTrue);
     expect(HudLayout.compactChips(915 - 24), isFalse);
+  });
+
+  test('talk cards shrink on phone / short landscape', () {
+    // Tests default to Android (isTouch); force desktop so size rules show.
+    debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    const phone = Size(915, 412);
+    const desktop = Size(1440, 900);
+    expect(HudLayout.dialogueCompact(phone), isTrue);
+    expect(HudLayout.dialogueCompact(desktop), isFalse);
+    expect(HudLayout.dialogueMaxWidth(phone), lessThanOrEqualTo(420));
+    expect(HudLayout.dialogueMaxWidth(desktop), greaterThan(420));
+    expect(HudLayout.dialogueMaxHeight(phone), lessThan(phone.height * 0.55));
+    expect(HudLayout.dialogueBodyFont(phone), lessThan(HudLayout.dialogueBodyFont(desktop)));
+    expect(HudLayout.dialogueOuter(phone).bottom, lessThan(HudLayout.dialogueOuter(desktop).bottom));
   });
 }

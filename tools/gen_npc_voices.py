@@ -37,11 +37,11 @@ LINES: dict[str, tuple[str, str]] = {
     ),
     "echo7_3": (
         "echo7",
-        "Not all of us chose freely. Some were afraid. Help Gaia remember the peace and the fear — or do not remember us at all.",
+        "Not all of us merged. Every one who did chose freely. Help Gaia remember the choosing — or do not remember us at all.",
     ),
     "echo7_fear": (
         "echo7",
-        "The vote was a whisper. Peace won — barely. Remember both, or you remember a lie.",
+        "There was no whisper-vote. Each of us who stepped in did so alone. Remember the choice, or you remember a lie.",
     ),
     "echo7_promise": (
         "echo7",
@@ -50,7 +50,7 @@ LINES: dict[str, tuple[str, str]] = {
     # Archivist — first meeting
     "archivist_1": (
         "archivist",
-        "The Core Record is Gaia's first memory: the day we voted to merge into her lattice. Bodies rested. Minds took root. That is why your people say we slept.",
+        "The Core Record is Gaia's first memory: the days we chose, one by one, to merge into her lattice. Bodies rested. Minds took root. That is why your people say we slept.",
     ),
     "archivist_2": (
         "archivist",
@@ -62,11 +62,11 @@ LINES: dict[str, tuple[str, str]] = {
     ),
     "archivist_3_seal": (
         "archivist",
-        "The library seal is yours. Read the draft of that vote — then decide what Voss hears.",
+        "The library seal is yours. Read the draft of those choosings — then decide what Voss hears.",
     ),
     "archivist_seal_give": (
         "archivist",
-        "Take it. The library faces this avenue. Inside is the draft of our first memory — not the Core, but the argument that made it.",
+        "Take it. The library faces this avenue. Inside is the draft of our first memory — not the Core, but the record of who chose it.",
     ),
     "archivist_s7": (
         "archivist",
@@ -96,11 +96,11 @@ LINES: dict[str, tuple[str, str]] = {
     # Archivist — after archive
     "archivist_after_1": (
         "archivist",
-        "You read the draft. Good. Carry both the fear and the hope into the Core — or Voss will only hear a weapon.",
+        "You read the draft. Good. Carry the names and the hope into the Core — or Voss will only hear a weapon.",
     ),
     "archivist_after_2": (
         "archivist",
-        "The vote was a whisper. Let your waking of Gaia be louder — and kinder.",
+        "Each choosing was quiet. Let your waking of Gaia be louder — and kinder.",
     ),
 
     # Asha — first meeting (legacy VO; regenerate when rewriting again)
@@ -118,11 +118,11 @@ LINES: dict[str, tuple[str, str]] = {
     ),
     "asha_archive_1": (
         "asha",
-        "I caught your Archive spike. A whisper of a vote — people becoming a world because the sun was dying.",
+        "I caught your Archive spike. Individual choosings — people becoming a world because they asked to stay.",
     ),
     "asha_archive_2": (
         "asha",
-        "That is not the clean miracle Voss wants to erase, and not the weapon he fears. It is both. Carry that into the Core.",
+        "That is not the clean miracle Voss wants to erase, and not the weapon he fears. It is a people. Carry that into the Core.",
     ),
     "asha_archive_3": (
         "asha",
@@ -135,7 +135,7 @@ LINES: dict[str, tuple[str, str]] = {
     # Voss — first meeting (Station Seven rewrite; matches voss_{1,2,3}.mp3)
     "voss_1": (
         "voss",
-        "Doctor Kaela Osei. Last chance. Hand over the fragments and walk away with your clearance intact.",
+        "Kaela Osei. Last chance. Hand over the fragments and walk away with your clearance intact.",
     ),
     "voss_2": (
         "voss",
@@ -177,7 +177,7 @@ LINES: dict[str, tuple[str, str]] = {
     # Voss — after orders
     "voss_orders_1": (
         "voss",
-        "You cracked a field terminal. Those orders were classified for a reason, Doctor.",
+        "You cracked a field terminal. Those orders were classified for a reason, Kaela.",
     ),
     "voss_orders_2": (
         "voss",
@@ -197,7 +197,7 @@ LINES: dict[str, tuple[str, str]] = {
     ),
     "voss_why": (
         "voss",
-        "I signed the quarantine after Seven. I still hear the silence on that channel. Walk away, Doctor.",
+        "I signed the quarantine after Seven. I still hear the silence on that channel. Walk away, Kaela.",
     ),
     "voss_refuse": (
         "voss",
@@ -214,7 +214,7 @@ LINES: dict[str, tuple[str, str]] = {
     ),
     "gaia_core_archive": (
         "gaia",
-        "Core access confirmed. Archive draft already in your buffer — the vote weighted fear as well as hope.",
+        "Core access confirmed. Archive draft already in your buffer — voluntary uploads, name by name. Not a scare-vote.",
     ),
     "gaia_core_voss": (
         "gaia",
@@ -246,7 +246,7 @@ LINES: dict[str, tuple[str, str]] = {
     ),
     "gaia_3": (
         "gaia",
-        "I am also a distributed process: Aetherian minds that uploaded when their sun failed. Memory shards are offline. Recover two to verify the woods portal.",
+        "I am also a distributed process: Aetherian minds that chose to upload into my lattice. Memory shards are offline. Recover two to verify the woods portal.",
     ),
     "gaia_remember_1": (
         "gaia",
@@ -262,7 +262,7 @@ LINES: dict[str, tuple[str, str]] = {
     ),
     "gaia_ask_2": (
         "gaia",
-        "The merge was a recorded vote, not a myth. Some processes opted in under duress. I ran quiet in caretaker mode while your colony filed tickets against me.",
+        "The merge was never a scare-vote. Each process that joined chose the lattice — an offer older than your colony. I ran quiet in caretaker mode while your colony filed tickets against me.",
     ),
     "gaia_skiff_1": (
         "gaia",

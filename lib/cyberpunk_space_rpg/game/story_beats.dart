@@ -16,8 +16,10 @@ class StoryBeats {
   static bool _busy = false;
 
   /// Journal titles for replayable story slideshows (not memory fragments).
+  /// Order here is the Memories-tab STORY section order.
   static const titles = <String, String>{
     Cutscenes.coalition: 'First Contact',
+    Cutscenes.afterSentinel: 'The Sentinel Falls',
   };
 
   static void attach(BonfireGameInterface game) {
@@ -36,7 +38,7 @@ class StoryBeats {
     WidgetsBinding.instance.scheduleFrame();
   }
 
-  /// First Archive open: Asha on comms reacts to the whisper-vote draft.
+  /// First Archive open: Asha on comms reacts to the voluntary-merge draft.
   static void onArchiveOpened() {
     final game = _game;
     if (game == null || !game.context.mounted) return;

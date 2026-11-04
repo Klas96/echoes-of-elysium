@@ -173,7 +173,7 @@ class Adventure {
     }
     if (openedArchive) {
       parts.add(
-        'The archive draft travels with Gaia\'s waking: the merge was never clean courage. It was a whisper of a vote, and you chose to remember it.');
+        'The archive draft travels with Gaia\'s waking: each merge was a voluntary choosing, and you chose to remember their names.');
     }
     if (flag('said_trust_gaia') && flag('promised_echo')) {
       parts.add(
@@ -181,7 +181,7 @@ class Adventure {
     }
     if (flag('asha_archive_ack') || hasClue('asha_on_archive')) {
       parts.add(
-        'Asha\'s channel still echoes: carry the fear with the hope. Voss heard a people tonight — not only a lattice.');
+        'Asha\'s channel still echoes: carry the names with the hope. Voss heard a people tonight — not only a lattice.');
     }
     // Quests.turnedInCount via save flags to avoid a circular import.
     final jobs = [
@@ -229,7 +229,7 @@ class Adventure {
       id: 'aetherian_merge',
       title: 'The Merge',
       body:
-          'The colony tagged Gaia as a caretaker AI. Incomplete: she is also an Aetherian upload lattice — minds in process, bodies returned — so a dying sun could not erase them. She ran quiet in caretaker mode until Kaela\'s diagnostic skiff opened the channel — and went down in the woods.',
+          'The colony tagged Gaia as a caretaker AI. Incomplete: she is also an Aetherian upload lattice — minds that chose to take root, bodies returned to soil. The path into her was open long before any human crisis. She ran quiet in caretaker mode until Kaela\'s diagnostic skiff opened the channel — and went down in the woods.',
       where: 'Woods · Gaia',
     ),
     ClueDef(
@@ -248,9 +248,9 @@ class Adventure {
     ),
     ClueDef(
       id: 'echo_split',
-      title: 'The Split Vote',
+      title: 'The Choosing',
       body:
-          'Echo-7 remembers fear as clearly as peace. Not every Aetherian chose the merge. Some only had nowhere else to go.',
+          'Echo-7 remembers those who merged and those who did not. Every path was voluntary — the lattice was never a scare-vote.',
       where: 'City · Echo-7',
     ),
     ClueDef(
@@ -326,14 +326,14 @@ class Adventure {
       id: 'archive_first_memory',
       title: 'First Memory Draft',
       body:
-          'A brittle page: "If we merge, we stop dying with our sun. If we do not, we end as dust that remembers nothing." The vote passed by a whisper.',
+          'A brittle page of names: each who chose to merge into Gaia — bodies to soil, minds to lattice. The offer was open long before any sun failed. No scare-vote. One choosing at a time.',
       where: 'City · Archive Library',
     ),
     ClueDef(
       id: 'asha_on_archive',
       title: "Asha's Channel",
       body:
-          'Asha caught the Archive spike on her comms. She heard the whisper-vote too: not clean courage — people scared enough to become the world. She wants that fear carried to the Core, where Voss only hears weapons.',
+          'Asha caught the Archive spike on her comms. She heard individual choosings — not panic, people who meant to become the world. She wants those names carried to the Core, where Voss only hears weapons.',
       where: 'City · Archive · Asha link',
     ),
     ClueDef(

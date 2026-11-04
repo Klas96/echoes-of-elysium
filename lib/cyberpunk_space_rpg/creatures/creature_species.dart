@@ -120,7 +120,7 @@ const creatureSpecies = <String, CreatureSpecies>{
     id: 'vinefox',
     name: 'Vine Fox',
     habitat: 'Whispering Woods, old stumps',
-    hint: 'Something sweet grows where the old trees fell.',
+    hint: 'Something sweet lies on the grass by an old stump in the western hollow.',
     lore: 'Vine foxes can smell a path long after it\'s overgrown. They have never once been lost.',
     rule: BondRule.offerItem,
     item: 'sweetroot',

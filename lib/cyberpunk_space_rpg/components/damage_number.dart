@@ -70,13 +70,8 @@ class DamageNumber extends GameComponent {
     final (dy, alpha) = curve((_t / life).clamp(0.0, 1.0));
     if (alpha <= 0) return;
     final off = Offset(_drift * (_t / life), dy);
-    if (alpha < 1) {
-      canvas.saveLayer(
-          (off & Size(size.x, size.y)).inflate(4), Paint()..color = Color.fromRGBO(0, 0, 0, alpha));
-      _tp.paint(canvas, off);
-      canvas.restore();
-    } else {
-      _tp.paint(canvas, off);
-    }
+    // Avoid saveLayer during combat spam — hard-cut near the end instead.
+    if (alpha < 0.2) return;
+    _tp.paint(canvas, off);
   }
 }

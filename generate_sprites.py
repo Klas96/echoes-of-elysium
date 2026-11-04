@@ -45,27 +45,25 @@ def make_player():
 
 # ── NPC Gaia ───────────────────────────────────────────────────────────────────
 def make_npc_gaia():
-    S = 30
-    img = Image.new('RGBA', (S, S), (0,0,0,0))
+    """Toast / fallback portrait: front idle from gaia_walk (hologram), not the old green-staff goddess."""
+    walk = os.path.join(OUT_DIR, "gaia_walk.png")
+    if os.path.isfile(walk):
+        sheet = Image.open(walk).convert("RGBA")
+        return sheet.crop((0, 0, 32, 32))
+    # Fallback if walk sheet missing: cyan hologram bust (matches woods/temple look).
+    S = 32
+    img = Image.new("RGBA", (S, S), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
-    shadow(d, S)
-    # Wide green robes
-    d.ellipse([3, 13, 27, 27], fill=(25, 118, 50))
-    d.ellipse([6, 15, 24, 25], fill=(38, 152, 65))
-    # Staff
-    d.rectangle([23, 7, 26, 23], fill=(148, 98, 48))
-    d.ellipse([20, 3, 29, 12], fill=(80, 210, 90))
-    d.ellipse([22, 5, 27, 10], fill=(160, 255, 160, 200))
-    # Head
-    d.ellipse([9, 3, 21, 14], fill=(220, 175, 135))
-    # Silver hair
-    d.ellipse([7, 0, 23, 10], fill=(208, 212, 222))
-    d.ellipse([8, 1, 22, 9],  fill=(228, 232, 240))
-    # Eyes (glowing green)
-    d.ellipse([11, 6, 14, 9], fill=(50, 235, 95))
-    d.ellipse([16, 6, 19, 9], fill=(50, 235, 95))
-    # Robe symbol
-    d.ellipse([12, 17, 18, 23], fill=(80, 255, 80, 200))
+    shadow(d, S, alpha=40)
+    d.ellipse([6, 12, 26, 30], fill=(20, 48, 110))
+    d.ellipse([8, 14, 24, 28], fill=(36, 72, 150))
+    d.ellipse([10, 4, 22, 16], fill=(210, 230, 255))
+    d.ellipse([8, 1, 24, 12], fill=(80, 210, 255))
+    d.ellipse([9, 2, 23, 10], fill=(140, 235, 255))
+    d.arc([10, 0, 22, 6], 200, 340, fill=(200, 255, 255), width=1)
+    d.ellipse([12, 7, 15, 10], fill=(20, 40, 80))
+    d.ellipse([17, 7, 20, 10], fill=(20, 40, 80))
+    d.ellipse([13, 18, 19, 24], fill=(120, 255, 255, 180))
     return img
 
 # ── NPC Asha ───────────────────────────────────────────────────────────────────

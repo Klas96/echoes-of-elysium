@@ -56,4 +56,30 @@ class HudLayout {
 
   /// Max tracked jobs listed before collapsing into "+N more".
   static int trackerJobs(Size screen) => screen.height < 500 ? 1 : 2;
+
+  /// NPC / room talk cards — phones (and short landscape) need a denser plate.
+  static bool dialogueCompact(Size screen) =>
+      isTouch || screen.shortestSide < 600 || screen.height < 520;
+
+  static double dialogueMaxWidth(Size screen) {
+    final margin = dialogueCompact(screen) ? 24.0 : 48.0;
+    final cap = dialogueCompact(screen) ? 420.0 : 560.0;
+    return min(cap, max(200.0, screen.width - margin));
+  }
+
+  /// Cap height so many choices don't cover the whole phone screen.
+  static double dialogueMaxHeight(Size screen) =>
+      screen.height * (dialogueCompact(screen) ? 0.48 : 0.62);
+
+  static EdgeInsets dialogueOuter(Size screen) => dialogueCompact(screen)
+      ? const EdgeInsets.fromLTRB(10, 0, 10, 10)
+      : const EdgeInsets.fromLTRB(24, 0, 24, 24);
+
+  static EdgeInsets dialoguePadding(Size screen) => dialogueCompact(screen)
+      ? const EdgeInsets.fromLTRB(12, 10, 12, 8)
+      : const EdgeInsets.fromLTRB(24, 20, 24, 16);
+
+  static double dialogueNameFont(Size screen) => dialogueCompact(screen) ? 9.5 : 11;
+  static double dialogueBodyFont(Size screen) => dialogueCompact(screen) ? 12.5 : 15;
+  static double dialogueBodyHeight(Size screen) => dialogueCompact(screen) ? 1.4 : 1.65;
 }

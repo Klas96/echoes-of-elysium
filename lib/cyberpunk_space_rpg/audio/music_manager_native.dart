@@ -22,13 +22,16 @@ class MusicManager {
   /// True when [play] was blocked by the browser autoplay policy (web).
   bool _awaitingGesture = false;
 
+  /// App left the foreground — keep BGM paused until [resumeForAppLifecycle].
+  bool _pausedByLifecycle = false;
+
   static String _asset(String path) =>
       path.startsWith('assets/') ? path.substring(7) : path;
 
   double get _effective =>
       (_enabled ? _userVolume : 0.0) * _mix.clamp(0.0, 1.0);
 
-  bool get _shouldPlay => _effective > 0.001;
+  bool get _shouldPlay => _effective > 0.001 && !_pausedByLifecycle;
 
   Future<void> _ensureReady() async {
     if (_ready) return;
@@ -115,6 +118,7 @@ class MusicManager {
 
   /// Warm / resume after a click, tap, or key (browser autoplay unlock).
   Future<void> unlockAfterGesture() async {
+    if (_pausedByLifecycle) return;
     await _ensureReady();
     final p = _player;
     if (p == null) return;
@@ -145,6 +149,22 @@ class MusicManager {
     try {
       await _player?.stop();
     } catch (_) {}
+  }
+
+  /// Pause BGM while the app is backgrounded / inactive (Android home, etc.).
+  Future<void> pauseForAppLifecycle() async {
+    _pausedByLifecycle = true;
+    try {
+      await _player?.pause();
+    } catch (_) {}
+  }
+
+  /// Resume BGM after returning to the foreground, if settings still allow it.
+  Future<void> resumeForAppLifecycle() async {
+    if (!_pausedByLifecycle) return;
+    _pausedByLifecycle = false;
+    if (_currentTrack == null) return;
+    await _apply();
   }
 
   /// Relative mix (dialogue duck). Multiplies the user volume setting.
