@@ -46,12 +46,14 @@ import '../ui/ability_hud.dart';
 import '../ui/app_version_label.dart';
 import '../ui/hud_layout.dart';
 import '../interiors/meal_chip.dart';
+import '../interiors/room_scene.dart';
 import '../ui/mmo_feedback.dart';
 import '../ui/quest_board_ui.dart';
 import '../ui/shop_ui.dart';
 import 'adventure.dart';
 import 'click_pathfinder.dart';
 import 'debug_mask_editor.dart';
+import 'debug_place_jump.dart';
 import 'debug_walk_grid.dart';
 import 'game_debug.dart';
 import 'game_input.dart';
@@ -934,7 +936,13 @@ class _PlayerSpawn extends GameComponent {
     if (entry != null && !MapEntryPoint.bySide.containsKey(entry)) return;
     _done = true;
     final save = SaveService.data;
-    if (SaveService.resumePlayer && player is CustomPlayer) {
+    final debugAt = kDebugMode ? DebugPlaceJump.takePendingSpawn() : null;
+    if (debugAt != null && player is CustomPlayer) {
+      Travel.takePendingEntry();
+      SaveService.resumePlayer = false;
+      player.position = debugAt.clone();
+      player.respawnPoint = debugAt.clone();
+    } else if (SaveService.resumePlayer && player is CustomPlayer) {
       SaveService.resumePlayer = false;
       Travel.takePendingEntry();
       final at = save.player ?? save.checkpoint;
@@ -1139,7 +1147,7 @@ class IntroScreen extends StatelessWidget {
                 Text(_isTouch
                         ? 'Tap to move · tap foe to shoot · WASD optional'
                         : kDebugMode
-                            ? 'Click pathfind · click foe / T shoot · WASD · Esc · J · I · `'
+                            ? 'Click pathfind · click foe / T shoot · WASD · Esc · J · I · ` · F2 jump'
                             : 'Click pathfind · click foe / T to shoot · WASD · Esc Menu · J · I',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.white24, fontSize: 11, letterSpacing: 1.2)),
@@ -1250,6 +1258,99 @@ Future<void> _travelTo(BuildContext context, TravelDest dest) async {
   } else {
     nav.pushReplacement(MaterialPageRoute(builder: (_) => screen));
   }
+}
+
+/// Debug place-jumper: map + spawn (and optional interior). Skips cutscenes /
+/// story gates. Only reachable from [kDebugMode] UI / F2.
+Future<void> _debugWarp(BuildContext context, DebugPlace place) async {
+  if (!kDebugMode) return;
+  DebugPlaceJump.hide();
+  _debugPreparePlace(place);
+
+  final sameMap = GameState.level == place.level && _activeGame != null;
+  if (sameMap && place.interiorId == null) {
+    final g = _activeGame!;
+    final player = g.player;
+    final at = _debugSpawnFor(place);
+    if (player != null && at != null) {
+      player.position = at.clone();
+      if (player is CustomPlayer) player.respawnPoint = at.clone();
+      g.camera.moveToPlayer();
+    } else if (place.entrySide != null) {
+      Travel.pendingSpawnEntry = place.entrySide;
+      final edge = MapEntryPoint.bySide[place.entrySide!];
+      if (player != null && edge != null) {
+        player.position = edge.clone();
+        g.camera.moveToPlayer();
+      }
+    }
+    GameToast.show('DEBUG JUMP', body: place.label, compact: true, color: const Color(0xFF00FF88));
+    return;
+  }
+
+  if (sameMap && place.interiorId != null) {
+    final g = _activeGame!;
+    final at = _debugSpawnFor(place);
+    if (at != null && g.player != null) {
+      g.player!.position = at.clone();
+    }
+    await _debugEnterInterior(g, place.interiorId!);
+    return;
+  }
+
+  // Cross-map: leave, land at spawn / edge, then maybe enter interior.
+  final mapId = Travel.mapIdFor(place.level);
+  MapEntryPoint.bySide.clear();
+  DebugPlaceJump.pendingInterior = place.interiorId;
+  DebugPlaceJump.pendingSpawn = _debugSpawnFor(place);
+  if (place.entrySide != null && DebugPlaceJump.pendingSpawn == null) {
+    Travel.pendingSpawnEntry = place.entrySide;
+  }
+  MusicManager().play(_musicAssetForMap(mapId));
+  final nav = Navigator.of(context);
+  await _leaveMap(nextMapId: mapId);
+  if (!context.mounted) return;
+  nav.pushReplacement(MaterialPageRoute(builder: (_) => _screenForMap(mapId)));
+}
+
+Vector2? _debugSpawnFor(DebugPlace place) {
+  if (place.spawnX == null || place.spawnY == null) return null;
+  return Vector2(place.spawnX!, place.spawnY!);
+}
+
+void _debugPreparePlace(DebugPlace place) {
+  // Unlock story-gated rooms so the jumper always works mid-save.
+  if (place.interiorId == 'archive_library') {
+    Adventure.setFlag('archive_opened');
+  }
+  if (place.interiorId == 'pond_grotto') {
+    Gates.open('woods_grotto');
+  }
+  // Mark region visited so portal menus stay usable after a debug hop.
+  final region = GameState.regionIds[place.level];
+  if (region != null) GameState.markRegionVisited(region);
+}
+
+Future<void> _debugEnterInterior(BonfireGameInterface game, String id) async {
+  if (!kDebugMode) return;
+  // Prefer a live Building / GrottoGate so exit puts Kaela at the door.
+  if (id == 'pond_grotto') {
+    Gates.open('woods_grotto');
+    for (final g in game.query<GrottoGate>(onlyVisible: false)) {
+      await Interiors.enterAt(game, id, g.mouthFront, force: true);
+      return;
+    }
+    // Fallback near the LIGHT gate tile if the component isn't ready yet.
+    await Interiors.enterAt(game, id, Vector2(1180, 420), force: true);
+    return;
+  }
+  for (final b in game.query<Building>(onlyVisible: false)) {
+    if (b.id != id) continue;
+    await Interiors.enterAt(game, id, Interiors.doorFront(b), force: true);
+    return;
+  }
+  GameToast.show('DEBUG JUMP',
+      body: 'No $id on this map', compact: true, color: const Color(0xFFFF6688));
 }
 
 /// Invisible overlay: [MapEdgeExit] queued a walk-off; travel immediately.
@@ -1584,6 +1685,19 @@ Future<void> _startLevel(BonfireGameInterface game, int level) async {
       GameState.resetMap1();
   }
   SaveService.saveNow();
+  // Debug place-jumper: enter a room after the map finishes loading.
+  if (kDebugMode) {
+    final room = DebugPlaceJump.takePendingInterior();
+    if (room != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        // Buildings / gates finish registering a frame or two after onReady.
+        await Future<void>.delayed(const Duration(milliseconds: 80));
+        final g = _activeGame;
+        if (g == null) return;
+        await _debugEnterInterior(g, room);
+      });
+    }
+  }
   // First landing in the woods: say the mission out loud (cutscene can blur).
   if (level == 1 && !d.flag('opening_brief_shown')) {
     d.setFlag('opening_brief_shown');
@@ -1609,6 +1723,10 @@ KeyEventResult _handleDebugKey(FocusNode _, KeyEvent event) {
       event is KeyDownEvent &&
       event.logicalKey == LogicalKeyboardKey.backquote) {
     GameDebug.toggle();
+    if (!GameDebug.isOn) DebugPlaceJump.hide();
+    return KeyEventResult.handled;
+  }
+  if (kDebugMode && DebugPlaceJump.handleKey(event)) {
     return KeyEventResult.handled;
   }
   if (kDebugMode &&
@@ -2829,9 +2947,20 @@ class _DebugOverlay extends StatelessWidget {
           child: ValueListenableBuilder<bool>(
             valueListenable: GameDebug.enabled,
             builder: (_, debug, __) => _DebugToggleButton(
-                active: debug, onTap: GameDebug.toggle),
+              active: debug,
+              onTap: () {
+                GameDebug.toggle();
+                if (!GameDebug.isOn) DebugPlaceJump.hide();
+              },
+              onLongPress: () {
+                if (!GameDebug.isOn) GameDebug.toggle();
+                DebugPlaceJump.toggle();
+              },
+            ),
           ),
         ),
+        // Place jumper above the chip so long-press → panel is usable.
+        DebugPlaceJumpPanel(onWarp: _debugWarp),
       ]),
     );
   }
@@ -2840,12 +2969,18 @@ class _DebugOverlay extends StatelessWidget {
 class _DebugToggleButton extends StatelessWidget {
   final bool active;
   final VoidCallback onTap;
-  const _DebugToggleButton({required this.active, required this.onTap});
+  final VoidCallback onLongPress;
+  const _DebugToggleButton({
+    required this.active,
+    required this.onTap,
+    required this.onLongPress,
+  });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
+      onLongPress: onLongPress,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
@@ -2854,7 +2989,7 @@ class _DebugToggleButton extends StatelessWidget {
               color: active ? const Color(0xFF00FF88) : Colors.white24),
           borderRadius: BorderRadius.circular(4),
         ),
-        child: Text('`  DEBUG',
+        child: Text(active ? '`  DEBUG · F2' : '`  DEBUG',
             style: TextStyle(
               color: active ? const Color(0xFF00FF88) : Colors.white38,
               fontSize: 11,
