@@ -114,34 +114,6 @@ def render(path, scale=0.5, title=None):
         spr = Image.open(gids[o["gid"]][0]).convert("RGBA")
         im.alpha_composite(spr, (int(o["x"]), int(o["y"] - o["height"])))
     ok = walkable(W, H, T, gids, layers, objs)
-    # Woods-style floor contact shadow beside walls (NW light → south/east bias).
-    wall = ~ok
-    shade = Image.new("RGBA", (W * T, H * T), (0, 0, 0, 0))
-    spx = shade.load()
-    for y in range(H):
-        for x in range(W):
-            if wall[y, x]:
-                continue
-            px, py = x * T, y * T
-            if x + 1 < W and wall[y, x + 1]:
-                for j in range(T):
-                    for i in range(T - 6, T):
-                        a = 110 + (i - (T - 6)) * 12
-                        spx[px + i, py + j] = (0, 0, 0, min(160, a))
-            if x > 0 and wall[y, x - 1]:
-                for j in range(T):
-                    for i in range(5):
-                        spx[px + i, py + j] = (0, 0, 0, max(40, 110 - i * 14))
-            if y + 1 < H and wall[y + 1, x]:
-                for j in range(T - 7, T):
-                    for i in range(T):
-                        a = 120 + (j - (T - 7)) * 10
-                        spx[px + i, py + j] = (0, 0, 0, min(170, a))
-            if y > 0 and wall[y - 1, x]:
-                for j in range(5):
-                    for i in range(T):
-                        spx[px + i, py + j] = (0, 0, 0, max(40, 110 - j * 14))
-    im.alpha_composite(shade)
     sp = next(o for o in objs if o["name"] == "spawn")
     reach = flood(ok, int((sp["x"] + 1) // T), int((sp["y"] + 1) // T))
     rs = rings(reach)
