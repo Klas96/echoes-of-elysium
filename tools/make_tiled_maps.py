@@ -1367,6 +1367,13 @@ def map1():
     disk_carve(path, *P["cross"], 2.6)               # the crossroads reads as a plaza
     path &= lv.floor & ~water
     path = clean_walls(path, border=0) & path
+    # Willow west approach: seal 1-tile forest punch-throughs on the 2-tall
+    # road (around tile 54,8) so the cart path reads as full dirt, not an end-cap.
+    for x in range(50, 60):
+        left = path[8, x - 1] or path[9, x - 1]
+        right = path[8, min(x + 1, lv.W - 1)] or path[9, min(x + 1, lv.W - 1)]
+        if left and right:
+            path[8, x] = path[9, x] = True
     for y in range(lv.H):
         for x in range(lv.W):
             if wall[y, x] or not (water[y, x] or path[y, x]):
