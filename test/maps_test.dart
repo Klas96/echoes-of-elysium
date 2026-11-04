@@ -27,12 +27,24 @@ void main() {
     return 'inside';
   }
 
-  const files = {'woods': 'world', 'city': 'world2', 'ruins': 'world3', 'town': 'world5'};
+  const files = {
+    'woods': 'world',
+    'city': 'world2',
+    'ruins': 'world3',
+    'town': 'world5',
+    'works': 'world6',
+  };
   // map -> {exit side: (dest, entry side on dest)}
   const expected = {
     'world': {'south': ('city', 'north')},
-    'world2': {'north': ('woods', 'south'), 'south': ('ruins', 'north'), 'east': ('town', 'west')},
+    'world2': {
+      'north': ('woods', 'south'),
+      'south': ('ruins', 'north'),
+      'east': ('town', 'west'),
+      'west': ('works', 'east'),
+    },
     'world5': {'west': ('city', 'east')},
+    'world6': {'east': ('city', 'west')},
     'world3': {'north': ('city', 'south')},
   };
 

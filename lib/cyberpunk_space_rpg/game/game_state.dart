@@ -56,7 +56,8 @@ class GameState {
   /// Shown when the game is finished.
   static const endingText = 'The Aetherians live on.';
 
-  // 1 woods, 2 city, 3 ruins, 4 core, 5 lantern town (0 before any map is ready).
+  // 1 woods, 2 city, 3 ruins, 4 core, 5 lantern town, 6 canal works
+  // (0 before any map is ready).
   static int _level = 0;
   static int _step = 0;
 
@@ -75,6 +76,8 @@ class GameState {
   static const _l4Enter = 0, _l4Gaia = 1, _l4Activate = 2;
   // Level 5 steps (peaceful hub)
   static const _l5Town = 0;
+  // Level 6 steps (side district)
+  static const _l6Works = 0;
 
   /// Tiled map stem and region id for each level, as stored in the save.
   static const mapIds = {
@@ -83,6 +86,7 @@ class GameState {
     3: 'world3',
     4: 'world4',
     5: 'world5',
+    6: 'world6',
   };
   static const regionIds = {
     1: 'woods',
@@ -90,6 +94,7 @@ class GameState {
     3: 'ruins',
     4: 'core',
     5: 'town',
+    6: 'works',
   };
 
   static bool hasVisitedRegion(String regionId) =>
@@ -137,6 +142,8 @@ class GameState {
       case 4:
         portalUnlocked.value = d.flag('portalUnlocked:world4');
       case 5:
+        portalUnlocked.value = true;
+      case 6:
         portalUnlocked.value = true;
       default:
         portalUnlocked.value = true;
@@ -209,6 +216,13 @@ class GameState {
   static void resetMap5() {
     _level = 5;
     _step = _l5Town;
+    portalUnlocked.value = true;
+    _refresh();
+  }
+
+  static void resetMap6() {
+    _level = 6;
+    _step = _l6Works;
     portalUnlocked.value = true;
     _refresh();
   }
@@ -334,7 +348,8 @@ class GameState {
                   Adventure.hasClue('archivist_seal'))) {
             return 'Open the Archive (optional) — then south to the Ruins';
           }
-          return job ?? 'South road → Ruins · or walk east to Lantern Town';
+          return job ??
+              'South road → Ruins · east → Lantern Town · SW west → Canal Works';
         }
         if (_step >= _l2Quiet || SaveService.data.flag('sentinelDefeated')) {
           return 'Speak with the Archivist — then the road south opens';
@@ -345,7 +360,8 @@ class GameState {
           return 'Use the Archivist\'s seal on the Archive Library';
         }
         if (_step >= _l2Archivist) return 'Seek out the Archivist';
-        return 'Arrival plaza: west → market & Echo-7 · south → Archive Square · east → Lantern Gate';
+        return 'Arrival plaza: west → market & Echo-7 · SW west → Canal Works · '
+            'south → Archive Square · east → Lantern Gate';
       case 3:
         if (Adventure.flag('ruins_gate_open')) {
           return 'Descend to Gaia\'s Core';
@@ -375,6 +391,8 @@ class GameState {
             : 'Core ahead · memories ${Memories.progressLabel}';
       case 5:
         return job ?? 'Mira\'s stall (trade glimmer) · job board · west road → City';
+      case 6:
+        return job ?? 'Canal Works · dry basin west to the crane · east road → City';
     }
     return '';
   }
