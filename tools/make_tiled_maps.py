@@ -1373,12 +1373,12 @@ def map1():
                 lv.ground[y, x] = blob(ts, "grass-forest", wall, x, y, lv.rng)
             if water[y, x]: lv.ground[y, x] = blob(ts, "grass-water", water, x, y, lv.rng)
             if path[y, x]: lv.ground[y, x] = blob(ts, "grass-path", path, x, y, lv.rng)
-    # NE stash nook: path east end-caps + forest west-edge column at x=54
-    # (baked blob shadows, full 32×32 collide — not half-collide wang stubs).
+    # NE stash nook: path east end-caps + forest left-edge column at x=54
+    # (blob dither faces the path; full 32×32 collide).
     lv.ground[8, 53] = 28  # grass-path east end (top)
     lv.ground[9, 53] = 31  # grass-path east end (bottom)
     for y in (7, 8, 9, 10):
-        lv.ground[y, 54] = 148  # grass-forest west edge, 32×32 collide
+        lv.ground[y, 54] = 138  # grass-forest left edge (open west), 32×32 collide
     # keep-out: trails, clearings, gated pockets, the cabin
     for r in trails:
         carve_route(lv, route_pts(r), 2.5, lv.keepout)
