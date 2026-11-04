@@ -1388,6 +1388,9 @@ def map1():
         lv.ground[y, 53] = 159
     for y in (6, 7, 8, 9, 10, 11):
         lv.ground[y, 54] = 142  # right-edge forest (grass+shadow on east)
+    # Clear old half-forest scraps so the east dither reads against grass.
+    for y, gid in ((6, 4), (7, 3), (8, 5), (9, 6), (10, 7), (11, 6)):
+        lv.ground[y, 55] = gid
     # keep-out: trails, clearings, gated pockets, the cabin
     for r in trails:
         carve_route(lv, route_pts(r), 2.5, lv.keepout)
