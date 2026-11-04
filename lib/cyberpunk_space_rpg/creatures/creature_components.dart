@@ -1,12 +1,12 @@
 import 'dart:math';
 
 import 'package:bonfire/bonfire.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import '../audio/sfx_manager.dart';
 import '../components/custom_player.dart';
 import '../components/sentinel_drone.dart';
+import '../components/soft_aura.dart';
 import '../components/uec_drone.dart';
 import 'bonds.dart';
 import 'creature_species.dart';
@@ -117,15 +117,13 @@ abstract class CreatureBody extends GameComponent {
   }
 
   void renderGlow(Canvas canvas, Color color, double radius, double a) {
-    // Soft blur is a walk-frame cost on every nearby creature; skip on web.
-    final paint = Paint()..color = color.withValues(alpha: a);
-    if (!kIsWeb) {
-      paint.maskFilter = MaskFilter.blur(BlurStyle.normal, radius * 0.6);
-    }
-    canvas.drawCircle(
+    // Radial soft falloff — MaskFilter was a hard disc on web / laggy elsewhere.
+    paintSoftAura(
+      canvas,
       Offset(16, species.flying ? 12 : 18),
       radius,
-      paint,
+      color,
+      coreAlpha: a,
     );
   }
 
