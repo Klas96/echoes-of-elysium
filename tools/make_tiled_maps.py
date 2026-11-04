@@ -1374,7 +1374,7 @@ def map1():
             if water[y, x]: lv.ground[y, x] = blob(ts, "grass-water", water, x, y, lv.rng)
             if path[y, x]: lv.ground[y, x] = blob(ts, "grass-path", path, x, y, lv.rng)
     # NE stash nook: 2-tile-thick forest wall (x=53–54). Path ends at x=52.
-    # West face 138 (shadow toward path), east face 149 (shadow toward willow).
+    # West face 138 (shadow toward path), east face 142 (shadow toward willow).
     # Band edges 146/141 only over dirt; corners 157/158 at the path notch.
     lv.ground[8, 52] = 28   # grass-path east end (top)
     lv.ground[9, 52] = 31   # grass-path east end (bottom)
@@ -1387,7 +1387,7 @@ def map1():
     for y in (6, 11):
         lv.ground[y, 53] = 159
     for y in (6, 7, 8, 9, 10, 11):
-        lv.ground[y, 54] = 149  # right-edge forest (faces willow clearing)
+        lv.ground[y, 54] = 142  # right-edge forest (grass+shadow on east)
     # keep-out: trails, clearings, gated pockets, the cabin
     for r in trails:
         carve_route(lv, route_pts(r), 2.5, lv.keepout)
