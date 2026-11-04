@@ -1367,19 +1367,17 @@ def map1():
     disk_carve(path, *P["cross"], 2.6)               # the crossroads reads as a plaza
     path &= lv.floor & ~water
     path = clean_walls(path, border=0) & path
-    # Willow west approach: seal 1-tile forest punch-throughs on the 2-tall
-    # road (around tile 54,8) so the cart path reads as full dirt, not an end-cap.
-    for x in range(50, 60):
-        left = path[8, x - 1] or path[9, x - 1]
-        right = path[8, min(x + 1, lv.W - 1)] or path[9, min(x + 1, lv.W - 1)]
-        if left and right:
-            path[8, x] = path[9, x] = True
     for y in range(lv.H):
         for x in range(lv.W):
             if wall[y, x] or not (water[y, x] or path[y, x]):
                 lv.ground[y, x] = blob(ts, "grass-forest", wall, x, y, lv.rng)
             if water[y, x]: lv.ground[y, x] = blob(ts, "grass-water", water, x, y, lv.rng)
             if path[y, x]: lv.ground[y, x] = blob(ts, "grass-path", path, x, y, lv.rng)
+    # NE stash nook ends at ~54,8 against a forest plug at x=55. Use full dirt
+    # body tiles (not wang end-caps) so the closed road reads solid — never
+    # open that plug into the willow trail.
+    lv.ground[8, 54] = 63
+    lv.ground[9, 54] = 63
     # keep-out: trails, clearings, gated pockets, the cabin
     for r in trails:
         carve_route(lv, route_pts(r), 2.5, lv.keepout)
