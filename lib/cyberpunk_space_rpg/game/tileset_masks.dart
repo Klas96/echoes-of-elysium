@@ -23,6 +23,7 @@ class TilesetMasks {
       3 => 'cyberpunk',
       4 => 'core',
       5 => 'city',
+      6 => 'junkyard',
       _ => 'woods',
     };
   }

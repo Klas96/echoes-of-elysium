@@ -67,7 +67,7 @@ class Travel {
     TravelDest(
       level: 6,
       title: 'Canal Works',
-      blurb: 'Dry docks and salvage cranes west of the City\'s SW yard.',
+      blurb: 'Scrapyard west of the City\'s SW yard — heaps, oil, and dead drones.',
       regionId: 'works',
     ),
     TravelDest(

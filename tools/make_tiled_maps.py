@@ -17,7 +17,7 @@ only .json/.tsj), and writes:
   <out>/world3.tmj  cyberpunk ruins   (tileset cyberpunk)
   <out>/world4.tmj  Gaia Core         (tileset core)
   <out>/world5.tmj  Lantern Town hub  (tileset city)
-  <out>/world6.tmj  Canal Works       (tileset city; west of City SW)
+  <out>/world6.tmj  Canal Works yard  (tileset junkyard; west of City SW)
   <out>/tilesets/<name>.png
   <preview>/preview_world*.png        (only with --preview: render + walkability)
 
@@ -2387,126 +2387,142 @@ def map4():
     lv.write("world4.tmj", "tilesets/core.png")
     return ts
 
+def retile_junkyard_edge(lv, ts, path, oil, metal, side, cx, half=2, margin=2):
+    """Re-blob dirt-heap / dirt-metal around a punched junkyard edge."""
+    W, H = lv.W, lv.H
+    wall = ~lv.floor
+    if side == "east":
+        y0, y1 = max(0, cx - half), min(H, cx + half + 1)
+        for x in range(W - 3, W):
+            for y in range(y0, y1):
+                if lv.floor[y, x]:
+                    path[y, x] = True
+        rx0, rx1 = max(0, W - 3 - margin - 1), W
+        ry0, ry1 = max(0, cx - half - margin), min(H, cx + half + 1 + margin)
+    elif side == "west":
+        y0, y1 = max(0, cx - half), min(H, cx + half + 1)
+        for x in range(0, 3):
+            for y in range(y0, y1):
+                if lv.floor[y, x]:
+                    path[y, x] = True
+        rx0, rx1 = 0, min(W, 3 + margin + 1)
+        ry0, ry1 = max(0, cx - half - margin), min(H, cx + half + 1 + margin)
+    else:
+        return
+    path &= lv.floor
+    for y in range(ry0, ry1):
+        for x in range(rx0, rx1):
+            if wall[y, x]:
+                lv.ground[y, x] = blob(ts, "dirt-heap", wall, x, y, lv.rng)
+            elif oil is not None and oil[y, x]:
+                lv.ground[y, x] = blob(ts, "dirt-oil", oil, x, y, lv.rng)
+            elif metal is not None and metal[y, x]:
+                lv.ground[y, x] = blob(ts, "dirt-metal", metal, x, y, lv.rng)
+            elif path[y, x] or lv.floor[y, x]:
+                # dirt base (non-overlay)
+                empty = np.zeros_like(wall)
+                lv.ground[y, x] = blob(ts, "dirt-heap", empty, x, y, lv.rng)
+
 # =============================================================== MAP 6: Canal Works
 def map6():
-    """Canal Works — industrial side district west of the City's SW yard.
+    """Canal Works — scrapyard west of the City's SW yard (junkyard tileset).
 
-    East edge walks back to the City. A basin ring and a west crane yard
-    leave two wall blocks so the works read as a place, not a corridor stub."""
-    ts = Tileset("city")
+    East edge walks back to the City. Scrap-heap islands and oil pans make
+    two walkable rings so the yard reads as a place, not a corridor stub."""
+    ts = Tileset("junkyard")
     lv = Level(ts, 44, 34, seed=66)
     lv.rings_min = 2
     P = dict(spawn=(40.5, 16), basin=(22, 16), crane=(8, 22), salvage=(24, 26),
              north=(22, 6), westpad=(6, 10), h1=(30.5, 12.5), stash=(26.5, 29.5))
-    # Two road rings: east basin block + west crane block (wall islands inside).
-    road = np.zeros((lv.H, lv.W), bool)
-    rect_carve(road, 36, 14, 44, 18)           # east road → City
-    rect_carve(road, 14, 8, 34, 10)            # basin ring north
-    rect_carve(road, 14, 22, 34, 24)           # basin ring south
-    rect_carve(road, 14, 8, 16, 24)            # basin west
-    rect_carve(road, 32, 8, 34, 24)            # basin east
-    rect_carve(road, 4, 20, 16, 24)            # to crane yard
-    rect_carve(road, 20, 24, 28, 28)           # to salvage
-    rect_carve(road, 4, 8, 8, 20)              # west pad lane
-    floor = np.zeros_like(road)
+    path = np.zeros((lv.H, lv.W), bool)
+    rect_carve(path, 36, 14, 44, 18)           # east road → City
+    rect_carve(path, 14, 8, 34, 10)
+    rect_carve(path, 14, 22, 34, 24)
+    rect_carve(path, 14, 8, 16, 24)
+    rect_carve(path, 32, 8, 34, 24)
+    rect_carve(path, 4, 20, 16, 24)
+    rect_carve(path, 20, 24, 28, 28)
+    rect_carve(path, 4, 8, 8, 20)
+    floor = np.zeros_like(path)
     rect_carve(floor, 34, 10, 44, 22)          # EAST GATE COURT
-    rect_carve(floor, 12, 6, 36, 26)           # basin apron (ring walks)
+    rect_carve(floor, 12, 6, 36, 26)           # basin apron
     rect_carve(floor, 2, 16, 16, 30)           # CRANE YARD
     rect_carve(floor, 16, 24, 32, 32)          # SALVAGE LOT
     rect_carve(floor, 10, 2, 30, 10)           # NORTH WORKS
     rect_carve(floor, 2, 4, 12, 16)            # WEST PAD
-    # Leave wall cores so rings_min counts (not carved as floor):
-    #   basin core ~ (18..30, 12..20), crane core ~ (6..12, 12..18) stay wall
-    # by simply not carving them — apron/road rings go around.
-    LOTS = [("apartment_block", 26, 2, (25, 2, 32, 7)),
-            ("noodle_shop", 3, 3, (2, 3, 9, 7))]
-    for _, _, _, r in LOTS:
-        rect_carve(floor, *r)
-    # Punch wall cores, then force a walkable ring so they stay islands
-    # (not 8-connected to the outer border wall mass).
-    # Basin block + crane block (large enough for MIN_LOOP around each).
     cores = ((18, 12, 30, 20), (4, 13, 12, 21))
     for x0, y0, x1, y1 in cores:
         floor[y0:y1, x0:x1] = False
-        road[y0:y1, x0:x1] = False
-        # 3-tile walk collar around each core
+        path[y0:y1, x0:x1] = False
         rect_carve(floor, x0 - 3, y0 - 3, x1 + 3, y0)
         rect_carve(floor, x0 - 3, y1, x1 + 3, y1 + 3)
         rect_carve(floor, x0 - 3, y0, x0, y1)
         rect_carve(floor, x1, y0, x1 + 3, y1)
-    lv.floor = floor | road
+    lv.floor = floor | path
     wall = clean_walls(~lv.floor)
     lv.floor = ~wall
-    road &= lv.floor
-    road = clean_walls(road, border=0) & road
-    # Re-assert cores after clean_walls (erosion can bridge islands).
+    path &= lv.floor
+    path = clean_walls(path, border=0) & path
     for x0, y0, x1, y1 in cores:
         lv.floor[y0:y1, x0:x1] = False
-        road[y0:y1, x0:x1] = False
+        path[y0:y1, x0:x1] = False
         for y in range(max(0, y0 - 3), min(lv.H, y1 + 3)):
             for x in range(max(0, x0 - 3), min(lv.W, x1 + 3)):
                 if not (x0 <= x < x1 and y0 <= y < y1):
                     lv.floor[y, x] = True
     wall = ~lv.floor
-    sidewalk = ~road
-    plaza = np.zeros_like(wall)
-    rect_carve(plaza, 34, 10, 44, 22)
-    plaza &= lv.floor & ~road
-    basin = np.zeros_like(wall)
-    rect_carve(basin, 19, 13, 29, 19)          # dry basin tiles on the wall core surface? no — apron mark
-    # Basin is the wall hole's surrounding plaza strip (visual only on floor).
-    basin_mark = np.zeros_like(wall)
-    rect_carve(basin_mark, 17, 11, 31, 21)
-    basin_mark &= lv.floor & ~road
+    oil = np.zeros_like(wall)
+    rect_carve(oil, 20, 14, 28, 18)
+    rect_carve(oil, 8, 24, 12, 28)
+    oil &= lv.floor & ~path
+    metal = np.zeros_like(wall)
+    rect_carve(metal, 34, 12, 42, 20)
+    rect_carve(metal, 22, 24, 30, 30)
+    metal &= lv.floor & ~path & ~oil
     for y in range(lv.H):
         for x in range(lv.W):
             if wall[y, x]:
-                lv.ground[y, x] = blob(ts, "sidewalk-building", wall, x, y, lv.rng)
+                lv.ground[y, x] = blob(ts, "dirt-heap", wall, x, y, lv.rng)
+            elif oil[y, x]:
+                lv.ground[y, x] = blob(ts, "dirt-oil", oil, x, y, lv.rng)
+            elif metal[y, x]:
+                lv.ground[y, x] = blob(ts, "dirt-metal", metal, x, y, lv.rng)
             else:
-                lv.ground[y, x] = blob(ts, "road-sidewalk", sidewalk, x, y, lv.rng, exclude={4, 5, 6, 7, 8})
-                if plaza[y, x] or basin_mark[y, x]:
-                    lv.ground[y, x] = 12 if (x * 7 + y * 3) % 11 else 13
-    lv.keepout = road.copy()
+                empty = np.zeros_like(wall)
+                lv.ground[y, x] = blob(ts, "dirt-heap", empty, x, y, lv.rng)
+    lv.keepout = path.copy()
     lv.keepout_hard = np.zeros_like(wall)
     for k, (x, y) in P.items():
         disk_carve(lv.keepout, x, y, 2.6); disk_carve(lv.keepout_hard, x, y, 1.5)
     for r in ((14, 8, 34, 10), (14, 22, 34, 24), (14, 8, 16, 24), (32, 8, 34, 24),
               (34, 10, 44, 22), (4, 20, 16, 24), (20, 24, 28, 28)):
         rect_carve(lv.keepout, *r)
-    for name, tx, ty, (x0, y0, x1, y1) in LOTS:
-        d = BUILDINGS.defs[name]
-        for m in (lv.keepout, lv.keepout_hard):
-            rect_carve(m, x0, y0, x1, y1 + 1)
-            rect_carve(m, tx - 1, ty, tx + d["w"] // T + 1, ty + d["h"] // T + 1)
-    for (fx, fy) in ((40.5, 16), (22, 16), (8, 22), (24, 26), (22, 6), (6, 10), (30.5, 12.5), (10, 18)):
+    for (fx, fy) in ((40.5, 16), (22, 16), (8, 22), (24, 26), (22, 6), (6, 10), (30.5, 12.5), (26.5, 29.5)):
         disk_carve(lv.keepout, fx, fy, 1.4); disk_carve(lv.keepout_hard, fx, fy, 1.0)
-    for name, x, y in (("helipad", 6, 24), ("holo_billboard", 36, 11), ("neon_sign", 38, 20),
-                       ("car_blue_v", 28, 28), ("car_purple_v", 14, 28),
-                       ("traffic_light", 34, 14)):
+    for name, x, y in (("crane_pad", 5, 22), ("salvage_board", 36, 11), ("yard_sign", 38, 19),
+                       ("wreck_car_v", 28, 26), ("wreck_car_h", 14, 28),
+                       ("skip_bin", 20, 26), ("arc_welder", 2, 8)):
         landmark(lv, name, x, y)
     for (x, y) in ((35, 11), (41, 11), (35, 20), (41, 20), (16, 7), (30, 7), (2, 22), (14, 26),
-                   (22, 28), (28, 26), (16, 22), (30, 22)):
-        landmark(lv, "street_lamp", x, y)
-    near_wall = (lv.floor & ~road) & lv.fringe(wall)
-    lv.line_props("street_lamp", [(37, 13), (37, 19)], step=3)
-    lv.line_mix(["bollard", "planter_small"], [(35, 15), (35, 17)], step=2)
-    lv.scatter_on(["trash_bin", "hydrant"], 4, near_wall, min_dist=4.5)
-    lv.scatter_on(["vending_machine", "kiosk"], 2, near_wall, min_dist=6.0)
+                   (22, 28), (16, 22), (30, 22)):
+        landmark(lv, "yard_lamp", x, y)
+    near_wall = (lv.floor & ~path) & lv.fringe(wall)
+    lv.line_props("yard_lamp", [(37, 13), (37, 19)], step=3)
+    lv.line_mix(["drum_sealed", "scrap_crate"], [(35, 15), (35, 17)], step=2)
+    lv.scatter_on(["scrap_pile", "drum_leaking", "cable_tangle"], 6, near_wall, min_dist=4.0)
+    lv.scatter_on(["broken_vendor", "weigh_console", "vent_stack"], 3, near_wall, min_dist=5.5)
     lv.vignette(*P["spawn"], [
-        ("bollard", -1, 0), ("planter_small", -2, 1), ("bench", -1, 1),
+        ("drum_sealed", -1, 0), ("scrap_crate", -2, 1), ("tire_wall", -1, 2),
     ])
     lv.vignette(*P["crane"], [
-        ("bollard", 1, 0), ("trash_bin", 0, 1), ("planter_small", 1, 1),
+        ("scrap_pile", 1, 0), ("drone_hulk", 0, 1), ("drum_leaking", 1, 1),
     ])
     lv.vignette(*P["salvage"], [
-        ("bench", 1, 0), ("bollard", -1, 1), ("planter_small", 0, -1),
+        ("scrap_crate", 1, 0), ("cable_tangle", -1, 1), ("concrete_stub", 0, -1),
     ])
     interior = np.zeros_like(wall)
     interior[1:-1, 1:-1] = (wall[1:-1, 1:-1] & wall[:-2, 1:-1] & wall[2:, 1:-1] & wall[1:-1, :-2] & wall[1:-1, 2:])
-    lv.scatter_on(["rooftop_ac", "solar_panel"], 8, interior, need_floor=False, min_dist=3.5)
-    lv.scatter_on(["rooftop_vent"], 4, interior, need_floor=False, min_dist=4.0)
-    for name, tx, ty, _ in LOTS:
-        lv.building(name, tx, ty)
+    lv.scatter_on(["scrap_heap", "radar_dish"], 4, interior, need_floor=False, min_dist=4.0)
     place(lv, "spawn", *P["spawn"])
     place(lv, "health", *P["h1"])
     place(lv, "stash", *P["stash"], glimmer=16)
@@ -2515,16 +2531,16 @@ def map6():
     place_dronespawn(lv, 6.0, 26.0, kind="scout", max=1, interval=9)
     ey = int(P["spawn"][1])
     open_map_edge(lv, "east", ey, half=2)
-    retile_city_edge(lv, ts, road, None, "east", ey, half=2, plaza=plaza)
+    retile_junkyard_edge(lv, ts, path, oil, metal, "east", ey, half=2)
     place_mapexit(lv, "east", ey, dest="city", entry="west", half=2)
     place_entry(lv, "east", *P["spawn"])
     place(lv, "checkpoint", *P["spawn"], label="Works Gate")
     place(lv, "examine", P["spawn"][0] - 2.0, P["spawn"][1] + 2.0,
-          id="works_gate_post", title="WORKS GATE",
-          text="Canal Works. East walks back to the City's south-west yard. The dry basin rings west to the crane.")
+          id="works_gate_post", title="YARD GATE",
+          text="Canal Works scrapyard. East walks back to the City. Heaps west hide the crane pad.")
     place(lv, "examine", 22.0, 10.5,
           id="works_basin_mark", title="DRY BASIN",
-          text="Freight water drained years ago. Cranes still wait for barges that never come.")
+          text="Oil and rust where barge water used to sit. The heap ring still loops the pit.")
     place(lv, "examine", P["crane"][0] + 1.5, P["crane"][1],
           id="works_crane_slate", title="CRANE SLATE",
           text="UEC inventory: scrap alloy, dead drones, one sealed crate marked for Mira.")
@@ -2533,12 +2549,14 @@ def map6():
           text="Colony scrap sorted by glimmer weight. Someone still works this lot after dark.")
     place(lv, "examine", P["north"][0] + 0.5, P["north"][1],
           id="works_north_rail", title="NORTH RAIL",
-          text="Service track ends at a wall of apartments. Loop south through the basin.")
-    lv.write("world6.tmj", "tilesets/city.png")
+          text="Service track ends in a wall of scrap. Loop south through the basin.")
+    lv.write("world6.tmj", "tilesets/junkyard.png")
     return ts
 
 if __name__ == "__main__":
     os.makedirs(os.path.join(OUT, "tilesets"), exist_ok=True)
-    for n in ("woods", "city", "cyberpunk", "core"):
-        shutil.copy(os.path.join(TSDIR, f"{n}.png"), os.path.join(OUT, "tilesets", f"{n}.png"))
+    for n in ("woods", "city", "cyberpunk", "core", "junkyard"):
+        src = os.path.join(TSDIR, f"{n}.png")
+        if os.path.isfile(src):
+            shutil.copy(src, os.path.join(OUT, "tilesets", f"{n}.png"))
     map1(); map2(); map3(); map4(); map5(); map6()

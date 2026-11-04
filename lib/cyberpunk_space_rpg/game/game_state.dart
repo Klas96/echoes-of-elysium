@@ -392,7 +392,7 @@ class GameState {
       case 5:
         return job ?? 'Mira\'s stall (trade glimmer) · job board · west road → City';
       case 6:
-        return job ?? 'Canal Works · dry basin west to the crane · east road → City';
+        return job ?? 'Scrapyard · heap ring west to the crane · east road → City';
     }
     return '';
   }
