@@ -398,7 +398,14 @@ void main() {
       expect(GateArt.boulderRollFps, roll['fps']);
       expect(HiddenPath.closedColliders, rects(json('bramble_closed.json')['collision']));
       expect(HiddenPath.openColliders, rects(json('bramble_open.json')['collision']));
-      for (final f in [GateArt.grottoClosed, GateArt.grottoOpen, GateArt.boulderClosed, GateArt.boulderOpen, GateArt.boulderRoll]) {
+      for (final f in [
+        GateArt.grottoClosed,
+        GateArt.grottoOpen,
+        GateArt.boulderClosed,
+        GateArt.boulderOpen,
+        GateArt.boulderOpenGround,
+        GateArt.boulderRoll,
+      ]) {
         expect(File('assets/images/$f').existsSync(), isTrue, reason: f);
       }
     });

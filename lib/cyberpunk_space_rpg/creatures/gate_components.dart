@@ -39,7 +39,10 @@ class GateArt {
   static const grottoInteract = Offset(46, 66);
 
   static const boulderClosed = 'obstacles/road_boulder_closed.png';
+  /// East resting stone (+ soft shadow). Y-sorted; passage is transparent.
   static const boulderOpen = 'obstacles/road_boulder_open.png';
+  /// Dirt/passage decal drawn under Kaela ([BoulderOpenGround], MAP priority).
+  static const boulderOpenGround = 'obstacles/road_boulder_open_ground.png';
 
   /// 3 frames of 96x64, 10 fps, once: closed -> roll east -> open.
   static const boulderRoll = 'obstacles/road_boulder_roll_anim.png';
@@ -51,8 +54,8 @@ class GateArt {
   static List<Rect> get boulderOpenColliders => ObstacleMasks.boulderOpen;
 
   /// Open-state resting stone foot Y (art px from [road_boulder.json]
-  /// `open.boulder_bbox` bottom). Used for Y-sort so Kaela walks over the
-  /// clear passage and only ducks behind the east rock mass.
+  /// `open.boulder_bbox` bottom). Used for Y-sort so Kaela ducks behind the
+  /// rock mass while the ground sheet stays under her feet.
   static const boulderOpenFoot = 56.0;
   static const boulderArtHeight = 64.0;
 
@@ -355,11 +358,44 @@ class BrambleGate extends AbilityGate {
   }
 }
 
+/// Dirt/passage decal for an open road boulder. Mounted as a **sibling** of
+/// the gate (not a child) so MAP priority keeps it under Kaela while the
+/// stone sprite Y-sorts on its own foot.
+class BoulderOpenGround extends GameComponent {
+  Sprite? sprite;
+  double Function()? opacityOf;
+
+  BoulderOpenGround(Vector2 position, Vector2 size) {
+    this.position = position;
+    this.size = size;
+  }
+
+  @override
+  int get priority => LayerPriority.MAP + 1;
+
+  @override
+  void render(Canvas canvas) {
+    final s = sprite;
+    if (s == null) return;
+    final a = (opacityOf?.call() ?? 1.0).clamp(0.0, 1.0);
+    if (a <= 0.01) return;
+    s.render(
+      canvas,
+      size: size,
+      overridePaint: Paint()
+        ..filterQuality = FilterQuality.none
+        ..color = Color.fromRGBO(255, 255, 255, a),
+    );
+  }
+}
+
 /// PUSH: the fallen boulder across the south road (road_boulder_*); the
 /// stone turtle rolls it east (road_boulder_roll_anim, once).
 class FallenBoulderGate extends AbilityGate {
   FallenBoulderGate(super.def, super.position, super.size);
   SpriteAnimationTicker? _roll;
+  Sprite? _groundSprite;
+  BoulderOpenGround? _ground;
 
   @override
   String get closedArt => GateArt.boulderClosed;
@@ -373,14 +409,36 @@ class FallenBoulderGate extends AbilityGate {
   Offset get interactArt => GateArt.boulderInteract;
 
   // Closed: sort on the plug's south foot. Open: resting-stone foot only
-  // (art y=56). Passage pixels are transparent so a high sort cannot paint
-  // ground over Kaela in the west lane.
+  // (art y=56). Ground lives on [BoulderOpenGround] under the player.
   @override
   int get priority {
     final foot = isOpen
         ? size.y * (GateArt.boulderOpenFoot / GateArt.boulderArtHeight)
         : size.y * 0.92;
     return LayerPriority.getComponentPriority((position.y + foot).floor());
+  }
+
+  @override
+  Future<void> onLoad() async {
+    await super.onLoad();
+    _groundSprite = await Sprite.load(GateArt.boulderOpenGround);
+    if (isOpen) _mountGround();
+  }
+
+  void _mountGround() {
+    if (_ground != null || !hasGameRef) return;
+    final g = BoulderOpenGround(position.clone(), size.clone())
+      ..sprite = _groundSprite
+      ..opacityOf = () => openT;
+    _ground = g;
+    gameRef.add(g);
+  }
+
+  @override
+  void onRemove() {
+    _ground?.removeFromParent();
+    _ground = null;
+    super.onRemove();
   }
 
   @override
@@ -395,7 +453,9 @@ class FallenBoulderGate extends AbilityGate {
                   loop: false))
           .createTicker();
       openT = 0;
-    }).catchError((_) {});
+    }).catchError((_) {
+      _mountGround();
+    });
   }
 
   @override
@@ -406,12 +466,17 @@ class FallenBoulderGate extends AbilityGate {
       if (r.done()) {
         _roll = null;
         openT = 1;
+        _mountGround();
       } else {
         openT = 0;
       }
     }
     super.update(dt);
-    if (_roll != null) openT = 0;
+    if (_roll != null) {
+      openT = 0;
+    } else if (isOpen) {
+      _mountGround();
+    }
   }
 
   @override

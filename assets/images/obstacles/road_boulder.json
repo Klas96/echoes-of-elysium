@@ -69,6 +69,7 @@
   0,
   64
  ],
- "ground_decal": false,
- "note": "place on a 3-tile-wide dirt road (both 96x64, one scale/palette, bottom-aligned; swap image + collision). `collision` = closed state (full road width, all 3 tiles). Closed paint is wedged mossy stone across all three tiles (handprint stays on the main rock; no side footpath, no baked dirt). Open: resting stone only (opaque core \u2248 x64\u201392,y30\u201356) plus a soft shadow halo — passage tiles are transparent so map road shows under Kaela (baked ground decal covered her via Y-sort). Depth-sort open on boulder_bbox bottom (y=56)."
+ "ground_decal": true,
+ "ground_file": "road_boulder_open_ground.png",
+ "note": "place on a 3-tile-wide dirt road (both 96x64, one scale/palette, bottom-aligned; swap image + collision). `collision` = closed state (full road width, all 3 tiles). Closed paint is wedged mossy stone across all three tiles. Open is split: road_boulder_open.png = east resting stone (Y-sorted on boulder_bbox bottom y=56); road_boulder_open_ground.png = dirt/passage decal drawn at MAP priority under Kaela so the ground never paints over her."
 }

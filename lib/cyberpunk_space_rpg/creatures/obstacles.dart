@@ -38,7 +38,9 @@ class Boulder extends GameComponent with Interactable, PointOfInterest {
   final Vector2 push;
   Sprite? _closed;
   Sprite? _open;
+  Sprite? _groundSprite;
   SpriteAnimationTicker? _roll;
+  BoulderOpenGround? _ground;
   final _hits = <RectangleHitbox>[];
   double _openT;
   bool _opening = false;
@@ -77,6 +79,15 @@ class Boulder extends GameComponent with Interactable, PointOfInterest {
 
   void applyColliderRects(List<Rect> rects) => _setColliders(rects);
 
+  void _mountGround() {
+    if (_ground != null || !hasGameRef) return;
+    final g = BoulderOpenGround(position.clone(), size.clone())
+      ..sprite = _groundSprite
+      ..opacityOf = () => _openT;
+    _ground = g;
+    gameRef.add(g);
+  }
+
   @override
   Future<void> onLoad() async {
     await ObstacleMasks.ensureLoaded();
@@ -84,9 +95,18 @@ class Boulder extends GameComponent with Interactable, PointOfInterest {
     _setColliders(pushed ? GateArt.boulderOpenColliders : GateArt.boulderClosedColliders);
     _closed = await Sprite.load(GateArt.boulderClosed);
     _open = await Sprite.load(GateArt.boulderOpen);
+    _groundSprite = await Sprite.load(GateArt.boulderOpenGround);
     _openT = pushed ? 1 : 0;
     _setColliders(pushed ? GateArt.boulderOpenColliders : GateArt.boulderClosedColliders);
+    if (pushed) _mountGround();
     return super.onLoad();
+  }
+
+  @override
+  void onRemove() {
+    _ground?.removeFromParent();
+    _ground = null;
+    super.onRemove();
   }
 
   @override
@@ -140,6 +160,7 @@ class Boulder extends GameComponent with Interactable, PointOfInterest {
       _openT = 0;
     }).catchError((_) {
       _openT = 1;
+      _mountGround();
     });
     _setColliders(GateArt.boulderOpenColliders);
     _opening = false;
@@ -160,11 +181,13 @@ class Boulder extends GameComponent with Interactable, PointOfInterest {
       if (r.done()) {
         _roll = null;
         _openT = 1;
+        _mountGround();
       } else {
         _openT = 0;
       }
     } else if (pushed) {
       _openT = min(1, _openT + dt * 1.5);
+      _mountGround();
     }
   }
 
