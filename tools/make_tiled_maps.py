@@ -1374,23 +1374,23 @@ def map1():
             if water[y, x]: lv.ground[y, x] = blob(ts, "grass-water", water, x, y, lv.rng)
             if path[y, x]: lv.ground[y, x] = blob(ts, "grass-path", path, x, y, lv.rng)
     # NE stash nook: 2-tile-thick forest wall (x=53–54). Path ends at x=52.
-    # Band edge shadows (146/141) stay over dirt only; wall uses interior +
-    # single-corner tiles at the path notch so top/bottom joins don't seam.
+    # West face 138 (shadow toward path), east face 142 (shadow toward willow).
+    # Band edges 146/141 only over dirt; corners 157/158 at the path notch.
     lv.ground[8, 52] = 28   # grass-path east end (top)
     lv.ground[9, 52] = 31   # grass-path east end (bottom)
     lv.ground[8, 53] = 138  # left-edge forest (faces path)
     lv.ground[9, 53] = 138
-    lv.ground[8, 54] = 159  # interior forest (thick body)
-    lv.ground[9, 54] = 159
     lv.ground[7, 52] = 146  # south-edge band over path only
     lv.ground[10, 52] = 141
     lv.ground[7, 53] = 157  # SW grass corner toward path end
     lv.ground[10, 53] = 158  # NW grass corner toward path end
     for y in (6, 11):
         lv.ground[y, 53] = 159
-        lv.ground[y, 54] = 159
-    lv.ground[7, 54] = 159
-    lv.ground[10, 54] = 159
+    for y in (6, 7, 8, 9, 10, 11):
+        lv.ground[y, 54] = 142  # right-edge forest (grass+shadow on east)
+    # Clear old half-forest scraps so the east dither reads against grass.
+    for y, gid in ((6, 4), (7, 3), (8, 5), (9, 6), (10, 7), (11, 6)):
+        lv.ground[y, 55] = gid
     # keep-out: trails, clearings, gated pockets, the cabin
     for r in trails:
         carve_route(lv, route_pts(r), 2.5, lv.keepout)
