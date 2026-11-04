@@ -176,6 +176,63 @@ def _stamp_masked(opx, cpx, ox, oy, tex_a: Image.Image, tex_b: Image.Image):
             )
 
 
+def calm_terrain(sheet: Image.Image) -> Image.Image:
+    """Soften high-frequency noise on ground/blob tiles; leave props crisp.
+
+    Keeps the rusty palette but drops speckles so large maps stay pleasant.
+    Scrap-heap / wall tiles are darkened so they stay distinct from dirt floor.
+    """
+    out = sheet.copy()
+    terrain = sheet.crop((0, 0, COLS * T, (PROP_START // COLS) * T))
+    soft = terrain.filter(ImageFilter.GaussianBlur(radius=1.1))
+    arr = np.array(soft).astype(np.float32)
+    rgb = arr[..., :3]
+    gray = rgb.mean(axis=2, keepdims=True)
+    rgb = gray * 0.35 + rgb * 0.65
+    rgb = np.clip(rgb * 0.92 + 18, 0, 255)
+    arr[..., :3] = rgb
+    soft = Image.fromarray(arr.astype(np.uint8), "RGBA")
+    soft = soft.resize((soft.width // 2, soft.height // 2), Image.Resampling.BOX)
+    soft = soft.resize((COLS * T, (PROP_START // COLS) * T), Image.Resampling.NEAREST)
+    out.paste(soft, (0, 0))
+    # Darken tiles that collide as scrap-heap walls (not dirt floor variants).
+    wall_ids = _colliding_heap_ids()
+    px = out.load()
+    for tid in wall_ids:
+        ox, oy = (tid % COLS) * T, (tid // COLS) * T
+        for j in range(T):
+            for i in range(T):
+                r, g, b, a = px[ox + i, oy + j]
+                if a < 8:
+                    continue
+                # Pull toward deep rust so walls sit under the floor in value
+                px[ox + i, oy + j] = (
+                    max(0, int(r * 0.55)),
+                    max(0, int(g * 0.52)),
+                    max(0, int(b * 0.58)),
+                    a,
+                )
+    return out
+
+
+def _colliding_heap_ids() -> set[int]:
+    """Tile ids in dirt-heap / heap ground that carry collision (true walls)."""
+    root = ET.parse(os.path.join(HERE, "cyberpunk.tsx")).getroot()
+    # Before rename, asphalt-ruin colliding tiles == junkyard dirt-heap walls.
+    ids = set()
+    for t in root.findall("tile"):
+        tid = int(t.get("id"))
+        if not (16 <= tid <= 17 or 32 <= tid <= 78):
+            continue
+        for p in t.findall("properties/property"):
+            if p.get("name") == "collides" and p.get("value") == "true":
+                ids.add(tid)
+                break
+        if t.find("objectgroup/object") is not None and (16 <= tid <= 17 or 32 <= tid <= 78):
+            ids.add(tid)
+    return ids or set(range(16, 18)) | {78}
+
+
 def rewrite_tsx(cyber_path: str, out_path: str):
     tree = ET.parse(cyber_path)
     root = tree.getroot()
@@ -320,6 +377,7 @@ def main():
             sheet.paste(props_only.crop((0, (PROP_START // COLS) * T, COLS * T, ROWS * T)),
                         (0, (PROP_START // COLS) * T))
     sheet = punch_prop_alpha(sheet)
+    sheet = calm_terrain(sheet)
 
     png = os.path.join(HERE, "junkyard.png")
     sheet.save(png)

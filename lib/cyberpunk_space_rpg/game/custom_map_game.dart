@@ -26,6 +26,7 @@ import '../components/lamp_light.dart';
 import 'well_rested.dart';
 import '../audio/audio_unlock.dart';
 import '../audio/music_manager.dart';
+import '../components/wall_contact_shadow.dart';
 import '../creatures/bonds.dart';
 import '../creatures/creature_components.dart';
 import '../creatures/creature_species.dart';
@@ -1473,6 +1474,8 @@ Future<void> _startLevel(BonfireGameInterface game, int level) async {
   BuildingMasks.loadFromDisk();
   // Walls from TMJ (complete) so click-paths go around forests, not through.
   await ClickPathfinder.primeFromAsset(_mapAssetForLevel(level));
+  // Floor contact shadow beside walls (woods-style depth) on every overworld.
+  game.add(WallContactShadow());
   SaveService.snapshot = _snapshot;
   // Companions stay home: the region on screen decides who follows.
   final arrivedFrom = Regions.previous;
