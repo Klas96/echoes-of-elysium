@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:bonfire/bonfire.dart';
 import 'package:flutter/material.dart';
+import 'soft_aura.dart';
 import 'walk_sheet.dart';
 import '../game/adventure.dart';
 import '../game/game_state.dart';
@@ -112,13 +113,13 @@ class NpcCharacter extends SimpleNpc {
     final col = accent;
     final p = sin(_pulse);
 
-    // Soft glow aura
-    canvas.drawCircle(
+    // Soft glow aura — radial falloff (not MaskFilter hard disc).
+    paintSoftAura(
+      canvas,
       Offset(cx, cy),
-      r + 6 + p * 2,
-      Paint()
-        ..color = col.withOpacity(0.12 + p * 0.04)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
+      r + 10 + p * 2,
+      col,
+      coreAlpha: 0.16 + p * 0.05,
     );
 
     // Animated sprite (DirectionAnimation)

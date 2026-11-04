@@ -89,7 +89,7 @@ class Journal {
 }
 
 /// Subtle day/night tint over the game view (under the HUD). At night lamps,
-/// lanterns and fires cut warm pools into it (see [NightTintPainter]).
+/// lanterns and fires add warm glow pools (see [NightTintPainter]).
 class NightTint extends StatelessWidget {
   const NightTint({super.key});
 

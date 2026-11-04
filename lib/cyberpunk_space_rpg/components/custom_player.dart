@@ -13,6 +13,7 @@ import 'uec_drone.dart';
 import 'walk_sheet.dart';
 import 'building.dart';
 import 'muzzle_flash.dart';
+import 'soft_aura.dart';
 import '../audio/music_manager.dart';
 import '../audio/sfx_manager.dart';
 import '../creatures/interaction.dart';
@@ -284,13 +285,15 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
   final _wardInner = Paint()
     ..style = PaintingStyle.stroke
     ..strokeWidth = 1.6;
+  final _auraPaint = Paint();
 
   @override
   void render(Canvas canvas) {
     final cx = size.x / 2;
     final cy = size.y / 2;
     final r = size.x / 2;
-    // MaskFilter.blur is a known web hot path; solid shapes on web.
+    final glowColor = isBlocked ? const Color(0xFFFF3333) : const Color(0xFF00FFFF);
+    // MaskFilter.blur is a known web hot path; solid glow keeps the cue.
     final softGlow = !kIsWeb;
 
     // Phase afterimages (drawn in local space relative to current position).
@@ -330,6 +333,11 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
           const Color(0xFFE8D0FF).withValues(alpha: 0.45 * pulse);
       canvas.drawCircle(Offset(cx, cy), r + 7, _wardInner);
     }
+
+    // Glow aura — radial soft falloff (not MaskFilter; that was a hard disc
+    // on web and a laggy blur elsewhere). Lag wins stay on NightTint paths.
+    paintSoftAura(canvas, Offset(cx, cy), r + 10, glowColor,
+        coreAlpha: 0.30, paint: _auraPaint);
 
     // Brief visual kick opposite the shot — keeps walk art intact.
     if (_shootKickT > 0) {

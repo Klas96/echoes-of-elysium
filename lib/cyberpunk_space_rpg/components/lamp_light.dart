@@ -109,11 +109,13 @@ class NightLights {
   /// Pools are slightly wider than tall: light on the ground.
   static const squash = 0.78;
 
-  /// Max tint removed at the centre of a pool, and max additive glow.
-  /// Glow stays very soft — NightTint sits above the game canvas, so a strong
-  /// plus-blend cookie paints over the lantern sprite itself.
+  /// Additive lamp glow strength. NightTint no longer punches day-holes with
+  /// saveLayer/dstOut (walk lag); pools read as glow through the blue wash.
+  /// Slightly stronger than the old 0.10 so lamps still read without cuts.
+  static const glowStrength = 0.18;
+
+  /// Kept for docs / older notes; hole-punch path removed.
   static const cutStrength = 0.48;
-  static const glowStrength = 0.10;
 
   static List<LampLight> get lights => List.unmodifiable(_lights);
 
@@ -372,16 +374,12 @@ class _CameraProbe extends GameComponent {
   }
 }
 
-/// Day/night wash with warm pools cut into it around every lamp (#35). One
-/// cached cookie image drawn per visible light; no blur.
+/// Day/night wash + additive lamp glows (#35). No saveLayer / dstOut holes —
+/// that path dominated night walk cost; lamps now glow through the blue wash.
 class NightTintPainter extends CustomPainter {
   NightTintPainter() : super(repaint: Listenable.merge([DayCycle.time, NightLights.frame]));
 
   final _tintPaint = Paint();
-  final _layerPaint = Paint();
-  final _cut = Paint()
-    ..blendMode = BlendMode.dstOut
-    ..filterQuality = FilterQuality.none;
   final _glow = Paint()
     ..blendMode = BlendMode.plus
     ..filterQuality = FilterQuality.none;
@@ -394,25 +392,13 @@ class NightTintPainter extends CustomPainter {
     final strength = NightLights.lights.isEmpty ? 0.48 : 1.0;
     final tint = DayCycle.tint(t, strength: strength);
     final full = Offset.zero & size;
+    if (tint.a > 0) {
+      _tintPaint.color = tint;
+      canvas.drawRect(full, _tintPaint);
+    }
     final lights = NightLights.visible(size, DayCycle.darkness(t));
-    if (lights.isEmpty) {
-      if (tint.a > 0) {
-        _tintPaint.color = tint;
-        canvas.drawRect(full, _tintPaint);
-      }
-      return;
-    }
+    if (lights.isEmpty) return;
     final clock = NightLights.clock;
-    // 1) the tint with soft holes punched under each lamp
-    canvas.saveLayer(full, _layerPaint);
-    _tintPaint.color = tint;
-    canvas.drawRect(full, _tintPaint);
-    for (final l in lights) {
-      _cut.color = Color.fromRGBO(0, 0, 0, NightLights.cutStrength * l.strength);
-      canvas.drawImageRect(l.cookie.image, l.cookie.src(clock, l.phase), l.rect, _cut);
-    }
-    canvas.restore();
-    // 2) coloured additive glow on top
     for (final l in lights) {
       final a = NightLights.glowStrength * l.strength;
       if (l.tinted) {
