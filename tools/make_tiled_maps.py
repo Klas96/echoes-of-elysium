@@ -1677,37 +1677,40 @@ def darkzone(lv, x0, y0, x1, y1, was=None):
 
 # =============================================================== MAP 2: city
 def map2():
-    """City: districts around a central ARCHIVE SQUARE (layout from
-    GameConcept's story graph for #26), wider than tall.
+    """City: expand the #26 district graph — same spine, new east canal loop.
 
                          [N edge → Woods]
                                │
        NOODLE ─ MARKET ROW ─ ARRIVAL PLAZA ══ boulevard ══ LANTERN GATE ─► Town (E edge)
                   │              │                 (tea house)   │
-       ECHO DISTRICT ───── ARCHIVE SQUARE ──────────────── EAST LOT (nest)
-          │                  │ (archive_library)               │
-       WEST YARD          GREENHOUSE GARDEN                PATROL ALLEY (sniper)
+       ECHO DISTRICT ───── ARCHIVE SQUARE ──────────────── EAST LOT ── DOCKS (NEW)
+          │                  │ (archive_library)               │         │
+       WEST YARD          GREENHOUSE GARDEN                PATROL ── CANAL QUAY (NEW)
           │  (frag)          │                                 │
           └── yard alley ── SENTINEL PLAZA ───────────────────┘
                                │
                         VOSS ALCOVE · SOUTH GATE ─► Ruins (S edge)
 
-    Loops (validated, >= 2): west (plaza–market–Echo–square), east (plaza–
-    Lantern Gate–east lot–square), south (square–garden–Sentinel–patrol
-    alley–east lot) and the west yard alley. Story order stays Echo-7 →
-    Archivist → Sentinel → Voss; the edge exits keep their sides."""
+    Original districts / NPCs / exits keep their tiles; the map grows east so
+    docks + canal quay hang off the east lot without relocating the Archive."""
     ts = Tileset("city")
-    lv = Level(ts, 52, 44, seed=22)
-    lv.rings_min = 2
+    # Was 52×44; +14 east for docks / canal. Story P coords unchanged.
+    lv = Level(ts, 66, 44, seed=22)
+    lv.rings_min = 3
     P = dict(spawn=(26.5, 4.5), echo7=(6, 16.5), h1=(14, 7.5), d1=(5.5, 31), arch=(26.5, 18.5),
              h2=(20.5, 20.5), d2=(39.5, 18), sentinel=(26.5, 32), h3=(45.5, 31.5), voss=(19.5, 38.5),
-             gate=(26.5, 41.5), town=(49.5, 7.5), yard=(4.5, 25), lot=(46, 19), se=(45.5, 26.5),
-             cache=(5.5, 11), garden=(25, 28))
+             gate=(26.5, 41.5), town=(63.5, 7.5), yard=(4.5, 25), lot=(46, 19), se=(45.5, 26.5),
+             cache=(5.5, 11), garden=(25, 28),
+             # NEW east expansion
+             docks=(58, 16), canal=(58, 28), quay=(54, 34))
     road = np.zeros((lv.H, lv.W), bool)
-    rect_carve(road, 34, 6, 52, 9)             # boulevard: plaza → Lantern Gate → Town
+    rect_carve(road, 34, 6, 66, 9)             # boulevard: plaza → Lantern Gate → Town (extended)
     rect_carve(road, 45, 9, 48, 15)            # Lantern Gate street down to the east lot
     rect_carve(road, 35, 17, 45, 19)           # east street: east lot → Archive Square
     rect_carve(road, 24, 36, 29, 44)           # gate road → Ruins (matches exit half=2)
+    rect_carve(road, 48, 15, 60, 17)           # NEW: lot → docks road
+    rect_carve(road, 56, 17, 59, 30)           # NEW: docks → canal
+    rect_carve(road, 48, 30, 59, 33)           # NEW: canal → patrol / quay
     floor = np.zeros_like(road)
     rect_carve(floor, 19, 2, 34, 10)           # ARRIVAL PLAZA
     rect_carve(floor, 24, 0, 29, 3)            # north road → Woods edge
@@ -1717,7 +1720,7 @@ def map2():
     rect_carve(floor, 10, 15, 19, 19)          # Echo → square street
     rect_carve(floor, 23, 9, 30, 13)           # plaza → square avenue (the dome is in view)
     rect_carve(floor, 18, 12, 36, 22)          # ARCHIVE SQUARE
-    rect_carve(floor, 34, 4, 52, 11)           # boulevard sidewalks
+    rect_carve(floor, 34, 4, 66, 11)           # boulevard sidewalks (extended)
     rect_carve(floor, 43, 10, 50, 15)          # Lantern Gate street
     rect_carve(floor, 41, 14, 50, 23)          # EAST LOT
     rect_carve(floor, 35, 16, 42, 20)          # east street
@@ -1732,6 +1735,11 @@ def map2():
     rect_carve(floor, 23, 35, 30, 44)          # gate road
     rect_carve(floor, 16, 36, 24, 41)          # VOSS ALCOVE
     rect_carve(floor, 21, 40, 32, 44)          # south gate square
+    # NEW east districts
+    rect_carve(floor, 50, 12, 64, 20)          # DOCKS / freight apron
+    rect_carve(floor, 54, 20, 64, 32)          # CANAL QUAY
+    rect_carve(floor, 48, 28, 56, 36)          # quay → sentinel fringe
+    rect_carve(floor, 58, 6, 66, 12)           # town approach walks
     # building lots (sprite top-left; door side faces the open floor below)
     LOTS = [("noodle_shop", 5, 2, (4, 2, 10, 5)),          # market row (enterable, #31)
             ("archive_library", 30, 12, (29, 12, 36, 17)),  # Archive Square (#31)
@@ -1769,14 +1777,15 @@ def map2():
                 lv.ground[y, x] = blob(ts, "road-sidewalk", sidewalk, x, y, lv.rng, exclude={4, 5, 6, 7, 8})
                 if plaza[y, x] and not near_lawn[y, x] and not near_rw[y, x]:
                     lv.ground[y, x] = 12 if (x * 7 + y * 3) % 13 else 13
-    for x in range(36, 46):                    # lane arrows east to the Lantern Gate
+    for x in range(36, 64):                    # lane arrows east to the Lantern Gate / Town
         if road[7, x]: lv.ground[7, x] = 7
     lv.keepout = road.copy()
     lv.keepout_hard = np.zeros_like(wall)
     for k, (x, y) in P.items():
         disk_carve(lv.keepout, x, y, 2.8); disk_carve(lv.keepout_hard, x, y, 1.6)
     for r in ((19, 2, 34, 10), (18, 12, 36, 22), (14, 29, 38, 36), (21, 40, 32, 44), (23, 9, 30, 13),
-              (3, 6, 19, 9), (10, 16, 19, 18), (36, 31, 48, 33), (5, 29, 6, 33), (5, 32, 15, 33)):
+              (3, 6, 19, 9), (10, 16, 19, 18), (36, 31, 48, 33), (5, 29, 6, 33), (5, 32, 15, 33),
+              (50, 14, 62, 18), (54, 22, 62, 30), (48, 30, 56, 34)):
         rect_carve(lv.keepout, *r)             # walk lines stay free of colliding props
     for name, tx, ty, (x0, y0, x1, y1) in LOTS:
         d = BUILDINGS.defs[name]       # lot + sprite + the row in front of the door
@@ -1791,18 +1800,22 @@ def map2():
                        ("vending_machine", 17, 5), ("kiosk", 6, 9), ("kiosk", 11, 9), ("neon_sign", 15, 9),
                        ("holo_billboard", 48, 4), ("neon_sign", 48, 10), ("helipad", 30, 30),
                        ("car_blue_v", 48, 15), ("car_purple_v", 42, 21), ("hover_taxi_v", 48, 21),
-                       ("traffic_light", 34, 5), ("traffic_light", 37, 16), ("bus_stop", 36, 10)):
+                       ("traffic_light", 34, 5), ("traffic_light", 37, 16), ("bus_stop", 36, 10),
+                       # east docks / canal (new)
+                       ("holo_billboard", 60, 12), ("neon_sign", 55, 14), ("car_blue_v", 61, 18),
+                       ("bus_stop", 56, 26), ("traffic_light", 52, 30), ("helipad", 60, 24)):
         landmark(lv, name, x, y)
     # corner lamps: every district is lit at night (#35 light pools)
     for (x, y) in ((20, 2), (32, 2), (19, 9), (33, 9), (18, 12), (18, 21), (35, 21), (14, 29), (37, 29),
                    (14, 35), (37, 35), (3, 5), (18, 5), (18, 9), (2, 13), (10, 19), (2, 21), (10, 28),
-                   (41, 14), (49, 22), (44, 25), (47, 29), (16, 36), (23, 40), (35, 10), (43, 10)):
+                   (41, 14), (49, 22), (44, 25), (47, 29), (16, 36), (23, 40), (35, 10), (43, 10),
+                   (52, 14), (62, 14), (54, 22), (62, 28), (50, 32), (56, 32)):
         landmark(lv, "street_lamp", x, y)
     # Street furniture follows the roads; plazas get small authored sets.
     sidewalk = lv.floor & ~road
     curb = sidewalk & lv.dilate(road, 1)
     near_wall = sidewalk & lv.fringe(wall)
-    lv.line_props("street_lamp", [(35, 4), (51, 4)], step=4)
+    lv.line_props("street_lamp", [(35, 4), (63, 4)], step=4)
     lv.line_props("street_lamp", [(35, 10), (42, 10)], step=3)
     lv.line_props("street_lamp", [(19, 2), (19, 9)], step=3)
     lv.line_props("street_lamp", [(33, 2), (33, 9)], step=3)
@@ -1890,10 +1903,10 @@ def map2():
           text="A scout's note: \"Archive walls hum. Stay clear.\"",
           clue="city_yard_memo")
     place(lv, "stash", P["yard"][0] - 1.5, P["yard"][1] - 1.5, glimmer=18, was=(4.0, 19.5))
-    place(lv, "examine", P["town"][0] - 3.5, P["town"][1] - 2.5,
+    place(lv, "examine", P["town"][0] - 4.0, P["town"][1] + 1.2,
           id="city_lantern_sign", title="LANTERN ROAD",
-          text="Walk east off the map to Lantern Town. The inn takes travellers; the street south "
-               "runs to the east lot and back round to the Archive Square.")
+          text="Walk east off the map to Lantern Town. South of the boulevard the docks and canal quay "
+               "loop back to the east lot and Sentinel plaza.")
     place(lv, "examine", 24.0, 15.5,
           id="city_branch_sign", title="CROSS STREET",
           text="Archive Square. Every street in the old city ends up here.")
@@ -1915,6 +1928,20 @@ def map2():
           text="Trader chalk: 'For Mira's board.' Heavy with colony salvage.",
           quest="city_west_cache")
     place(lv, "stash", P["cache"][0] + 1.5, P["cache"][1] + 0.5, glimmer=14, was=(5.5, 10.5))
+    place(lv, "examine", P["docks"][0] + 0.5, P["docks"][1] + 1.5,
+          id="city_docks_board", title="FREIGHT BOARD",
+          text="Manifests for the canal quay. South along the water returns to the patrol alley; west is the east lot.")
+    place(lv, "examine", P["canal"][0] - 1.0, P["canal"][1],
+          id="city_canal_rail", title="CANAL RAIL",
+          text="Black water under grate. The quay road west rejoins Sentinel plaza.")
+    place(lv, "stash", P["docks"][0] + 1.5, P["docks"][1] + 0.5, glimmer=12, was=(48.0, 16.0))
+    place(lv, "health", P["quay"][0] + 1.0, P["quay"][1] - 0.5, was=(40.0, 36.0))
+    lv.vignette(*P["docks"], [
+        ("bench", 1, 1), ("bollard", -1, 0), ("planter_small", 2, 0),
+    ])
+    lv.vignette(*P["canal"], [
+        ("bollard", 0, 1), ("trash_bin", 1, -1), ("planter_small", -1, 1),
+    ])
     lv.write("world2.tmj", "tilesets/city.png")
     return ts
 
@@ -1922,27 +1949,28 @@ CITY_RESERVED = ((4.5, 25), (3.5, 27), (7.5, 25), (5.5, 27.5), (3, 23.5), (5.5, 
                  (46, 19), (45, 18), (47.5, 20.5), (46.5, 17), (45.5, 26.5), (46.5, 28.5),
                  (46, 5), (46, 10), (35, 19), (24, 15.5), (21.7, 39.5), (28.5, 5.7), (21.5, 14),
                  # dronespawn pads (east lot + SE patrol)
-                 (44.5, 17.5), (47.5, 19.5), (46.0, 27.0))
+                 (44.5, 17.5), (47.5, 19.5), (46.0, 27.0),
+                 # east expansion
+                 (58, 16), (58, 28), (54, 34), (56, 15), (57, 28), (55, 33.5))
 
 # =============================================================== MAP 5: Lantern Town
 def map5():
-    """Peaceful colony hub off the City — vendor, rest, return travel.
-
-    #26 light pass: the market lanes ring a central MARKET HALL block, and
-    Lantern Pond on the east green is ringed by a promenade, so the town is
-    two loops around landmarks rather than one open square. The west road
-    back to the City (edge exit) is unchanged; Mira's stall faces it."""
+    """Peaceful colony hub — expand with a south quay loop; Mira / west exit stay."""
     ts = Tileset("city")
-    lv = Level(ts, 36, 28, seed=55)
+    # Was 36×28; +8 east / +4 south for quay + reed walk around the pond.
+    lv = Level(ts, 44, 32, seed=55)
     lv.rings_min = 2
     P = dict(spawn=(16, 5.5), mira=(10, 13.5), h1=(21.5, 12.5), portal=(16, 23), stash=(32.5, 21.5),
-             pond=(29, 14))
+             pond=(29, 14),
+             quay=(36, 22), reeds=(38, 12))
     road = np.zeros((lv.H, lv.W), bool)
     rect_carve(road, 9, 6, 23, 8)              # north lane
     rect_carve(road, 9, 18, 23, 20)            # south lane
     rect_carve(road, 9, 6, 11, 20)             # west lane
     rect_carve(road, 21, 6, 23, 20)            # east lane
     rect_carve(road, 0, 12, 9, 15)             # west road → City
+    rect_carve(road, 23, 18, 36, 20)           # NEW: south lane → quay
+    rect_carve(road, 34, 10, 36, 22)           # NEW: reeds ↔ quay
     floor = np.zeros_like(road)
     rect_carve(floor, 12, 2, 21, 6)            # Lantern Gate court (spawn)
     rect_carve(floor, 8, 5, 25, 9)             # north lane + walks
@@ -1952,6 +1980,8 @@ def map5():
     rect_carve(floor, 0, 11, 9, 16)            # west road
     rect_carve(floor, 12, 20, 21, 26)          # south court (Market South)
     rect_carve(floor, 24, 6, 34, 23)           # east green around Lantern Pond
+    rect_carve(floor, 32, 8, 42, 26)           # NEW: reeds + quay green
+    rect_carve(floor, 20, 24, 38, 30)          # NEW: south quay court
     LOTS = [("tea_house", 3, 6, (2, 6, 8, 11)), ("greenhouse", 3, 17, (2, 17, 8, 22)),
             ("noodle_shop", 27, 2, (26, 2, 33, 5))]
     for _, _, _, r in LOTS:
@@ -1961,8 +1991,8 @@ def map5():
     lv.floor = ~wall
     road &= lv.floor
     road = clean_walls(road, border=0) & road
-    water = np.zeros_like(wall); rect_carve(water, 26, 10, 32, 18); water &= lv.floor
-    lv.mist = [(28.0, 12.0), (30.0, 15.5)]          # Lantern Pond
+    water = np.zeros_like(wall); rect_carve(water, 26, 10, 34, 18); water &= lv.floor
+    lv.mist = [(28.0, 12.0), (30.0, 15.5), (32.5, 14.0)]          # Lantern Pond
     paving = lv.dilate(water, 1) & ~water & lv.floor
     sidewalk = ~road
     for y in range(lv.H):
@@ -1981,12 +2011,14 @@ def map5():
         disk_carve(lv.keepout, x, y, 2.6); disk_carve(lv.keepout_hard, x, y, 1.5)
     rect_carve(lv.keepout, 8, 5, 25, 9); rect_carve(lv.keepout, 8, 17, 25, 21)
     rect_carve(lv.keepout, 9, 5, 11, 21); rect_carve(lv.keepout, 21, 5, 23, 21)
+    rect_carve(lv.keepout, 32, 10, 40, 24)
     for name, tx, ty, (x0, y0, x1, y1) in LOTS:
         d = BUILDINGS.defs[name]
         for m in (lv.keepout, lv.keepout_hard):
             rect_carve(m, x0, y0, x1, y1 + 1)
             rect_carve(m, tx - 1, ty, tx + d["w"] // T + 1, ty + d["h"] // T + 1)
-    for (fx, fy) in ((8.4, 14), (11.6, 13.9), (5, 13.5), (32.5, 21.5), (21.5, 12.5), (25, 9)):
+    for (fx, fy) in ((8.4, 14), (11.6, 13.9), (5, 13.5), (32.5, 21.5), (21.5, 12.5), (25, 9),
+                     (36, 22), (38, 12)):
         disk_carve(lv.keepout, fx, fy, 1.4); disk_carve(lv.keepout_hard, fx, fy, 1.0)
     sidewalk = lv.floor & ~road & ~water
     curb = sidewalk & lv.dilate(road, 1) & ~paving
@@ -2041,20 +2073,37 @@ def map5():
           text="West off the map returns to the City's Lantern Gate.")
     place(lv, "examine", 25.0, 9.0,
           id="town_pond_sign", title="LANTERN POND",
-          text="Colonists float paper lanterns here on the first night of each season. The promenade rings the pond; the lanes ring the market hall.")
+          text="Colonists float paper lanterns here on the first night of each season. The promenade rings the pond; "
+               "east past the reeds a quay loop returns to the south market court.")
+    place(lv, "examine", P["quay"][0] - 0.5, P["quay"][1] + 1.0,
+          id="town_quay_mark", title="QUAY BENCH",
+          text="Ferry chalk: 'No boats tonight.' Walk north through the reeds to the pond, west to Mira's lanes.")
+    place(lv, "examine", P["reeds"][0] - 0.8, P["reeds"][1],
+          id="town_reed_walk", title="REED WALK",
+          text="Soft ground. Lanterns hang from willow poles along the water.")
+    lv.vignette(*P["quay"], [
+        ("bench", 1, 0), ("planter_small", -1, 1), ("bollard", 0, 1),
+    ])
     lv.write("world5.tmj", "tilesets/city.png")
     return ts
 
 # =============================================================== MAP 3: cyberpunk ruins
 def map3():
-    """Ruins dungeon: hub at h2, NE key wing, SE keyed gate to Core, SW Memory 5 deep path."""
+    """Ruins: expand the wing graph — same keyed SE choke, new east/north side loops.
+
+    Original hub / key / Memory 5 / portal / storygate tiles stay put. Grow the
+    canvas east so a vent stack and crane yard hang off the key wing without
+    opening a walk-around past the sealed gate."""
     ts = Tileset("cyberpunk")
-    lv = Level(ts, 46, 46, seed=33)
-    lv.rings_min = 2
+    # Was 46×46; +12 east for vent/crane loops. Gate choke coords unchanged.
+    lv = Level(ts, 58, 46, seed=33)
+    lv.rings_min = 3
     P = dict(spawn=(5.5, 5.5), h1=(6, 13), d1=(16, 6), d2=(18, 12), h2=(17, 18), d3=(26, 5),
              h3=(31, 7), key=(39.5, 6.5), d4=(33, 19), h4=(35, 27), gate=(37.5, 33.5),
              d5=(23, 29), d6=(12, 36), m5a=(8, 40), m5b=(4.5, 42.5), portal=(39.5, 39.5),
-             west=(5, 25))
+             west=(5, 25),
+             # NEW — stay north of the SE choke so the gate cannot be skipped
+             vent=(50, 8), crane=(52, 18), service=(48, 24))
     # No d5→portal shortcut: SE approach must pass the keyed gate after h4.
     edges = [("spawn", "d1"), ("spawn", "h1"), ("d1", "d2"), ("d2", "h2"), ("h1", "h2"), ("d1", "d3"),
              ("d3", "h3"), ("h3", "key"), ("h3", "d4"), ("h2", "d4"), ("d4", "h4"),
@@ -2063,7 +2112,9 @@ def map3():
              # #26: a west gallery (landing → shrine road) and a south link
              # (shrine road → gate approach) close two more rings, so the
              # central clearing is no longer the only way between wings
-             ("h1", "west"), ("west", "d6"), ("d5", "h4")]
+             ("h1", "west"), ("west", "d6"), ("d5", "h4"),
+             # expansion: key wing → vent → crane → service → d4 (north of choke)
+             ("key", "vent"), ("vent", "crane"), ("crane", "service"), ("service", "d4")]
     for a, b in edges: seg_carve(lv.floor, P[a], P[b], 1.9)
     for k, (x, y) in P.items():
         # Gate is a choke, not a plaza — otherwise players walk around LOCKED.
@@ -2073,6 +2124,8 @@ def map3():
             r = 4.2
         elif k in ("key", "m5b"):
             r = 3.6
+        elif k in ("vent", "crane", "service"):
+            r = 3.2
         else:
             r = 3.3
         disk_carve(lv.floor, x, y, r)
@@ -2183,14 +2236,32 @@ def map3():
           id="ruins_dead_end", title="WAYMARKER",
           text="Offline UEC pad: \"Shrine sector SW — anomaly deep past the ruin. Optional.\"",
           clue="ruins_dead_end")
+    place(lv, "examine", P["vent"][0] + 0.5, P["vent"][1] + 1.2,
+          id="ruins_vent_mark", title="VENT STACK",
+          text="Heat and ozone. The crane yard south loops back to the mid ruins — this does not bypass the SE gate.")
+    place(lv, "examine", P["crane"][0] - 1.0, P["crane"][1],
+          id="ruins_crane_cab", title="CRANE CAB",
+          text="Boom frozen over a slag pit. Service catwalk west rejoins the hub roads.")
+    place(lv, "stash", P["vent"][0] - 1.2, P["vent"][1] - 0.5, glimmer=18)
+    place(lv, "health", P["service"][0] + 1.0, P["service"][1] + 0.5)
+    lv.vignette(*P["vent"], [
+        ("steam_vent", 1, 0), ("loose_cables", -1, 1), ("barrel_toxic", 0, 1),
+    ])
+    lv.vignette(*P["crane"], [
+        ("wrecked_car_h", 1, 1), ("rubble_large", -1, 0), ("drone_wreck", 0, -1),
+    ])
     lv.write("world3.tmj", "tilesets/cyberpunk.png")
     return ts
 
 # =============================================================== MAP 4: Gaia Core
 def map4():
-    """Sacred chamber under the ruins — activate the Core Record."""
+    """Sacred chamber under the ruins — expand with side ambulatories, keep the dais readable."""
     ts = Tileset("core")
-    lv = Level(ts, 30, 36, seed=44)
+    # Was 30×36; grow east (+12) and a little south. Original spine tiles stay.
+    # rings_min stays 0: Core is a chamber (void reads as border); loops are still
+    # authored so players can leave the processional without a hallway feel.
+    lv = Level(ts, 42, 40, seed=44)
+    lv.rings_min = 0
     P = dict(
         spawn=(15, 4.5),
         h1=(15, 11),
@@ -2200,20 +2271,39 @@ def map4():
         h2=(15, 24),
         d3=(23.5, 25),
         portal=(15, 30),
+        # NEW side loops off the existing hall (east growth + west memorial alcove)
+        memorial=(5, 22),
+        ambulatory=(34, 18),
+        annex=(34, 28),
     )
     edges = [
         ("spawn", "h1"), ("h1", "gaia"), ("gaia", "portal"),
         ("h1", "d1"), ("h1", "d2"), ("gaia", "h2"), ("gaia", "d3"),
+        # expansion rings around the hall
+        ("d1", "memorial"), ("memorial", "gaia"),
+        ("d2", "ambulatory"), ("ambulatory", "annex"), ("annex", "d3"),
+        ("ambulatory", "gaia"),
     ]
     for a, b in edges:
         seg_carve(lv.floor, P[a], P[b], 2.1)
     for k, (x, y) in P.items():
-        r = 4.5 if k in ("spawn", "portal", "gaia") else 3.2
+        if k in ("spawn", "portal", "gaia"):
+            r = 4.5
+        elif k in ("memorial", "ambulatory", "annex"):
+            r = 3.4
+        else:
+            r = 3.2
         disk_carve(lv.floor, x, y, r)
-    # Slightly wider processional hall
+    # Original processional hall (unchanged column)
     rect_carve(lv.floor, 12, 6, 17, 30)
+    # Compact pillar masses inside the side loops (keep aisles open).
+    for (x0, y0, x1, y1) in ((8, 19, 10, 21), (27, 18, 29, 21), (27, 25, 29, 27)):
+        lv.floor[y0:y1, x0:x1] = False
     wall = clean_walls(~lv.floor)
     lv.floor = ~wall
+    for (x0, y0, x1, y1) in ((8, 19, 10, 21), (27, 18, 29, 21), (27, 25, 29, 27)):
+        lv.floor[y0:y1, x0:x1] = False
+    wall = ~lv.floor
     dais = np.zeros_like(wall)
     disk_carve(dais, *P["portal"], 3.8)
     disk_carve(dais, *P["gaia"], 2.8)
@@ -2264,6 +2354,19 @@ def map4():
           id="core_console", title="CORE CONSOLE",
           text="Activation waits on a living neural match. A remote wipe is already queued.",
           clue="core_console")
+    place(lv, "examine", *P["memorial"],
+          id="core_memorial", title="NAMELESS STELE",
+          text="Names the forest took. The ambulatory east of the hall loops back to Gaia without leaving the Core.")
+    place(lv, "examine", *P["ambulatory"],
+          id="core_ambulatory", title="LATTICE WALK",
+          text="Side aisle. South to the annex, west back to the living dais.")
+    place(lv, "health", *P["annex"])
+    lv.vignette(*P["memorial"], [
+        ("gold_glyph_stone", 1, 0), ("memory_pedestal", 0, 1), ("data_crystals", -1, 0),
+    ])
+    lv.vignette(*P["ambulatory"], [
+        ("orb_pylon", 0, 1), ("lattice_panel", 1, 0), ("energy_brazier", -1, 0),
+    ])
     lv.write("world4.tmj", "tilesets/core.png")
     return ts
 
