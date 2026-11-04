@@ -50,8 +50,10 @@ class GateArt {
   static List<Rect> get boulderClosedColliders => ObstacleMasks.boulderClosed;
   static List<Rect> get boulderOpenColliders => ObstacleMasks.boulderOpen;
 
-  /// Open-state resting stone (art px); used for depth sort.
-  static const boulderOpenFoot = 64.0;
+  /// Open-state resting stone foot Y (art px from [road_boulder.json]
+  /// `open.boulder_bbox` bottom). Used for Y-sort so Kaela walks over the
+  /// clear passage and only ducks behind the east rock mass.
+  static const boulderOpenFoot = 56.0;
   static const boulderArtHeight = 64.0;
 
   /// road_boulder.json puts the interaction on the south side; on the Woods
@@ -370,9 +372,9 @@ class FallenBoulderGate extends AbilityGate {
   @override
   Offset get interactArt => GateArt.boulderInteract;
 
-  // Closed: sort on the plug's south foot. Open: on the resting stone's base
-  // (default rectCollision used the tiny old pad and drew the whole sprite
-  // over Kaela when she stood beside it in the passage).
+  // Closed: sort on the plug's south foot. Open: resting-stone foot only
+  // (art y=56). Passage pixels are transparent so a high sort cannot paint
+  // ground over Kaela in the west lane.
   @override
   int get priority {
     final foot = isOpen
