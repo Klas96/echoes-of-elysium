@@ -989,6 +989,8 @@ class _CustomMapGameState extends State<CustomMapGame> with WidgetsBindingObserv
     // Backgrounded (phone home button, app switcher, web tab hidden, window
     // closing): save where Kaela stands right now, and silence audio.
     // mediaPlayer + Android music focus otherwise keeps BGM playing off-screen.
+    // Also clear WASD — browsers drop KeyUp on tab switch, which left Kaela
+    // walking forever (and off the map).
     switch (state) {
       case AppLifecycleState.inactive:
       case AppLifecycleState.paused:
@@ -996,6 +998,7 @@ class _CustomMapGameState extends State<CustomMapGame> with WidgetsBindingObserv
       case AppLifecycleState.detached:
         MusicManager().pauseForAppLifecycle();
         SfxManager().pauseForAppLifecycle();
+        GameInput.onFocusLost();
         if (state != AppLifecycleState.inactive && _activeGame != null) {
           SaveService.saveNow();
         }
@@ -1003,6 +1006,7 @@ class _CustomMapGameState extends State<CustomMapGame> with WidgetsBindingObserv
       case AppLifecycleState.resumed:
         MusicManager().resumeForAppLifecycle();
         SfxManager().resumeForAppLifecycle();
+        GameInput.onFocusGained();
         break;
     }
   }
