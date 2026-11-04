@@ -13,6 +13,7 @@ import 'uec_drone.dart';
 import 'walk_sheet.dart';
 import 'building.dart';
 import 'muzzle_flash.dart';
+import 'soft_aura.dart';
 import '../audio/music_manager.dart';
 import '../audio/sfx_manager.dart';
 import '../creatures/interaction.dart';
@@ -333,13 +334,10 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
       canvas.drawCircle(Offset(cx, cy), r + 7, _wardInner);
     }
 
-    // Glow aura (state indicator). Prefer keeping this for look; lag wins go
-    // through NightTint / engine paths, not by stripping body glows.
-    _auraPaint
-      ..color = glowColor.withValues(alpha: softGlow ? 0.22 : 0.28)
-      ..maskFilter =
-          softGlow ? const MaskFilter.blur(BlurStyle.normal, 6) : null;
-    canvas.drawCircle(Offset(cx, cy), r + 3, _auraPaint);
+    // Glow aura — radial soft falloff (not MaskFilter; that was a hard disc
+    // on web and a laggy blur elsewhere). Lag wins stay on NightTint paths.
+    paintSoftAura(canvas, Offset(cx, cy), r + 10, glowColor,
+        coreAlpha: 0.30, paint: _auraPaint);
 
     // Brief visual kick opposite the shot — keeps walk art intact.
     if (_shootKickT > 0) {

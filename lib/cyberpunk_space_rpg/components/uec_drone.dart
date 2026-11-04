@@ -1,9 +1,9 @@
 import 'dart:math';
 import 'package:bonfire/bonfire.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'custom_player.dart';
 import 'damage_number.dart';
+import 'soft_aura.dart';
 import 'drone_bounds.dart';
 import 'enemy_bullet.dart';
 import 'explosion_effect.dart';
@@ -280,7 +280,6 @@ class UECDrone extends GameDecoration {
 
   Sprite? _sprite;
   SpriteAnimationTicker? _hover;
-  /// Soft-glow / bars reuse paints; MaskFilter.blur is skipped on web.
   final _auraPaint = Paint();
   final _barBg = Paint()..color = Colors.black54;
   final _barFg = Paint();
@@ -556,15 +555,15 @@ class UECDrone extends GameDecoration {
         ? const Color(0xFF88CC88)
         : (aggro ? _stats.aggroColor : _stats.idleColor);
 
-    // Kind-coloured aura (soft green while HUSHed). Blur skipped on web.
-    _auraPaint
-      ..color = col.withValues(alpha: 0.18 + sin(_pulse) * 0.07)
-      ..maskFilter =
-          kIsWeb ? null : const MaskFilter.blur(BlurStyle.normal, 7);
-    canvas.drawCircle(
+    // Kind-coloured aura (soft green while HUSHed) — radial glow, no blur.
+    final auraR = r + (kind == DroneKind.shield && _shield > 0 ? 14 : 11);
+    paintSoftAura(
+      canvas,
       Offset(cx, cy),
-      r + (kind == DroneKind.shield && _shield > 0 ? 8 : 5),
-      _auraPaint,
+      auraR,
+      col,
+      coreAlpha: 0.22 + sin(_pulse) * 0.08,
+      paint: _auraPaint,
     );
 
     // Shield ring
