@@ -1233,37 +1233,39 @@ def carve_route(lv, pts, half, mask=None):
 
 # =============================================================== MAP 1: woods
 def map1():
-    """Woods: a wilderness wider than tall, laid out as a graph of clearings.
+    """Woods: expand the existing graph — same story spine, new side areas.
 
-    Story beats are nodes, trails are edges, and the edges close into rings
-    around solid forest blocks (validated: >= 2 rings, see RINGS_MIN):
+    All original clearings / gates / creatures keep their tile coords. The map
+    grows east (+16) so new optional regions hang off the old east grove and
+    pond without relocating the crash, Asha, or City exit:
 
-        crash ── h1 ── cabin ─── ridge ─── pond (frag)
-          │        \\                  /      │
-        west       CROSSROADS ── east bend ──┤
-        hollow    /     │              \\     east grove (frag)
-          │      /      │               \\    │
-        sw bend ── ASHA'S CAMP ──── brook ── south meadow ── exit S → City
-          │
-        nest spur (long south walk → UEC pads)
+        crash ── h1 ── cabin ─── ridge ─── pond (frag) ── willow creek (NEW)
+          │        \\                  /      │              │
+        west       CROSSROADS ── east bend ──┤── egrove ── watchtower (NEW)
+        hollow    /     │              \\     │   (frag)        │
+          │      /      │               \\    │                 fern gallery (NEW)
+        sw bend ── ASHA'S CAMP ──── brook ── meadow ── old cart road (NEW)
+          │                              \\     │
+        nest spur ── nestloop (NEW) ──────┘    └── exit S → City
 
-    Gaia waits at the crash (NW), Asha at her camp in the middle south, the
-    two portal fragments sit on opposite sides (pond NE, east grove E), and
-    the road to the City leaves the south meadow (SE). Every beat can be
-    reached two ways, so the trip reads as crossing a forest, not walking a
-    hallway south. The south exit keeps Woods↔City travel unchanged."""
+    Nest pads stay at the spur tip; nestloop only adds a way back so the spur
+    is no longer a pure dead hallway. rings_min 3 after the east wilds land."""
     ts = Tileset("woods")
-    # Height 54 (+10 vs old 44): longer nest spur south before the pads, and
-    # the City exit stays on the south edge.
-    lv = Level(ts, 56, 54, seed=11)
-    lv.rings_min = 2
+    # Was 56×54; grow east for willow / watch / fern / oldroad. Height unchanged
+    # so the City exit and nest spur stay on the same rows.
+    lv = Level(ts, 72, 54, seed=11)
+    lv.rings_min = 3
     south = lv.H - 0.5  # path punch to the south edge
+    # Original story places — DO NOT MOVE (gates, saves, playtested nooks).
     P = dict(spawn=(8, 9), gaia=(11, 8), h1=(17, 12), cabin=(19.5, 7.5), ridge=(31, 6),
              pond=(42, 10), f2=(37.41, 11.84), cross=(27, 20), d2=(34, 15.5), ebend=(36, 24),
              egrove=(48.5, 23), f4=(51, 29.5), whollow=(6, 23), f1=(5.5, 21.5), hollow=(13, 19),
              swbend=(9, 34), nestbend=(6, 42), nest=(4.5, 49), asha=(24, 33), h2=(23, 26),
              brook=(32, 35), meadow=(42, 36), h3=(44.5, 30.5), exit=(42, 50), f3=(15, 36),
-             d1=(16, 33.5))
+             d1=(16, 33.5),
+             # NEW expansion places (east wilds + nest reconnect)
+             willow=(58, 9), watch=(64, 18), fern=(60, 28), oldroad=(56, 36),
+             nestloop=(14, 44))
     trails = [
         ["spawn", "h1", "cross"],                   # crash → crossroads
         ["h1", "cabin"],
@@ -1279,15 +1281,21 @@ def map1():
         ["whollow", "hollow"],                      # mossy hollow (puffcap)
         ["swbend", "nestbend", "nest"],             # nest spur (Asha job) — long south walk
         ["meadow", "exit"],
+        # --- expansion (optional exploration; does not relocate the spine) ---
+        ["pond", "willow", "watch"],                # east of the pond
+        ["egrove", "watch"],                        # grove → watchtower
+        ["watch", "fern", "oldroad", "meadow"],     # east wilds down to meadow
+        ["nest", "nestloop", "f3", "brook"],        # nest spur reconnects
     ]
     def route_pts(r):
         return [P[k] for k in r]
     for r in trails:
         carve_route(lv, route_pts(r), 2.0)
     big = dict(cross=5.5, asha=4.6, pond=5.2, meadow=4.6, spawn=4.6, egrove=4.4, whollow=3.8,
-               nest=4.8, nestbend=2.8)
+               nest=4.8, nestbend=2.8, willow=3.6, watch=4.0, fern=3.4, oldroad=3.2, nestloop=2.8)
     for k in ("spawn", "h1", "cabin", "ridge", "pond", "cross", "d2", "ebend", "egrove", "whollow",
-              "hollow", "swbend", "nestbend", "nest", "asha", "h2", "brook", "meadow", "f3"):
+              "hollow", "swbend", "nestbend", "nest", "asha", "h2", "brook", "meadow", "f3",
+              "willow", "watch", "fern", "oldroad", "nestloop"):
         disk_carve(lv.floor, *P[k], big.get(k, 3.2))
     rect_carve(lv.floor, 16, 2, 24, 9)                # ranger cabin clearing
     seg_carve(lv.floor, P["exit"], (P["exit"][0], south), 2.0)
@@ -1386,7 +1394,11 @@ def map1():
                        ("standing_stone", 24, 22), ("standing_stone", 30, 22),
                        ("tent", 26, 30), ("campfire", 21, 31), ("radio_dish", 30, 3),
                        ("signpost", 14, 10), ("signpost", 37, 21), ("signpost", 7, 31),
-                       ("signpost", 33, 33), ("signpost", 45, 15)):
+                       ("signpost", 33, 33), ("signpost", 45, 15),
+                       # East wilds beacons (new)
+                       ("signpost", 55, 10), ("lantern", 57, 8), ("lantern", 59, 10),
+                       ("signpost", 62, 17), ("radio_dish", 63, 15),
+                       ("signpost", 58, 27), ("signpost", 54, 35)):
         landmark(lv, name, x, y)
     # Decor: authored lanterns (colliding — random scatter can seal secret paths),
     # spaced forest wall, path-verge soft props, story-clearing vignettes.
@@ -1395,10 +1407,10 @@ def map1():
     trees = ["tree_green", "tree_teal", "tree_blue", "tree_purple", "tree_pine", "tree_big"]
     bigp = ["log", "stump"]  # not boulder — random boulders choke ability-gate mouths
     bush = ["bush_green", "bush_glow", "rock_small", "rock_moss"]
-    lv.scatter_on(trees, 30, fringe, min_dist=2.4)
-    lv.scatter_on(bigp, 8, fringe, min_dist=4.0)
-    lv.scatter_on(bush, 10, edge, min_dist=3.2)
-    lv.scatter_on(["flowers", "mushrooms"], 8, edge, min_dist=4.0)
+    lv.scatter_on(trees, 40, fringe, min_dist=2.4)
+    lv.scatter_on(bigp, 10, fringe, min_dist=4.0)
+    lv.scatter_on(bush, 14, edge, min_dist=3.2)
+    lv.scatter_on(["flowers", "mushrooms"], 12, edge, min_dist=4.0)
     lv.vignette(*P["cross"], [
         ("flowers", 2, 1), ("flowers", 1, -2), ("mushrooms", -1, 1), ("bush_glow", -2, 0),
     ])
@@ -1422,6 +1434,18 @@ def map1():
     ])
     lv.vignette(*P["nest"], [
         ("log", 1, 0), ("bush_green", -1, 1), ("rock_moss", 0, -1),
+    ])
+    lv.vignette(*P["willow"], [
+        ("flowers", 1, 1), ("flowers", -1, 0), ("bush_glow", 0, 2), ("rock_moss", 2, 0),
+    ])
+    lv.vignette(*P["watch"], [
+        ("log", 1, 1), ("rock_small", -1, 0), ("bush_green", 2, -1),
+    ])
+    lv.vignette(*P["fern"], [
+        ("mushrooms", 0, 1), ("flowers", 1, -1), ("bush_glow", -1, 0),
+    ])
+    lv.vignette(*P["oldroad"], [
+        ("rock_moss", 1, 0), ("log", -1, 1), ("flowers", 0, -1),
     ])
     lv.building("ranger_cabin", 18, 2)
     # gameplay objects
@@ -1468,9 +1492,8 @@ def map1():
     place(lv, "examine", P["spawn"][0] - 1.2, P["spawn"][1] + 1.4,
           id="woods_mission_slate", title="FIELD BRIEF",
           text="Kaela — talk to Gaia (green) by the crash, then Asha at her camp: the woods need friends. Both glowing "
-               "fragments open the road; the trails ring round, so every clearing has two ways in. The road to the City "
-               "leaves the south-east meadow. "
-               "Do not let the UEC wipe her.")
+               "fragments open the road; trails ring round, and east of the grove the older wilds keep going. The road "
+               "to the City leaves the south-east meadow. Do not let the UEC wipe her.")
     place(lv, "examine", P["asha"][0] - 3.4, P["asha"][1] + 1.2,
           id="woods_boot", title="UEC BOOT PRINT",
           text="Fresh composite sole marks in the moss after rain.", clue="boot_print")
@@ -1489,9 +1512,9 @@ def map1():
           give="moonflower_bloom", quest="moonflower_draft")
     place(lv, "examine", P["cross"][0] + 1.2, P["cross"][1] + 2.4,
           id="woods_fork_sign", title="STANDING STONES",
-          text="Every trail meets here. NE: the pond. E: the grove. S: Asha's camp. W: the mossy hollow and "
-               "round to the crash. Fragments glow out there (a dark grotto by the pond, thorns past the grove); a fallen boulder "
-               "blocks the City road beyond the south-east meadow.")
+          text="Every trail meets here. NE: the pond (and willow creek beyond). E: the grove, then the old watchtower. "
+               "S: Asha's camp. W: the mossy hollow and round to the crash. Fragments: dark grotto by the pond, thorns "
+               "past the grove. A fallen boulder still blocks the City road beyond the south-east meadow.")
     place(lv, "examine", P["ridge"][0] + 1.5, P["ridge"][1] - 0.5,
           id="woods_ridge_lookout", title="CITY LIGHTS TO THE SOUTH",
           text="From the ridge, past the radio dish, the City's glow hangs over the treeline to the south-east. "
@@ -1502,12 +1525,30 @@ def map1():
     place(lv, "examine", 36.1, 13.1,
           id="woods_glade_sign", title="SIDE PATH MARK",
           text="Trails leave the pond three ways: west along the ridge, south-west to the stones, south to the grove. "
-               "You will not get stuck.")
+               "A fourth path now runs east into willow creek. You will not get stuck.")
     place(lv, "examine", P["meadow"][0] + 2.0, P["meadow"][1] - 1.6,
           id="woods_portal_notice", title="SOUTH ROAD",
           text="City beyond this tree line. Walk south off the map. Its plaza looks three ways: Lantern Town east, "
                "the Archive south-east, the Ruins road south.")
+    place(lv, "examine", P["willow"][0] + 0.5, P["willow"][1] + 1.8,
+          id="woods_willow_mark", title="WILLOW CREEK",
+          text="Water from the pond thins into a willow ditch. East: a crooked watchtower on the old rim. South: ferns "
+               "down toward the cart road that rejoins the meadow.")
+    place(lv, "examine", P["watch"][0] - 0.8, P["watch"][1] + 1.5,
+          id="woods_watch_slate", title="FALLEN WATCH",
+          text="UEC glass cracked in the moss. Someone watched the grove from here — then walked south into the ferns.")
+    place(lv, "examine", P["fern"][0] + 0.6, P["fern"][1],
+          id="woods_fern_cache", title="FERN SHELTER",
+          text="A lean-to of cut fronds. Still dry inside. Trail chalk: OLD ROAD → MEADOW.")
+    place(lv, "examine", P["oldroad"][0] + 1.0, P["oldroad"][1] - 0.8,
+          id="woods_oldroad_post", title="CART-ROAD POST",
+          text="Weathered mile-mark: LANTERN 6 / GROVE 1. The ruts turn west into the meadow you already know.")
+    place(lv, "examine", P["nestloop"][0] + 0.8, P["nestloop"][1],
+          id="woods_nest_return", title="RETURN CUT",
+          text="A newer path cuts back toward the brook — the nest spur is no longer a one-way crawl.")
     place(lv, "hidden", 13.5, 12.5, glimmer=18, was=(13.0, 43.6))
+    place(lv, "hidden", P["fern"][0] - 1.2, P["fern"][1] + 0.8, glimmer=16, was=(16.0, 40.0))
+    place(lv, "health", P["watch"][0] + 1.5, P["watch"][1] - 0.8, was=(22.0, 30.0))
     woods_creatures_and_secrets(lv, nooks)
     woods_main_gates(lv)
     # After all objects exist: add path-verge lanterns that don't seal secrets.
@@ -1520,7 +1561,11 @@ WOODS_RESERVED = ((43.5, 8.5), (44, 12.5), (47.5, 20.5), (13, 19), (40, 12.5), (
                   (24.5, 7.5), (26.5, 8), (29.5, 8.2), (26.5, 11.5), (29.5, 11.5), (27, 13.5),
                   (5.5, 21.5), (6.1, 21.2), (4.9, 22.5), (4.5, 49), (6.1, 48.6), (15.5, 36),
                   (3.5, 30.5), (13.5, 12.5), (37.5, 26), (14, 38), (13, 17), (14.5, 18.5),
-                  (6.0, 42.0), (32.5, 5.5))
+                  (6.0, 42.0), (32.5, 5.5),
+                  # expansion clearings / new examines
+                  (58, 9), (64, 18), (60, 28), (56, 36), (14, 44),
+                  (58.5, 10.8), (63.2, 19.5), (60.6, 28), (57, 35.2), (14.8, 44),
+                  (58.8, 28.8), (65.5, 17.2))
 
 # keep props off the main-route gates (x0, y0, x1, y1 tiles, end exclusive)
 GATE_CLEAR = ((35, 10, 40, 15), (49, 24, 53, 31), (39, 48, 44, 52))
