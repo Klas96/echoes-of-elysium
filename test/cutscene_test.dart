@@ -62,7 +62,7 @@ void main() {
       expect(s.panels.first.image, 'assets/cutscenes/awakening/awakening_p1.webp');
       expect(s.panels.first.from, const PanKey(1.0, 0.5, 0.5));
       expect(s.panels.first.to, const PanKey(1.08, 0.45, 0.5));
-      expect(s.panels[1].lines.single.text, startsWith('Dr. Kaela Osei'));
+      expect(s.panels[1].lines.single.text, startsWith('Kaela Osei'));
       expect(s.speaker('N').narrator, isTrue);
       expect(s.speaker('GAIA').name, 'GAIA');
       expect(s.speaker('GAIA').color, const Color(0xFF00FF88));

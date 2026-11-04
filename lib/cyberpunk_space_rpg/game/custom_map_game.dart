@@ -478,7 +478,7 @@ NpcDialogue _vossDialogue() {
       name: 'COMMANDER VOSS  ·  UEC',
       color: const Color(0xFFFF4444),
       lines: const [
-        'You cracked a field terminal. Those orders were classified for a reason, Doctor.',
+        'You cracked a field terminal. Those orders were classified for a reason, Kaela.',
         'Collateral risk accepted. My signature. I know what I signed after Seven.',
         'If you still walk into the Core, bring me something truer than a ghost story — or we end the same way.',
       ],
@@ -520,7 +520,7 @@ NpcDialogue _vossDialogue() {
     color: const Color(0xFFFF4444),
     // Must match assets/audio/voices/voss_{1,2,3}.mp3 (Station Seven rewrite).
     lines: const [
-      'Doctor Kaela Osei. Last chance. Hand over the fragments and walk away with your clearance intact.',
+      'Kaela Osei. Last chance. Hand over the fragments and walk away with your clearance intact.',
       'Station Seven went dark the last time a lattice woke. I will not bury another colony for an alien ghost story.',
       'If you reach the Core, understand this: I am not erasing history. I am choosing the living over the dead.',
     ],
@@ -536,7 +536,7 @@ NpcDialogue _vossDialogue() {
         setFlag: 'asked_voss_why',
         requireFlagUnset: 'asked_voss_why',
         replyLines: [
-          'I signed the quarantine after Seven. I still hear the silence on that channel. Walk away, Doctor.',
+          'I signed the quarantine after Seven. I still hear the silence on that channel. Walk away, Kaela.',
         ],
         replyVoicePaths: [
           'audio/voices/voss_why.mp3',
