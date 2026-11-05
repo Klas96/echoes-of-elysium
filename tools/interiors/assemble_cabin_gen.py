@@ -255,6 +255,25 @@ def _cell_inset_frame_score(cell: Image.Image) -> float:
     return min(dark, light) / n
 
 
+def _cell_window_score(cell: Image.Image) -> float:
+    """Higher when a cell has warm amber window glow inside a darker frame."""
+    px = cell.load()
+    warm = dark = n = 0
+    for y in range(T):
+        for x in range(T):
+            r, g, b, a = px[x, y]
+            if a < 8:
+                continue
+            n += 1
+            if r > 170 and g > 110 and b < 120 and r >= g > b:
+                warm += 1
+            elif r < 100 and g < 80 and b < 60:
+                dark += 1
+    if n == 0 or warm < 8:
+        return 0.0
+    return (warm / n) * (1.0 + min(1.0, dark / max(1, warm)))
+
+
 def _lower_hearth_column(face: Image.Image, fire_c: int, plain_c: int) -> Image.Image:
     """Slide AI hearth pixels down onto the baseboard; fill the gap with AI masonry.
 
@@ -359,12 +378,15 @@ def slice_walls_from_strips(face_src: Path, side_src: Path) -> dict[int, Image.I
     inner = list(range(1, STRIP_COLS - 1))
     fire_c = max(inner, key=lambda c: _cell_dark_hole_score(probe[1][c]) + _cell_dark_hole_score(probe[2][c]))
     right_inner = [c for c in inner if c >= STRIP_COLS // 2 and abs(c - fire_c) > 1]
+    # Prefer a glowing window inset; fall back to any framed inset.
     map_c = max(
         right_inner or [c for c in inner if abs(c - fire_c) > 1],
-        key=lambda c: _cell_inset_frame_score(probe[1][c]),
+        key=lambda c: (
+            _cell_window_score(probe[1][c]) * 3.0
+            + _cell_inset_frame_score(probe[1][c])
+        ),
     )
-    # Stay ≥2 cols from map/fire so a sliced inset cannot leak a "half map"
-    # onto the chimney mid band when we clear the fire column to plain.
+    # Stay ≥2 cols from window/fire so a sliced inset cannot leak onto the chimney.
     plain_candidates = [
         c
         for c in inner
@@ -372,7 +394,11 @@ def slice_walls_from_strips(face_src: Path, side_src: Path) -> dict[int, Image.I
     ] or [c for c in inner if c not in (fire_c, map_c)]
     plain = min(
         plain_candidates,
-        key=lambda c: _cell_dark_hole_score(probe[1][c]) + _cell_inset_frame_score(probe[1][c]),
+        key=lambda c: (
+            _cell_dark_hole_score(probe[1][c])
+            + _cell_inset_frame_score(probe[1][c])
+            + _cell_window_score(probe[1][c])
+        ),
     )
     face = _lower_hearth_column(face, fire_c, plain)
     cells = slice_strip_cells(face, STRIP_COLS, 3)
@@ -393,14 +419,24 @@ def slice_walls_from_strips(face_src: Path, side_src: Path) -> dict[int, Image.I
     else:
         out[W_FIRE] = cells[1][fire_c]
     out[STRIP_MID0 + fire_c] = cells[1][plain]
-    # Also scrub map bleed from neighboring mid cells (half-frame slices).
+    # Scrub inset bleed from neighboring mid cells (half-frame / half-window slices).
     for c in (map_c - 1, map_c + 1):
         if 0 < c < STRIP_COLS - 1 and c != fire_c:
             out[STRIP_MID0 + c] = cells[1][plain]
     out[W_MAP] = cells[1][map_c]
-    meta = {"fire_col": fire_c, "map_col": map_c, "plain_col": plain, "cols": STRIP_COLS}
+    meta = {
+        "fire_col": fire_c,
+        "map_col": map_c,
+        "plain_col": plain,
+        "cols": STRIP_COLS,
+        "inset": "window",
+    }
     (GEN / "wall_strip_meta.json").write_text(json.dumps(meta, indent=2) + "\n")
-    print(f"strip insets: fire_col={fire_c} map_col={map_c} plain_col={plain} mid_hole={mid_hole:.3f} base_hole={base_hole:.3f}")
+    print(
+        f"strip insets: fire_col={fire_c} window_col={map_c} plain_col={plain} "
+        f"mid_hole={mid_hole:.3f} base_hole={base_hole:.3f} "
+        f"window_score={_cell_window_score(cells[1][map_c]):.3f}"
+    )
 
     # Cutaway sides: thin AI rim + black void (not a stretched dark column).
     side = scale_side_cutaway(side_src)
@@ -416,9 +452,17 @@ def slice_walls_from_strips(face_src: Path, side_src: Path) -> dict[int, Image.I
     out[W_LOG_S_BASE_E] = east[2]
     out[W_LOG_C_E] = east[0]
 
-    # Door jambs: same AI cutaway rim, flipped for the right post — no invent.
-    out[J_LOG_L] = west[1]
-    out[J_LOG_R] = east[1]
+    # Door jambs: dedicated AI log post (opaque wood) — not the void cutaway rim.
+    jamb_src = GEN / "cabin_door_jamb.jpg"
+    if jamb_src.exists():
+        jamb_raw = Image.open(jamb_src).convert("RGBA")
+        jbox = find_content_box(jamb_raw, dark=18)
+        jamb = opaque_tile(jamb_raw.crop(jbox))
+    else:
+        # Fallback: near-end face mid (log butts), still AI pixels.
+        jamb = cells[1][1]
+    out[J_LOG_L] = jamb
+    out[J_LOG_R] = jamb.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
     return out
 
 
@@ -458,6 +502,13 @@ def bed_pair(src: Path) -> tuple[Image.Image, Image.Image]:
     return clear_dark_bg(head), clear_dark_bg(foot)
 
 
+def mat_tile(src: Path) -> Image.Image:
+    """Doormat must stay opaque (clearing near-black fibers turns the entrance into void)."""
+    raw = Image.open(src).convert("RGBA")
+    box = find_content_box(raw, dark=18)
+    return opaque_tile(raw.crop(box), size=T)
+
+
 def assemble_props() -> dict[int, Image.Image]:
     mapping = {
         PLANT: "cabin_plant.jpg",
@@ -466,9 +517,12 @@ def assemble_props() -> dict[int, Image.Image]:
         NOTE: "cabin_note.jpg",
         LOGS: "cabin_logs.jpg",
         RUG: "cabin_rug.jpg",
-        MAT_CABIN: "cabin_doormat.jpg",
     }
     out = {tid: prop_tile(GEN / name, tid) for tid, name in mapping.items()}
+    mat_src = GEN / "cabin_doormat.jpg"
+    if not mat_src.exists():
+        raise FileNotFoundError(f"missing doormat source: {mat_src}")
+    out[MAT_CABIN] = mat_tile(mat_src)
     # #132 continuous bed (hard NN) — avoids mid-seam hole between head/foot.
     bed_src = GEN / "cabin_bed_full.jpg"
     if not bed_src.exists():

@@ -64,10 +64,10 @@
   "note": "'Kaela, use what you need. The chest is yours now. A.'"
   },
 {
-  "id": "wall_map",
+  "id": "wall_window",
   "rect": [9, 2, 1, 1],
-  "kind": "map",
-  "note": "Region map: 'Asha has pinned every trail she's walked. A few are still blank.'"
+  "kind": "flavour",
+  "note": "Night presses against the glass. The woods are a dark quiet."
   },
 {
   "id": "stove",

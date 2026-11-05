@@ -1,6 +1,7 @@
 {
   "fire_col": 2,
   "map_col": 9,
-  "plain_col": 4,
-  "cols": 12
+  "plain_col": 7,
+  "cols": 12,
+  "inset": "window"
 }

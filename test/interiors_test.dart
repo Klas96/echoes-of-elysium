@@ -187,13 +187,13 @@ void main() {
 
     test('facing rule: next to a rect and facing it', () {
       final r = _room('ranger_cabin');
-      final map = r.spots.firstWhere((s) => s.id == 'wall_map').rect;
-      // Stand under the rect centre (works for 1-wide or wider wall_map).
-      final below = (map.x + map.w ~/ 2, map.y + map.h);
-      expect(r.stepInto(map, below.$1, below.$2), (0, -1));
+      final window = r.spots.firstWhere((s) => s.id == 'wall_window').rect;
+      // Stand under the rect centre (works for 1-wide or wider wall inset).
+      final below = (window.x + window.w ~/ 2, window.y + window.h);
+      expect(r.stepInto(window, below.$1, below.$2), (0, -1));
       expect(RoomSpotComponent.facing(Direction.up, (0, -1)), isTrue);
       expect(RoomSpotComponent.facing(Direction.down, (0, -1)), isFalse);
-      expect(r.stepInto(map, below.$1, below.$2 + 2), isNull);
+      expect(r.stepInto(window, below.$1, below.$2 + 2), isNull);
     });
 
     test('furniture footprints stay domestic (#62)', () {
