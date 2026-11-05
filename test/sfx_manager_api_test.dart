@@ -13,6 +13,7 @@ void main() {
   setUp(() {
     SfxManager.portFactory = () => RecordingSfxPort();
     SfxManager.globalContextSetter = (_) async {};
+    SfxManager.freshVoicePlayerPerLine = false;
     sfx = SfxManager();
     sfx.debugReset();
   });
@@ -21,6 +22,8 @@ void main() {
     sfx.debugReset();
     SfxManager.portFactory = AudioplayersSfxPort.new;
     SfxManager.globalContextSetter = defaultSfxGlobalContextSetter;
+    SfxManager.freshVoicePlayerPerLine =
+        SfxManager.defaultFreshVoicePlayerPerLine;
   });
 
   test('shared API methods exist and are safe when muted', () async {
