@@ -67,23 +67,67 @@ def content_bbox(im: Image.Image) -> tuple[int, int, int, int]:
     return alpha.getbbox() or (0, 0, im.width, im.height)
 
 
-def pixelize(src: Path, dst: Path, width: int, height: int, pad: float = 0.06) -> None:
+def pixelize_rgba(
+    src: Path,
+    width: int,
+    height: int,
+    pad: float = 0.06,
+    *,
+    cover: bool = False,
+) -> Image.Image:
+    """AI gen → hard pixels. cover=True fills the box (aspect-preserving crop)."""
     raw = Image.open(src).convert("RGBA")
     cut = remove_bg(raw)
     box = content_bbox(cut)
     subject = cut.crop(box)
     max_w = max(1, int(width * (1 - 2 * pad)))
     max_h = max(1, int(height * (1 - 2 * pad)))
-    # Soft fit then nearest snap for chunky pixels.
-    subject = subject.resize((max_w * 4, max_h * 4), Image.Resampling.LANCZOS)
-    subject = subject.resize((max_w, max_h), Image.Resampling.NEAREST)
+    sw, sh = subject.size
+    if cover:
+        scale = max(max_w / sw, max_h / sh)
+        nw = max(1, int(sw * scale * 4))
+        nh = max(1, int(sh * scale * 4))
+        subject = subject.resize((nw, nh), Image.Resampling.LANCZOS)
+        fw, fh = max(1, nw // 4), max(1, nh // 4)
+        subject = subject.resize((fw, fh), Image.Resampling.NEAREST)
+        if subject.width > width or subject.height > height:
+            cx = max(0, (subject.width - width) // 2)
+            cy = max(0, (subject.height - height) // 2)
+            subject = subject.crop(
+                (cx, cy, cx + min(width, subject.width), cy + min(height, subject.height))
+            )
+    else:
+        # Soft fit then nearest snap for chunky pixels (may stretch).
+        subject = subject.resize((max_w * 4, max_h * 4), Image.Resampling.LANCZOS)
+        subject = subject.resize((max_w, max_h), Image.Resampling.NEAREST)
     out = Image.new("RGBA", (width, height), (0, 0, 0, 0))
     ox = (width - subject.width) // 2
     oy = (height - subject.height) // 2
     out.paste(subject, (ox, oy), subject)
+    return out
+
+
+def pixelize(src: Path, dst: Path, width: int, height: int, pad: float = 0.06) -> None:
+    out = pixelize_rgba(src, width, height, pad=pad, cover=False)
     dst.parent.mkdir(parents=True, exist_ok=True)
     out.save(dst, "PNG")
     print(f"Wrote {dst} ({width}x{height})")
+
+
+def pixelize_stack_pair(
+    src: Path,
+    tile: int = 32,
+    pad: float = 0.02,
+) -> tuple[Image.Image, Image.Image]:
+    """Pixelize one continuous tall prop to tile×(2*tile), then split head/foot.
+
+    Beds and other 1×2 props must go through this path so the mid join has no
+    independent padding gap between halves.
+    """
+    full = pixelize_rgba(src, tile, tile * 2, pad=pad, cover=True)
+    head = full.crop((0, 0, tile, tile))
+    foot = full.crop((0, tile, tile, tile * 2))
+    return head, foot
 
 
 def main() -> int:
