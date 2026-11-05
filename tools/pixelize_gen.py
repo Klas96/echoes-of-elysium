@@ -67,23 +67,43 @@ def content_bbox(im: Image.Image) -> tuple[int, int, int, int]:
     return alpha.getbbox() or (0, 0, im.width, im.height)
 
 
-def pixelize(src: Path, dst: Path, width: int, height: int, pad: float = 0.06) -> None:
+def pixelize(
+    src: Path,
+    dst: Path,
+    width: int,
+    height: int,
+    pad: float = 0.06,
+    *,
+    soft_fit: bool = True,
+) -> None:
+    """Fit AI art into width×height.
+
+    soft_fit=True (legacy): LANCZOS upsample then NEAREST — softer, more colours.
+    soft_fit=False: NEAREST only — hard pixel art for gameplay tiles (cabin, etc.).
+    """
     raw = Image.open(src).convert("RGBA")
     cut = remove_bg(raw)
     box = content_bbox(cut)
     subject = cut.crop(box)
     max_w = max(1, int(width * (1 - 2 * pad)))
     max_h = max(1, int(height * (1 - 2 * pad)))
-    # Soft fit then nearest snap for chunky pixels.
-    subject = subject.resize((max_w * 4, max_h * 4), Image.Resampling.LANCZOS)
-    subject = subject.resize((max_w, max_h), Image.Resampling.NEAREST)
+    if soft_fit:
+        subject = subject.resize((max_w * 4, max_h * 4), Image.Resampling.LANCZOS)
+        subject = subject.resize((max_w, max_h), Image.Resampling.NEAREST)
+    else:
+        # Preserve aspect; NEAREST only — no soft intermediate.
+        sw, sh = subject.size
+        scale = min(max_w / sw, max_h / sh)
+        nw = max(1, int(round(sw * scale)))
+        nh = max(1, int(round(sh * scale)))
+        subject = subject.resize((nw, nh), Image.Resampling.NEAREST)
     out = Image.new("RGBA", (width, height), (0, 0, 0, 0))
     ox = (width - subject.width) // 2
     oy = (height - subject.height) // 2
     out.paste(subject, (ox, oy), subject)
     dst.parent.mkdir(parents=True, exist_ok=True)
     out.save(dst, "PNG")
-    print(f"Wrote {dst} ({width}x{height})")
+    print(f"Wrote {dst} ({width}x{height}, soft_fit={soft_fit})")
 
 
 def main() -> int:
@@ -92,8 +112,13 @@ def main() -> int:
     ap.add_argument("dst")
     ap.add_argument("width", type=int)
     ap.add_argument("height", type=int)
+    ap.add_argument(
+        "--hard",
+        action="store_true",
+        help="NEAREST-only (no LANCZOS soft fit) for hard pixel gameplay tiles",
+    )
     args = ap.parse_args()
-    pixelize(Path(args.src), Path(args.dst), args.width, args.height)
+    pixelize(Path(args.src), Path(args.dst), args.width, args.height, soft_fit=not args.hard)
     return 0
 
 

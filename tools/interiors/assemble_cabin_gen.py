@@ -1,12 +1,8 @@
 #!/usr/bin/env python3
-"""Pixelize AI-gen cabin sources into hard 32px tile overrides and patch tileset.
+"""Pixelize AI-gen cabin sources into hard 32×32 tile overrides and patch tileset.
 
-Reads tools/interiors/gen_src/cabin/*.jpg (Cursor/AI image gen), writes:
-  tools/interiors/gen_src/cabin/tiles/<id>.png
-then pastes those ids into assets/images/interiors/tileset.png.
-
-Uses nearest-neighbour only (no LANCZOS soft fit) plus a light palette snap so
-tiles stay calm/readable hard pixel art. Does not invent art with Pillow draws.
+AI JPG → NEAREST-only pixelize straight to 32×32 (no soft 128 intermediate).
+Gameplay tiles are only tiles/<id>.png at 32×32 — never commit soft _raw_* files.
 
 Run:
   python3 tools/interiors/assemble_cabin_gen.py
@@ -15,6 +11,7 @@ Run:
 from __future__ import annotations
 
 import sys
+import tempfile
 from pathlib import Path
 
 from PIL import Image
@@ -29,10 +26,8 @@ from pixelize_gen import pixelize  # noqa: E402
 
 T = 32
 COLS = 16
-# Soft AI leftovers were 400–800 colours; hard pixel target stays under this.
-MAX_COLOURS = 48
+MAX_COLOURS = 24
 
-# Cabin tile ids (must match build_rooms.py)
 CABIN, CABIN2 = 4, 5
 MAT_CABIN = 15
 W_LOG, W_FIRE = 20, 21
@@ -46,14 +41,13 @@ RUG = 63
 BED_C_H, BED_C_F = 64, 65
 
 
-def hard_pixel(im: Image.Image, size: int = T, colours: int = 24) -> Image.Image:
-    """NEAREST downscale + adaptive palette snap (process AI art, don't invent)."""
+def hard_pixel(im: Image.Image, size: int = T, colours: int = 16) -> Image.Image:
+    """NEAREST to size + binary alpha + palette snap (process AI, don't invent)."""
     im = im.convert("RGBA")
     out = im.resize((size, size), Image.Resampling.NEAREST)
-    # Binary alpha first so soft fringes don't inflate colour counts.
     px = out.load()
-    for y in range(out.height):
-        for x in range(out.width):
+    for y in range(size):
+        for x in range(size):
             r, g, b, a = px[x, y]
             px[x, y] = (r, g, b, 255 if a >= 128 else 0)
     rgb = out.convert("RGB").quantize(colors=colours, method=Image.Quantize.MEDIANCUT)
@@ -64,13 +58,12 @@ def hard_pixel(im: Image.Image, size: int = T, colours: int = 24) -> Image.Image
 
 
 def opaque_tile(im: Image.Image, size: int = T) -> Image.Image:
-    out = hard_pixel(im, size=size, colours=20)
+    out = hard_pixel(im, size=size, colours=16)
     px = out.load()
     for y in range(size):
         for x in range(size):
             r, g, b, a = px[x, y]
-            if a < 255:
-                px[x, y] = (r, g, b, 255)
+            px[x, y] = (r, g, b, 255)
     return out
 
 
@@ -80,7 +73,7 @@ def slice_floor(src: Path) -> dict[int, Image.Image]:
     left = (raw.width - side) // 2
     top = (raw.height - side) // 2
     crop = raw.crop((left, top, left + side, top + side))
-    # Snap to a 4×2 cell grid with NEAREST only.
+    # Straight NEAREST into a 4×2 cell grid — no LANCZOS.
     grid = crop.resize((T * 4, T * 2), Image.Resampling.NEAREST)
     a = grid.crop((0, 0, T, T))
     b = grid.crop((T, 0, T * 2, T))
@@ -124,17 +117,12 @@ def grid_cells(im: Image.Image, cols: int, rows: int) -> list[Image.Image]:
 def slice_walls(src: Path) -> dict[int, Image.Image]:
     raw = Image.open(src).convert("RGBA")
     cells = grid_cells(raw, 5, 3)
-    log = cells[0]
-    fire = cells[6]
-    mmap = cells[7]
-    jl = cells[13]
-    jr = cells[14]
     return {
-        W_LOG: opaque_tile(log),
-        W_FIRE: opaque_tile(fire),
-        W_MAP: opaque_tile(mmap),
-        J_LOG_L: opaque_tile(jl),
-        J_LOG_R: opaque_tile(jr),
+        W_LOG: opaque_tile(cells[0]),
+        W_FIRE: opaque_tile(cells[6]),
+        W_MAP: opaque_tile(cells[7]),
+        J_LOG_L: opaque_tile(cells[13]),
+        J_LOG_R: opaque_tile(cells[14]),
     }
 
 
@@ -154,13 +142,16 @@ def clear_dark_bg(im: Image.Image) -> Image.Image:
 
 
 def prop_tile(src: Path, tid: int) -> Image.Image:
-    """AI prop → hard 32px via existing pixelize_gen, then NEAREST palette snap."""
-    tmp = TILES / f"_raw_{tid}.png"
-    # pixelize_gen still does a soft fit; we re-snap hard below.
-    pixelize(src, tmp, T * 4, T * 4, pad=0.06)
-    raw = clear_dark_bg(Image.open(tmp).convert("RGBA"))
-    out = hard_pixel(raw, size=T, colours=16)
-    return clear_dark_bg(out)
+    """AI prop → hard 32×32 in one step (NEAREST only). No soft _raw intermediate."""
+    with tempfile.TemporaryDirectory(prefix=f"cabin_prop_{tid}_") as tmpdir:
+        tmp = Path(tmpdir) / f"{tid}.png"
+        pixelize(src, tmp, T, T, pad=0.08, soft_fit=False)
+        raw = clear_dark_bg(Image.open(tmp).convert("RGBA"))
+    assert raw.size == (T, T), (tid, raw.size)
+    out = hard_pixel(raw, size=T, colours=12)
+    out = clear_dark_bg(out)
+    assert out.size == (T, T), (tid, out.size)
+    return out
 
 
 def assemble_props() -> dict[int, Image.Image]:
@@ -175,10 +166,7 @@ def assemble_props() -> dict[int, Image.Image]:
         BED_C_F: "cabin_bed_foot.jpg",
         MAT_CABIN: "cabin_doormat.jpg",
     }
-    out: dict[int, Image.Image] = {}
-    for tid, name in mapping.items():
-        out[tid] = prop_tile(GEN / name, tid)
-    return out
+    return {tid: prop_tile(GEN / name, tid) for tid, name in mapping.items()}
 
 
 def patch_sheet(tiles: dict[int, Image.Image]) -> None:
@@ -193,10 +181,9 @@ def patch_sheet(tiles: dict[int, Image.Image]) -> None:
         assert tile.size == (T, T), (tid, tile.size)
         n = len(tile.getcolors(T * T) or [])
         if n > MAX_COLOURS:
-            print(f"warn: tile {tid} still noisy ({n} colours)")
+            raise SystemExit(f"tile {tid} too soft/noisy ({n} colours > {MAX_COLOURS})")
         x, y = (tid % COLS) * T, (tid // COLS) * T
-        blank = Image.new("RGBA", (T, T), (0, 0, 0, 0))
-        sheet.paste(blank, (x, y))
+        sheet.paste(Image.new("RGBA", (T, T), (0, 0, 0, 0)), (x, y))
         sheet.alpha_composite(tile, (x, y))
     sheet.save(OUT_SHEET)
     print(f"patched {OUT_SHEET} ({len(tiles)} tiles)")
@@ -204,18 +191,26 @@ def patch_sheet(tiles: dict[int, Image.Image]) -> None:
 
 def main() -> int:
     TILES.mkdir(parents=True, exist_ok=True)
+    # Drop soft intermediates and prior cells — only 32×32 id PNGs remain.
     for stale in TILES.glob("*.png"):
-        # Keep regenerating cleanly from AI jpgs.
         stale.unlink()
     tiles: dict[int, Image.Image] = {}
     tiles.update(slice_floor(GEN / "cabin_floor_sheet.jpg"))
     tiles.update(slice_walls(GEN / "cabin_wall_sheet.jpg"))
     tiles.update(assemble_props())
     for tid, im in tiles.items():
+        assert im.size == (T, T), (tid, im.size)
         path = TILES / f"{tid}.png"
         im.save(path)
         n = len(im.getcolors(T * T) or [])
-        print(f"wrote {path} ({n} colours)")
+        print(f"wrote {path} ({im.size[0]}×{im.size[1]}, {n} colours)")
+    # Guard: no soft leftovers in the tiles folder.
+    leftovers = [p.name for p in TILES.glob("_raw_*.png")]
+    if leftovers:
+        raise SystemExit(f"soft _raw_ files must not remain: {leftovers}")
+    soft = [p.name for p in TILES.glob("*.png") if Image.open(p).size != (T, T)]
+    if soft:
+        raise SystemExit(f"non-32×32 tiles: {soft}")
     patch_sheet(tiles)
     return 0
 
