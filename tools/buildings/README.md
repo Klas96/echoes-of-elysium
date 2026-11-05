@@ -1,13 +1,8 @@
 # Buildings v2: placeable building sprites
 
-Six city/core buildings come from `gen_src/buildings/*_front_magenta.jpg` via `tools/process_buildings.py`
-(`.venv/bin/python tools/process_buildings.py` — magenta key, despill, area downscale, sharpen, palette,
-binary alpha, selective navy outline).
-
-**Ranger cabin** is AI image-gen → hard pixel: source
-`tools/buildings/gen_src/ranger_cabin_front.jpg`, assembled by
-`tools/buildings/make_ranger_cabin_pixel.py` (`pixelize_gen` + NEAREST palette snap to 128×128).
-Re-gen the JPG with hard pixel art in mind, then re-run that script — do not Pillow-invent the sprite.
+Seven buildings made from `gen_src/buildings/*_front_magenta.jpg` by `tools/process_buildings.py`.
+That script reuses `tools/process_gen.py` (magenta key, despill, area downscale, sharpen, palette, binary alpha,
+selective navy outline). Re-run it with `.venv/bin/python tools/process_buildings.py`.
 
 ## Files
 - `<name>.png`: RGBA sprite. Alpha is binary (0/255), there is no magenta fringe, and transparent pixels are RGB 0.
