@@ -782,11 +782,21 @@ SOLID_PROPS = {
 
 
 def load_gen_overrides() -> dict[int, Image.Image]:
-    """Cursor-gen tiles from assemble_*_gen.py under gen_src/<room>/tiles/."""
+    """Cursor-gen tiles from assemble_*_gen.py under gen_src/<room>/tiles/.
+
+    Room folders load in a fixed order; later rooms win on shared tile ids so
+    cabin hard-pixel plant/rug (48/63) override older soft tea stamps.
+    """
     out: dict[int, Image.Image] = {}
     if not GEN_SRC.is_dir():
         return out
-    for path in sorted(GEN_SRC.glob("*/tiles/*.png")):
+    room_order = {"archive": 0, "grotto": 1, "noodle": 2, "tea": 3, "cabin": 4}
+
+    def _key(path: Path) -> tuple[int, str]:
+        room = path.parent.parent.name
+        return (room_order.get(room, 99), path.name)
+
+    for path in sorted(GEN_SRC.glob("*/tiles/*.png"), key=_key):
         if path.name.startswith("_"):
             continue
         try:
@@ -1245,11 +1255,10 @@ def noodle() -> dict:
 
 
 def ranger() -> dict:
+    # One hearth + one map on the north wall (quiet props + one wall focal).
     F, P = shell(W_LOG, W_LOG_S, W_LOG_C, CABIN, MAT_CABIN, J_LOG_L, J_LOG_R)
-    for x in (2, 3, 4):
-        F[0][x] = W_FIRE
-    for x in (5, 6, 7):
-        F[0][x] = W_MAP
+    F[0][3] = W_FIRE
+    F[0][6] = W_MAP
     vary(F, CABIN, CABIN2)
     P[1][1] = LOGS
     P[2][1] = CHEST
@@ -1271,9 +1280,9 @@ def ranger() -> dict:
              "note": "Creature journal: 'N of 24 creatures befriended'"},
             {"id": "asha_note", "rect": [9, 1, 1, 1], "kind": "note",
              "note": "'Kaela, use what you need. The chest is yours now. A.'"},
-            {"id": "wall_map", "rect": [5, 0, 3, 1], "kind": "map",
+            {"id": "wall_map", "rect": [6, 0, 1, 1], "kind": "map",
              "note": "Region map: 'Asha has pinned every trail she's walked. A few are still blank.'"},
-            {"id": "stove", "rect": [2, 0, 3, 1], "kind": "flavour",
+            {"id": "stove", "rect": [3, 0, 1, 1], "kind": "flavour",
              "note": "'Cold ashes and a kettle. It smells of pine.'"},
         ],
         [],
