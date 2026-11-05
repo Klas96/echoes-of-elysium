@@ -43,6 +43,11 @@ class HudLayout {
   /// Bottom offset of the TALK / INTERACT / hold prompts.
   static double promptBottom(Size screen) => narrow(screen) ? 24 : 80;
 
+  /// Ability bar [Positioned.bottom] (SafeArea still owns system insets).
+  /// Phones / narrow layouts pin to the screen edge; desktop keeps a lift.
+  static double abilityBottom(Size screen) =>
+      (isTouch || narrow(screen)) ? 0 : 26;
+
   /// +XP / loot pops sit with the HP/XP block (beside bars on landscape,
   /// under them on portrait) — not by the ability bar. See GameHud.
   static double popsMaxWidth(Size screen) => min(160, screen.width * 0.42);
