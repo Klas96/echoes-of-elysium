@@ -84,8 +84,12 @@ void main() {
         final r = _room(id);
         expect(r.id, id);
         // #62: 32px so a tile is Kaela's height. Tea house hub pilot is 16×10;
-        // every other room stays on the domestic 12×8 grid.
-        final expected = id == 'tea_house' ? (16, 10, 32) : (12, 8, 32);
+        // cabin uses 12×10 for a taller masonry N wall; others stay 12×8.
+        final expected = switch (id) {
+          'tea_house' => (16, 10, 32),
+          'ranger_cabin' => (12, 10, 32),
+          _ => (12, 8, 32),
+        };
         expect((r.cols, r.rows, r.tile), expected);
         expect(r.tile, CustomPlayer.sizePlayer.toInt());
         expect(_pngSize('assets/images/interiors/${r.image}'), (r.cols * r.tile, r.rows * r.tile));
@@ -183,13 +187,13 @@ void main() {
 
     test('facing rule: next to a rect and facing it', () {
       final r = _room('ranger_cabin');
-      final map = r.spots.firstWhere((s) => s.id == 'wall_map').rect;
-      // Stand under the rect centre (works for 1-wide or wider wall_map).
-      final below = (map.x + map.w ~/ 2, map.y + map.h);
-      expect(r.stepInto(map, below.$1, below.$2), (0, -1));
+      final window = r.spots.firstWhere((s) => s.id == 'wall_window').rect;
+      // Stand under the rect centre (works for 1-wide or wider wall inset).
+      final below = (window.x + window.w ~/ 2, window.y + window.h);
+      expect(r.stepInto(window, below.$1, below.$2), (0, -1));
       expect(RoomSpotComponent.facing(Direction.up, (0, -1)), isTrue);
       expect(RoomSpotComponent.facing(Direction.down, (0, -1)), isFalse);
-      expect(r.stepInto(map, below.$1, below.$2 + 2), isNull);
+      expect(r.stepInto(window, below.$1, below.$2 + 2), isNull);
     });
 
     test('furniture footprints stay domestic (#62)', () {
