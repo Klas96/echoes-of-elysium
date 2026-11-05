@@ -774,6 +774,7 @@ LECTERN, GLYPH = 66, 67
 BARREL, FERN = 68, 69
 # Cabin continuous strip + tall side bands (assemble_cabin_gen).
 W_LOG_S_MID, W_LOG_S_BASE = 116, 117
+W_LOG_S_E, W_LOG_S_MID_E, W_LOG_S_BASE_E, W_LOG_C_E = 118, 119, 120, 121
 STRIP_TOP0, STRIP_MID0, STRIP_BASE0 = 80, 92, 104
 STRIP_COLS = 12
 
@@ -1272,10 +1273,27 @@ def ranger() -> dict:
             F[0][x] = STRIP_TOP0 + x
             F[1][x] = STRIP_MID0 + x
             F[2][x] = STRIP_BASE0 + x
-        # Cutaway sides / corners meet the tall face.
-        for y, side in ((0, W_LOG_C), (1, W_LOG_S_MID), (2, W_LOG_S_BASE)):
-            F[y][0] = side
-            F[y][W - 1] = side
+        # Cutaway sides / corners meet the tall face (west rim; east = flipped AI).
+        for y, west, east in (
+            (0, W_LOG_C, W_LOG_C_E),
+            (1, W_LOG_S_MID, W_LOG_S_MID_E),
+            (2, W_LOG_S_BASE, W_LOG_S_BASE_E),
+        ):
+            F[y][0] = west
+            F[y][W - 1] = east
+        # Remaining E/W below the tall face stay cutaway void (not dark columns).
+        for y in range(3, H):
+            if F[y][0] == W_LOG_S:
+                F[y][0] = W_LOG_S_MID
+            if F[y][W - 1] == W_LOG_S:
+                F[y][W - 1] = W_LOG_S_MID_E
+        for y, x, tid in (
+            (H - 2, 0, W_LOG_C),
+            (H - 1, 0, W_LOG_C),
+            (H - 2, W - 1, W_LOG_C_E),
+            (H - 1, W - 1, W_LOG_C_E),
+        ):
+            F[y][x] = tid
         # South short face uses band tiles (top + baseboard), not the strip.
         for x in range(1, W - 1):
             if F[H - 2][x] not in (CABIN, CABIN2):
