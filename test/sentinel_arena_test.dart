@@ -36,6 +36,43 @@ void main() {
     });
   });
 
+  group('SentinelDrone.resetEncounter', () {
+    tearDown(() {
+      SentinelArena.instance = null;
+      SentinelDrone.instance = null;
+    });
+
+    test('no-ops when the fight was never started', () {
+      final s = SentinelDrone(Vector2(10, 20), onDefeated: () {});
+      expect(s.isEngaged, isFalse);
+      s.resetEncounter();
+      expect(s.isEngaged, isFalse);
+      expect(s.health, s.maxHealth);
+      expect(s.phase, 1);
+    });
+
+    test('restores idle HP/phase and opens a sealed arena', () {
+      final arena = SentinelArena(Vector2(100, 200));
+      SentinelArena.instance = arena;
+      arena.sealed = true;
+
+      final origin = Vector2(80, 180);
+      final s = SentinelDrone(origin, onDefeated: () {});
+      s.position = origin + Vector2(40, 20);
+      s.debugMarkEngaged(health: (s.maxHealth * 0.25).round());
+      expect(s.isEngaged, isTrue);
+      expect(s.phase, 3);
+
+      s.resetEncounter();
+
+      expect(s.isEngaged, isFalse);
+      expect(s.health, s.maxHealth);
+      expect(s.phase, 1);
+      expect(s.position, origin);
+      expect(arena.sealed, isFalse);
+    });
+  });
+
   group('Sentinel arena hard-pixel art (#65)', () {
     Future<(int, int)> dims(String path) async {
       final codec =
