@@ -154,6 +154,9 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
     setupMovementByJoystick(enabled: false);
     stopMove(forceIdle: true);
     respawnFade.value = true;
+    // Sentinel plaza: dying mid-lockdown used to leave the fence up with
+    // Kaela teleported to a checkpoint outside — soft-lock. Restart clean.
+    SentinelDrone.instance?.resetEncounter();
   }
 
   void _updateRespawn(double dt) {
@@ -430,6 +433,7 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
     // (focus steal / Esc / cutscene), or re-arm keys after a new map Keyboard.
     if (!isRespawning) _reconcileKeyboardMovement();
     super.update(dt);
+    _clampToMapBounds();
     _jog?.setSpeed(velocity.length);
     // Throttle HUD notifier — cloning every frame rebuilt Flutter debug text.
     final prev = positionNotifier.value;
@@ -842,6 +846,24 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
       }
     } else {
       _footstepTimer = 0;
+    }
+  }
+
+  /// Keep Kaela's top-left inside the tiled map (belt-and-suspenders if a
+  /// stuck KeyUp still pushed her past the edge before focus hooks fired).
+  /// Clamps only — does not halt WASD (edge contact is normal near exits).
+  void _clampToMapBounds() {
+    if (!hasGameRef) return;
+    final mapSize = gameRef.map.getMapSize();
+    if (mapSize.x <= 0 || mapSize.y <= 0) return;
+    final maxX = max(0.0, mapSize.x - size.x);
+    final maxY = max(0.0, mapSize.y - size.y);
+    final x = position.x.clamp(0.0, maxX);
+    final y = position.y.clamp(0.0, maxY);
+    if (x != position.x || y != position.y) {
+      position
+        ..x = x
+        ..y = y;
     }
   }
 

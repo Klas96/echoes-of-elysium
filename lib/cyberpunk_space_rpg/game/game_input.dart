@@ -5,6 +5,7 @@ import '../audio/audio_unlock.dart';
 import '../components/custom_player.dart';
 import 'debug_mask_editor.dart';
 import 'game_debug.dart';
+import 'game_focus_hooks.dart';
 import 'keyboard_guard.dart';
 
 /// Overworld keyboard focus + a focus-independent WASD path.
@@ -19,6 +20,9 @@ class GameInput {
 
   static bool _installed = false;
 
+  /// True after [onFocusLost] until [onFocusGained] — skips duplicate clears.
+  static bool _focusLost = false;
+
   /// False while an interior room owns the screen — steer the room player
   /// via [syncAlternateKeys] instead of the paused overworld Kaela.
   static bool overworldKeysEnabled = true;
@@ -28,6 +32,9 @@ class GameInput {
 
   /// WASD sync for the active room player (no Bonfire focus required).
   static void Function()? syncAlternateKeys;
+
+  /// Hard-stop for the active room player (focus loss / blur).
+  static void Function()? haltAlternate;
 
   static final _moveKeys = {
     LogicalKeyboardKey.arrowUp,
@@ -48,6 +55,31 @@ class GameInput {
     // Mask editor must see S/A before WASD (Bonfire directional keys).
     DebugMaskEditor.installKeys();
     GameDebug.install();
+    // Web blur / visibilitychange — KeyUp is often lost when switching tabs.
+    installGameFocusHooks(
+      onLost: onFocusLost,
+      onGained: onFocusGained,
+    );
+  }
+
+  /// Tab/window blur, app background, or visibility hidden: drop stuck WASD
+  /// so Kaela does not skate off-map forever.
+  static void onFocusLost() {
+    if (_focusLost) return;
+    _focusLost = true;
+    KeyboardGuard.releaseAll();
+    CustomPlayer.current?.haltMovement();
+    haltAlternate?.call();
+  }
+
+  /// Focus / visibility restored: synthesize KeyUps again, then reclaim.
+  ///
+  /// Returning while a key is still physically held requires a fresh press —
+  /// preferred over resuming a phantom held direction.
+  static void onFocusGained() {
+    if (!_focusLost) return;
+    _focusLost = false;
+    reclaim(releaseKeys: true);
   }
 
   static bool _isMove(LogicalKeyboardKey key) => _moveKeys.contains(key);

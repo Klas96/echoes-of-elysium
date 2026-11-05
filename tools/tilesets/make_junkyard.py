@@ -66,7 +66,9 @@ COLOR_RENAME = {
 }
 
 # Hard junkyard palettes (RGB) — few steps, game-like pixel shading.
-DIRT = [(58, 42, 28), (86, 64, 40), (110, 84, 52), (138, 108, 68), (162, 130, 82)]
+# DIRT ramp is deliberately tight (~L54→107) so adjacent brown / light-brown
+# ground variants don't checkerboard; heaps stay redder for readable walls.
+DIRT = [(70, 52, 34), (88, 66, 42), (104, 80, 50), (118, 92, 58), (132, 104, 66)]
 HEAP = [(28, 18, 14), (48, 28, 18), (72, 40, 22), (104, 56, 28), (138, 72, 34), (168, 92, 42)]
 OIL = [(18, 28, 30), (28, 48, 46), (36, 68, 62), (48, 92, 78), (64, 118, 96)]
 METAL = [(32, 34, 40), (52, 56, 64), (78, 84, 94), (108, 116, 126), (140, 148, 158)]
@@ -135,11 +137,12 @@ def pixel_junkyard_from_cyberpunk() -> Image.Image:
             remapped = _ramp_by_luma(tile, METAL)
         else:
             remapped = _ramp_by_luma(tile, DIRT)
-            # Light checker dither on flat dirt so floors read pixel-y, not flat fill
+            # Soft checker dither on light dirt only (keeps pixel grain without
+            # punching bright holes next to darker brown neighbours).
             for j in range(T):
                 for i in range(T):
-                    if (i + j) % 4 == 0 and remapped[j, i, 0] > 90:
-                        remapped[j, i] = np.clip(remapped[j, i].astype(int) - 10, 0, 255).astype(np.uint8)
+                    if (i + j) % 4 == 0 and remapped[j, i, 0] >= 118:
+                        remapped[j, i] = np.clip(remapped[j, i].astype(int) - 6, 0, 255).astype(np.uint8)
         rgb[oy : oy + T, ox : ox + T] = remapped
 
     # Props: keep cyberpunk silhouettes; warm-shift cool neon toward rust/amber.

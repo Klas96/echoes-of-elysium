@@ -18,7 +18,7 @@ import 'uec_drone.dart';
 
 enum _SState { idle, fight }
 
-enum _Atk { none, slamTele, ring, sweepTele }
+enum _Atk { none, slamTele, ringTele, ring, sweepTele }
 
 /// City apex boss: sealed plaza arena + three HP phases with telegraphs/adds.
 class SentinelDrone extends GameDecoration {
@@ -123,12 +123,23 @@ class SentinelDrone extends GameDecoration {
   }
 
   Sprite? _sprite;
+  Sprite? _slamTeleArt;
+  Sprite? _sweepTeleArt;
+  Sprite? _ringTellArt;
+  double _phaseFlash = 0;
 
   Vector2 get _centre => position + size / 2;
 
   @override
   Future<void> onLoad() async {
     _sprite = await Sprite.load('sprites/sentinel_boss.png');
+    try {
+      _slamTeleArt = await Sprite.load('sprites/fx/sentinel_slam_tele.png');
+      _sweepTeleArt = await Sprite.load('sprites/fx/sentinel_sweep_tele.png');
+      _ringTellArt = await Sprite.load('sprites/fx/sentinel_ring_tell.png');
+    } catch (_) {
+      // Procedural telegraphs remain as fallback.
+    }
     instance = this;
     add(CircleHitbox(
         radius: 24, isSolid: true, collisionType: CollisionType.passive));
@@ -164,6 +175,64 @@ class SentinelDrone extends GameDecoration {
     _trySeal();
   }
 
+  /// True once the lockdown fight has started (seal may still be pending).
+  bool get isEngaged => _arenaReady;
+
+  /// HP left — exposed for tests / debug.
+  int get health => _health;
+
+  /// Current phase band (1–3).
+  int get phase => _phase;
+
+  /// Kaela died mid-fight: drop the fence, despawn adds, and restore the
+  /// Sentinel to its pre-engage idle so she can walk back in and try again.
+  void resetEncounter() {
+    final arena = SentinelArena.instance;
+    final engaged = _arenaReady || (arena?.sealed ?? false);
+    if (!engaged || isDead) return;
+
+    _clearAdds();
+    _clearVolleyBullets();
+    _health = maxHealth;
+    _state = _SState.idle;
+    _arenaReady = false;
+    _phase = 1;
+    _spawnedP2 = false;
+    _spawnedP3 = false;
+    _atk = _Atk.none;
+    _atkT = 0;
+    _meleeTimer = 0;
+    _patternTimer = 1.2;
+    _knockback.setZero();
+    _hushed = 0;
+    _stuckFor = 0;
+    _slowT = 0;
+    _slowFactor = 0.45;
+    _phaseFlash = 0;
+    position = _origin.clone();
+    arena?.open();
+  }
+
+  /// Test helper: mark the fight as started without a live game / GameState.
+  @visibleForTesting
+  void debugMarkEngaged({int? health}) {
+    _arenaReady = true;
+    _state = _SState.fight;
+    if (health != null) {
+      _health = health.clamp(1, maxHealth);
+      _phase = phaseForHpRatio(_health / maxHealth);
+      _spawnedP2 = _phase >= 2;
+      _spawnedP3 = _phase >= 3;
+    }
+  }
+
+  void _clearVolleyBullets() {
+    if (!hasGameRef) return;
+    for (final b in gameRef.query<EnemyBullet>(onlyVisible: false).toList()) {
+      if (b.isMounted) b.removeFromParent();
+    }
+  }
+
   /// Fence only when Kaela is inside — ranged openers must not lock her out.
   void _trySeal() {
     final arena = SentinelArena.instance;
@@ -182,6 +251,7 @@ class SentinelDrone extends GameDecoration {
   void _setPhase(int p) {
     if (p == _phase) return;
     _phase = p;
+    _phaseFlash = 0.28;
     GameToast.show('PHASE $p',
         color: const Color(0xFFFF8844), compact: true, seconds: 1.6);
     if (p == 2 && !_spawnedP2) {
@@ -283,8 +353,9 @@ class SentinelDrone extends GameDecoration {
   }
 
   void _startRing() {
-    _atk = _Atk.ring;
-    _atkT = 0.05;
+    // Short hard-pixel ring tell, then the 8-way pulse volley.
+    _atk = _Atk.ringTele;
+    _atkT = 0.38;
   }
 
   void _startSweep(Vector2 toPlayer) {
@@ -345,18 +416,26 @@ class SentinelDrone extends GameDecoration {
       switch (_atk) {
         case _Atk.slamTele:
           _resolveSlam();
+          _atk = _Atk.none;
+          _patternTimer = _phase == 1 ? 2.4 : (_phase == 2 ? 2.0 : 1.55);
+          break;
+        case _Atk.ringTele:
+          _atk = _Atk.ring;
+          _atkT = 0.05;
           break;
         case _Atk.ring:
           _resolveRing();
+          _atk = _Atk.none;
+          _patternTimer = _phase == 1 ? 2.4 : (_phase == 2 ? 2.0 : 1.55);
           break;
         case _Atk.sweepTele:
           _resolveSweep();
+          _atk = _Atk.none;
+          _patternTimer = _phase == 1 ? 2.4 : (_phase == 2 ? 2.0 : 1.55);
           break;
         case _Atk.none:
           break;
       }
-      _atk = _Atk.none;
-      _patternTimer = _phase == 1 ? 2.4 : (_phase == 2 ? 2.0 : 1.55);
       return;
     }
 
@@ -392,10 +471,14 @@ class SentinelDrone extends GameDecoration {
     _meleeTimer = max(0, _meleeTimer - dt);
     _hushed = max(0, _hushed - dt);
     _slowT = max(0, _slowT - dt);
+    _phaseFlash = max(0, _phaseFlash - dt);
     if (_slowT <= 0) _slowFactor = 0.45;
 
     final player = gameRef.player;
     if (player == null) return;
+    // During the death fade Kaela is still inside the plaza — do not
+    // re-engage / re-seal before the checkpoint teleport lands.
+    if (player is CustomPlayer && player.isRespawning) return;
     final toPlayer = (player.position + player.size / 2) - _centre;
     final dist = toPlayer.length;
 
@@ -540,50 +623,128 @@ class SentinelDrone extends GameDecoration {
   void _paintTelegraphs(Canvas canvas, double cx, double cy, Color col) {
     if (_atk == _Atk.slamTele) {
       final t = (1 - _atkT / _slamTele).clamp(0.0, 1.0);
-      canvas.drawCircle(
-        Offset(cx, cy),
-        _slamR,
-        Paint()
-          ..color = Color.fromRGBO(255, 200, 40, 0.15 + t * 0.25)
-          ..style = PaintingStyle.fill,
-      );
-      canvas.drawCircle(
-        Offset(cx, cy),
-        _slamR,
-        Paint()
-          ..color = Color.fromRGBO(255, 180, 20, 0.55 + t * 0.35)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 2.5,
-      );
-      canvas.drawCircle(
-        Offset(cx, cy),
-        _slamR * t,
-        Paint()
-          ..color = const Color(0x88FFEE66)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.5,
-      );
+      final slam = _slamTeleArt;
+      if (slam != null) {
+        final diam = _slamR * 2;
+        final paint = Paint()
+          ..filterQuality = FilterQuality.none
+          ..color = Color.fromRGBO(255, 255, 255, 0.45 + t * 0.5);
+        slam.render(
+          canvas,
+          position: Vector2(cx - _slamR, cy - _slamR),
+          size: Vector2.all(diam),
+          overridePaint: paint,
+        );
+        // Expanding charge ring (same sheet, scaled by t).
+        final pulse = Paint()
+          ..filterQuality = FilterQuality.none
+          ..color = Color.fromRGBO(255, 230, 120, 0.35 + t * 0.4);
+        final pr = _slamR * (0.25 + t * 0.75);
+        slam.render(
+          canvas,
+          position: Vector2(cx - pr, cy - pr),
+          size: Vector2.all(pr * 2),
+          overridePaint: pulse,
+        );
+      } else {
+        canvas.drawCircle(
+          Offset(cx, cy),
+          _slamR,
+          Paint()
+            ..color = Color.fromRGBO(255, 200, 40, 0.15 + t * 0.25)
+            ..style = PaintingStyle.fill,
+        );
+        canvas.drawCircle(
+          Offset(cx, cy),
+          _slamR,
+          Paint()
+            ..color = Color.fromRGBO(255, 180, 20, 0.55 + t * 0.35)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2.5,
+        );
+        canvas.drawCircle(
+          Offset(cx, cy),
+          _slamR * t,
+          Paint()
+            ..color = const Color(0x88FFEE66)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.5,
+        );
+      }
     } else if (_atk == _Atk.sweepTele) {
       final t = (1 - _atkT / _sweepTele).clamp(0.0, 1.0);
-      final path = Path()
-        ..moveTo(cx, cy)
-        ..arcTo(
-          Rect.fromCircle(center: Offset(cx, cy), radius: _sweepRange),
-          _sweepFacing - _sweepHalfRad,
-          _sweepHalfRad * 2,
-          false,
-        )
-        ..close();
-      canvas.drawPath(
-        path,
-        Paint()..color = Color.fromRGBO(255, 60, 40, 0.18 + t * 0.28),
-      );
-      canvas.drawPath(
-        path,
-        Paint()
-          ..color = Color.fromRGBO(255, 80, 40, 0.7)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 2,
+      final sweep = _sweepTeleArt;
+      if (sweep != null) {
+        final paint = Paint()
+          ..filterQuality = FilterQuality.none
+          ..color = Color.fromRGBO(255, 255, 255, 0.4 + t * 0.55);
+        canvas.save();
+        canvas.translate(cx, cy);
+        canvas.rotate(_sweepFacing);
+        // Sprite apex is on the left; length ≈ sweep range.
+        final len = _sweepRange;
+        final halfW = len * 0.95; // covers ~120° cone read
+        sweep.render(
+          canvas,
+          position: Vector2(0, -halfW / 2),
+          size: Vector2(len, halfW),
+          overridePaint: paint,
+        );
+        canvas.restore();
+      } else {
+        final path = Path()
+          ..moveTo(cx, cy)
+          ..arcTo(
+            Rect.fromCircle(center: Offset(cx, cy), radius: _sweepRange),
+            _sweepFacing - _sweepHalfRad,
+            _sweepHalfRad * 2,
+            false,
+          )
+          ..close();
+        canvas.drawPath(
+          path,
+          Paint()..color = Color.fromRGBO(255, 60, 40, 0.18 + t * 0.28),
+        );
+        canvas.drawPath(
+          path,
+          Paint()
+            ..color = Color.fromRGBO(255, 80, 40, 0.7)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2,
+        );
+      }
+    } else if (_atk == _Atk.ringTele) {
+      final t = (1 - _atkT / 0.38).clamp(0.0, 1.0);
+      final ring = _ringTellArt;
+      if (ring != null) {
+        final r = 28.0 + t * 52.0;
+        final paint = Paint()
+          ..filterQuality = FilterQuality.none
+          ..color = Color.fromRGBO(255, 255, 255, 0.55 + t * 0.35);
+        ring.render(
+          canvas,
+          position: Vector2(cx - r, cy - r),
+          size: Vector2.all(r * 2),
+          overridePaint: paint,
+        );
+      } else {
+        canvas.drawCircle(
+          Offset(cx, cy),
+          28 + t * 52,
+          Paint()
+            ..color = Color.fromRGBO(255, 140, 60, 0.55 + t * 0.35)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2,
+        );
+      }
+    }
+
+    if (_phaseFlash > 0) {
+      final a = (_phaseFlash / 0.28).clamp(0.0, 1.0);
+      canvas.drawCircle(
+        Offset(cx, cy),
+        spriteSize * 0.55,
+        Paint()..color = Color.fromRGBO(255, 220, 180, 0.35 * a),
       );
     }
   }

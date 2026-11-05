@@ -49,10 +49,12 @@ import '../interiors/room_scene.dart';
 import '../ui/mmo_feedback.dart';
 import '../ui/quest_board_ui.dart';
 import '../ui/shop_ui.dart';
+import '../ui/zone_banner.dart';
 import 'adventure.dart';
 import 'click_pathfinder.dart';
 import 'debug_mask_editor.dart';
 import 'debug_place_jump.dart';
+import 'debug_tile_inspect.dart';
 import 'debug_walk_grid.dart';
 import 'game_debug.dart';
 import 'game_input.dart';
@@ -992,6 +994,8 @@ class _CustomMapGameState extends State<CustomMapGame> with WidgetsBindingObserv
     // Backgrounded (phone home button, app switcher, web tab hidden, window
     // closing): save where Kaela stands right now, and silence audio.
     // mediaPlayer + Android music focus otherwise keeps BGM playing off-screen.
+    // Also clear WASD — browsers drop KeyUp on tab switch, which left Kaela
+    // walking forever (and off the map).
     switch (state) {
       case AppLifecycleState.inactive:
       case AppLifecycleState.paused:
@@ -999,6 +1003,7 @@ class _CustomMapGameState extends State<CustomMapGame> with WidgetsBindingObserv
       case AppLifecycleState.detached:
         MusicManager().pauseForAppLifecycle();
         SfxManager().pauseForAppLifecycle();
+        GameInput.onFocusLost();
         if (state != AppLifecycleState.inactive && _activeGame != null) {
           SaveService.saveNow();
         }
@@ -1006,6 +1011,7 @@ class _CustomMapGameState extends State<CustomMapGame> with WidgetsBindingObserv
       case AppLifecycleState.resumed:
         MusicManager().resumeForAppLifecycle();
         SfxManager().resumeForAppLifecycle();
+        GameInput.onFocusGained();
         break;
     }
   }
@@ -1146,7 +1152,7 @@ class IntroScreen extends StatelessWidget {
                 Text(_isTouch
                         ? 'Tap to move · tap foe to shoot · WASD optional'
                         : kDebugMode
-                            ? 'Click pathfind · click foe / T shoot · WASD · Esc · J · I · ` · F2 jump'
+                            ? 'Click pathfind · click foe / T shoot · WASD · Esc · J · I · ` · F2 jump · ⇧click tile'
                             : 'Click pathfind · click foe / T to shoot · WASD · Esc Menu · J · I',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.white24, fontSize: 11, letterSpacing: 1.2)),
@@ -1574,6 +1580,9 @@ Future<void> _startLevel(BonfireGameInterface game, int level) async {
   BuildingMasks.loadFromDisk();
   // Walls from TMJ (complete) so click-paths go around forests, not through.
   await ClickPathfinder.primeFromAsset(_mapAssetForLevel(level));
+  if (kDebugMode) {
+    await DebugTileInspect.primeFromAsset(_mapAssetForLevel(level));
+  }
   SaveService.snapshot = _snapshot;
   // Companions stay home: the region on screen decides who follows.
   final arrivedFrom = Regions.previous;
@@ -1651,7 +1660,7 @@ Future<void> _startLevel(BonfireGameInterface game, int level) async {
   Travel.markVisited(level);
   final dest = Travel.byLevel(level);
   if (dest != null) {
-    MmoFeedback.enterZone(dest.title, blurb: dest.blurb);
+    MmoFeedback.enterZone(dest.title, regionId: dest.regionId);
   }
   final d = SaveService.data;
   if (Gates.wantsReturnLine(Regions.current, from: arrivedFrom)) {
@@ -1720,7 +1729,10 @@ KeyEventResult _handleDebugKey(FocusNode _, KeyEvent event) {
       event is KeyDownEvent &&
       event.logicalKey == LogicalKeyboardKey.backquote) {
     GameDebug.toggle();
-    if (!GameDebug.isOn) DebugPlaceJump.hide();
+    if (!GameDebug.isOn) {
+      DebugPlaceJump.hide();
+      DebugTileInspect.lastLabel.value = null;
+    }
     return KeyEventResult.handled;
   }
   if (kDebugMode && DebugPlaceJump.handleKey(event)) {
@@ -1896,6 +1908,9 @@ Widget _mapPointer({bool checkDialogue = false}) {
           if (AIFragment.activeDialogue.value != null) return;
         }
         final screen = _pointerToViewport(e.position);
+        final world = _pointerToWorld(e.position);
+        // Shift+click (DEBUG on): name the tile/prop under the cursor.
+        if (DebugTileInspect.tryHandleWorldClick(world)) return;
         final ed = DebugMaskEditor.instance;
         if (ed != null && GameDebug.isOn && ed.onScreenTap(screen)) return;
         if (GameDebug.isOn) {
@@ -1903,7 +1918,6 @@ Widget _mapPointer({bool checkDialogue = false}) {
         }
         // World space — handle immediately (gesture turn) so shots fire on web.
         // Do not also queue pendingClick or _issueClick runs twice.
-        final world = _pointerToWorld(e.position);
         final kaela = CustomPlayer.current;
         if (kaela != null) {
           kaela.handleWorldClick(world);
@@ -2542,52 +2556,10 @@ class GameHudState extends State<GameHud> {
               // Wide (landscape): the zone banner sits between health and
               // tracker so it never covers the middle of the screen.
               final wide = !HudLayout.narrow(screen);
-              final Widget banner = KeyedSubtree(key: const ValueKey('hud-banner'), child: ValueListenableBuilder<String?>(
-          valueListenable: MmoFeedback.zoneTitle,
-          builder: (_, title, __) {
-            if (title == null) return const SizedBox.shrink();
-            return IgnorePointer(
-              child: Center(
-                child: AnimatedOpacity(
-                  opacity: 1,
-                  duration: const Duration(milliseconds: 300),
-                  child: Container(
-                    key: const ValueKey('hud-banner-card'),
-                    padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.55),
-                      border: Border.all(color: const Color(0xFF00FFCC).withValues(alpha: 0.35)),
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(title.toUpperCase(),
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                                color: Color(0xFFAAFFEE),
-                                fontSize: 14,
-                                letterSpacing: 3,
-                                fontWeight: FontWeight.bold)),
-                        ValueListenableBuilder<String?>(
-                          valueListenable: MmoFeedback.zoneBlurb,
-                          builder: (_, blurb, __) => blurb == null || blurb.isEmpty
-                              ? const SizedBox.shrink()
-                              : Padding(
-                                  padding: const EdgeInsets.only(top: 4),
-                                  child: Text(blurb,
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(
-                                          color: Colors.white54, fontSize: 10)),
-                                ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            );
-          },
-        ));
+              const Widget banner = KeyedSubtree(
+                key: ValueKey('hud-banner'),
+                child: ZoneBanner(),
+              );
               // Fixed-width capsule bars. Do not wrap in IntrinsicWidth or
               // put Expanded inside the bar — that fails layout and the
               // whole top HUD (HP/XP) disappears.
@@ -2947,7 +2919,10 @@ class _DebugOverlay extends StatelessWidget {
               active: debug,
               onTap: () {
                 GameDebug.toggle();
-                if (!GameDebug.isOn) DebugPlaceJump.hide();
+                if (!GameDebug.isOn) {
+                  DebugPlaceJump.hide();
+                  DebugTileInspect.lastLabel.value = null;
+                }
               },
               onLongPress: () {
                 if (!GameDebug.isOn) GameDebug.toggle();
@@ -2986,7 +2961,7 @@ class _DebugToggleButton extends StatelessWidget {
               color: active ? const Color(0xFF00FF88) : Colors.white24),
           borderRadius: BorderRadius.circular(4),
         ),
-        child: Text(active ? '`  DEBUG · F2' : '`  DEBUG',
+        child: Text(active ? '`  DEBUG · F2 · ⇧click' : '`  DEBUG',
             style: TextStyle(
               color: active ? const Color(0xFF00FF88) : Colors.white38,
               fontSize: 11,
@@ -3015,22 +2990,34 @@ class _DebugHud extends StatelessWidget {
             final tx = pos.x / _tile;
             final ty = pos.y / _tile;
             final map = GameState.mapIds[GameState.level] ?? '?';
-            return Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.7),
-                border: Border.all(color: const Color(0xFF00FF88), width: 1),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                '$map  ·  px ${pos.x.toStringAsFixed(0)}, ${pos.y.toStringAsFixed(0)}'
-                '  ·  tile ${tx.toStringAsFixed(1)}, ${ty.toStringAsFixed(1)}',
-                style: const TextStyle(
-                    color: Color(0xFF00FF88),
-                    fontSize: 13,
-                    fontFamily: 'monospace',
-                    letterSpacing: 1),
-              ),
+            return ValueListenableBuilder<String?>(
+              valueListenable: DebugTileInspect.lastLabel,
+              builder: (_, tileLabel, __) {
+                final lines = <String>[
+                  '$map  ·  px ${pos.x.toStringAsFixed(0)}, ${pos.y.toStringAsFixed(0)}'
+                      '  ·  tile ${tx.toStringAsFixed(1)}, ${ty.toStringAsFixed(1)}',
+                  if (tileLabel != null) '⇧ $tileLabel',
+                ];
+                return Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.7),
+                    border:
+                        Border.all(color: const Color(0xFF00FF88), width: 1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    lines.join('\n'),
+                    style: const TextStyle(
+                        color: Color(0xFF00FF88),
+                        fontSize: 13,
+                        fontFamily: 'monospace',
+                        letterSpacing: 1,
+                        height: 1.35),
+                  ),
+                );
+              },
             );
           },
         ),

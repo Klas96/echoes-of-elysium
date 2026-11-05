@@ -1,7 +1,10 @@
 name: CI
 
+# Full analyze/test/build gate for main only.
+# PRs into `dev` stay fast — no redundant CI on every playtest merge.
 on:
   pull_request:
+    branches: [main]
   push:
     branches: [main]
 

@@ -117,6 +117,49 @@ class DialogChrome {
     );
   }
 
+  /// Enter-zone name plate — chunky hard-pixel RPG banner (WoW zone feel).
+  /// Same neon double-frame grammar as talk/toast chrome — not Material.
+  static Widget zoneBannerShell({
+    required Widget child,
+    Color? accent,
+    EdgeInsetsGeometry? padding,
+  }) {
+    return _PixelFrame(
+      accent: (accent ?? cyan).withValues(alpha: 0.95),
+      fill: ink.withValues(alpha: 0.94),
+      thickness: 2,
+      corner: 12,
+      padding: padding ?? const EdgeInsets.fromLTRB(14, 10, 14, 10),
+      child: child,
+    );
+  }
+
+  /// Uppercase zone name — hard 1px shadow, no soft glow.
+  /// Letter-spacing kept modest so long titles fit the plate band.
+  static TextStyle zoneTitleStyle({Color? accent, bool compact = false}) =>
+      TextStyle(
+        color: accent ?? const Color(0xFFAAFFEE),
+        fontSize: compact ? 11 : 13,
+        letterSpacing: compact ? 1.2 : 1.8,
+        fontWeight: FontWeight.w800,
+        height: 1.0,
+        fontFamily: 'monospace',
+        shadows: const [
+          Shadow(color: Color(0xFF050814), offset: Offset(1, 1), blurRadius: 0),
+        ],
+      );
+
+  /// One-line flavor under the zone name.
+  static TextStyle zoneBlurbStyle({bool compact = false}) => TextStyle(
+        color: bodyDim,
+        fontSize: compact ? 9.5 : 11,
+        height: 1.25,
+        letterSpacing: 0.15,
+        shadows: const [
+          Shadow(color: Color(0xFF050814), offset: Offset(1, 1), blurRadius: 0),
+        ],
+      );
+
   /// TALK / INTERACT / hold prompt chip.
   static Widget promptShell({
     required Widget child,

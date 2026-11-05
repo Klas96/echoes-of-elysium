@@ -68,7 +68,8 @@ class RoomText {
   static const ashaNote =
       'Kaela, use what you need. Bank glimmer free; spare gear costs a little to store. A.';
   static String journalCount(int n, int total) => '$n of $total creatures befriended';
-  static const wallMap = "Asha has pinned every trail she's walked. A few are still blank.";
+  static const wallWindow =
+      'Night presses against the glass. The woods are a dark quiet.';
   static const stove =
       'A low fire, still crackling. Asha must have stoked it before she left. It smells of pine.';
 

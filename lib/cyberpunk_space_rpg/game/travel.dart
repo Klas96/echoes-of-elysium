@@ -49,37 +49,37 @@ class Travel {
     TravelDest(
       level: 1,
       title: 'Whispering Woods',
-      blurb: 'Gaia\'s glade. Home of the first UEC breach.',
+      blurb: 'Gaia\'s glade — first light before the breach.',
       regionId: 'woods',
     ),
     TravelDest(
       level: 2,
       title: 'The City',
-      blurb: 'Neon streets, the tea house, and the UEC checkpoint.',
+      blurb: 'Neon streets, tea steam, and a UEC checkpoint.',
       regionId: 'city',
     ),
     TravelDest(
       level: 5,
       title: 'Lantern Town',
-      blurb: 'Quiet market alleys. Mira trades glimmer for gear.',
+      blurb: 'Quiet market alleys — Mira trades glimmer for gear.',
       regionId: 'town',
     ),
     TravelDest(
       level: 6,
       title: 'Canal Works',
-      blurb: 'Scrapyard west of the City\'s SW yard — heaps, oil, and dead drones.',
+      blurb: 'Oil, scrap heaps, and drones that never woke.',
       regionId: 'works',
     ),
     TravelDest(
       level: 3,
       title: 'The Ruins',
-      blurb: 'Collapsed Aetherian districts on the road to the Core.',
+      blurb: 'Dead neon districts on the road to the Core.',
       regionId: 'ruins',
     ),
     TravelDest(
       level: 4,
       title: 'Gaia\'s Core',
-      blurb: 'Sacred chamber under the ruins. The Core Record waits.',
+      blurb: 'Sacred chamber beneath the ruins. The Record waits.',
       regionId: 'core',
     ),
   ];

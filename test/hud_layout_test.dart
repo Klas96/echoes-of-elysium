@@ -35,6 +35,7 @@ void busyState({bool talk = false}) {
       'Mira\'s stall (trade glimmer) · job board · west road → City, then follow the lantern road south';
   MmoFeedback.zoneTitle.value = 'Lantern Town';
   MmoFeedback.zoneBlurb.value = 'Market hub · job board · Mira\'s stall';
+  MmoFeedback.zoneRegion.value = 'town';
   WellRested.remaining.value = 178;
   Meals.active.value = 'night_bowl';
   Meals.remaining.value = 151;
@@ -59,6 +60,8 @@ void clearState() {
   GameToast.current.value = null;
   MmoFeedback.pops.value = const [];
   MmoFeedback.zoneTitle.value = null;
+  MmoFeedback.zoneBlurb.value = null;
+  MmoFeedback.zoneRegion.value = null;
   WellRested.remaining.value = 0;
   Meals.active.value = null;
   Meals.remaining.value = 0;
@@ -135,6 +138,19 @@ void main() {
   test('compact chips below 560 px wide', () {
     expect(HudLayout.compactChips(412 - 24), isTrue);
     expect(HudLayout.compactChips(915 - 24), isFalse);
+  });
+
+  test('ability bar pins to bottom on phone / narrow', () {
+    // Tests default to Android (isTouch).
+    expect(HudLayout.abilityBottom(const Size(412, 915)), 0);
+    expect(HudLayout.abilityBottom(const Size(360, 800)), 0);
+    expect(HudLayout.abilityBottom(const Size(915, 412)), 0);
+    debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    expect(HudLayout.abilityBottom(const Size(412, 915)), 0,
+        reason: 'narrow desktop window still pins');
+    expect(HudLayout.abilityBottom(const Size(1440, 900)), 26,
+        reason: 'wide desktop keeps lift');
   });
 
   test('talk cards shrink on phone / short landscape', () {

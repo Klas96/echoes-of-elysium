@@ -136,8 +136,8 @@ void useSpot(RoomData room, RoomSpot s) {
       GameToast.show('MENU',
           body: RoomText.journalCount(Bonds.befriendedCount, Bonds.total), color: _asha, compact: true);
       Journal.show();
-    case 'ranger_cabin/wall_map':
-      _wallMap();
+    case 'ranger_cabin/wall_window':
+      _flavour(RoomText.wallWindow);
     case 'ranger_cabin/stove':
       _flavour(RoomText.stove);
     case 'pond_grotto/pond_fragment':
@@ -467,21 +467,3 @@ void _stashWithdrawGear() {
   ));
 }
 
-void _wallMap() {
-  const names = {
-    'woods': 'Whispering Woods',
-    'city': 'The City',
-    'town': 'Lantern Town',
-    'ruins': 'The Ruins',
-    'core': "Gaia's Core",
-  };
-  final walked = [
-    for (final e in names.entries) '${GameState.hasVisitedRegion(e.key) ? '■' : '□'} ${e.value}',
-  ];
-  RoomPanel.show(RoomPanelData(
-    title: "Asha's map",
-    color: _asha,
-    pages: [RoomText.wallMap],
-    footer: walked.join('   '),
-  ));
-}

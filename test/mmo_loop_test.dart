@@ -6,7 +6,9 @@ import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/game/quests.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/game/save_service.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/game/trade.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/game/well_rested.dart';
+import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/game/travel.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/ui/mmo_feedback.dart';
+import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/ui/zone_banner.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -17,6 +19,9 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     SaveService.data = SaveData();
     WellRested.remaining.value = 0;
+    MmoFeedback.zoneTitle.value = null;
+    MmoFeedback.zoneBlurb.value = null;
+    MmoFeedback.zoneRegion.value = null;
   });
 
   group('well rested', () {
@@ -148,6 +153,55 @@ void main() {
       expect(a0, 1);
       expect(dy1, -DamageNumber.rise);
       expect(a1, 0);
+    });
+  });
+
+  group('enter-zone banners', () {
+    test('Travel destinations carry zone titles', () {
+      const wanted = {
+        1: 'Whispering Woods',
+        2: 'The City',
+        6: 'Canal Works',
+        3: 'The Ruins',
+        4: "Gaia's Core",
+      };
+      for (final e in wanted.entries) {
+        final dest = Travel.byLevel(e.key);
+        expect(dest, isNotNull, reason: 'level ${e.key}');
+        expect(dest!.title, e.value);
+      }
+    });
+
+    test('enterZone shows title only, then clears', () async {
+      final dest = Travel.byLevel(6)!;
+      MmoFeedback.enterZone(dest.title, regionId: dest.regionId);
+      expect(MmoFeedback.zoneTitle.value, 'Canal Works');
+      expect(MmoFeedback.zoneBlurb.value, isNull);
+      expect(MmoFeedback.zoneRegion.value, 'works');
+      await Future<void>.delayed(
+        MmoFeedback.zoneHold + const Duration(milliseconds: 100),
+      );
+      expect(MmoFeedback.zoneTitle.value, isNull);
+      expect(MmoFeedback.zoneBlurb.value, isNull);
+      expect(MmoFeedback.zoneRegion.value, isNull);
+    });
+
+    test('each travel region has a themed pixel banner asset', () {
+      for (final dest in Travel.all) {
+        final asset = ZoneBanner.assetFor(dest.regionId);
+        expect(asset, isNotNull, reason: dest.regionId);
+        expect(asset, contains('/${dest.regionId}.png'));
+      }
+    });
+
+    test('each banner region has plate insets that keep text inside the art', () {
+      for (final region in ZoneBanner.assets.keys) {
+        expect(ZoneBanner.plateInsetsFor(region), isNotNull, reason: region);
+        final inset = ZoneBanner.plateInsetsFor(region)!;
+        expect(inset.left + inset.right, lessThan(0.75), reason: region);
+        expect(inset.top + inset.bottom, lessThan(0.85), reason: region);
+        expect(inset.left + inset.right, greaterThan(0.25), reason: region);
+      }
     });
   });
 }
