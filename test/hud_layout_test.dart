@@ -137,6 +137,19 @@ void main() {
     expect(HudLayout.compactChips(915 - 24), isFalse);
   });
 
+  test('ability bar pins to bottom on phone / narrow', () {
+    // Tests default to Android (isTouch).
+    expect(HudLayout.abilityBottom(const Size(412, 915)), 0);
+    expect(HudLayout.abilityBottom(const Size(360, 800)), 0);
+    expect(HudLayout.abilityBottom(const Size(915, 412)), 0);
+    debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    expect(HudLayout.abilityBottom(const Size(412, 915)), 0,
+        reason: 'narrow desktop window still pins');
+    expect(HudLayout.abilityBottom(const Size(1440, 900)), 26,
+        reason: 'wide desktop keeps lift');
+  });
+
   test('talk cards shrink on phone / short landscape', () {
     // Tests default to Android (isTouch); force desktop so size rules show.
     debugDefaultTargetPlatformOverride = TargetPlatform.linux;

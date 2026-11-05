@@ -23,7 +23,8 @@ class AbilityHud extends StatelessWidget {
     final btn = HudLayout.isTouch ? 64.0 : 54.0;
     final gap = HudLayout.isTouch ? 8.0 : 6.0;
     final right = HudLayout.isTouch ? 10.0 : 16.0;
-    final bottom = HudLayout.narrow(screen) ? 20.0 : 26.0;
+    // Phone / narrow: pin to the bottom edge; SafeArea keeps system padding.
+    final bottom = HudLayout.abilityBottom(screen);
 
     return Positioned(
       right: right,
@@ -31,6 +32,10 @@ class AbilityHud extends StatelessWidget {
       child: SafeArea(
         top: false,
         left: false,
+        // Tiny gap above the home indicator / gesture bar so buttons aren't flush.
+        minimum: EdgeInsets.only(
+          bottom: (HudLayout.isTouch || HudLayout.narrow(screen)) ? 8 : 0,
+        ),
         child: ValueListenableBuilder<int>(
           valueListenable: Progression.revision,
           builder: (_, __, ___) => Row(
