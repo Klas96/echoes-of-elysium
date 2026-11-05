@@ -22,7 +22,7 @@ TILES = GEN / "tiles"
 OUT_SHEET = ROOT / "assets" / "images" / "interiors" / "tileset.png"
 SYS_TOOLS = ROOT / "tools"
 sys.path.insert(0, str(SYS_TOOLS))
-from pixelize_gen import pixelize  # noqa: E402
+from pixelize_gen import pixelize, pixelize_stack_pair  # noqa: E402
 
 T = 32
 COLS = 16
@@ -154,6 +154,14 @@ def prop_tile(src: Path, tid: int) -> Image.Image:
     return out
 
 
+def bed_pair(src: Path) -> tuple[Image.Image, Image.Image]:
+    """One continuous AI bed → hard 32×64 NN → head/foot (no mid padding gap)."""
+    head, foot = pixelize_stack_pair(src, T, pad=0.02, soft_fit=False)
+    head = hard_pixel(clear_dark_bg(head), size=T, colours=12)
+    foot = hard_pixel(clear_dark_bg(foot), size=T, colours=12)
+    return clear_dark_bg(head), clear_dark_bg(foot)
+
+
 def assemble_props() -> dict[int, Image.Image]:
     mapping = {
         PLANT: "cabin_plant.jpg",
@@ -162,11 +170,15 @@ def assemble_props() -> dict[int, Image.Image]:
         NOTE: "cabin_note.jpg",
         LOGS: "cabin_logs.jpg",
         RUG: "cabin_rug.jpg",
-        BED_C_H: "cabin_bed_head.jpg",
-        BED_C_F: "cabin_bed_foot.jpg",
         MAT_CABIN: "cabin_doormat.jpg",
     }
-    return {tid: prop_tile(GEN / name, tid) for tid, name in mapping.items()}
+    out = {tid: prop_tile(GEN / name, tid) for tid, name in mapping.items()}
+    # #132 continuous bed (hard NN) — avoids mid-seam hole between head/foot.
+    bed_src = GEN / "cabin_bed_full.jpg"
+    if not bed_src.exists():
+        raise FileNotFoundError(f"missing continuous bed source: {bed_src}")
+    out[BED_C_H], out[BED_C_F] = bed_pair(bed_src)
+    return out
 
 
 def patch_sheet(tiles: dict[int, Image.Image]) -> None:

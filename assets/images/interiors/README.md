@@ -46,6 +46,10 @@ JSON layers, not the PNG. Do not commit @2x previews.
 32px hard pixels to match overworld tileset quality (neon cyberpunk /
 night-forest palette).
 
+**Two-tile beds:** Prefer a single continuous `*_bed_full.jpg` (tea / cabin).
+Assemblers NN that to 32×64 then split head/foot so the mid join has no
+independent padding hole. Do not invent bed pixels with Pillow.
+
 ## Tileset
 
 `assets/images/interiors/tileset.png` — 16 columns, 32 px, spacing 0,

@@ -5,6 +5,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 
 import 'audio_contexts.dart';
+import 'sfx_audio_port.dart';
 
 /// Desktop / mobile SFX via audioplayers (Linux, Windows, Android, iOS, macOS).
 /// just_audio has no Linux plugin — MissingPluginException on desktop.
@@ -16,22 +17,31 @@ class SfxManager {
   factory SfxManager() => _instance;
   SfxManager._();
 
-  AudioPlayer? _footstep;
-  AudioPlayer? _damage;
-  AudioPlayer? _portal;
-  AudioPlayer? _chime;
-  AudioPlayer? _heal;
-  AudioPlayer? _voice;
+  /// Override in tests to inject recording fakes (no real AudioPlayer).
+  @visibleForTesting
+  static SfxAudioPortFactory portFactory = AudioplayersSfxPort.new;
+
+  /// Override in tests to skip [AudioPlayer.global.setAudioContext].
+  @visibleForTesting
+  static SfxGlobalContextSetter globalContextSetter =
+      defaultSfxGlobalContextSetter;
+
+  SfxAudioPort? _footstep;
+  SfxAudioPort? _damage;
+  SfxAudioPort? _portal;
+  SfxAudioPort? _chime;
+  SfxAudioPort? _heal;
+  SfxAudioPort? _voice;
   /// Round-robin so auto-fire never stop/plays the same player twice in a row
   /// (Android MediaPlayer goes laggy/silent under overlapping stop+play).
-  List<AudioPlayer>? _shootPlayers;
-  Future<List<AudioPlayer>?>? _shootPlayersLoading;
+  List<SfxAudioPort>? _shootPlayers;
+  Future<List<SfxAudioPort>?>? _shootPlayersLoading;
   int _shootIdx = 0;
   bool _ready = false;
   bool _initStarted = false;
   int _voiceToken = 0;
   /// Drops stale stop/play chains when the same one-shot is re-triggered.
-  final Map<AudioPlayer, int> _oneShotGen = {};
+  final Map<SfxAudioPort, int> _oneShotGen = {};
 
   double _userVolume = 1.0;
   bool _enabled = true;
@@ -64,6 +74,35 @@ class SfxManager {
   static PlayerMode get _shootMode =>
       !kIsWeb && Platform.isAndroid ? PlayerMode.lowLatency : PlayerMode.mediaPlayer;
 
+  /// Test-only: wipe singleton state between cases.
+  @visibleForTesting
+  void debugReset() {
+    _footstep = null;
+    _damage = null;
+    _portal = null;
+    _chime = null;
+    _heal = null;
+    _voice = null;
+    _shootPlayers = null;
+    _shootPlayersLoading = null;
+    _shootIdx = 0;
+    _ready = false;
+    _initStarted = false;
+    _voiceToken = 0;
+    _oneShotGen.clear();
+    _userVolume = 1.0;
+    _enabled = true;
+  }
+
+  @visibleForTesting
+  List<SfxAudioPort>? get debugShootPlayers => _shootPlayers;
+
+  @visibleForTesting
+  int get debugShootIdx => _shootIdx;
+
+  @visibleForTesting
+  bool get debugReady => _ready;
+
   Future<void> init() async {
     if (_ready) return;
     if (_initStarted) {
@@ -77,14 +116,14 @@ class SfxManager {
     try {
       // Must not use AndroidAudioFocus.gain — that pauses MusicManager BGM.
       final mix = GameAudioContexts.mix;
-      _footstep ??= AudioPlayer();
-      _damage ??= AudioPlayer();
-      _portal ??= AudioPlayer();
-      _chime ??= AudioPlayer();
-      _heal ??= AudioPlayer();
-      _voice ??= AudioPlayer();
+      _footstep ??= portFactory();
+      _damage ??= portFactory();
+      _portal ??= portFactory();
+      _chime ??= portFactory();
+      _heal ??= portFactory();
+      _voice ??= portFactory();
       try {
-        await AudioPlayer.global.setAudioContext(mix);
+        await globalContextSetter(mix);
       } catch (e) {
         debugPrint('SfxManager global context: $e');
       }
@@ -121,7 +160,7 @@ class SfxManager {
     }
   }
 
-  Future<List<AudioPlayer>?> _ensureShootPlayers() async {
+  Future<List<SfxAudioPort>?> _ensureShootPlayers() async {
     if (_shootPlayers != null) return _shootPlayers;
     _shootPlayersLoading ??= () async {
       try {
@@ -130,7 +169,7 @@ class SfxManager {
         final vol = _baseShoot * _scale;
         // Parallel warm — sequential create/decode made the first phone shot late.
         final players = await Future.wait(List.generate(_shootSlots, (_) async {
-          final p = AudioPlayer();
+          final p = portFactory();
           await p.setPlayerMode(mode);
           await _safeContext(p, mix);
           await p.setReleaseMode(ReleaseMode.stop);
@@ -149,7 +188,7 @@ class SfxManager {
     return _shootPlayersLoading;
   }
 
-  Future<void> _safeContext(AudioPlayer p, AudioContext mix) async {
+  Future<void> _safeContext(SfxAudioPort p, AudioContext mix) async {
     try {
       await p.setAudioContext(mix);
     } catch (e) {
@@ -182,7 +221,7 @@ class SfxManager {
     } catch (_) {}
   }
 
-  Future<void> _playOneShot(AudioPlayer? player, String asset) async {
+  Future<void> _playOneShot(SfxAudioPort? player, String asset) async {
     if (!_audible) return;
     if (!_ready) await init();
     final p = player;
@@ -226,7 +265,7 @@ class SfxManager {
     unawaited(_fireShoot(p, vol));
   }
 
-  Future<void> _fireShoot(AudioPlayer p, double vol) async {
+  Future<void> _fireShoot(SfxAudioPort p, double vol) async {
     final gen = (_oneShotGen[p] = (_oneShotGen[p] ?? 0) + 1);
     try {
       // stop()+resume() only. Never seek after stop on Android SoundPool:
@@ -268,7 +307,7 @@ class SfxManager {
       // Fresh player each line — Linux/GStreamer often stays silent after
       // stop()+replay on the same short-clip player.
       final old = _voice;
-      _voice = AudioPlayer();
+      _voice = portFactory();
       final p = _voice!;
       try {
         await old?.stop();
