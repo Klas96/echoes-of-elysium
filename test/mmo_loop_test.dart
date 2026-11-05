@@ -193,5 +193,15 @@ void main() {
         expect(asset, contains('/${dest.regionId}.png'));
       }
     });
+
+    test('each banner region has plate insets that keep text inside the art', () {
+      for (final region in ZoneBanner.assets.keys) {
+        expect(ZoneBanner.plateInsetsFor(region), isNotNull, reason: region);
+        final inset = ZoneBanner.plateInsetsFor(region)!;
+        expect(inset.left + inset.right, lessThan(0.75), reason: region);
+        expect(inset.top + inset.bottom, lessThan(0.85), reason: region);
+        expect(inset.left + inset.right, greaterThan(0.25), reason: region);
+      }
+    });
   });
 }

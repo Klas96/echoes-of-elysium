@@ -20,10 +20,24 @@ class ZoneBanner extends StatelessWidget {
     'town': 'assets/images/ui/zone_banners/town.png',
   };
 
+  /// Fractional insets into the dark text plate of each 240×80 sheet
+  /// (measured from art + a few px of inner margin so glyphs stay inside).
+  static const plateInsets = {
+    'woods': EdgeInsets.fromLTRB(0.30, 0.42, 0.32, 0.28),
+    'city': EdgeInsets.fromLTRB(0.29, 0.38, 0.29, 0.22),
+    'works': EdgeInsets.fromLTRB(0.27, 0.40, 0.25, 0.24),
+    'ruins': EdgeInsets.fromLTRB(0.14, 0.40, 0.20, 0.26),
+    'core': EdgeInsets.fromLTRB(0.26, 0.30, 0.27, 0.26),
+    'town': EdgeInsets.fromLTRB(0.28, 0.34, 0.28, 0.32),
+  };
+
+  /// Plate insets for [regionId], or null when unknown.
+  static EdgeInsets? plateInsetsFor(String? regionId) =>
+      regionId == null ? null : plateInsets[regionId];
+
   /// Asset path for [regionId], or null when unknown.
   static String? assetFor(String? regionId) =>
       regionId == null ? null : assets[regionId];
-
   static Color accentFor(String? regionId) => switch (regionId) {
         'woods' => const Color(0xFFAAFFEE),
         'city' => DialogChrome.cyan,
@@ -33,6 +47,17 @@ class ZoneBanner extends StatelessWidget {
         'town' => const Color(0xFFFFE08A),
         _ => DialogChrome.cyan,
       };
+
+  static EdgeInsets _textPadding(String? regionId, double bannerW, double artH) {
+    final f = plateInsets[regionId] ??
+        const EdgeInsets.fromLTRB(0.28, 0.36, 0.28, 0.28);
+    return EdgeInsets.fromLTRB(
+      bannerW * f.left,
+      artH * f.top,
+      bannerW * f.right,
+      artH * f.bottom,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -49,9 +74,11 @@ class ZoneBanner extends StatelessWidget {
             final screen = MediaQuery.sizeOf(context);
             final short = screen.height < 500;
             final narrow = screen.width < 400;
+            final compact = short || narrow;
             final maxW = screen.width * 0.9;
             // Native sheets are 240×80 (3:1). Cap on short landscape for HUD.
-            final bannerW = short ? maxW.clamp(200.0, 300.0) : maxW.clamp(240.0, 420.0);
+            final bannerW =
+                short ? maxW.clamp(200.0, 300.0) : maxW.clamp(240.0, 420.0);
             final artH = bannerW / 3;
 
             return IgnorePointer(
@@ -63,7 +90,6 @@ class ZoneBanner extends StatelessWidget {
                     width: bannerW,
                     height: artH,
                     child: Stack(
-                      alignment: Alignment.center,
                       children: [
                         Positioned.fill(
                           child: Image.asset(
@@ -75,44 +101,46 @@ class ZoneBanner extends StatelessWidget {
                           ),
                         ),
                         Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: bannerW * 0.22,
-                            vertical: artH * 0.18,
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                title.toUpperCase(),
-                                textAlign: TextAlign.center,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: DialogChrome.zoneTitleStyle(
-                                  accent: accent,
-                                  compact: short || narrow,
-                                ),
-                              ),
-                              ValueListenableBuilder<String?>(
-                                valueListenable: MmoFeedback.zoneBlurb,
-                                builder: (_, blurb, __) {
-                                  if (blurb == null || blurb.isEmpty) {
-                                    return const SizedBox.shrink();
-                                  }
-                                  return Padding(
-                                    padding: const EdgeInsets.only(top: 2),
-                                    child: Text(
-                                      blurb,
-                                      textAlign: TextAlign.center,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: DialogChrome.zoneBlurbStyle(
-                                        compact: short || narrow,
-                                      ),
+                          padding: _textPadding(region, bannerW, artH),
+                          child: Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(
+                                    title.toUpperCase(),
+                                    textAlign: TextAlign.center,
+                                    maxLines: 1,
+                                    softWrap: false,
+                                    style: DialogChrome.zoneTitleStyle(
+                                      accent: accent,
+                                      compact: compact,
                                     ),
-                                  );
-                                },
-                              ),
-                            ],
+                                  ),
+                                ),
+                                ValueListenableBuilder<String?>(
+                                  valueListenable: MmoFeedback.zoneBlurb,
+                                  builder: (_, blurb, __) {
+                                    if (blurb == null || blurb.isEmpty) {
+                                      return const SizedBox.shrink();
+                                    }
+                                    return Padding(
+                                      padding: const EdgeInsets.only(top: 1),
+                                      child: Text(
+                                        blurb,
+                                        textAlign: TextAlign.center,
+                                        maxLines: compact ? 1 : 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: DialogChrome.zoneBlurbStyle(
+                                          compact: true,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ],
