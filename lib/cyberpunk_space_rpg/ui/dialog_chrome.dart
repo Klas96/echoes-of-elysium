@@ -117,31 +117,46 @@ class DialogChrome {
     );
   }
 
-  /// Enter-zone name plate — hard-pixel RPG banner (not a soft Material toast).
-  static Widget zoneBannerShell({required Widget child}) {
+  /// Enter-zone name plate — chunky hard-pixel RPG banner (WoW zone feel).
+  /// Same neon double-frame grammar as talk/toast chrome — not Material.
+  static Widget zoneBannerShell({
+    required Widget child,
+    Color? accent,
+    EdgeInsetsGeometry? padding,
+  }) {
     return _PixelFrame(
-      accent: cyan.withValues(alpha: 0.85),
-      fill: ink.withValues(alpha: 0.9),
-      thickness: 1.5,
-      corner: 10,
-      padding: const EdgeInsets.fromLTRB(22, 12, 22, 10),
+      accent: (accent ?? cyan).withValues(alpha: 0.95),
+      fill: ink.withValues(alpha: 0.94),
+      thickness: 2,
+      corner: 12,
+      padding: padding ?? const EdgeInsets.fromLTRB(14, 10, 14, 10),
       child: child,
     );
   }
 
-  static TextStyle zoneTitleStyle() => const TextStyle(
-        color: Color(0xFFAAFFEE),
-        fontSize: 15,
-        letterSpacing: 3.2,
+  /// Wide-spaced uppercase zone name — hard 1px shadow, no soft glow.
+  static TextStyle zoneTitleStyle({Color? accent, bool compact = false}) =>
+      TextStyle(
+        color: accent ?? const Color(0xFFAAFFEE),
+        fontSize: compact ? 12 : 15,
+        letterSpacing: compact ? 2.4 : 3.6,
         fontWeight: FontWeight.w800,
-        height: 1.1,
+        height: 1.05,
+        fontFamily: 'monospace',
+        shadows: const [
+          Shadow(color: Color(0xFF050814), offset: Offset(1, 1), blurRadius: 0),
+        ],
       );
 
-  static TextStyle zoneBlurbStyle() => TextStyle(
-        color: bodyDim.withValues(alpha: 0.92),
-        fontSize: 11,
-        height: 1.35,
-        letterSpacing: 0.2,
+  /// One-line flavor under the zone name.
+  static TextStyle zoneBlurbStyle({bool compact = false}) => TextStyle(
+        color: bodyDim,
+        fontSize: compact ? 9.5 : 11,
+        height: 1.25,
+        letterSpacing: 0.15,
+        shadows: const [
+          Shadow(color: Color(0xFF050814), offset: Offset(1, 1), blurRadius: 0),
+        ],
       );
 
   /// TALK / INTERACT / hold prompt chip.
