@@ -8,6 +8,7 @@ import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/game/trade.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/game/well_rested.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/game/travel.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/ui/mmo_feedback.dart';
+import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/ui/zone_banner.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -20,6 +21,7 @@ void main() {
     WellRested.remaining.value = 0;
     MmoFeedback.zoneTitle.value = null;
     MmoFeedback.zoneBlurb.value = null;
+    MmoFeedback.zoneRegion.value = null;
   });
 
   group('well rested', () {
@@ -174,12 +176,22 @@ void main() {
 
     test('enterZone shows title and flavor, then clears', () async {
       final dest = Travel.byLevel(6)!;
-      MmoFeedback.enterZone(dest.title, blurb: dest.blurb);
+      MmoFeedback.enterZone(dest.title, blurb: dest.blurb, regionId: dest.regionId);
       expect(MmoFeedback.zoneTitle.value, 'Canal Works');
       expect(MmoFeedback.zoneBlurb.value, dest.blurb);
+      expect(MmoFeedback.zoneRegion.value, 'works');
       await Future<void>.delayed(const Duration(milliseconds: 2900));
       expect(MmoFeedback.zoneTitle.value, isNull);
       expect(MmoFeedback.zoneBlurb.value, isNull);
+      expect(MmoFeedback.zoneRegion.value, isNull);
+    });
+
+    test('each travel region has a themed pixel banner asset', () {
+      for (final dest in Travel.all) {
+        final asset = ZoneBanner.assetFor(dest.regionId);
+        expect(asset, isNotNull, reason: dest.regionId);
+        expect(asset, contains('/${dest.regionId}.png'));
+      }
     });
   });
 }

@@ -49,6 +49,7 @@ import '../interiors/room_scene.dart';
 import '../ui/mmo_feedback.dart';
 import '../ui/quest_board_ui.dart';
 import '../ui/shop_ui.dart';
+import '../ui/zone_banner.dart';
 import 'adventure.dart';
 import 'click_pathfinder.dart';
 import 'debug_mask_editor.dart';
@@ -1659,7 +1660,7 @@ Future<void> _startLevel(BonfireGameInterface game, int level) async {
   Travel.markVisited(level);
   final dest = Travel.byLevel(level);
   if (dest != null) {
-    MmoFeedback.enterZone(dest.title, blurb: dest.blurb);
+    MmoFeedback.enterZone(dest.title, blurb: dest.blurb, regionId: dest.regionId);
   }
   final d = SaveService.data;
   if (Gates.wantsReturnLine(Regions.current, from: arrivedFrom)) {
@@ -2555,48 +2556,9 @@ class GameHudState extends State<GameHud> {
               // Wide (landscape): the zone banner sits between health and
               // tracker so it never covers the middle of the screen.
               final wide = !HudLayout.narrow(screen);
-              final Widget banner = KeyedSubtree(
-                key: const ValueKey('hud-banner'),
-                child: ValueListenableBuilder<String?>(
-                  valueListenable: MmoFeedback.zoneTitle,
-                  builder: (_, title, __) {
-                    if (title == null) return const SizedBox.shrink();
-                    return IgnorePointer(
-                      child: Center(
-                        child: ConstrainedBox(
-                          constraints: BoxConstraints(maxWidth: screen.width * 0.86),
-                          child: DialogChrome.zoneBannerShell(
-                            child: Column(
-                              key: const ValueKey('hud-banner-card'),
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  title.toUpperCase(),
-                                  textAlign: TextAlign.center,
-                                  style: DialogChrome.zoneTitleStyle(),
-                                ),
-                                ValueListenableBuilder<String?>(
-                                  valueListenable: MmoFeedback.zoneBlurb,
-                                  builder: (_, blurb, __) =>
-                                      blurb == null || blurb.isEmpty
-                                          ? const SizedBox.shrink()
-                                          : Padding(
-                                              padding: const EdgeInsets.only(top: 6),
-                                              child: Text(
-                                                blurb,
-                                                textAlign: TextAlign.center,
-                                                style: DialogChrome.zoneBlurbStyle(),
-                                              ),
-                                            ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
+              const Widget banner = KeyedSubtree(
+                key: ValueKey('hud-banner'),
+                child: ZoneBanner(),
               );
               // Fixed-width capsule bars. Do not wrap in IntrinsicWidth or
               // put Expanded inside the bar — that fails layout and the

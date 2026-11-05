@@ -8,6 +8,8 @@ class MmoFeedback {
   static final pops = ValueNotifier<List<HudPop>>(const []);
   static final zoneTitle = ValueNotifier<String?>(null);
   static final zoneBlurb = ValueNotifier<String?>(null);
+  /// Region id for the themed pixel plate (`woods`, `city`, …).
+  static final zoneRegion = ValueNotifier<String?>(null);
 
   // Damage numbers (components/damage_number.dart) share the pop look.
   static const hitColor = Color(0xFFFFFFFF);
@@ -40,16 +42,18 @@ class MmoFeedback {
     });
   }
 
-  /// WoW-style zone enter banner: big name + optional one-line flavor.
-  static void enterZone(String title, {String? blurb}) {
+  /// WoW-style zone enter banner: themed plate + name + optional flavor.
+  static void enterZone(String title, {String? blurb, String? regionId}) {
     zoneTitle.value = title;
     zoneBlurb.value = (blurb == null || blurb.isEmpty) ? null : blurb;
-    final token = '$title|${zoneBlurb.value ?? ''}';
+    zoneRegion.value = regionId;
+    final token = '$title|${zoneBlurb.value ?? ''}|${regionId ?? ''}';
     _zoneClearToken = token;
     Future.delayed(const Duration(milliseconds: 2800), () {
       if (_zoneClearToken == token) {
         zoneTitle.value = null;
         zoneBlurb.value = null;
+        zoneRegion.value = null;
       }
     });
   }
