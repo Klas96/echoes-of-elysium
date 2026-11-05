@@ -7,7 +7,7 @@
 "size": [12, 8],
 "tile": 32,
 "floor": [
-  [77, 20, 21, 21, 21, 24, 24, 24, 20, 20, 20, 77],
+  [77, 20, 20, 21, 20, 20, 24, 20, 20, 20, 20, 77],
   [72, 5, 4, 4, 4, 5, 4, 4, 4, 5, 4, 72],
   [72, 4, 5, 4, 4, 4, 5, 4, 4, 4, 5, 72],
   [72, 4, 4, 5, 4, 4, 4, 5, 4, 4, 4, 72],
@@ -62,13 +62,13 @@
   },
 {
   "id": "wall_map",
-  "rect": [5, 0, 3, 1],
+  "rect": [6, 0, 1, 1],
   "kind": "map",
   "note": "Region map: 'Asha has pinned every trail she's walked. A few are still blank.'"
   },
 {
   "id": "stove",
-  "rect": [2, 0, 3, 1],
+  "rect": [3, 0, 1, 1],
   "kind": "flavour",
   "note": "'Cold ashes and a kettle. It smells of pine.'"
   }
