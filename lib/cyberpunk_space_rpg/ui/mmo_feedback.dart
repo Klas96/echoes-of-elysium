@@ -43,13 +43,17 @@ class MmoFeedback {
   }
 
   /// WoW-style zone enter banner: themed plate + zone name only (no subtext).
+  ///
+  /// Visible hold before clear; [ZoneBanner] fades in/out around this window.
+  static const zoneHold = Duration(milliseconds: 2600);
+
   static void enterZone(String title, {String? regionId}) {
     zoneTitle.value = title;
     zoneBlurb.value = null;
     zoneRegion.value = regionId;
     final token = '$title|${regionId ?? ''}';
     _zoneClearToken = token;
-    Future.delayed(const Duration(milliseconds: 2800), () {
+    Future.delayed(zoneHold, () {
       if (_zoneClearToken == token) {
         zoneTitle.value = null;
         zoneBlurb.value = null;

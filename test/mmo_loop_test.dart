@@ -178,7 +178,9 @@ void main() {
       expect(MmoFeedback.zoneTitle.value, 'Canal Works');
       expect(MmoFeedback.zoneBlurb.value, isNull);
       expect(MmoFeedback.zoneRegion.value, 'works');
-      await Future<void>.delayed(const Duration(milliseconds: 2900));
+      await Future<void>.delayed(
+        MmoFeedback.zoneHold + const Duration(milliseconds: 100),
+      );
       expect(MmoFeedback.zoneTitle.value, isNull);
       expect(MmoFeedback.zoneBlurb.value, isNull);
       expect(MmoFeedback.zoneRegion.value, isNull);

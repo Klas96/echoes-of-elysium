@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 
 import 'dialog_chrome.dart';
+import 'hud_layout.dart';
 import 'mmo_feedback.dart';
 
 /// WoW-style enter-zone toast: themed pixel banner + zone name only.
 ///
-/// The plate art *is* the frame (transparent outside the motifs). No DialogChrome
-/// / toast border wrapper — just the hard AI→NN sheet with the title centered
-/// on the empty plate band (no flavor subtext).
-class ZoneBanner extends StatelessWidget {
+/// Fades in/out. Desktop gets a larger plate, nudged a bit further down.
+class ZoneBanner extends StatefulWidget {
   const ZoneBanner({super.key});
 
   static const assets = {
@@ -31,6 +30,8 @@ class ZoneBanner extends StatelessWidget {
     'town': EdgeInsets.fromLTRB(0.28, 0.34, 0.28, 0.32),
   };
 
+  static const fadeDuration = Duration(milliseconds: 400);
+
   /// Plate insets for [regionId], or null when unknown.
   static EdgeInsets? plateInsetsFor(String? regionId) =>
       regionId == null ? null : plateInsets[regionId];
@@ -49,8 +50,76 @@ class ZoneBanner extends StatelessWidget {
         _ => DialogChrome.cyan,
       };
 
+  @override
+  State<ZoneBanner> createState() => _ZoneBannerState();
+}
+
+class _ZoneBannerState extends State<ZoneBanner>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _fade;
+  String? _title;
+  String? _region;
+
+  @override
+  void initState() {
+    super.initState();
+    _fade = AnimationController(
+      vsync: this,
+      duration: ZoneBanner.fadeDuration,
+    );
+    MmoFeedback.zoneTitle.addListener(_onZone);
+    MmoFeedback.zoneRegion.addListener(_onZone);
+    _syncFromNotifiers(animate: false);
+  }
+
+  @override
+  void dispose() {
+    MmoFeedback.zoneTitle.removeListener(_onZone);
+    MmoFeedback.zoneRegion.removeListener(_onZone);
+    _fade.dispose();
+    super.dispose();
+  }
+
+  void _onZone() => _syncFromNotifiers(animate: true);
+
+  void _syncFromNotifiers({required bool animate}) {
+    final title = MmoFeedback.zoneTitle.value;
+    final region = MmoFeedback.zoneRegion.value;
+    final asset = ZoneBanner.assetFor(region);
+    if (title != null && asset != null) {
+      setState(() {
+        _title = title;
+        _region = region;
+      });
+      if (animate) {
+        _fade.forward();
+      } else {
+        _fade.value = 1;
+      }
+      return;
+    }
+    // Cleared — fade out, then drop the held plate.
+    if (_title == null) return;
+    if (!animate) {
+      _fade.value = 0;
+      setState(() {
+        _title = null;
+        _region = null;
+      });
+      return;
+    }
+    _fade.reverse().then((_) {
+      if (!mounted) return;
+      if (MmoFeedback.zoneTitle.value != null) return;
+      setState(() {
+        _title = null;
+        _region = null;
+      });
+    });
+  }
+
   static EdgeInsets _textPadding(String? regionId, double bannerW, double artH) {
-    final f = plateInsets[regionId] ??
+    final f = ZoneBanner.plateInsets[regionId] ??
         const EdgeInsets.fromLTRB(0.28, 0.36, 0.28, 0.28);
     return EdgeInsets.fromLTRB(
       bannerW * f.left,
@@ -62,72 +131,80 @@ class ZoneBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<String?>(
-      valueListenable: MmoFeedback.zoneTitle,
-      builder: (_, title, __) {
-        if (title == null) return const SizedBox.shrink();
-        return ValueListenableBuilder<String?>(
-          valueListenable: MmoFeedback.zoneRegion,
-          builder: (_, region, __) {
-            final asset = assetFor(region);
-            if (asset == null) return const SizedBox.shrink();
-            final accent = accentFor(region);
-            final screen = MediaQuery.sizeOf(context);
-            final short = screen.height < 500;
-            final narrow = screen.width < 400;
-            final compact = short || narrow;
-            final maxW = screen.width * 0.9;
-            // Native sheets are 240×80 (3:1). Cap on short landscape for HUD.
-            final bannerW =
-                short ? maxW.clamp(200.0, 300.0) : maxW.clamp(240.0, 420.0);
-            final artH = bannerW / 3;
+    final title = _title;
+    final region = _region;
+    if (title == null) return const SizedBox.shrink();
+    final asset = ZoneBanner.assetFor(region);
+    if (asset == null) return const SizedBox.shrink();
 
-            return IgnorePointer(
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: maxW),
-                  child: SizedBox(
-                    key: const ValueKey('hud-banner-card'),
-                    width: bannerW,
-                    height: artH,
-                    child: Stack(
-                      children: [
-                        Positioned.fill(
-                          child: Image.asset(
-                            asset,
-                            fit: BoxFit.fill,
-                            filterQuality: FilterQuality.none,
-                            isAntiAlias: false,
-                            gaplessPlayback: true,
-                          ),
-                        ),
-                        Padding(
-                          padding: _textPadding(region, bannerW, artH),
-                          child: Center(
-                            child: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Text(
-                                title.toUpperCase(),
-                                textAlign: TextAlign.center,
-                                maxLines: 1,
-                                softWrap: false,
-                                style: DialogChrome.zoneTitleStyle(
-                                  accent: accent,
-                                  compact: compact,
-                                ),
-                              ),
+    final accent = ZoneBanner.accentFor(region);
+    final screen = MediaQuery.sizeOf(context);
+    final short = screen.height < 500;
+    final narrow = HudLayout.narrow(screen);
+    final desktop = !HudLayout.isTouch && !narrow;
+    final compact = short || narrow;
+    final maxW = screen.width * 0.9;
+    // Desktop: larger plate. Short landscape stays capped for HUD room.
+    final double bannerW;
+    if (short) {
+      bannerW = maxW.clamp(200.0, 300.0);
+    } else if (desktop) {
+      bannerW = maxW.clamp(360.0, 560.0);
+    } else {
+      bannerW = maxW.clamp(240.0, 420.0);
+    }
+    final artH = bannerW / 3;
+    // Desktop: sit a bit further under the top HUD row.
+    final topPad = desktop ? 36.0 : 0.0;
+
+    return IgnorePointer(
+      child: FadeTransition(
+        opacity: _fade,
+        child: Padding(
+          padding: EdgeInsets.only(top: topPad),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: maxW),
+              child: SizedBox(
+                key: const ValueKey('hud-banner-card'),
+                width: bannerW,
+                height: artH,
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: Image.asset(
+                        asset,
+                        fit: BoxFit.fill,
+                        filterQuality: FilterQuality.none,
+                        isAntiAlias: false,
+                        gaplessPlayback: true,
+                      ),
+                    ),
+                    Padding(
+                      padding: _textPadding(region, bannerW, artH),
+                      child: Center(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            title.toUpperCase(),
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            softWrap: false,
+                            style: DialogChrome.zoneTitleStyle(
+                              accent: accent,
+                              compact: compact,
                             ),
                           ),
                         ),
-                      ],
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ),
-            );
-          },
-        );
-      },
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
