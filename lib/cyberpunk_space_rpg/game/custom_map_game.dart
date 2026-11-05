@@ -49,6 +49,7 @@ import '../interiors/room_scene.dart';
 import '../ui/mmo_feedback.dart';
 import '../ui/quest_board_ui.dart';
 import '../ui/shop_ui.dart';
+import '../ui/zone_banner.dart';
 import 'adventure.dart';
 import 'click_pathfinder.dart';
 import 'debug_mask_editor.dart';
@@ -1659,7 +1660,7 @@ Future<void> _startLevel(BonfireGameInterface game, int level) async {
   Travel.markVisited(level);
   final dest = Travel.byLevel(level);
   if (dest != null) {
-    MmoFeedback.enterZone(dest.title, blurb: dest.blurb);
+    MmoFeedback.enterZone(dest.title, regionId: dest.regionId);
   }
   final d = SaveService.data;
   if (Gates.wantsReturnLine(Regions.current, from: arrivedFrom)) {
@@ -2555,52 +2556,10 @@ class GameHudState extends State<GameHud> {
               // Wide (landscape): the zone banner sits between health and
               // tracker so it never covers the middle of the screen.
               final wide = !HudLayout.narrow(screen);
-              final Widget banner = KeyedSubtree(key: const ValueKey('hud-banner'), child: ValueListenableBuilder<String?>(
-          valueListenable: MmoFeedback.zoneTitle,
-          builder: (_, title, __) {
-            if (title == null) return const SizedBox.shrink();
-            return IgnorePointer(
-              child: Center(
-                child: AnimatedOpacity(
-                  opacity: 1,
-                  duration: const Duration(milliseconds: 300),
-                  child: Container(
-                    key: const ValueKey('hud-banner-card'),
-                    padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.55),
-                      border: Border.all(color: const Color(0xFF00FFCC).withValues(alpha: 0.35)),
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(title.toUpperCase(),
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                                color: Color(0xFFAAFFEE),
-                                fontSize: 14,
-                                letterSpacing: 3,
-                                fontWeight: FontWeight.bold)),
-                        ValueListenableBuilder<String?>(
-                          valueListenable: MmoFeedback.zoneBlurb,
-                          builder: (_, blurb, __) => blurb == null || blurb.isEmpty
-                              ? const SizedBox.shrink()
-                              : Padding(
-                                  padding: const EdgeInsets.only(top: 4),
-                                  child: Text(blurb,
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(
-                                          color: Colors.white54, fontSize: 10)),
-                                ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            );
-          },
-        ));
+              const Widget banner = KeyedSubtree(
+                key: ValueKey('hud-banner'),
+                child: ZoneBanner(),
+              );
               // Fixed-width capsule bars. Do not wrap in IntrinsicWidth or
               // put Expanded inside the bar — that fails layout and the
               // whole top HUD (HP/XP) disappears.

@@ -37,6 +37,7 @@ flutter:
     - assets/images/creatures/
     - assets/images/obstacles/
     - assets/images/ui/
+    - assets/images/ui/zone_banners/
     - assets/images/interiors/
     - assets/audio/music/
     - assets/audio/sfx/

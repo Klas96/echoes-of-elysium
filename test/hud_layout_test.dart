@@ -35,6 +35,7 @@ void busyState({bool talk = false}) {
       'Mira\'s stall (trade glimmer) · job board · west road → City, then follow the lantern road south';
   MmoFeedback.zoneTitle.value = 'Lantern Town';
   MmoFeedback.zoneBlurb.value = 'Market hub · job board · Mira\'s stall';
+  MmoFeedback.zoneRegion.value = 'town';
   WellRested.remaining.value = 178;
   Meals.active.value = 'night_bowl';
   Meals.remaining.value = 151;
@@ -59,6 +60,8 @@ void clearState() {
   GameToast.current.value = null;
   MmoFeedback.pops.value = const [];
   MmoFeedback.zoneTitle.value = null;
+  MmoFeedback.zoneBlurb.value = null;
+  MmoFeedback.zoneRegion.value = null;
   WellRested.remaining.value = 0;
   Meals.active.value = null;
   Meals.remaining.value = 0;
