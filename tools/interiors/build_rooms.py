@@ -782,11 +782,21 @@ SOLID_PROPS = {
 
 
 def load_gen_overrides() -> dict[int, Image.Image]:
-    """Cursor-gen tiles from assemble_*_gen.py under gen_src/<room>/tiles/."""
+    """Cursor-gen tiles from assemble_*_gen.py under gen_src/<room>/tiles/.
+
+    Room folders load in a fixed order; later rooms win on shared tile ids so
+    cabin hard-pixel plant/rug (48/63) override older soft tea stamps.
+    """
     out: dict[int, Image.Image] = {}
     if not GEN_SRC.is_dir():
         return out
-    for path in sorted(GEN_SRC.glob("*/tiles/*.png")):
+    room_order = {"archive": 0, "grotto": 1, "noodle": 2, "tea": 3, "cabin": 4}
+
+    def _key(path: Path) -> tuple[int, str]:
+        room = path.parent.parent.name
+        return (room_order.get(room, 99), path.name)
+
+    for path in sorted(GEN_SRC.glob("*/tiles/*.png"), key=_key):
         if path.name.startswith("_"):
             continue
         try:

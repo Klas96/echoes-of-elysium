@@ -1,7 +1,7 @@
 # Ranger cabin interior sources
 
-Hard 32×32 pixel art is authored in `build_rooms.py` (Pillow) and exported by
-`tools/interiors/assemble_cabin_gen.py` into `tiles/<id>.png`.
+AI image-gen JPGs in this folder → `assemble_cabin_gen.py` (NEAREST + palette snap)
+→ `tiles/<id>.png` → `build_rooms.py`.
 
-The `*.jpg` files here are **legacy soft AI references** and are **not** used by
-the assembler. Do not reintroduce LANCZOS→NEAREST downscales for cabin tiles.
+Do **not** invent cabin tiles with Pillow drawing. Regenerate art via AI image gen
+with hard pixel art in mind, then re-run the assemble pipeline.
