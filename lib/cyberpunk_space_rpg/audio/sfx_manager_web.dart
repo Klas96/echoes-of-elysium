@@ -77,7 +77,7 @@ class SfxManager {
   Future<void> playFootstep() async => _engine.playOneShot(_engine.footstep);
   Future<void> playDamage() async => _engine.playOneShot(_engine.damage);
   Future<void> playPortal() async => _engine.playOneShot(_engine.portal);
-  Future<void> playShoot() async => _engine.playOneShot(_engine.shoot);
+  Future<void> playShoot() async => _engine.playShoot();
 
   /// Soft chime for bonds and finds (reuses the computer beep).
   Future<void> playChime() async => _engine.playOneShot(_engine.chime);

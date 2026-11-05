@@ -29,7 +29,13 @@ class SfxWebEngine {
   SfxDomAudio? footstep;
   SfxDomAudio? damage;
   SfxDomAudio? portal;
+  /// First shoot slot (tests / volume); prefer [playShoot] for combat fire.
   SfxDomAudio? shoot;
+  /// Round-robin so rapid auto-fire on mobile browsers does not stall one
+  /// HTMLAudioElement (EOE-55 / web mobile: rewind+play drops or lags).
+  List<SfxDomAudio> shootPool = const [];
+  int _shootIdx = 0;
+  static const shootSlots = 4;
   SfxDomAudio? chime;
   SfxDomAudio? heal;
   SfxDomAudio? currentVoice;
@@ -56,9 +62,11 @@ class SfxWebEngine {
     footstep = _preload('audio/sfx/footstep_grass.mp3');
     damage = _preload('audio/sfx/damage_hit.mp3');
     portal = _preload('audio/sfx/portal.mp3');
-    shoot = _preload('audio/sfx/shoot.wav');
+    shootPool = List.generate(shootSlots, (_) => _preload('audio/sfx/shoot.wav'));
+    shoot = shootPool.isEmpty ? null : shootPool.first;
     chime = _preload('audio/sfx/computer_beep.wav');
     heal = _preload('audio/sfx/health_pickup.mp3');
+    _shootIdx = 0;
     applyVolumes();
   }
 
@@ -73,7 +81,9 @@ class SfxWebEngine {
     footstep?.volume = baseFoot * s;
     damage?.volume = baseDamage * s;
     portal?.volume = basePortal * s;
-    shoot?.volume = baseShoot * s;
+    for (final el in shootPool) {
+      el.volume = baseShoot * s;
+    }
     chime?.volume = baseChime * s;
     heal?.volume = baseHeal * s;
     currentVoice?.volume = baseVoice * s;
@@ -91,7 +101,15 @@ class SfxWebEngine {
   /// Unlock after a user gesture. Skips elements already playing (no rewind).
   Future<void> unlockAfterGesture() async {
     if (footstep == null) init();
-    for (final el in [footstep, damage, portal, shoot, chime, heal]) {
+    final els = <SfxDomAudio?>[
+      footstep,
+      damage,
+      portal,
+      ...shootPool,
+      chime,
+      heal,
+    ];
+    for (final el in els) {
       if (el == null) continue;
       try {
         final wasPlaying = !el.paused && el.currentTime > 0;
@@ -112,6 +130,17 @@ class SfxWebEngine {
     el.currentTime = 0;
     // ignore: discarded_futures — matches production fire-and-forget
     el.play();
+  }
+
+  /// Combat shoot — round-robin across the warm pool (mobile web safe).
+  void playShoot() {
+    if (!audible) return;
+    if (shootPool.isEmpty) {
+      playOneShot(shoot);
+      return;
+    }
+    final el = shootPool[_shootIdx++ % shootPool.length];
+    playOneShot(el);
   }
 
   Future<void> playVoice(String assetPath) async {
@@ -137,7 +166,15 @@ class SfxWebEngine {
 
   Future<void> pauseForAppLifecycle() async {
     await stopVoice();
-    for (final el in [footstep, damage, portal, shoot, chime, heal]) {
+    final els = <SfxDomAudio?>[
+      footstep,
+      damage,
+      portal,
+      ...shootPool,
+      chime,
+      heal,
+    ];
+    for (final el in els) {
       if (el == null) continue;
       try {
         el.pause();

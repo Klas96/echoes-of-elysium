@@ -368,7 +368,8 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
     wardCdLeft.value = 0;
     anchorCdLeft.value = 0;
     _phaseGhosts.clear();
-    SfxManager().init();
+    // Await warm so the first phone/web shot is not decode-on-play.
+    await SfxManager().init();
     paint.filterQuality = FilterQuality.none;
     _jog = await JogSheet.load();
     animation = _jog!.animation;
