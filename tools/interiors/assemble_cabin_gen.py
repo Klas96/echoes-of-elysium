@@ -34,6 +34,8 @@ MAT_CABIN = 15
 W_LOG, W_FIRE = 20, 21
 W_MAP = 24
 J_LOG_L, J_LOG_R = 30, 31
+# AI cutaway companions (also stamped into tileset by build_rooms overrides).
+W_LOG_S, W_LOG_C = 72, 77
 PLANT = 48
 CHEST = 50
 JOURNAL, NOTE = 52, 53
@@ -101,11 +103,11 @@ def find_content_box(im: Image.Image, dark: int = 28) -> tuple[int, int, int, in
 
 
 def grid_cells(im: Image.Image, cols: int, rows: int) -> list[Image.Image]:
-    box = find_content_box(im)
+    box = find_content_box(im, dark=20)
     grid = im.crop(box)
     gw, gh = grid.size
     cw, ch = gw // cols, gh // rows
-    pad = max(1, min(cw, ch) // 16)
+    pad = max(2, min(cw, ch) // 20)
     cells: list[Image.Image] = []
     for r in range(rows):
         for c in range(cols):
@@ -115,15 +117,154 @@ def grid_cells(im: Image.Image, cols: int, rows: int) -> list[Image.Image]:
     return cells
 
 
+def _row_mean(px, y: int, w: int) -> tuple[float, float, float]:
+    rs = gs = bs = n = 0
+    step = max(1, w // 40)
+    for x in range(0, w, step):
+        r, g, b, a = px[x, y]
+        if a < 8:
+            continue
+        rs += r
+        gs += g
+        bs += b
+        n += 1
+    if not n:
+        return (0.0, 0.0, 0.0)
+    return (rs / n, gs / n, bs / n)
+
+
+def _is_orange_floor(rgb: tuple[float, float, float]) -> bool:
+    r, g, b = rgb
+    return r > 115 and b < 95 and r > g + 20 and r > b + 35 and (g + b) < (r + 40)
+
+
+def strip_atlas_floor(cell: Image.Image) -> Image.Image:
+    """Drop orange floor planks baked under AI wall cells; keep ~2px contact shadow.
+
+    Processes the AI atlas only — does not invent wall pixels.
+    """
+    cell = cell.convert("RGBA")
+    px = cell.load()
+    w, h = cell.size
+    y = h - 1
+    floor_run = 0
+    while y > int(h * 0.28):
+        if _is_orange_floor(_row_mean(px, y, w)):
+            floor_run += 1
+            y -= 1
+            continue
+        if floor_run >= 3 and y > 2 and _is_orange_floor(_row_mean(px, y - 1, w)):
+            y -= 1
+            floor_run += 1
+            continue
+        break
+    if floor_run >= 3:
+        cell = cell.crop((0, 0, w, min(h, y + 2)))
+    return cell
+
+
+def nonblack_box(cell: Image.Image, dark: int = 40) -> tuple[int, int, int, int]:
+    px = cell.load()
+    w, h = cell.size
+    min_x, min_y, max_x, max_y = w, h, 0, 0
+    found = False
+    for y in range(h):
+        for x in range(w):
+            r, g, b, a = px[x, y]
+            if a < 8:
+                continue
+            if r > dark or g > dark or b > dark:
+                found = True
+                min_x = min(min_x, x)
+                min_y = min(min_y, y)
+                max_x = max(max_x, x)
+                max_y = max(max_y, y)
+    if not found:
+        return (0, 0, w, h)
+    return (min_x, min_y, max_x + 1, max_y + 1)
+
+
+def scrub_floor_bleed(tile: Image.Image) -> Image.Image:
+    """If NN still leaves orange floor on the bottom rows, darken toward baseboard."""
+    tile = tile.copy()
+    px = tile.load()
+    for yy in (30, 31):
+        for x in range(T):
+            r, g, b, a = px[x, yy]
+            if r > 115 and r > g + 20 and r > b + 35 and b < 95:
+                br, bg, bb, _ = px[x, 26]
+                fac = 3 if yy == 31 else 2
+                px[x, yy] = (max(0, br // fac), max(0, bg // fac), max(0, bb // fac), a)
+    return tile
+
+
+def trim_void_columns(tile: Image.Image, dark_sum: int = 70, min_keep: int = 12) -> Image.Image:
+    """Crop near-black void columns left after NN so cutaway wood fills the tile."""
+    px = tile.load()
+    w, h = tile.size
+    left = 0
+    while left < w - min_keep:
+        dark = sum(1 for y in range(h) if sum(px[left, y][:3]) < dark_sum)
+        if dark < h * 0.7:
+            break
+        left += 1
+    right = w - 1
+    while right > left + min_keep:
+        dark = sum(1 for y in range(h) if sum(px[right, y][:3]) < dark_sum)
+        if dark < h * 0.7:
+            break
+        right -= 1
+    if left == 0 and right == w - 1:
+        return tile
+    return tile.crop((left, 0, right + 1, h))
+
+
+def strip_side_top_beam(cell: Image.Image) -> Image.Image:
+    """Remove the horizontal top-beam band from E/W cutaway cells.
+
+    Mid-side columns tile vertically; keeping the atlas top beam would stamp a
+    false horizontal stripe every 32px. Corners keep the beam via W_LOG_C.
+    """
+    w, h = cell.size
+    # Drop ~18% from the top (beam + join), keep vertical rim/face continuous.
+    y0 = max(6, h * 18 // 100)
+    if y0 >= h - 8:
+        return cell
+    return cell.crop((0, y0, w, h))
+
+
+def wall_tile(cell: Image.Image, *, fill_cutaway: bool = False) -> Image.Image:
+    """AI wall cell → hard opaque 32×32 (floor stripped; optional void crop for sides)."""
+    cell = strip_atlas_floor(cell)
+    if fill_cutaway:
+        cell = cell.crop(nonblack_box(cell, dark=35))
+        cell = strip_side_top_beam(cell)
+    out = scrub_floor_bleed(opaque_tile(cell))
+    if fill_cutaway:
+        out = opaque_tile(trim_void_columns(out))
+    # Re-snap after scrub so side cutaways stay within the hard-pixel budget.
+    return opaque_tile(out)
+
+
 def slice_walls(src: Path) -> dict[int, Image.Image]:
+    """Cutaway wall atlas (5×3): quiet face + beam/baseboard, side thickness, corners, jambs.
+
+    Cell map (row-major):
+      0 face, 2 fire, 3 map, 5 side cutaway, 6 corner post, 7 left jamb,
+      9 door (unused gameplay id), 10 side variant.
+    Right jamb is a horizontal flip of the AI left jamb (no new pixels invented).
+    """
     raw = Image.open(src).convert("RGBA")
     cells = grid_cells(raw, 5, 3)
+    jamb_l = wall_tile(cells[7])
     return {
-        W_LOG: opaque_tile(cells[0]),
-        W_FIRE: opaque_tile(cells[6]),
-        W_MAP: opaque_tile(cells[7]),
-        J_LOG_L: opaque_tile(cells[13]),
-        J_LOG_R: opaque_tile(cells[14]),
+        W_LOG: wall_tile(cells[0]),
+        W_FIRE: wall_tile(cells[2]),
+        W_MAP: wall_tile(cells[3]),
+        W_LOG_S: wall_tile(cells[5], fill_cutaway=True),
+        W_LOG_C: wall_tile(cells[6]),
+        J_LOG_L: jamb_l,
+        J_LOG_R: jamb_l.transpose(Image.Transpose.FLIP_LEFT_RIGHT),
     }
 
 
