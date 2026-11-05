@@ -363,8 +363,15 @@ def slice_walls_from_strips(face_src: Path, side_src: Path) -> dict[int, Image.I
         right_inner or [c for c in inner if abs(c - fire_c) > 1],
         key=lambda c: _cell_inset_frame_score(probe[1][c]),
     )
+    # Stay ≥2 cols from map/fire so a sliced inset cannot leak a "half map"
+    # onto the chimney mid band when we clear the fire column to plain.
+    plain_candidates = [
+        c
+        for c in inner
+        if c not in (fire_c, map_c) and abs(c - map_c) > 1 and abs(c - fire_c) > 1
+    ] or [c for c in inner if c not in (fire_c, map_c)]
     plain = min(
-        (c for c in inner if c not in (fire_c, map_c)),
+        plain_candidates,
         key=lambda c: _cell_dark_hole_score(probe[1][c]) + _cell_inset_frame_score(probe[1][c]),
     )
     face = _lower_hearth_column(face, fire_c, plain)
@@ -386,6 +393,10 @@ def slice_walls_from_strips(face_src: Path, side_src: Path) -> dict[int, Image.I
     else:
         out[W_FIRE] = cells[1][fire_c]
     out[STRIP_MID0 + fire_c] = cells[1][plain]
+    # Also scrub map bleed from neighboring mid cells (half-frame slices).
+    for c in (map_c - 1, map_c + 1):
+        if 0 < c < STRIP_COLS - 1 and c != fire_c:
+            out[STRIP_MID0 + c] = cells[1][plain]
     out[W_MAP] = cells[1][map_c]
     meta = {"fire_col": fire_c, "map_col": map_c, "plain_col": plain, "cols": STRIP_COLS}
     (GEN / "wall_strip_meta.json").write_text(json.dumps(meta, indent=2) + "\n")
