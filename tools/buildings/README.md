@@ -1,8 +1,12 @@
 # Buildings v2: placeable building sprites
 
-Seven buildings made from `gen_src/buildings/*_front_magenta.jpg` by `tools/process_buildings.py`.
-That script reuses `tools/process_gen.py` (magenta key, despill, area downscale, sharpen, palette, binary alpha,
-selective navy outline). Re-run it with `.venv/bin/python tools/process_buildings.py`.
+Six city/core buildings come from `gen_src/buildings/*_front_magenta.jpg` via `tools/process_buildings.py`
+(`.venv/bin/python tools/process_buildings.py` — magenta key, despill, area downscale, sharpen, palette,
+binary alpha, selective navy outline).
+
+**Ranger cabin** is hard 32×32-grid pixel art from `tools/buildings/make_ranger_cabin_pixel.py`
+(NEAREST, limited palette). Re-run that script after edits; do not regenerate it through the soft AI
+magenta pipeline.
 
 ## Files
 - `<name>.png`: RGBA sprite. Alpha is binary (0/255), there is no magenta fringe, and transparent pixels are RGB 0.

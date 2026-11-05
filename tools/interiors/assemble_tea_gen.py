@@ -142,6 +142,8 @@ def mat_tile(src: Path) -> Image.Image:
 
 
 def assemble_props() -> dict[int, Image.Image]:
+    # Plant (48) and rug (63) stay on hard Pillow pixel art in build_rooms —
+    # shared with ranger cabin; soft AI downscales made the cabin unreadable.
     mapping = {
         COUNTER: "tea_counter.jpg",
         URN: "tea_urn.jpg",
@@ -149,10 +151,8 @@ def assemble_props() -> dict[int, Image.Image]:
         CUSHION: "tea_cushion.jpg",
         BED_H: "tea_bed_head.jpg",
         BED_F: "tea_bed_foot.jpg",
-        PLANT: "tea_plant.jpg",
         SCREEN: "tea_screen.jpg",
         NIGHT: "tea_nightstand.jpg",
-        RUG: "tea_rug.jpg",
     }
     out = {tid: prop_tile(GEN / name, tid) for tid, name in mapping.items()}
     out[MAT] = mat_tile(GEN / "tea_doormat.jpg")

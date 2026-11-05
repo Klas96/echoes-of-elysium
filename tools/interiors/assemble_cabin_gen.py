@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
-"""Pixelize Cursor-gen cabin sources into 32px tile overrides and patch tileset.
+"""Export hard 32×32 pixel-art cabin tiles (NEAREST, limited palette).
 
-Reads tools/interiors/gen_src/cabin/*.jpg, writes:
-  tools/interiors/gen_src/cabin/tiles/<id>.png
-then pastes those ids into assets/images/interiors/tileset.png.
+Soft AI `gen_src/cabin/*.jpg` sources are intentionally unused — preference is
+calm readable pixel art, not detail-rich downscales. This script writes the
+Pillow cabin builders from build_rooms.py into gen_src/cabin/tiles/ and patches
+the shared interiors tilesheet so re-runs stay true pixel art.
 
-Run before (or via) build_rooms.py so cabin art stays Cursor-gen.
+Run:
+  python3 tools/interiors/assemble_cabin_gen.py
+  python3 tools/interiors/build_rooms.py
 """
 from __future__ import annotations
 
+import importlib.util
 import sys
 from pathlib import Path
 
@@ -18,151 +22,65 @@ ROOT = Path(__file__).resolve().parents[2]
 GEN = Path(__file__).resolve().parent / "gen_src" / "cabin"
 TILES = GEN / "tiles"
 OUT_SHEET = ROOT / "assets" / "images" / "interiors" / "tileset.png"
-SYS_TOOLS = ROOT / "tools"
-sys.path.insert(0, str(SYS_TOOLS))
-from pixelize_gen import pixelize  # noqa: E402
-
 T = 32
 COLS = 16
 
-# Cabin tile ids (must match build_rooms.py)
-CABIN, CABIN2 = 4, 5
-# Dedicated cabin mat — do not overwrite shared MAT=12 (tea/noodle).
-MAT_CABIN = 15
-W_LOG, W_FIRE = 20, 21
-W_MAP = 24
-J_LOG_L, J_LOG_R = 30, 31
-PLANT = 48
-CHEST = 50
-JOURNAL, NOTE = 52, 53
-LOGS = 60
-RUG = 63
-BED_C_H, BED_C_F = 64, 65
+# Cabin-owned tile ids (must match build_rooms.py). Shared plant/rug (48/63)
+# stay on Pillow via build_rooms — do not reintroduce soft AI overrides for them.
+CABIN_IDS = {
+    4: "cabin_floor",
+    5: "cabin_floor_alt",
+    15: "mat_cabin",
+    20: "log_wall",
+    21: "fire_wall",
+    24: "map_wall",
+    30: "jamb_log_l",
+    31: "jamb_log_r",
+    50: "chest",
+    52: "journal",
+    53: "note",
+    60: "logs",
+    64: "bed_cabin_head",
+    65: "bed_cabin_foot",
+}
 
 
-def opaque_tile(im: Image.Image, size: int = T) -> Image.Image:
-    im = im.convert("RGBA")
-    # Soft fit then nearest snap for chunky pixels.
-    tmp = im.resize((size * 4, size * 4), Image.Resampling.LANCZOS)
-    out = tmp.resize((size, size), Image.Resampling.NEAREST)
-    # Force opaque for floor/wall cells.
-    px = out.load()
-    for y in range(size):
-        for x in range(size):
-            r, g, b, a = px[x, y]
-            if a < 255:
-                px[x, y] = (r, g, b, 255)
-    return out
+def _load_build_rooms():
+    path = Path(__file__).resolve().parent / "build_rooms.py"
+    spec = importlib.util.spec_from_file_location("build_rooms_cabin", path)
+    mod = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(mod)
+    return mod
 
 
-def slice_floor(src: Path) -> dict[int, Image.Image]:
-    raw = Image.open(src).convert("RGBA")
-    # Use center square, build a 4x2 grid, pick two neighbouring cells.
-    side = min(raw.size)
-    left = (raw.width - side) // 2
-    top = (raw.height - side) // 2
-    crop = raw.crop((left, top, left + side, top + side))
-    grid = crop.resize((T * 4, T * 2), Image.Resampling.LANCZOS)
-    grid = grid.resize((T * 4, T * 2), Image.Resampling.NEAREST)
-    a = grid.crop((0, 0, T, T))
-    b = grid.crop((T, 0, T * 2, T))
-    return {CABIN: opaque_tile(a), CABIN2: opaque_tile(b)}
-
-
-def find_content_box(im: Image.Image, dark: int = 28) -> tuple[int, int, int, int]:
-    """Bounding box of non-near-black pixels (the tile grid on dark canvas)."""
-    px = im.load()
-    w, h = im.size
-    min_x, min_y, max_x, max_y = w, h, 0, 0
-    for y in range(h):
-        for x in range(w):
-            r, g, b, a = px[x, y]
-            if a < 8:
-                continue
-            if r > dark or g > dark or b > dark:
-                min_x = min(min_x, x)
-                min_y = min(min_y, y)
-                max_x = max(max_x, x)
-                max_y = max(max_y, y)
-    if max_x <= min_x:
-        return (0, 0, w, h)
-    return (min_x, min_y, max_x + 1, max_y + 1)
-
-
-def grid_cells(im: Image.Image, cols: int, rows: int) -> list[Image.Image]:
-    """Split a content box into cols×rows cells (GenerateImage wall sheets)."""
-    box = find_content_box(im)
-    grid = im.crop(box)
-    gw, gh = grid.size
-    cw, ch = gw // cols, gh // rows
-    # Trim a thin gutter so black grid lines don't dominate.
-    pad = max(1, min(cw, ch) // 16)
-    cells: list[Image.Image] = []
-    for r in range(rows):
-        for c in range(cols):
-            x0, y0 = c * cw + pad, r * ch + pad
-            x1, y1 = (c + 1) * cw - pad, (r + 1) * ch - pad
-            cells.append(grid.crop((x0, y0, x1, y1)))
-    return cells
-
-
-def slice_walls(src: Path) -> dict[int, Image.Image]:
-    raw = Image.open(src).convert("RGBA")
-    # cabin_wall_sheet is a 5×3 log-wall atlas: hearth, map, doorway among plains.
-    cells = grid_cells(raw, 5, 3)
-    # Indices (row-major): hearth ~6, map ~7, doorway ~12; vertical posts 13/14 = jambs.
-    log = cells[0]
-    fire = cells[6]
-    mmap = cells[7]
-    jl = cells[13]
-    jr = cells[14]
+def hard_cabin_tiles(br) -> dict[int, Image.Image]:
+    """True pixel art: opaque floors/walls, binary-alpha props."""
     return {
-        W_LOG: opaque_tile(log),
-        W_FIRE: opaque_tile(fire),
-        W_MAP: opaque_tile(mmap),
-        J_LOG_L: opaque_tile(jl),
-        J_LOG_R: opaque_tile(jr),
+        4: br.cabin_floor(0),
+        5: br.cabin_floor(1),
+        15: br.mat(False),
+        20: br.log_wall(),
+        21: br.fire_wall(),
+        24: br.map_wall(),
+        30: br.jamb(br.log_wall, "l", br.rgba(140, 100, 60)),
+        31: br.jamb(br.log_wall, "r", br.rgba(140, 100, 60)),
+        50: br.chest(),
+        52: br.desk(False),
+        53: br.note(),
+        60: br.logs(),
+        64: br.bed(True, cabin=True),
+        65: br.bed(False, cabin=True),
     }
 
 
-def clear_dark_bg(im: Image.Image) -> Image.Image:
-    """Second pass: drop leftover near-black canvas after pixelize_gen."""
-    im = im.convert("RGBA")
-    px = im.load()
-    for y in range(im.height):
-        for x in range(im.width):
-            r, g, b, a = px[x, y]
-            if a == 0:
-                continue
-            if r < 28 and g < 28 and b < 28:
-                px[x, y] = (0, 0, 0, 0)
-            elif r < 40 and g < 40 and b < 40 and max(r, g, b) - min(r, g, b) < 8:
-                px[x, y] = (0, 0, 0, 0)
-    return im
-
-
-def prop_tile(src: Path, tid: int) -> Image.Image:
-    tmp = TILES / f"_raw_{tid}.png"
-    pixelize(src, tmp, T, T, pad=0.08)
-    return clear_dark_bg(Image.open(tmp).convert("RGBA"))
-
-
-def assemble_props() -> dict[int, Image.Image]:
-    mapping = {
-        PLANT: "cabin_plant.jpg",
-        CHEST: "cabin_chest.jpg",
-        JOURNAL: "cabin_journal.jpg",
-        NOTE: "cabin_note.jpg",
-        LOGS: "cabin_logs.jpg",
-        RUG: "cabin_rug.jpg",
-        BED_C_H: "cabin_bed_head.jpg",
-        BED_C_F: "cabin_bed_foot.jpg",
-        MAT_CABIN: "cabin_doormat.jpg",
-    }
-    out: dict[int, Image.Image] = {}
-    for tid, name in mapping.items():
-        out[tid] = prop_tile(GEN / name, tid)
-    return out
+def assert_hard_pixel(im: Image.Image, tid: int) -> None:
+    assert im.size == (T, T), (tid, im.size)
+    colors = im.getcolors(T * T)
+    assert colors is not None
+    # Soft AI downscales land 400–800 colours; hard pixel stays tiny.
+    if len(colors) > 48:
+        raise SystemExit(f"tile {tid} too noisy ({len(colors)} colours) — not hard pixel art")
 
 
 def patch_sheet(tiles: dict[int, Image.Image]) -> None:
@@ -174,9 +92,7 @@ def patch_sheet(tiles: dict[int, Image.Image]) -> None:
         bigger.paste(sheet, (0, 0))
         sheet = bigger
     for tid, tile in tiles.items():
-        assert tile.size == (T, T), (tid, tile.size)
         x, y = (tid % COLS) * T, (tid // COLS) * T
-        # Clear cell then paste (props need alpha).
         blank = Image.new("RGBA", (T, T), (0, 0, 0, 0))
         sheet.paste(blank, (x, y))
         sheet.alpha_composite(tile, (x, y))
@@ -185,18 +101,21 @@ def patch_sheet(tiles: dict[int, Image.Image]) -> None:
 
 
 def main() -> int:
+    br = _load_build_rooms()
     TILES.mkdir(parents=True, exist_ok=True)
-    tiles: dict[int, Image.Image] = {}
-    tiles.update(slice_floor(GEN / "cabin_floor_sheet.jpg"))
-    tiles.update(slice_walls(GEN / "cabin_wall_sheet.jpg"))
-    tiles.update(assemble_props())
+    # Drop leftover soft AI cell PNGs (including old plant/rug) from this folder.
+    for stale in TILES.glob("*.png"):
+        stale.unlink()
+    tiles = hard_cabin_tiles(br)
     for tid, im in tiles.items():
+        assert_hard_pixel(im, tid)
         path = TILES / f"{tid}.png"
         im.save(path)
-        print(f"wrote {path}")
+        print(f"wrote {path} ({CABIN_IDS[tid]}, {len(im.getcolors(T * T))} colours)")
     patch_sheet(tiles)
+    print("note: soft gen_src/cabin/*.jpg unused — hard pixel only")
     return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    sys.exit(main())
