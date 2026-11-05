@@ -156,11 +156,11 @@ def prop_tile(src: Path, tid: int) -> Image.Image:
 
 
 def bed_pair(src: Path) -> tuple[Image.Image, Image.Image]:
-    """One continuous AI bed → 32×64 hard NN → head/foot (no mid padding gap)."""
+    """One continuous AI bed → hard 32×64 NN → head/foot (no mid padding gap)."""
     head, foot = pixelize_stack_pair(src, T, pad=0.02, soft_fit=False)
-    head = clear_dark_bg(hard_pixel(clear_dark_bg(head), size=T, colours=12))
-    foot = clear_dark_bg(hard_pixel(clear_dark_bg(foot), size=T, colours=12))
-    return head, foot
+    head = hard_pixel(clear_dark_bg(head), size=T, colours=12)
+    foot = hard_pixel(clear_dark_bg(foot), size=T, colours=12)
+    return clear_dark_bg(head), clear_dark_bg(foot)
 
 
 def assemble_props() -> dict[int, Image.Image]:
@@ -173,9 +173,8 @@ def assemble_props() -> dict[int, Image.Image]:
         RUG: "cabin_rug.jpg",
         MAT_CABIN: "cabin_doormat.jpg",
     }
-    out: dict[int, Image.Image] = {}
-    for tid, name in mapping.items():
-        out[tid] = prop_tile(GEN / name, tid)
+    out = {tid: prop_tile(GEN / name, tid) for tid, name in mapping.items()}
+    # #132 continuous bed (hard NN) — avoids mid-seam hole between head/foot.
     bed_src = GEN / "cabin_bed_full.jpg"
     if not bed_src.exists():
         raise FileNotFoundError(f"missing continuous bed source: {bed_src}")
@@ -218,6 +217,7 @@ def main() -> int:
         im.save(path)
         n = len(im.getcolors(T * T) or [])
         print(f"wrote {path} ({im.size[0]}×{im.size[1]}, {n} colours)")
+    # Guard: no soft leftovers in the tiles folder.
     leftovers = [p.name for p in TILES.glob("_raw_*.png")]
     if leftovers:
         raise SystemExit(f"soft _raw_ files must not remain: {leftovers}")

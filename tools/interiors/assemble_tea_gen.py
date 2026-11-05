@@ -134,7 +134,7 @@ def prop_tile(src: Path, tid: int) -> Image.Image:
 
 def bed_pair(src: Path) -> tuple[Image.Image, Image.Image]:
     """One continuous AI bed → 32×64 NN → head/foot (no mid padding gap)."""
-    head, foot = pixelize_stack_pair(src, T, pad=0.02)
+    head, foot = pixelize_stack_pair(src, T, pad=0.02, soft_fit=False)
     return clear_dark_bg(head), clear_dark_bg(foot)
 
 
@@ -148,18 +148,18 @@ def mat_tile(src: Path) -> Image.Image:
 
 
 def assemble_props() -> dict[int, Image.Image]:
+    # Plant (48) / rug (63): cabin hard-pixel AI overrides win in build_rooms
+    # load order — do not reintroduce soft tea stamps for those shared ids.
+    # Beds: continuous tea_bed_full (#132) so head/foot join without a mid hole.
     mapping = {
         COUNTER: "tea_counter.jpg",
         URN: "tea_urn.jpg",
         TABLE: "tea_table.jpg",
         CUSHION: "tea_cushion.jpg",
-        PLANT: "tea_plant.jpg",
         SCREEN: "tea_screen.jpg",
         NIGHT: "tea_nightstand.jpg",
-        RUG: "tea_rug.jpg",
     }
     out = {tid: prop_tile(GEN / name, tid) for tid, name in mapping.items()}
-    # Prefer continuous full-bed source so halves join without a mid hole.
     bed_src = GEN / "tea_bed_full.jpg"
     if not bed_src.exists():
         raise FileNotFoundError(f"missing continuous bed source: {bed_src}")

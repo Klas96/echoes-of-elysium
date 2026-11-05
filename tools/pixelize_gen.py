@@ -78,9 +78,9 @@ def pixelize_rgba(
 ) -> Image.Image:
     """AI gen → sized RGBA.
 
-    soft_fit=True (legacy): LANCZOS upsample then NEAREST — softer, more colours.
-    soft_fit=False: NEAREST only — hard pixel art for gameplay tiles (cabin, etc.).
-    cover=True: aspect-preserving crop that fills the box (beds / stacked props).
+    cover=True fills the box (aspect-preserving crop) — used for continuous beds.
+    soft_fit=True (legacy): LANCZOS upsample then NEAREST.
+    soft_fit=False: NEAREST only — hard pixel gameplay tiles.
     """
     raw = Image.open(src).convert("RGBA")
     cut = remove_bg(raw)
@@ -131,8 +131,9 @@ def pixelize(
     pad: float = 0.06,
     *,
     soft_fit: bool = True,
+    cover: bool = False,
 ) -> None:
-    out = pixelize_rgba(src, width, height, pad=pad, cover=False, soft_fit=soft_fit)
+    out = pixelize_rgba(src, width, height, pad=pad, cover=cover, soft_fit=soft_fit)
     dst.parent.mkdir(parents=True, exist_ok=True)
     out.save(dst, "PNG")
     print(f"Wrote {dst} ({width}x{height}, soft_fit={soft_fit})")
