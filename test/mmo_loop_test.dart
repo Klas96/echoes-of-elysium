@@ -6,6 +6,7 @@ import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/game/quests.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/game/save_service.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/game/trade.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/game/well_rested.dart';
+import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/game/travel.dart';
 import 'package:cyberpunk_space_rpg/cyberpunk_space_rpg/ui/mmo_feedback.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -17,6 +18,8 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     SaveService.data = SaveData();
     WellRested.remaining.value = 0;
+    MmoFeedback.zoneTitle.value = null;
+    MmoFeedback.zoneBlurb.value = null;
   });
 
   group('well rested', () {
@@ -148,6 +151,35 @@ void main() {
       expect(a0, 1);
       expect(dy1, -DamageNumber.rise);
       expect(a1, 0);
+    });
+  });
+
+  group('enter-zone banners', () {
+    test('Travel destinations carry a name and one-line flavor', () {
+      const wanted = {
+        1: 'Whispering Woods',
+        2: 'The City',
+        6: 'Canal Works',
+        3: 'The Ruins',
+        4: "Gaia's Core",
+      };
+      for (final e in wanted.entries) {
+        final dest = Travel.byLevel(e.key);
+        expect(dest, isNotNull, reason: 'level ${e.key}');
+        expect(dest!.title, e.value);
+        expect(dest.blurb.trim().isNotEmpty, isTrue, reason: dest.title);
+        expect(dest.blurb.contains('\n'), isFalse, reason: '${dest.title} must stay one line');
+      }
+    });
+
+    test('enterZone shows title and flavor, then clears', () async {
+      final dest = Travel.byLevel(6)!;
+      MmoFeedback.enterZone(dest.title, blurb: dest.blurb);
+      expect(MmoFeedback.zoneTitle.value, 'Canal Works');
+      expect(MmoFeedback.zoneBlurb.value, dest.blurb);
+      await Future<void>.delayed(const Duration(milliseconds: 2900));
+      expect(MmoFeedback.zoneTitle.value, isNull);
+      expect(MmoFeedback.zoneBlurb.value, isNull);
     });
   });
 }

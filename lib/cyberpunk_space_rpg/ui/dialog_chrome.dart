@@ -117,6 +117,33 @@ class DialogChrome {
     );
   }
 
+  /// Enter-zone name plate — hard-pixel RPG banner (not a soft Material toast).
+  static Widget zoneBannerShell({required Widget child}) {
+    return _PixelFrame(
+      accent: cyan.withValues(alpha: 0.85),
+      fill: ink.withValues(alpha: 0.9),
+      thickness: 1.5,
+      corner: 10,
+      padding: const EdgeInsets.fromLTRB(22, 12, 22, 10),
+      child: child,
+    );
+  }
+
+  static TextStyle zoneTitleStyle() => const TextStyle(
+        color: Color(0xFFAAFFEE),
+        fontSize: 15,
+        letterSpacing: 3.2,
+        fontWeight: FontWeight.w800,
+        height: 1.1,
+      );
+
+  static TextStyle zoneBlurbStyle() => TextStyle(
+        color: bodyDim.withValues(alpha: 0.92),
+        fontSize: 11,
+        height: 1.35,
+        letterSpacing: 0.2,
+      );
+
   /// TALK / INTERACT / hold prompt chip.
   static Widget promptShell({
     required Widget child,

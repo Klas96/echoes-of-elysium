@@ -40,13 +40,13 @@ class MmoFeedback {
     });
   }
 
-  /// Zone enter banner: title only. [blurb] kept for call-site compat but unused.
+  /// WoW-style zone enter banner: big name + optional one-line flavor.
   static void enterZone(String title, {String? blurb}) {
     zoneTitle.value = title;
-    zoneBlurb.value = null;
-    final token = title;
+    zoneBlurb.value = (blurb == null || blurb.isEmpty) ? null : blurb;
+    final token = '$title|${zoneBlurb.value ?? ''}';
     _zoneClearToken = token;
-    Future.delayed(const Duration(milliseconds: 1600), () {
+    Future.delayed(const Duration(milliseconds: 2800), () {
       if (_zoneClearToken == token) {
         zoneTitle.value = null;
         zoneBlurb.value = null;

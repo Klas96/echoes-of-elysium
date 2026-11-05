@@ -59,6 +59,7 @@ void clearState() {
   GameToast.current.value = null;
   MmoFeedback.pops.value = const [];
   MmoFeedback.zoneTitle.value = null;
+  MmoFeedback.zoneBlurb.value = null;
   WellRested.remaining.value = 0;
   Meals.active.value = null;
   Meals.remaining.value = 0;
