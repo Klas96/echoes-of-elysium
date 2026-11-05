@@ -84,8 +84,12 @@ void main() {
         final r = _room(id);
         expect(r.id, id);
         // #62: 32px so a tile is Kaela's height. Tea house hub pilot is 16×10;
-        // every other room stays on the domestic 12×8 grid.
-        final expected = id == 'tea_house' ? (16, 10, 32) : (12, 8, 32);
+        // cabin uses 12×10 for a taller masonry N wall; others stay 12×8.
+        final expected = switch (id) {
+          'tea_house' => (16, 10, 32),
+          'ranger_cabin' => (12, 10, 32),
+          _ => (12, 8, 32),
+        };
         expect((r.cols, r.rows, r.tile), expected);
         expect(r.tile, CustomPlayer.sizePlayer.toInt());
         expect(_pngSize('assets/images/interiors/${r.image}'), (r.cols * r.tile, r.rows * r.tile));

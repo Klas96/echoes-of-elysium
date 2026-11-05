@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Pixelize AI-gen cabin sources into hard 32×32 tile overrides and patch tileset.
 
-AI JPG → NEAREST-only pixelize straight to 32×32 (no soft 128 intermediate).
-Gameplay tiles are only tiles/<id>.png at 32×32 — never commit soft _raw_* files.
-Continuous bed (`cabin_bed_full.jpg`) → 32×64 hard NN → head/foot split.
+Walls: continuous masonry strip (`cabin_wall_strip.jpg`) → NEAREST to a
+12×3 tile grid → slice (aligned horizontal rows). Side cutaway from
+`cabin_side_strip.jpg`. Props: AI JPG → NEAREST 32×32. Continuous bed →
+32×64 hard NN → head/foot. No soft `_raw_*`, no Pillow invent.
 
 Run:
   python3 tools/interiors/assemble_cabin_gen.py
@@ -11,6 +12,7 @@ Run:
 """
 from __future__ import annotations
 
+import json
 import sys
 import tempfile
 from pathlib import Path
@@ -34,8 +36,13 @@ MAT_CABIN = 15
 W_LOG, W_FIRE = 20, 21
 W_MAP = 24
 J_LOG_L, J_LOG_R = 30, 31
+W_LOG_TOP, W_LOG_BASE = 37, 38  # generic south / fallback face bands
 # AI cutaway companions (also stamped into tileset by build_rooms overrides).
 W_LOG_S, W_LOG_C = 72, 77
+W_LOG_S_MID, W_LOG_S_BASE = 116, 117
+# Continuous N-wall strip slices: top 80–91, mid 92–103, base 104–115.
+STRIP_TOP0, STRIP_MID0, STRIP_BASE0 = 80, 92, 104
+STRIP_COLS = 12
 PLANT = 48
 CHEST = 50
 JOURNAL, NOTE = 52, 53
@@ -117,155 +124,102 @@ def grid_cells(im: Image.Image, cols: int, rows: int) -> list[Image.Image]:
     return cells
 
 
-def _row_mean(px, y: int, w: int) -> tuple[float, float, float]:
-    rs = gs = bs = n = 0
-    step = max(1, w // 40)
-    for x in range(0, w, step):
-        r, g, b, a = px[x, y]
-        if a < 8:
-            continue
-        rs += r
-        gs += g
-        bs += b
-        n += 1
-    if not n:
-        return (0.0, 0.0, 0.0)
-    return (rs / n, gs / n, bs / n)
+def scale_strip(src: Path, cols: int, rows: int) -> Image.Image:
+    """AI wall strip → hard NN grid so masonry rows stay aligned across tiles."""
+    raw = Image.open(src).convert("RGBA")
+    box = find_content_box(raw, dark=18)
+    grid = raw.crop(box)
+    return grid.resize((cols * T, rows * T), Image.Resampling.NEAREST)
 
 
-def _is_orange_floor(rgb: tuple[float, float, float]) -> bool:
-    r, g, b = rgb
-    return r > 115 and b < 95 and r > g + 20 and r > b + 35 and (g + b) < (r + 40)
+def slice_strip_cells(grid: Image.Image, cols: int, rows: int) -> list[list[Image.Image]]:
+    out: list[list[Image.Image]] = []
+    for r in range(rows):
+        row: list[Image.Image] = []
+        for c in range(cols):
+            row.append(opaque_tile(grid.crop((c * T, r * T, c * T + T, r * T + T))))
+        out.append(row)
+    return out
 
 
-def strip_atlas_floor(cell: Image.Image) -> Image.Image:
-    """Drop orange floor planks baked under AI wall cells; keep ~2px contact shadow.
-
-    Processes the AI atlas only — does not invent wall pixels.
-    """
-    cell = cell.convert("RGBA")
+def _cell_dark_hole_score(cell: Image.Image) -> float:
+    """Higher when a cell has a dark hearth mouth / deep inset void."""
     px = cell.load()
-    w, h = cell.size
-    y = h - 1
-    floor_run = 0
-    while y > int(h * 0.28):
-        if _is_orange_floor(_row_mean(px, y, w)):
-            floor_run += 1
-            y -= 1
-            continue
-        if floor_run >= 3 and y > 2 and _is_orange_floor(_row_mean(px, y - 1, w)):
-            y -= 1
-            floor_run += 1
-            continue
-        break
-    if floor_run >= 3:
-        cell = cell.crop((0, 0, w, min(h, y + 2)))
-    return cell
-
-
-def nonblack_box(cell: Image.Image, dark: int = 40) -> tuple[int, int, int, int]:
-    px = cell.load()
-    w, h = cell.size
-    min_x, min_y, max_x, max_y = w, h, 0, 0
-    found = False
-    for y in range(h):
-        for x in range(w):
+    score = 0.0
+    n = 0
+    for y in range(T):
+        for x in range(T):
             r, g, b, a = px[x, y]
             if a < 8:
                 continue
-            if r > dark or g > dark or b > dark:
-                found = True
-                min_x = min(min_x, x)
-                min_y = min(min_y, y)
-                max_x = max(max_x, x)
-                max_y = max(max_y, y)
-    if not found:
-        return (0, 0, w, h)
-    return (min_x, min_y, max_x + 1, max_y + 1)
+            n += 1
+            if r < 55 and g < 50 and b < 50:
+                score += 1.0
+    return score / max(1, n)
 
 
-def scrub_floor_bleed(tile: Image.Image) -> Image.Image:
-    """If NN still leaves orange floor on the bottom rows, darken toward baseboard."""
-    tile = tile.copy()
-    px = tile.load()
-    for yy in (30, 31):
+def _cell_inset_frame_score(cell: Image.Image) -> float:
+    """Higher when a cell has a dark wood frame around a lighter inset (map/window)."""
+    px = cell.load()
+    dark = light = 0
+    n = 0
+    for y in range(T):
         for x in range(T):
-            r, g, b, a = px[x, yy]
-            if r > 115 and r > g + 20 and r > b + 35 and b < 95:
-                br, bg, bb, _ = px[x, 26]
-                fac = 3 if yy == 31 else 2
-                px[x, yy] = (max(0, br // fac), max(0, bg // fac), max(0, bb // fac), a)
-    return tile
+            r, g, b, a = px[x, y]
+            if a < 8:
+                continue
+            n += 1
+            if r < 90 and g < 70 and b < 55 and max(r, g, b) - min(r, g, b) < 35:
+                dark += 1
+            elif r > 150 and g > 120 and b > 70:
+                light += 1
+    if n == 0:
+        return 0.0
+    # Framed insets mix a dark border with a lighter interior patch.
+    return min(dark, light) / n
 
 
-def trim_void_columns(tile: Image.Image, dark_sum: int = 70, min_keep: int = 12) -> Image.Image:
-    """Crop near-black void columns left after NN so cutaway wood fills the tile."""
-    px = tile.load()
-    w, h = tile.size
-    left = 0
-    while left < w - min_keep:
-        dark = sum(1 for y in range(h) if sum(px[left, y][:3]) < dark_sum)
-        if dark < h * 0.7:
-            break
-        left += 1
-    right = w - 1
-    while right > left + min_keep:
-        dark = sum(1 for y in range(h) if sum(px[right, y][:3]) < dark_sum)
-        if dark < h * 0.7:
-            break
-        right -= 1
-    if left == 0 and right == w - 1:
-        return tile
-    return tile.crop((left, 0, right + 1, h))
+def slice_walls_from_strips(face_src: Path, side_src: Path) -> dict[int, Image.Image]:
+    """Full masonry face strip + side thickness strip → hard 32×32 wall ids."""
+    face = scale_strip(face_src, STRIP_COLS, 3)
+    cells = slice_strip_cells(face, STRIP_COLS, 3)
+    out: dict[int, Image.Image] = {}
+    for c in range(STRIP_COLS):
+        out[STRIP_TOP0 + c] = cells[0][c]
+        out[STRIP_MID0 + c] = cells[1][c]
+        out[STRIP_BASE0 + c] = cells[2][c]
 
+    # Keep insets off the cutaway end-caps so interact spots stay approachable.
+    inner = list(range(1, STRIP_COLS - 1))
+    fire_c = max(inner, key=lambda c: _cell_dark_hole_score(cells[1][c]) + _cell_dark_hole_score(cells[2][c]))
+    # Prefer the right half for the map (hearth is usually left-of-center on the strip).
+    right_inner = [c for c in inner if c >= STRIP_COLS // 2 and abs(c - fire_c) > 1]
+    map_c = max(right_inner or [c for c in inner if abs(c - fire_c) > 1], key=lambda c: _cell_inset_frame_score(cells[1][c]))
+    plain = min(
+        (c for c in inner if c not in (fire_c, map_c)),
+        key=lambda c: _cell_dark_hole_score(cells[1][c]) + _cell_inset_frame_score(cells[1][c]),
+    )
+    out[W_LOG_TOP] = cells[0][plain]
+    out[W_LOG] = cells[1][plain]
+    out[W_LOG_BASE] = cells[2][plain]
+    # Hearth sits on the baseboard band; map on the mid face.
+    out[W_FIRE] = cells[2][fire_c]
+    out[W_MAP] = cells[1][map_c]
+    meta = {"fire_col": fire_c, "map_col": map_c, "plain_col": plain, "cols": STRIP_COLS}
+    (GEN / "wall_strip_meta.json").write_text(json.dumps(meta, indent=2) + "\n")
+    print(f"strip insets: fire_col={fire_c} map_col={map_c} plain_col={plain}")
 
-def strip_side_top_beam(cell: Image.Image) -> Image.Image:
-    """Remove the horizontal top-beam band from E/W cutaway cells.
+    side = scale_strip(side_src, 1, 3)
+    side_cells = slice_strip_cells(side, 1, 3)
+    out[W_LOG_S] = side_cells[0][0]
+    out[W_LOG_S_MID] = side_cells[1][0]
+    out[W_LOG_S_BASE] = side_cells[2][0]
+    out[W_LOG_C] = side_cells[0][0]
 
-    Mid-side columns tile vertically; keeping the atlas top beam would stamp a
-    false horizontal stripe every 32px. Corners keep the beam via W_LOG_C.
-    """
-    w, h = cell.size
-    # Drop ~18% from the top (beam + join), keep vertical rim/face continuous.
-    y0 = max(6, h * 18 // 100)
-    if y0 >= h - 8:
-        return cell
-    return cell.crop((0, y0, w, h))
-
-
-def wall_tile(cell: Image.Image, *, fill_cutaway: bool = False) -> Image.Image:
-    """AI wall cell → hard opaque 32×32 (floor stripped; optional void crop for sides)."""
-    cell = strip_atlas_floor(cell)
-    if fill_cutaway:
-        cell = cell.crop(nonblack_box(cell, dark=35))
-        cell = strip_side_top_beam(cell)
-    out = scrub_floor_bleed(opaque_tile(cell))
-    if fill_cutaway:
-        out = opaque_tile(trim_void_columns(out))
-    # Re-snap after scrub so side cutaways stay within the hard-pixel budget.
-    return opaque_tile(out)
-
-
-def slice_walls(src: Path) -> dict[int, Image.Image]:
-    """Cutaway wall atlas (5×3): quiet face + beam/baseboard, side thickness, corners, jambs.
-
-    Cell map (row-major):
-      0 face, 2 fire, 3 map, 5 side cutaway, 6 corner post, 7 left jamb,
-      9 door (unused gameplay id), 10 side variant.
-    Right jamb is a horizontal flip of the AI left jamb (no new pixels invented).
-    """
-    raw = Image.open(src).convert("RGBA")
-    cells = grid_cells(raw, 5, 3)
-    jamb_l = wall_tile(cells[7])
-    return {
-        W_LOG: wall_tile(cells[0]),
-        W_FIRE: wall_tile(cells[2]),
-        W_MAP: wall_tile(cells[3]),
-        W_LOG_S: wall_tile(cells[5], fill_cutaway=True),
-        W_LOG_C: wall_tile(cells[6]),
-        J_LOG_L: jamb_l,
-        J_LOG_R: jamb_l.transpose(Image.Transpose.FLIP_LEFT_RIGHT),
-    }
+    # Door jambs: reuse AI side-thickness (flip for the right jamb — no invent).
+    out[J_LOG_L] = side_cells[1][0]
+    out[J_LOG_R] = side_cells[1][0].transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+    return out
 
 
 def clear_dark_bg(im: Image.Image) -> Image.Image:
@@ -350,7 +304,13 @@ def main() -> int:
         stale.unlink()
     tiles: dict[int, Image.Image] = {}
     tiles.update(slice_floor(GEN / "cabin_floor_sheet.jpg"))
-    tiles.update(slice_walls(GEN / "cabin_wall_sheet.jpg"))
+    face_strip = GEN / "cabin_wall_strip.jpg"
+    side_strip = GEN / "cabin_side_strip.jpg"
+    if not face_strip.exists() or not side_strip.exists():
+        raise FileNotFoundError(
+            f"need {face_strip.name} + {side_strip.name} (continuous wall strips)"
+        )
+    tiles.update(slice_walls_from_strips(face_strip, side_strip))
     tiles.update(assemble_props())
     for tid, im in tiles.items():
         assert im.size == (T, T), (tid, im.size)

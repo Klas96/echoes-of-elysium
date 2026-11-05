@@ -757,6 +757,7 @@ J_LOG_L, J_LOG_R = 30, 31
 J_CAVE_L, J_CAVE_R = 32, 33
 J_BOOK_L, J_BOOK_R = 34, 35
 ARCHIVE_RUG = 36
+W_LOG_TOP, W_LOG_BASE = 37, 38
 # Side + corner companions (E/W / posts). Face walls stay 16–25.
 W_TEA_S, W_NOODLE_S, W_LOG_S, W_BOOKS_S, W_CAVE_S = 70, 71, 72, 73, 74
 W_TEA_C, W_NOODLE_C, W_LOG_C, W_BOOKS_C, W_CAVE_C = 75, 76, 77, 78, 79
@@ -771,8 +772,12 @@ STOOL, RUG = 62, 63
 BED_C_H, BED_C_F = 64, 65
 LECTERN, GLYPH = 66, 67
 BARREL, FERN = 68, 69
+# Cabin continuous strip + tall side bands (assemble_cabin_gen).
+W_LOG_S_MID, W_LOG_S_BASE = 116, 117
+STRIP_TOP0, STRIP_MID0, STRIP_BASE0 = 80, 92, 104
+STRIP_COLS = 12
 
-WALLS = set(range(16, 36)) | set(range(70, 80))
+WALLS = set(range(16, 40)) | set(range(70, 80)) | set(range(80, 118))
 SOLID_FLOOR = WALLS | {POOL}
 SOLID_PROPS = {
     COUNTER, URN, POTS, TIN, TABLE, CUSHION, BED_H, BED_F, PLANT, SCREEN,
@@ -1255,43 +1260,72 @@ def noodle() -> dict:
 
 
 def ranger() -> dict:
-    # One hearth + one map on the north wall (quiet props + one wall focal).
-    F, P = shell(W_LOG, W_LOG_S, W_LOG_C, CABIN, MAT_CABIN, J_LOG_L, J_LOG_R)
-    F[0][3] = W_FIRE
-    F[0][6] = W_MAP
-    vary(F, CABIN, CABIN2)
-    P[1][1] = LOGS
-    P[2][1] = CHEST
-    P[1][8] = JOURNAL
-    P[1][9] = NOTE
-    P[2][10] = BED_C_H
-    P[3][10] = BED_C_F
-    P[4][1] = PLANT
-    P[4][8] = PLANT
-    P[3][5], P[3][6] = RUG, RUG
-    return room(
-        "ranger_cabin",
-        "Ranger cabin in the Woods: Asha's place",
-        F, P,
-        [
-            {"id": "stash_chest", "rect": [1, 2, 1, 1], "kind": "stash",
-             "note": "Stash between trips (#32)"},
-            {"id": "desk_journal", "rect": [8, 1, 1, 1], "kind": "journal",
-             "note": "Creature journal: 'N of 24 creatures befriended'"},
-            {"id": "asha_note", "rect": [9, 1, 1, 1], "kind": "note",
-             "note": "'Kaela, use what you need. The chest is yours now. A.'"},
-            {"id": "wall_map", "rect": [6, 0, 1, 1], "kind": "map",
-             "note": "Region map: 'Asha has pinned every trail she's walked. A few are still blank.'"},
-            {"id": "stove", "rect": [3, 0, 1, 1], "kind": "flavour",
-             "note": "'Cold ashes and a kettle. It smells of pine.'"},
-        ],
-        [],
-        [
-            {"tile": [3, 0], "kind": "fire"},
-            {"tile": [8, 1], "kind": "warm"},
-            {"tile": [1, 2], "kind": "warm"},
-        ],
-    )
+    """Cabin proving-ground: 3-tile-tall continuous masonry N wall vs Kaela.
+
+    Face tiles come from a sliced AI strip (aligned mortar rows). Room grows to
+    12×10 so the taller face still leaves a walkable floor.
+    """
+    with room_size(12, 10):
+        F, P = shell(W_LOG_TOP, W_LOG_S, W_LOG_C, CABIN, MAT_CABIN, J_LOG_L, J_LOG_R)
+        # Continuous strip across the north face (rows 0–2).
+        for x in range(STRIP_COLS):
+            F[0][x] = STRIP_TOP0 + x
+            F[1][x] = STRIP_MID0 + x
+            F[2][x] = STRIP_BASE0 + x
+        # Cutaway sides / corners meet the tall face.
+        for y, side in ((0, W_LOG_C), (1, W_LOG_S_MID), (2, W_LOG_S_BASE)):
+            F[y][0] = side
+            F[y][W - 1] = side
+        # South short face uses band tiles (top + baseboard), not the strip.
+        for x in range(1, W - 1):
+            if F[H - 2][x] not in (CABIN, CABIN2):
+                F[H - 2][x] = W_LOG_TOP
+            if F[H - 1][x] not in (MAT_CABIN, J_LOG_L, J_LOG_R):
+                F[H - 1][x] = W_LOG_BASE
+        meta_path = GEN_SRC / "cabin" / "wall_strip_meta.json"
+        fire_x, map_x = 2, 8
+        if meta_path.is_file():
+            meta = json.loads(meta_path.read_text())
+            fire_x = int(meta.get("fire_col", fire_x))
+            map_x = int(meta.get("map_col", map_x))
+        F[2][fire_x] = W_FIRE
+        F[1][map_x] = W_MAP
+        vary(F, CABIN, CABIN2)
+        # Props on floor south of the tall wall. Keep (fire_x,3) and (map_x,3)
+        # clear so wall interacts stay approachable.
+        P[4][1] = LOGS
+        P[5][1] = CHEST
+        P[4][8] = JOURNAL
+        P[4][9] = NOTE
+        P[4][10] = BED_C_H
+        P[5][10] = BED_C_F
+        P[6][2] = PLANT
+        P[6][7] = PLANT
+        P[5][5], P[5][6] = RUG, RUG
+        # Interact rects sit on the base wall row so the floor below can approach.
+        return room(
+            "ranger_cabin",
+            "Ranger cabin in the Woods: Asha's place",
+            F, P,
+            [
+                {"id": "stash_chest", "rect": [1, 5, 1, 1], "kind": "stash",
+                 "note": "Stash between trips (#32)"},
+                {"id": "desk_journal", "rect": [8, 4, 1, 1], "kind": "journal",
+                 "note": "Creature journal: 'N of 24 creatures befriended'"},
+                {"id": "asha_note", "rect": [9, 4, 1, 1], "kind": "note",
+                 "note": "'Kaela, use what you need. The chest is yours now. A.'"},
+                {"id": "wall_map", "rect": [map_x, 2, 1, 1], "kind": "map",
+                 "note": "Region map: 'Asha has pinned every trail she's walked. A few are still blank.'"},
+                {"id": "stove", "rect": [fire_x, 2, 1, 1], "kind": "flavour",
+                 "note": "'Cold ashes and a kettle. It smells of pine.'"},
+            ],
+            [],
+            [
+                {"tile": [fire_x, 2], "kind": "fire"},
+                {"tile": [8, 4], "kind": "warm"},
+                {"tile": [1, 5], "kind": "warm"},
+            ],
+        )
 
 
 def archive() -> dict:
