@@ -154,6 +154,9 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
     setupMovementByJoystick(enabled: false);
     stopMove(forceIdle: true);
     respawnFade.value = true;
+    // Sentinel plaza: dying mid-lockdown used to leave the fence up with
+    // Kaela teleported to a checkpoint outside — soft-lock. Restart clean.
+    SentinelDrone.instance?.resetEncounter();
   }
 
   void _updateRespawn(double dt) {

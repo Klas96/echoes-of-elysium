@@ -175,6 +175,64 @@ class SentinelDrone extends GameDecoration {
     _trySeal();
   }
 
+  /// True once the lockdown fight has started (seal may still be pending).
+  bool get isEngaged => _arenaReady;
+
+  /// HP left — exposed for tests / debug.
+  int get health => _health;
+
+  /// Current phase band (1–3).
+  int get phase => _phase;
+
+  /// Kaela died mid-fight: drop the fence, despawn adds, and restore the
+  /// Sentinel to its pre-engage idle so she can walk back in and try again.
+  void resetEncounter() {
+    final arena = SentinelArena.instance;
+    final engaged = _arenaReady || (arena?.sealed ?? false);
+    if (!engaged || isDead) return;
+
+    _clearAdds();
+    _clearVolleyBullets();
+    _health = maxHealth;
+    _state = _SState.idle;
+    _arenaReady = false;
+    _phase = 1;
+    _spawnedP2 = false;
+    _spawnedP3 = false;
+    _atk = _Atk.none;
+    _atkT = 0;
+    _meleeTimer = 0;
+    _patternTimer = 1.2;
+    _knockback.setZero();
+    _hushed = 0;
+    _stuckFor = 0;
+    _slowT = 0;
+    _slowFactor = 0.45;
+    _phaseFlash = 0;
+    position = _origin.clone();
+    arena?.open();
+  }
+
+  /// Test helper: mark the fight as started without a live game / GameState.
+  @visibleForTesting
+  void debugMarkEngaged({int? health}) {
+    _arenaReady = true;
+    _state = _SState.fight;
+    if (health != null) {
+      _health = health.clamp(1, maxHealth);
+      _phase = phaseForHpRatio(_health / maxHealth);
+      _spawnedP2 = _phase >= 2;
+      _spawnedP3 = _phase >= 3;
+    }
+  }
+
+  void _clearVolleyBullets() {
+    if (!hasGameRef) return;
+    for (final b in gameRef.query<EnemyBullet>(onlyVisible: false).toList()) {
+      if (b.isMounted) b.removeFromParent();
+    }
+  }
+
   /// Fence only when Kaela is inside — ranged openers must not lock her out.
   void _trySeal() {
     final arena = SentinelArena.instance;
@@ -418,6 +476,9 @@ class SentinelDrone extends GameDecoration {
 
     final player = gameRef.player;
     if (player == null) return;
+    // During the death fade Kaela is still inside the plaza — do not
+    // re-engage / re-seal before the checkpoint teleport lands.
+    if (player is CustomPlayer && player.isRespawning) return;
     final toPlayer = (player.position + player.size / 2) - _centre;
     final dist = toPlayer.length;
 
