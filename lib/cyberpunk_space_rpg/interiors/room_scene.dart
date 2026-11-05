@@ -218,6 +218,7 @@ class Interiors {
       GameInput.overworldKeysEnabled = false;
       GameInput.reclaimAlternate = _reclaimRoomKeys;
       GameInput.syncAlternateKeys = () => RoomPlayer.current?.syncMovementFromKeyboard();
+      GameInput.haltAlternate = () => RoomPlayer.current?.haltMovement();
       try {
         if (!context.mounted) return;
         // Completes after the reverse (exit) transition finishes — no second wait.
@@ -235,6 +236,7 @@ class Interiors {
         GameInput.overworldKeysEnabled = true;
         GameInput.reclaimAlternate = null;
         GameInput.syncAlternateKeys = null;
+        GameInput.haltAlternate = null;
         if (game.context.mounted) {
           if (outside != null && outside.isMounted) game.camera.moveToPlayer();
           // Always unpause if we paused on the way in (a memory played inside
@@ -249,6 +251,7 @@ class Interiors {
       GameInput.overworldKeysEnabled = true;
       GameInput.reclaimAlternate = null;
       GameInput.syncAlternateKeys = null;
+      GameInput.haltAlternate = null;
       _busy = false;
     }
   }
@@ -750,6 +753,29 @@ class RoomPlayer extends SimplePlayer with BlockMovementCollision, InstantFacing
     return held;
   }
 
+  /// Hard stop for focus loss / menus (mirrors overworld [CustomPlayer.haltMovement]).
+  void haltMovement() {
+    _clearWalk();
+    onJoystickChangeDirectional(JoystickDirectionalEvent(
+      directional: JoystickMoveDirectional.IDLE,
+      intensity: 0,
+      isKeyboard: true,
+    ));
+    stopMove(forceIdle: true);
+  }
+
+  void _clampToRoomBounds() {
+    final maxX = max(0.0, room.cols * room.tile - size.x);
+    final maxY = max(0.0, room.rows * room.tile - size.y);
+    final x = position.x.clamp(0.0, maxX);
+    final y = position.y.clamp(0.0, maxY);
+    if (x != position.x || y != position.y) {
+      position
+        ..x = x
+        ..y = y;
+    }
+  }
+
   @override
   void update(double dt) {
     speed = baseSpeed * Meals.speedMultiplier;
@@ -759,6 +785,7 @@ class RoomPlayer extends SimplePlayer with BlockMovementCollision, InstantFacing
       if (!held && _waypoints.isNotEmpty) _followWalk();
     }
     super.update(dt);
+    _clampToRoomBounds();
     _jog?.setSpeed(velocity.length);
     Meals.tick(dt);
     final (tx, ty) = tile;
