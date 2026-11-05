@@ -209,10 +209,9 @@ def slice_strip_cells(grid: Image.Image, cols: int, rows: int) -> list[list[Imag
 
 
 def _cell_dark_hole_score(cell: Image.Image) -> float:
-    """Higher when a cell has a dark hearth mouth / deep inset void."""
+    """Higher when a cell has a dark hearth mouth (grey stone + void), not log grooves."""
     px = cell.load()
-    score = 0.0
-    n = 0
+    dark = grey = n = 0
     for y in range(T):
         for x in range(T):
             r, g, b, a = px[x, y]
@@ -220,8 +219,19 @@ def _cell_dark_hole_score(cell: Image.Image) -> float:
                 continue
             n += 1
             if r < 55 and g < 50 and b < 50:
-                score += 1.0
-    return score / max(1, n)
+                dark += 1
+            elif (
+                70 <= r <= 160
+                and abs(r - g) < 25
+                and abs(g - b) < 25
+                and max(r, g, b) - min(r, g, b) < 30
+            ):
+                grey += 1
+    if n == 0:
+        return 0.0
+    # Weight void by nearby grey stone so stacked-log seams do not win.
+    stone_boost = 1.0 + min(2.0, 6.0 * grey / n)
+    return (dark / n) * stone_boost
 
 
 def _cell_inset_frame_score(cell: Image.Image) -> float:
@@ -278,23 +288,27 @@ def _lower_hearth_column(face: Image.Image, fire_c: int, plain_c: int) -> Image.
         if wood > T // 2:
             base_y = y
             break
-    # Mouth = near-black cluster above the baseboard (skip beam shadow + wood rows).
+    # Mouth = near-black cluster with grey stone nearby (log grooves are NOT hearths).
     mouth_ys: list[int] = []
     for y in range(T, base_y):
-        dark = sum(
-            1
-            for x in range(6, 26)
-            if px[x, y][0] < 55 and px[x, y][1] < 50 and px[x, y][2] < 50
-        )
-        wood = sum(
-            1
-            for x in range(T)
-            if px[x, y][0] > 55
-            and px[x, y][1] > 30
-            and px[x, y][2] < 55
-            and px[x, y][0] >= px[x, y][1]
-        )
-        if dark >= 7 and wood < T // 3:
+        dark = grey = wood = 0
+        for x in range(T):
+            r, g, b, a = px[x, y]
+            if a < 8:
+                continue
+            if r < 55 and g < 50 and b < 50:
+                if 6 <= x < 26:
+                    dark += 1
+            elif (
+                70 <= r <= 160
+                and abs(r - g) < 25
+                and abs(g - b) < 25
+                and max(r, g, b) - min(r, g, b) < 30
+            ):
+                grey += 1
+            elif r > 55 and g > 30 and b < 55 and r >= g:
+                wood += 1
+        if dark >= 6 and grey >= 2 and wood < T // 2:
             mouth_ys.append(y)
     if not mouth_ys:
         return out
@@ -306,9 +320,11 @@ def _lower_hearth_column(face: Image.Image, fire_c: int, plain_c: int) -> Image.
         else:
             runs.append([y])
     mouth_run = max(runs, key=len)
+    # A real hearth mouth is a short band — huge runs are log-groove false positives.
+    if len(mouth_run) > T // 2:
+        return out
     mouth_top, mouth_bot = mouth_run[0], mouth_run[-1]
-    # Stone surround above the mouth; stop at the mouth bottom so leftover tan
-    # masonry under the opening is not glued into the hearth block.
+    # Include a little grey-stone surround above the mouth.
     hearth_top = max(T, mouth_top - 6)
     hearth_bot = mouth_bot
     if hearth_bot <= hearth_top:
@@ -316,7 +332,8 @@ def _lower_hearth_column(face: Image.Image, fire_c: int, plain_c: int) -> Image.
     # Seat the mouth on the baseboard with a 1px contact gap.
     target_bot = base_y - 2
     shift = target_bot - hearth_bot
-    if shift <= 0:
+    # Refuse wild shifts (log grooves / bad detection would smash the face).
+    if shift <= 0 or shift > 14:
         return out
     rebuilt = plain.copy()
     # Keep fire-column capital / upper masonry above the hearth span.
