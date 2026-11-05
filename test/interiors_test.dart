@@ -153,8 +153,10 @@ void main() {
       expect(_room('archive_library').spots.where((s) => s.kind == 'lore' || s.kind == 'clue'), hasLength(4));
       expect(_room('archive_library').spots.map((s) => s.id), contains('merge_draft'));
       expect(_room('ranger_cabin').npcs, isEmpty);
+      // Cabin #134 replaced the wall map inset with a window (flavour).
       expect(_room('ranger_cabin').spots.map((s) => s.kind).toSet(),
-          containsAll(['note', 'stash', 'journal', 'map']));
+          containsAll(['note', 'stash', 'journal', 'flavour']));
+      expect(_room('ranger_cabin').spots.map((s) => s.id), contains('wall_window'));
       for (final n in ['wen', 'ferro', 'dao']) {
         expect(_pngSize('assets/images/sprites/${n}_walk.png'), (192, 128));
         expect(_pngSize('assets/images/sprites/npc_$n.png'), (30, 30));
