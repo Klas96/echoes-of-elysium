@@ -110,8 +110,8 @@ class SfxManager {
       ]);
       _ready = true;
       await _applyVolumes();
-      // Warm shoot slots so the first shot is not a create/decode hitch.
-      unawaited(_ensureShootPlayers());
+      // Await warm so the first phone shot is not create/decode-on-play.
+      await _ensureShootPlayers();
     } catch (e) {
       debugPrint('SfxManager init: $e');
       // Still mark ready if players exist so VO/SFX can attempt play.
@@ -128,16 +128,16 @@ class SfxManager {
         final mix = GameAudioContexts.mix;
         final mode = _shootMode;
         final vol = _baseShoot * _scale;
-        final players = <AudioPlayer>[];
-        for (var i = 0; i < _shootSlots; i++) {
+        // Parallel warm — sequential create/decode made the first phone shot late.
+        final players = await Future.wait(List.generate(_shootSlots, (_) async {
           final p = AudioPlayer();
           await p.setPlayerMode(mode);
           await _safeContext(p, mix);
           await p.setReleaseMode(ReleaseMode.stop);
           await p.setSource(AssetSource(_shootAsset));
           await p.setVolume(vol);
-          players.add(p);
-        }
+          return p;
+        }));
         _shootPlayers = players;
         return players;
       } catch (e) {
@@ -221,20 +221,25 @@ class SfxManager {
     if (players == null || players.isEmpty || !_audible) return;
     final p = players[_shootIdx++ % players.length];
     final vol = _baseShoot * _scale;
-    // Return immediately — awaiting stop/seek/resume would serialize auto-fire
+    // Return immediately — awaiting stop/resume would serialize auto-fire
     // and make shots sound laggy / drop when the previous await is still mid-flight.
     unawaited(_fireShoot(p, vol));
   }
 
   Future<void> _fireShoot(AudioPlayer p, double vol) async {
+    final gen = (_oneShotGen[p] = (_oneShotGen[p] ?? 0) + 1);
     try {
+      // stop()+resume() only. Never seek after stop on Android SoundPool:
+      // seekTo(0) is a no-op when streamId is null (post-stop / never played)
+      // and never emits seekComplete, so await seek(0) hits the 30s
+      // seekingTimeout — shots sounded missing or extremely late on phones.
       await p.stop();
+      if (_oneShotGen[p] != gen || !_audible) return;
       await p.setVolume(vol);
-      try {
-        await p.seek(Duration.zero);
-      } catch (_) {}
+      if (_oneShotGen[p] != gen || !_audible) return;
       await p.resume();
     } catch (_) {
+      if (_oneShotGen[p] != gen || !_audible) return;
       // Source lost / SoundPool quirk — full play reloads the clip.
       try {
         await p.play(AssetSource(_shootAsset), volume: vol);
