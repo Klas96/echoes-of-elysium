@@ -1374,23 +1374,24 @@ def map1():
             if water[y, x]: lv.ground[y, x] = blob(ts, "grass-water", water, x, y, lv.rng)
             if path[y, x]: lv.ground[y, x] = blob(ts, "grass-path", path, x, y, lv.rng)
     # NE stash nook: 2-tile-thick forest wall (x=53–54). Path ends at x=52.
-    # West face 138 (shadow toward path), east face 142 (shadow toward willow).
+    # In-memory ids are 0-based (write() emits Tiled GID = id+1). Comments show GIDs.
+    # West face GID 138 (shadow toward path), east face GID 142 (toward willow).
     # Band edges 146/141 only over dirt; corners 157/158 at the path notch.
-    lv.ground[8, 52] = 28   # grass-path east end (top)
-    lv.ground[9, 52] = 31   # grass-path east end (bottom)
-    lv.ground[8, 53] = 138  # left-edge forest (faces path)
-    lv.ground[9, 53] = 138
-    lv.ground[7, 52] = 146  # south-edge band over path only
-    lv.ground[10, 52] = 141
-    lv.ground[7, 53] = 157  # SW grass corner toward path end
-    lv.ground[10, 53] = 158  # NW grass corner toward path end
+    lv.ground[8, 52] = 27   # GID 28 grass-path east end (top)
+    lv.ground[9, 52] = 30   # GID 31 grass-path east end (bottom)
+    lv.ground[8, 53] = 137  # GID 138 left-edge forest (faces path)
+    lv.ground[9, 53] = 137
+    lv.ground[7, 52] = 145  # GID 146 south-edge band over path only
+    lv.ground[10, 52] = 140 # GID 141
+    lv.ground[7, 53] = 156  # GID 157 SW grass corner toward path end
+    lv.ground[10, 53] = 157 # GID 158 NW grass corner toward path end
     for y in (6, 11):
-        lv.ground[y, 53] = 159
+        lv.ground[y, 53] = 158  # GID 159
     for y in (6, 7, 8, 9, 10, 11):
-        lv.ground[y, 54] = 142  # right-edge forest (grass+shadow on east)
+        lv.ground[y, 54] = 141  # GID 142 right-edge forest (grass+shadow on east)
     # Clear old half-forest scraps so the east dither reads against grass.
-    for y, gid in ((6, 4), (7, 3), (8, 5), (9, 6), (10, 7), (11, 6)):
-        lv.ground[y, 55] = gid
+    for y, tid in ((6, 3), (7, 2), (8, 4), (9, 5), (10, 6), (11, 5)):  # GIDs 4,3,5,6,7,6
+        lv.ground[y, 55] = tid
     # keep-out: trails, clearings, gated pockets, the cabin
     for r in trails:
         carve_route(lv, route_pts(r), 2.5, lv.keepout)
