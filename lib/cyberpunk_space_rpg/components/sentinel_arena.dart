@@ -5,25 +5,39 @@ import 'package:flutter/material.dart';
 
 /// Temporary lockdown ring around the City Sentinel plaza.
 ///
-/// Thin solid walls + a dim vignette while the fight is active. Cleared on
-/// Sentinel death so the plaza opens again for the Archivist beat.
+/// Hard-pixel UEC energy fence + corner pylons + floor rim while the fight is
+/// active. Cleared on Sentinel death so the plaza opens again for the
+/// Archivist beat.
 class SentinelArena extends GameComponent {
   static SentinelArena? instance;
 
   /// Half-width of the square arena (world px) from [arenaCenter].
   static const double halfExtent = 11 * 32; // ~11 tiles
   static const double wallThick = 14;
+  static const double _tile = 32;
 
   final Vector2 arenaCenter;
   bool sealed = false;
   double _pulse = 0;
   final List<_ArenaWall> _walls = [];
+  final List<GameComponent> _decor = [];
+
+  Sprite? _fence;
+  Sprite? _pylon;
+  Sprite? _rim;
 
   SentinelArena(this.arenaCenter);
 
   @override
   Future<void> onLoad() async {
     instance = this;
+    try {
+      _fence = await Sprite.load('sprites/sentinel_fence.png');
+      _pylon = await Sprite.load('sprites/sentinel_pylon.png');
+      _rim = await Sprite.load('sprites/sentinel_rim.png');
+    } catch (_) {
+      // Missing art falls back to procedural neon slabs in [_ArenaWall].
+    }
     return super.onLoad();
   }
 
@@ -51,9 +65,45 @@ class SentinelArena extends GameComponent {
       final w = _ArenaWall(
         Vector2(r.left, r.top),
         Vector2(r.width, r.height),
+        fence: _fence,
       );
       _walls.add(w);
       gameRef.add(w);
+    }
+
+    // Corner pylons sit outside the walkable square.
+    final pylon = _pylon;
+    if (pylon != null) {
+      for (final offset in [
+        Vector2(-h - _tile * 0.55, -h - _tile * 0.55),
+        Vector2(h - _tile * 0.45, -h - _tile * 0.55),
+        Vector2(-h - _tile * 0.55, h - _tile * 0.45),
+        Vector2(h - _tile * 0.45, h - _tile * 0.45),
+      ]) {
+        final d = _ArenaPylon(c + offset, pylon);
+        _decor.add(d);
+        gameRef.add(d);
+      }
+    }
+
+    // Floor rim decals along the inner edge (activate on engage).
+    final rim = _rim;
+    if (rim != null) {
+      const step = _tile;
+      final n = ((h * 2) / step).floor();
+      for (var i = 0; i < n; i++) {
+        final along = -h + i * step + step / 2;
+        for (final pos in [
+          Vector2(c.x + along - step / 2, c.y - h), // north
+          Vector2(c.x + along - step / 2, c.y + h - step), // south
+          Vector2(c.x - h, c.y + along - step / 2), // west
+          Vector2(c.x + h - step, c.y + along - step / 2), // east
+        ]) {
+          final d = _ArenaRim(pos, rim);
+          _decor.add(d);
+          gameRef.add(d);
+        }
+      }
     }
   }
 
@@ -65,6 +115,10 @@ class SentinelArena extends GameComponent {
       if (w.isMounted) w.removeFromParent();
     }
     _walls.clear();
+    for (final d in _decor) {
+      if (d.isMounted) d.removeFromParent();
+    }
+    _decor.clear();
   }
 
   bool containsWorld(Vector2 world) {
@@ -85,26 +139,14 @@ class SentinelArena extends GameComponent {
     const h = halfExtent;
     final p = sin(_pulse);
     final c = arenaCenter;
-    // Floor wash
+    // Soft floor wash under the hard-pixel rim (kept quiet so tiles read).
     canvas.drawRect(
       Rect.fromCenter(
         center: Offset(c.x, c.y),
         width: h * 2,
         height: h * 2,
       ),
-      Paint()..color = Color.fromRGBO(255, 80, 20, 0.06 + p * 0.02),
-    );
-    // Inner rim
-    canvas.drawRect(
-      Rect.fromCenter(
-        center: Offset(c.x, c.y),
-        width: h * 2,
-        height: h * 2,
-      ),
-      Paint()
-        ..color = Color.fromRGBO(255, 100, 40, 0.35 + p * 0.1)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2,
+      Paint()..color = Color.fromRGBO(255, 80, 20, 0.04 + p * 0.015),
     );
     super.render(canvas);
   }
@@ -115,7 +157,9 @@ class SentinelArena extends GameComponent {
 
 /// Solid slab — player [BlockMovementCollision] treats solid hitboxes as walls.
 class _ArenaWall extends GameDecoration {
-  _ArenaWall(Vector2 position, Vector2 size)
+  final Sprite? fence;
+
+  _ArenaWall(Vector2 position, Vector2 size, {this.fence})
       : super(position: position, size: size);
 
   @override
@@ -126,17 +170,97 @@ class _ArenaWall extends GameDecoration {
 
   @override
   void render(Canvas canvas) {
-    canvas.drawRect(
-      Rect.fromLTWH(0, 0, size.x, size.y),
-      Paint()..color = const Color(0xCCFF4422),
-    );
-    canvas.drawRect(
-      Rect.fromLTWH(0, 0, size.x, size.y),
-      Paint()
-        ..color = const Color(0x88FFAA66)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5,
+    final sprite = fence;
+    if (sprite == null) {
+      canvas.drawRect(
+        Rect.fromLTWH(0, 0, size.x, size.y),
+        Paint()..color = const Color(0xCCFF4422),
+      );
+      canvas.drawRect(
+        Rect.fromLTWH(0, 0, size.x, size.y),
+        Paint()
+          ..color = const Color(0x88FFAA66)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.5,
+      );
+      return super.render(canvas);
+    }
+
+    final paint = Paint()..filterQuality = FilterQuality.none;
+    final horizontal = size.x >= size.y;
+    if (horizontal) {
+      // Tile fence segments along the long axis; stretch height to the slab.
+      var x = 0.0;
+      while (x < size.x) {
+        final w = min(32.0, size.x - x);
+        sprite.render(
+          canvas,
+          position: Vector2(x, 0),
+          size: Vector2(w, size.y),
+          overridePaint: paint,
+        );
+        x += 32;
+      }
+    } else {
+      // Vertical walls: rotate each segment 90°.
+      var y = 0.0;
+      while (y < size.y) {
+        final h = min(32.0, size.y - y);
+        canvas.save();
+        canvas.translate(size.x / 2, y + h / 2);
+        canvas.rotate(pi / 2);
+        sprite.render(
+          canvas,
+          position: Vector2(-h / 2, -size.x / 2),
+          size: Vector2(h, size.x),
+          overridePaint: paint,
+        );
+        canvas.restore();
+        y += 32;
+      }
+    }
+    super.render(canvas);
+  }
+}
+
+class _ArenaPylon extends GameDecoration {
+  final Sprite art;
+
+  _ArenaPylon(Vector2 position, this.art)
+      : super(position: position, size: Vector2.all(32));
+
+  @override
+  void render(Canvas canvas) {
+    art.render(
+      canvas,
+      size: size,
+      overridePaint: Paint()..filterQuality = FilterQuality.none,
     );
     super.render(canvas);
   }
+
+  @override
+  int get priority => LayerPriority.MAP + 2;
+}
+
+class _ArenaRim extends GameDecoration {
+  final Sprite art;
+
+  _ArenaRim(Vector2 position, this.art)
+      : super(position: position, size: Vector2.all(32));
+
+  @override
+  void render(Canvas canvas) {
+    art.render(
+      canvas,
+      size: size,
+      overridePaint: Paint()
+        ..filterQuality = FilterQuality.none
+        ..color = const Color(0xDDFFFFFF),
+    );
+    super.render(canvas);
+  }
+
+  @override
+  int get priority => LayerPriority.MAP + 1;
 }

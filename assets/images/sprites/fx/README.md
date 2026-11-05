@@ -22,3 +22,17 @@ stepTime/loop), drawn with FilterQuality.none:
 - `mist_loop.png` (mist; one placement per prop, does not tile).
 
 A missing sheet falls back to the procedural wisps.
+
+Sentinel arena fight polish (EOE-2 / #65), hard-pixel AI → NN:
+
+- `sentinel_slam_tele.png` 160×160 cracked plaza slam telegraph disc
+- `sentinel_sweep_tele.png` 128×128 scanner sweep cone (apex on left)
+- `sentinel_ring_tell.png` 64×64 thin expanding ring before the 8-way volley
+
+Companion lockdown tiles live next to the boss sprite (not under `fx/`):
+
+- `../sentinel_fence.png` 32×32 energy fence segment (tiled along the seal)
+- `../sentinel_pylon.png` 32×32 corner pylon
+- `../sentinel_rim.png` 32×32 floor rim decal on engage
+
+Missing FX fall back to the previous procedural circles/wedges.
