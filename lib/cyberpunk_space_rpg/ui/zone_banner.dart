@@ -1,19 +1,17 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 
 import 'dialog_chrome.dart';
 import 'mmo_feedback.dart';
 
-/// WoW-style enter-zone toast: chunky hard-pixel banner frame + themed flanks.
+/// WoW-style enter-zone toast: distinct AI→NN pixel-art plate per area.
 ///
-/// Matches [DialogChrome] neon-pixel grammar (double stroke, corner ticks,
-/// cyan/magenta accents) — not a soft Material card. Per-region motifs sit
-/// left/right of the name + flavor (woods trees, city neon, etc.).
+/// Each region ships a hard-pixel banner sheet with clear theme motifs
+/// (woods trees, city neon, Canal Works crane, cyber vents, core crystal).
+/// Title + flavor overlay the empty center band — DialogChrome hard type,
+/// not a soft Material card.
 class ZoneBanner extends StatelessWidget {
   const ZoneBanner({super.key});
 
-  /// Kept for tests / asset catalog — flank art sheets live here if needed.
   static const assets = {
     'woods': 'assets/images/ui/zone_banners/woods.png',
     'city': 'assets/images/ui/zone_banners/city.png',
@@ -46,16 +44,15 @@ class ZoneBanner extends StatelessWidget {
         return ValueListenableBuilder<String?>(
           valueListenable: MmoFeedback.zoneRegion,
           builder: (_, region, __) {
+            final asset = assetFor(region);
+            final accent = accentFor(region);
             final screen = MediaQuery.sizeOf(context);
             final short = screen.height < 500;
             final narrow = screen.width < 400;
-            final accent = accentFor(region);
             final maxW = screen.width * 0.9;
-            // Compact on short landscape so meal/toast chips stay clear.
-            final bannerW = short ? maxW.clamp(220.0, 340.0) : maxW.clamp(260.0, 440.0);
-            final motifW = short ? 28.0 : (narrow ? 34.0 : 42.0);
-            final padH = short ? 10.0 : 14.0;
-            final padV = short ? 7.0 : 10.0;
+            // Native sheets are 240×80 (3:1). Cap on short landscape for HUD.
+            final bannerW = short ? maxW.clamp(200.0, 300.0) : maxW.clamp(240.0, 420.0);
+            final artH = bannerW / 3;
 
             return IgnorePointer(
               child: Center(
@@ -64,68 +61,72 @@ class ZoneBanner extends StatelessWidget {
                   child: SizedBox(
                     key: const ValueKey('hud-banner-card'),
                     width: bannerW,
-                    child: DialogChrome.zoneBannerShell(
-                      accent: accent,
-                      padding: EdgeInsets.fromLTRB(padH, padV, padH, padV),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          SizedBox(
-                            width: motifW,
-                            height: short ? 36 : 48,
-                            child: CustomPaint(
-                              painter: _ZoneMotifPainter(region: region ?? '', mirror: false),
+                    height: artH,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        if (asset != null)
+                          Positioned.fill(
+                            child: Image.asset(
+                              asset,
+                              fit: BoxFit.fill,
+                              filterQuality: FilterQuality.none,
+                              isAntiAlias: false,
+                              gaplessPlayback: true,
                             ),
+                          )
+                        else
+                          Positioned.fill(
+                            child: ColoredBox(color: DialogChrome.ink.withValues(alpha: 0.92)),
                           ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  title.toUpperCase(),
-                                  textAlign: TextAlign.center,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: DialogChrome.zoneTitleStyle(
-                                    accent: accent,
-                                    compact: short || narrow,
-                                  ),
+                        // Thin hard neon rail — chrome grammar without hiding motifs.
+                        Positioned.fill(
+                          child: CustomPaint(
+                            painter: _HardBannerRailPainter(accent: accent),
+                          ),
+                        ),
+                        Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: bannerW * 0.2,
+                            vertical: artH * 0.16,
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                title.toUpperCase(),
+                                textAlign: TextAlign.center,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: DialogChrome.zoneTitleStyle(
+                                  accent: accent,
+                                  compact: short || narrow,
                                 ),
-                                ValueListenableBuilder<String?>(
-                                  valueListenable: MmoFeedback.zoneBlurb,
-                                  builder: (_, blurb, __) {
-                                    if (blurb == null || blurb.isEmpty) {
-                                      return const SizedBox.shrink();
-                                    }
-                                    return Padding(
-                                      padding: const EdgeInsets.only(top: 3),
-                                      child: Text(
-                                        blurb,
-                                        textAlign: TextAlign.center,
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: DialogChrome.zoneBlurbStyle(
-                                          compact: short || narrow,
-                                        ),
+                              ),
+                              ValueListenableBuilder<String?>(
+                                valueListenable: MmoFeedback.zoneBlurb,
+                                builder: (_, blurb, __) {
+                                  if (blurb == null || blurb.isEmpty) {
+                                    return const SizedBox.shrink();
+                                  }
+                                  return Padding(
+                                    padding: const EdgeInsets.only(top: 2),
+                                    child: Text(
+                                      blurb,
+                                      textAlign: TextAlign.center,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: DialogChrome.zoneBlurbStyle(
+                                        compact: short || narrow,
                                       ),
-                                    );
-                                  },
-                                ),
-                              ],
-                            ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 8),
-                          SizedBox(
-                            width: motifW,
-                            height: short ? 36 : 48,
-                            child: CustomPaint(
-                              painter: _ZoneMotifPainter(region: region ?? '', mirror: true),
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -138,82 +139,48 @@ class ZoneBanner extends StatelessWidget {
   }
 }
 
-/// Hard 1×1 / 2×2 block motifs — no gradients, no soft strokes.
-class _ZoneMotifPainter extends CustomPainter {
-  final String region;
-  final bool mirror;
+/// 1px outer + inset rails; hard corners — no soft Material radius/glow.
+class _HardBannerRailPainter extends CustomPainter {
+  final Color accent;
 
-  _ZoneMotifPainter({required this.region, required this.mirror});
+  _HardBannerRailPainter({required this.accent});
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (mirror) {
-      canvas.translate(size.width, 0);
-      canvas.scale(-1, 1);
-    }
-    final u = math.max(2.0, (size.width / 14).floorToDouble());
-    void px(double x, double y, Color c, [double w = 1, double h = 1]) {
-      canvas.drawRect(
-        Rect.fromLTWH((x * u).floorToDouble(), (y * u).floorToDouble(),
-            (w * u).floorToDouble().clamp(1, 999), (h * u).floorToDouble().clamp(1, 999)),
-        Paint()..color = c,
-      );
+    final outer = Rect.fromLTWH(0.5, 0.5, size.width - 1, size.height - 1);
+    final stroke = Paint()
+      ..color = accent.withValues(alpha: 0.85)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1
+      ..isAntiAlias = false;
+    canvas.drawRect(outer, stroke);
+
+    final inset = outer.deflate(3);
+    if (inset.width > 8 && inset.height > 8) {
+      final inner = Paint()
+        ..color = DialogChrome.cyan.withValues(alpha: 0.28)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1
+        ..isAntiAlias = false;
+      canvas.drawRect(inset, inner);
     }
 
-    switch (region) {
-      case 'woods':
-        // Pine + moonflower flecks.
-        px(5, 1, const Color(0xFF1A3A28), 4, 2);
-        px(4, 3, const Color(0xFF2E6B45), 6, 2);
-        px(3, 5, const Color(0xFF3F8A58), 8, 2);
-        px(6, 7, const Color(0xFF4A3420), 2, 5);
-        px(2, 10, const Color(0xFFAAFFEE), 2, 2);
-        px(10, 9, const Color(0xFF66FFAA), 2, 2);
-        px(1, 2, const Color(0xFF88E0FF), 2, 2); // moon speck
-      case 'city':
-        // Neon bar + rooftop blocks.
-        px(2, 2, const Color(0xFF1A2030), 10, 3);
-        px(3, 5, const Color(0xFF243044), 8, 4);
-        px(4, 9, const Color(0xFF1A2030), 6, 3);
-        px(2, 3, DialogChrome.cyan, 10, 1);
-        px(5, 6, DialogChrome.magenta, 2, 1);
-        px(8, 7, DialogChrome.cyan, 1, 1);
-      case 'works':
-        // Crane hook + barrel.
-        px(6, 1, const Color(0xFF8A5A3A), 2, 8);
-        px(4, 2, const Color(0xFFB87848), 6, 1);
-        px(3, 8, const Color(0xFF664428), 4, 3);
-        px(4, 9, const Color(0xFF88E0FF), 2, 1); // oil sheen
-        px(9, 10, const Color(0xFFFF9966), 3, 2);
-      case 'ruins':
-        // Broken pillar + neon shard.
-        px(5, 1, const Color(0xFF3A3A48), 4, 10);
-        px(4, 2, const Color(0xFF4A4A5A), 1, 3);
-        px(9, 4, DialogChrome.magenta, 2, 4);
-        px(3, 8, DialogChrome.cyan, 2, 1);
-        px(6, 11, const Color(0xFF2A2A38), 5, 1);
-      case 'core':
-        // Crystal + gold ring ticks.
-        px(6, 1, const Color(0xFF88E0FF), 2, 10);
-        px(5, 3, const Color(0xFFAAFFEE), 4, 2);
-        px(4, 5, const Color(0xFF66CCFF), 6, 2);
-        px(3, 7, const Color(0xFFFFE08A), 1, 1);
-        px(10, 7, const Color(0xFFFFE08A), 1, 1);
-        px(5, 10, const Color(0xFF3A5060), 4, 1);
-      case 'town':
-        // Lantern + awning.
-        px(5, 1, const Color(0xFF4A3420), 2, 3);
-        px(4, 4, const Color(0xFFFFCC66), 4, 4);
-        px(5, 5, const Color(0xFFFFEEAA), 2, 2);
-        px(3, 9, const Color(0xFF884422), 8, 2);
-        px(2, 8, const Color(0xFFCC6644), 10, 1);
-      default:
-        px(5, 4, DialogChrome.cyan, 4, 4);
-        px(6, 5, DialogChrome.magenta, 2, 2);
-    }
+    final tick = Paint()
+      ..color = DialogChrome.magenta.withValues(alpha: 0.9)
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.square
+      ..isAntiAlias = false;
+    const c = 6.0;
+    canvas.drawLine(Offset(outer.left, outer.top + c), Offset(outer.left, outer.top), tick);
+    canvas.drawLine(Offset(outer.left, outer.top), Offset(outer.left + c, outer.top), tick);
+    canvas.drawLine(Offset(outer.right - c, outer.top), Offset(outer.right, outer.top), tick);
+    canvas.drawLine(Offset(outer.right, outer.top), Offset(outer.right, outer.top + c), tick);
+    canvas.drawLine(Offset(outer.left, outer.bottom - c), Offset(outer.left, outer.bottom), tick);
+    canvas.drawLine(Offset(outer.left, outer.bottom), Offset(outer.left + c, outer.bottom), tick);
+    canvas.drawLine(Offset(outer.right - c, outer.bottom), Offset(outer.right, outer.bottom), tick);
+    canvas.drawLine(Offset(outer.right, outer.bottom), Offset(outer.right, outer.bottom - c), tick);
   }
 
   @override
-  bool shouldRepaint(covariant _ZoneMotifPainter old) =>
-      old.region != region || old.mirror != mirror;
+  bool shouldRepaint(covariant _HardBannerRailPainter old) => old.accent != accent;
 }
