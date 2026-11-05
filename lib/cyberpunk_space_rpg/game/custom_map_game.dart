@@ -53,6 +53,7 @@ import 'adventure.dart';
 import 'click_pathfinder.dart';
 import 'debug_mask_editor.dart';
 import 'debug_place_jump.dart';
+import 'debug_tile_inspect.dart';
 import 'debug_walk_grid.dart';
 import 'game_debug.dart';
 import 'game_input.dart';
@@ -1150,7 +1151,7 @@ class IntroScreen extends StatelessWidget {
                 Text(_isTouch
                         ? 'Tap to move · tap foe to shoot · WASD optional'
                         : kDebugMode
-                            ? 'Click pathfind · click foe / T shoot · WASD · Esc · J · I · ` · F2 jump'
+                            ? 'Click pathfind · click foe / T shoot · WASD · Esc · J · I · ` · F2 jump · ⇧click tile'
                             : 'Click pathfind · click foe / T to shoot · WASD · Esc Menu · J · I',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.white24, fontSize: 11, letterSpacing: 1.2)),
@@ -1578,6 +1579,9 @@ Future<void> _startLevel(BonfireGameInterface game, int level) async {
   BuildingMasks.loadFromDisk();
   // Walls from TMJ (complete) so click-paths go around forests, not through.
   await ClickPathfinder.primeFromAsset(_mapAssetForLevel(level));
+  if (kDebugMode) {
+    await DebugTileInspect.primeFromAsset(_mapAssetForLevel(level));
+  }
   SaveService.snapshot = _snapshot;
   // Companions stay home: the region on screen decides who follows.
   final arrivedFrom = Regions.previous;
@@ -1724,7 +1728,10 @@ KeyEventResult _handleDebugKey(FocusNode _, KeyEvent event) {
       event is KeyDownEvent &&
       event.logicalKey == LogicalKeyboardKey.backquote) {
     GameDebug.toggle();
-    if (!GameDebug.isOn) DebugPlaceJump.hide();
+    if (!GameDebug.isOn) {
+      DebugPlaceJump.hide();
+      DebugTileInspect.lastLabel.value = null;
+    }
     return KeyEventResult.handled;
   }
   if (kDebugMode && DebugPlaceJump.handleKey(event)) {
@@ -1900,6 +1907,9 @@ Widget _mapPointer({bool checkDialogue = false}) {
           if (AIFragment.activeDialogue.value != null) return;
         }
         final screen = _pointerToViewport(e.position);
+        final world = _pointerToWorld(e.position);
+        // Shift+click (DEBUG on): name the tile/prop under the cursor.
+        if (DebugTileInspect.tryHandleWorldClick(world)) return;
         final ed = DebugMaskEditor.instance;
         if (ed != null && GameDebug.isOn && ed.onScreenTap(screen)) return;
         if (GameDebug.isOn) {
@@ -1907,7 +1917,6 @@ Widget _mapPointer({bool checkDialogue = false}) {
         }
         // World space — handle immediately (gesture turn) so shots fire on web.
         // Do not also queue pendingClick or _issueClick runs twice.
-        final world = _pointerToWorld(e.position);
         final kaela = CustomPlayer.current;
         if (kaela != null) {
           kaela.handleWorldClick(world);
@@ -2951,7 +2960,10 @@ class _DebugOverlay extends StatelessWidget {
               active: debug,
               onTap: () {
                 GameDebug.toggle();
-                if (!GameDebug.isOn) DebugPlaceJump.hide();
+                if (!GameDebug.isOn) {
+                  DebugPlaceJump.hide();
+                  DebugTileInspect.lastLabel.value = null;
+                }
               },
               onLongPress: () {
                 if (!GameDebug.isOn) GameDebug.toggle();
@@ -2990,7 +3002,7 @@ class _DebugToggleButton extends StatelessWidget {
               color: active ? const Color(0xFF00FF88) : Colors.white24),
           borderRadius: BorderRadius.circular(4),
         ),
-        child: Text(active ? '`  DEBUG · F2' : '`  DEBUG',
+        child: Text(active ? '`  DEBUG · F2 · ⇧click' : '`  DEBUG',
             style: TextStyle(
               color: active ? const Color(0xFF00FF88) : Colors.white38,
               fontSize: 11,
@@ -3019,22 +3031,34 @@ class _DebugHud extends StatelessWidget {
             final tx = pos.x / _tile;
             final ty = pos.y / _tile;
             final map = GameState.mapIds[GameState.level] ?? '?';
-            return Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.7),
-                border: Border.all(color: const Color(0xFF00FF88), width: 1),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                '$map  ·  px ${pos.x.toStringAsFixed(0)}, ${pos.y.toStringAsFixed(0)}'
-                '  ·  tile ${tx.toStringAsFixed(1)}, ${ty.toStringAsFixed(1)}',
-                style: const TextStyle(
-                    color: Color(0xFF00FF88),
-                    fontSize: 13,
-                    fontFamily: 'monospace',
-                    letterSpacing: 1),
-              ),
+            return ValueListenableBuilder<String?>(
+              valueListenable: DebugTileInspect.lastLabel,
+              builder: (_, tileLabel, __) {
+                final lines = <String>[
+                  '$map  ·  px ${pos.x.toStringAsFixed(0)}, ${pos.y.toStringAsFixed(0)}'
+                      '  ·  tile ${tx.toStringAsFixed(1)}, ${ty.toStringAsFixed(1)}',
+                  if (tileLabel != null) '⇧ $tileLabel',
+                ];
+                return Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.7),
+                    border:
+                        Border.all(color: const Color(0xFF00FF88), width: 1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    lines.join('\n'),
+                    style: const TextStyle(
+                        color: Color(0xFF00FF88),
+                        fontSize: 13,
+                        fontFamily: 'monospace',
+                        letterSpacing: 1,
+                        height: 1.35),
+                  ),
+                );
+              },
             );
           },
         ),
