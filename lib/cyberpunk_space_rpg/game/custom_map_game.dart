@@ -1660,7 +1660,7 @@ Future<void> _startLevel(BonfireGameInterface game, int level) async {
   Travel.markVisited(level);
   final dest = Travel.byLevel(level);
   if (dest != null) {
-    MmoFeedback.enterZone(dest.title, blurb: dest.blurb, regionId: dest.regionId);
+    MmoFeedback.enterZone(dest.title, regionId: dest.regionId);
   }
   final d = SaveService.data;
   if (Gates.wantsReturnLine(Regions.current, from: arrivedFrom)) {

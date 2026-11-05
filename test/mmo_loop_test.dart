@@ -157,7 +157,7 @@ void main() {
   });
 
   group('enter-zone banners', () {
-    test('Travel destinations carry a name and one-line flavor', () {
+    test('Travel destinations carry zone titles', () {
       const wanted = {
         1: 'Whispering Woods',
         2: 'The City',
@@ -169,16 +169,14 @@ void main() {
         final dest = Travel.byLevel(e.key);
         expect(dest, isNotNull, reason: 'level ${e.key}');
         expect(dest!.title, e.value);
-        expect(dest.blurb.trim().isNotEmpty, isTrue, reason: dest.title);
-        expect(dest.blurb.contains('\n'), isFalse, reason: '${dest.title} must stay one line');
       }
     });
 
-    test('enterZone shows title and flavor, then clears', () async {
+    test('enterZone shows title only, then clears', () async {
       final dest = Travel.byLevel(6)!;
-      MmoFeedback.enterZone(dest.title, blurb: dest.blurb, regionId: dest.regionId);
+      MmoFeedback.enterZone(dest.title, regionId: dest.regionId);
       expect(MmoFeedback.zoneTitle.value, 'Canal Works');
-      expect(MmoFeedback.zoneBlurb.value, dest.blurb);
+      expect(MmoFeedback.zoneBlurb.value, isNull);
       expect(MmoFeedback.zoneRegion.value, 'works');
       await Future<void>.delayed(const Duration(milliseconds: 2900));
       expect(MmoFeedback.zoneTitle.value, isNull);

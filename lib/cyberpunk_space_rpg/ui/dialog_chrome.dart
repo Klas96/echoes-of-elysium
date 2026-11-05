@@ -134,14 +134,15 @@ class DialogChrome {
     );
   }
 
-  /// Wide-spaced uppercase zone name — hard 1px shadow, no soft glow.
+  /// Uppercase zone name — hard 1px shadow, no soft glow.
+  /// Letter-spacing kept modest so long titles fit the plate band.
   static TextStyle zoneTitleStyle({Color? accent, bool compact = false}) =>
       TextStyle(
         color: accent ?? const Color(0xFFAAFFEE),
-        fontSize: compact ? 12 : 15,
-        letterSpacing: compact ? 2.4 : 3.6,
+        fontSize: compact ? 11 : 13,
+        letterSpacing: compact ? 1.2 : 1.8,
         fontWeight: FontWeight.w800,
-        height: 1.05,
+        height: 1.0,
         fontFamily: 'monospace',
         shadows: const [
           Shadow(color: Color(0xFF050814), offset: Offset(1, 1), blurRadius: 0),

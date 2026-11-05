@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import 'dialog_chrome.dart';
 import 'mmo_feedback.dart';
 
-/// WoW-style enter-zone toast: themed pixel banner + text only.
+/// WoW-style enter-zone toast: themed pixel banner + zone name only.
 ///
 /// The plate art *is* the frame (transparent outside the motifs). No DialogChrome
-/// / toast border wrapper — just the hard AI→NN sheet with name + flavor on the
-/// empty center band.
+/// / toast border wrapper — just the hard AI→NN sheet with the title centered
+/// on the empty plate band (no flavor subtext).
 class ZoneBanner extends StatelessWidget {
   const ZoneBanner({super.key});
 
@@ -38,6 +38,7 @@ class ZoneBanner extends StatelessWidget {
   /// Asset path for [regionId], or null when unknown.
   static String? assetFor(String? regionId) =>
       regionId == null ? null : assets[regionId];
+
   static Color accentFor(String? regionId) => switch (regionId) {
         'woods' => const Color(0xFFAAFFEE),
         'city' => DialogChrome.cyan,
@@ -103,43 +104,18 @@ class ZoneBanner extends StatelessWidget {
                         Padding(
                           padding: _textPadding(region, bannerW, artH),
                           child: Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  child: Text(
-                                    title.toUpperCase(),
-                                    textAlign: TextAlign.center,
-                                    maxLines: 1,
-                                    softWrap: false,
-                                    style: DialogChrome.zoneTitleStyle(
-                                      accent: accent,
-                                      compact: compact,
-                                    ),
-                                  ),
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                title.toUpperCase(),
+                                textAlign: TextAlign.center,
+                                maxLines: 1,
+                                softWrap: false,
+                                style: DialogChrome.zoneTitleStyle(
+                                  accent: accent,
+                                  compact: compact,
                                 ),
-                                ValueListenableBuilder<String?>(
-                                  valueListenable: MmoFeedback.zoneBlurb,
-                                  builder: (_, blurb, __) {
-                                    if (blurb == null || blurb.isEmpty) {
-                                      return const SizedBox.shrink();
-                                    }
-                                    return Padding(
-                                      padding: const EdgeInsets.only(top: 1),
-                                      child: Text(
-                                        blurb,
-                                        textAlign: TextAlign.center,
-                                        maxLines: compact ? 1 : 2,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: DialogChrome.zoneBlurbStyle(
-                                          compact: true,
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ],
+                              ),
                             ),
                           ),
                         ),

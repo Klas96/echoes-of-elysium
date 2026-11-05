@@ -42,12 +42,12 @@ class MmoFeedback {
     });
   }
 
-  /// WoW-style zone enter banner: themed plate + name + optional flavor.
-  static void enterZone(String title, {String? blurb, String? regionId}) {
+  /// WoW-style zone enter banner: themed plate + zone name only (no subtext).
+  static void enterZone(String title, {String? regionId}) {
     zoneTitle.value = title;
-    zoneBlurb.value = (blurb == null || blurb.isEmpty) ? null : blurb;
+    zoneBlurb.value = null;
     zoneRegion.value = regionId;
-    final token = '$title|${zoneBlurb.value ?? ''}|${regionId ?? ''}';
+    final token = '$title|${regionId ?? ''}';
     _zoneClearToken = token;
     Future.delayed(const Duration(milliseconds: 2800), () {
       if (_zoneClearToken == token) {
