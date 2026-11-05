@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io' show Platform;
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
@@ -10,8 +9,11 @@ import 'sfx_audio_port.dart';
 /// Desktop / mobile SFX via audioplayers (Linux, Windows, Android, iOS, macOS).
 /// just_audio has no Linux plugin — MissingPluginException on desktop.
 ///
-/// Linux/GStreamer often no-ops `seek(0)+resume` once a short clip has finished.
-/// Re-`play(AssetSource)` each shot (same path as VO) is reliable.
+/// Shoot uses MediaPlayer + round-robin (never Android SoundPool / lowLatency):
+/// SoundPool `seek` after `stop` hung ~30s (EOE-55 / #123), and `stop`+`resume`
+/// still missed or lagged shots on phones because SoundPool never completes /
+/// clears stream state the way MediaPlayer does. Re-`play(AssetSource)` on a
+/// 4-slot pool keeps auto-fire snappy without overlapping one player.
 class SfxManager {
   static final SfxManager _instance = SfxManager._();
   factory SfxManager() => _instance;
@@ -49,7 +51,7 @@ class SfxManager {
   static const _footAsset = 'audio/sfx/footstep_grass.mp3';
   static const _damageAsset = 'audio/sfx/damage_hit.mp3';
   static const _portalAsset = 'audio/sfx/portal.mp3';
-  /// PCM WAV — Android SoundPool (lowLatency) is unreliable with MP3.
+  /// PCM WAV — short combat one-shot; kept as WAV for snappy MediaPlayer decode.
   static const _shootAsset = 'audio/sfx/shoot.wav';
   static const _chimeAsset = 'audio/sfx/computer_beep.wav';
   static const _healAsset = 'audio/sfx/health_pickup.mp3';
@@ -70,9 +72,8 @@ class SfxManager {
   double get _scale => _enabled ? _userVolume.clamp(0.0, 1.0) : 0.0;
   bool get _audible => _scale > 0.001;
 
-  /// SoundPool on Android; MediaPlayer elsewhere (GStreamer hates lowLatency).
-  static PlayerMode get _shootMode =>
-      !kIsWeb && Platform.isAndroid ? PlayerMode.lowLatency : PlayerMode.mediaPlayer;
+  /// Always MediaPlayer — Android SoundPool (lowLatency) is the EOE-55 footgun.
+  static PlayerMode get _shootMode => PlayerMode.mediaPlayer;
 
   /// Test-only: wipe singleton state between cases.
   @visibleForTesting
@@ -268,23 +269,17 @@ class SfxManager {
   Future<void> _fireShoot(SfxAudioPort p, double vol) async {
     final gen = (_oneShotGen[p] = (_oneShotGen[p] ?? 0) + 1);
     try {
-      // stop()+resume() only. Never seek after stop on Android SoundPool:
-      // seekTo(0) is a no-op when streamId is null (post-stop / never played)
-      // and never emits seekComplete, so await seek(0) hits the 30s
-      // seekingTimeout — shots sounded missing or extremely late on phones.
+      // Same path as other one-shots: stop → volume → play(AssetSource).
+      // Never seek (SoundPool/MediaPlayer seekComplete hangs). Never resume
+      // alone (SoundPool keeps a stale streamId after the clip ends and
+      // resume() becomes a silent no-op on phones — EOE-55 still on 0.4.5).
       await p.stop();
       if (_oneShotGen[p] != gen || !_audible) return;
       await p.setVolume(vol);
       if (_oneShotGen[p] != gen || !_audible) return;
-      await p.resume();
-    } catch (_) {
-      if (_oneShotGen[p] != gen || !_audible) return;
-      // Source lost / SoundPool quirk — full play reloads the clip.
-      try {
-        await p.play(AssetSource(_shootAsset), volume: vol);
-      } catch (e) {
-        debugPrint('SfxManager playShoot: $e');
-      }
+      await p.play(AssetSource(_shootAsset), volume: vol);
+    } catch (e) {
+      debugPrint('SfxManager playShoot: $e');
     }
   }
 

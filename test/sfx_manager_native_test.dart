@@ -28,16 +28,22 @@ void main() {
     SfxManager.globalContextSetter = defaultSfxGlobalContextSetter;
   });
 
-  test('init warms four shoot slots without seeking', () async {
+  test('init warms four MediaPlayer shoot slots without seeking', () async {
     await sfx.init();
     expect(sfx.debugReady, isTrue);
     expect(sfx.debugShootPlayers, hasLength(4));
-    for (final p in created) {
+    final shootPool = sfx.debugShootPlayers!.cast<RecordingSfxPort>();
+    for (final p in shootPool) {
+      expect(
+        p.calls.contains('setPlayerMode:mediaPlayer'),
+        isTrue,
+        reason: 'SoundPool/lowLatency regresses EOE-55 on phones',
+      );
       expect(p.calls.any((c) => c.startsWith('seek:')), isFalse);
     }
   });
 
-  test('playShoot uses stop → setVolume → resume and never seek (EOE-55)',
+  test('playShoot uses stop → setVolume → play and never seek/resume (EOE-55)',
       () async {
     await sfx.init();
     final shootPool = sfx.debugShootPlayers!.cast<RecordingSfxPort>();
@@ -60,8 +66,9 @@ void main() {
     expect(seq.length, 3);
     expect(seq[0], 'stop');
     expect(seq[1], startsWith('setVolume:'));
-    expect(seq[2], 'resume');
+    expect(seq[2], startsWith('play:AssetSource'));
     expect(fired.calls.any((c) => c.startsWith('seek:')), isFalse);
+    expect(fired.calls.contains('resume'), isFalse);
   });
 
   test('concurrent playShoot round-robins across slots without awaiting',
@@ -155,17 +162,24 @@ void main() {
     }
   });
 
-  test('shoot falls back to play when resume throws', () async {
+  test('playShoot never calls resume or seek (EOE-80 / post-#123)', () async {
     await sfx.init();
     final pool = sfx.debugShootPlayers!.cast<RecordingSfxPort>();
-    pool.first.resumeThrows = true;
-    await sfx.playShoot();
-    await Future<void>.delayed(const Duration(milliseconds: 5));
-    expect(
-      pool.first.calls.any((c) => c.startsWith('play:AssetSource')),
-      isTrue,
-    );
-    expect(pool.first.calls.any((c) => c.startsWith('seek:')), isFalse);
+    for (final p in pool) {
+      p.calls.clear();
+    }
+    for (var i = 0; i < 8; i++) {
+      await sfx.playShoot();
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    for (final p in pool) {
+      expect(p.calls.contains('resume'), isFalse);
+      expect(p.calls.any((c) => c.startsWith('seek:')), isFalse);
+      expect(
+        p.calls.where((c) => c.startsWith('play:AssetSource')).length,
+        greaterThan(0),
+      );
+    }
   });
 
   test('stopVoice disposes current voice port', () async {
