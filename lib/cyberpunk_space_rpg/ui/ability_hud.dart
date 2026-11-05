@@ -43,6 +43,7 @@ class AbilityHud extends StatelessWidget {
             children: [
               _AbilityButton(
                 size: btn,
+                id: 'phase',
                 label: 'PHASE',
                 hint: 'Space',
                 accent: _phaseAccent,
@@ -56,6 +57,7 @@ class AbilityHud extends StatelessWidget {
               SizedBox(width: gap),
               _AbilityButton(
                 size: btn,
+                id: 'pulse',
                 label: 'PULSE',
                 hint: 'Q',
                 accent: _pulseAccent,
@@ -69,6 +71,7 @@ class AbilityHud extends StatelessWidget {
               SizedBox(width: gap),
               _AbilityButton(
                 size: btn,
+                id: 'ward',
                 label: 'WARD',
                 hint: 'F',
                 accent: _wardAccent,
@@ -82,6 +85,7 @@ class AbilityHud extends StatelessWidget {
               SizedBox(width: gap),
               _AbilityButton(
                 size: btn,
+                id: 'anchor',
                 label: 'ANCHOR',
                 hint: 'R',
                 accent: _anchorAccent,
@@ -102,6 +106,7 @@ class AbilityHud extends StatelessWidget {
 
 class _AbilityButton extends StatelessWidget {
   final double size;
+  final String id;
   final String label;
   final String hint;
   final Color accent;
@@ -114,6 +119,7 @@ class _AbilityButton extends StatelessWidget {
 
   const _AbilityButton({
     required this.size,
+    required this.id,
     required this.label,
     required this.hint,
     required this.accent,
@@ -142,6 +148,10 @@ class _AbilityButton extends StatelessWidget {
                 ? label
                 : cd.ceil().toString();
         final color = unlocked ? accent : lockedColor;
+        final lockSize = HudLayout.isTouch ? 14.0 : 12.0;
+        // Keep the primary label (PHASE / Lv3 / cooldown) on the button
+        // center. A Column with the lock above used to shove Lv3/5/7/9 notes
+        // down relative to unlocked skill names.
         return Semantics(
           button: true,
           enabled: unlocked,
@@ -163,34 +173,39 @@ class _AbilityButton extends StatelessWidget {
                   unlocked: unlocked,
                   accent: color,
                 ),
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (!unlocked)
-                        Icon(Icons.lock_outline,
-                            size: HudLayout.isTouch ? 14 : 12,
-                            color: lockedColor.withValues(alpha: 0.9)),
-                      if (!unlocked) const SizedBox(height: 2),
-                      Text(
-                        text,
-                        style: TextStyle(
-                          color: unlocked
-                              ? (ready
-                                  ? accent
-                                  : Colors.white.withValues(alpha: 0.55))
-                              : lockedColor,
-                          fontSize: HudLayout.isTouch
-                              ? (unlocked ? 11 : 9)
-                              : (unlocked ? 10 : 8),
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: unlocked ? 1.0 : 0.5,
-                          height: 1,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    if (!unlocked)
+                      Positioned(
+                        top: size * 0.16,
+                        child: Icon(
+                          Icons.lock_outline,
+                          size: lockSize,
+                          color: lockedColor.withValues(alpha: 0.9),
                         ),
                       ),
-                      if (ready && !HudLayout.isTouch) ...[
-                        const SizedBox(height: 2),
-                        Text(
+                    Text(
+                      text,
+                      key: ValueKey('ability-$id-label'),
+                      style: TextStyle(
+                        color: unlocked
+                            ? (ready
+                                ? accent
+                                : Colors.white.withValues(alpha: 0.55))
+                            : lockedColor,
+                        fontSize: HudLayout.isTouch
+                            ? (unlocked ? 11 : 9)
+                            : (unlocked ? 10 : 8),
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: unlocked ? 1.0 : 0.5,
+                        height: 1,
+                      ),
+                    ),
+                    if (ready && !HudLayout.isTouch)
+                      Positioned(
+                        bottom: size * 0.16,
+                        child: Text(
                           hint,
                           style: TextStyle(
                             color: accent.withValues(alpha: 0.55),
@@ -199,9 +214,8 @@ class _AbilityButton extends StatelessWidget {
                             letterSpacing: 0.8,
                           ),
                         ),
-                      ],
-                    ],
-                  ),
+                      ),
+                  ],
                 ),
               ),
             ),
