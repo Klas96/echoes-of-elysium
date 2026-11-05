@@ -370,6 +370,48 @@ def _lower_hearth_column(face: Image.Image, fire_c: int, plain_c: int) -> Image.
     return out
 
 
+def _seat_window_tile(face: Image.Image, plain_mid: Image.Image) -> Image.Image:
+    """Crop the full glowing window (frame included) from the strip into one 32×32.
+
+    Continuous strips often straddle the window across two mid cells; placing only
+    one cell looks half-cut. Re-home the AI window pixels onto plain AI logs.
+    """
+    px = face.load()
+    xs: list[int] = []
+    ys: list[int] = []
+    for y in range(face.height):
+        for x in range(face.width):
+            r, g, b, a = px[x, y]
+            if a < 8:
+                continue
+            if r > 170 and g > 110 and b < 120 and r >= g > b:
+                xs.append(x)
+                ys.append(y)
+    if not xs:
+        return plain_mid
+    # Expand for the dark wood frame around the amber panes.
+    pad = 5
+    x0 = max(0, min(xs) - pad)
+    x1 = min(face.width, max(xs) + pad + 1)
+    y0 = max(0, min(ys) - pad)
+    y1 = min(face.height, max(ys) + pad + 1)
+    win = face.crop((x0, y0, x1, y1))
+    # Fit inside the tile with a 2px log margin.
+    max_w, max_h = T - 4, T - 4
+    if win.width > max_w or win.height > max_h:
+        scale = min(max_w / win.width, max_h / win.height)
+        win = win.resize(
+            (max(1, int(win.width * scale)), max(1, int(win.height * scale))),
+            Image.Resampling.NEAREST,
+        )
+    base = plain_mid.copy()
+    ox = (T - win.width) // 2
+    oy = (T - win.height) // 2
+    base.paste(win, (ox, oy))
+    # Re-snap palette/alpha like other wall cells (already 32×32).
+    return opaque_tile(base)
+
+
 def slice_walls_from_strips(face_src: Path, side_src: Path) -> dict[int, Image.Image]:
     """Full masonry face strip + side thickness strip → hard 32×32 wall ids."""
     face = scale_strip(face_src, STRIP_COLS, 3)
@@ -419,11 +461,12 @@ def slice_walls_from_strips(face_src: Path, side_src: Path) -> dict[int, Image.I
     else:
         out[W_FIRE] = cells[1][fire_c]
     out[STRIP_MID0 + fire_c] = cells[1][plain]
-    # Scrub inset bleed from neighboring mid cells (half-frame / half-window slices).
-    for c in (map_c - 1, map_c + 1):
+    # Seat the full window (may span 2 strip cols) into one mid tile on plain logs,
+    # then scrub neighbor mid cells so no half-window remains beside it.
+    out[W_MAP] = _seat_window_tile(face, cells[1][plain])
+    for c in (map_c - 1, map_c, map_c + 1):
         if 0 < c < STRIP_COLS - 1 and c != fire_c:
             out[STRIP_MID0 + c] = cells[1][plain]
-    out[W_MAP] = cells[1][map_c]
     meta = {
         "fire_col": fire_c,
         "map_col": map_c,
@@ -435,7 +478,7 @@ def slice_walls_from_strips(face_src: Path, side_src: Path) -> dict[int, Image.I
     print(
         f"strip insets: fire_col={fire_c} window_col={map_c} plain_col={plain} "
         f"mid_hole={mid_hole:.3f} base_hole={base_hole:.3f} "
-        f"window_score={_cell_window_score(cells[1][map_c]):.3f}"
+        f"window_score={_cell_window_score(out[W_MAP]):.3f}"
     )
 
     # Cutaway sides: thin AI rim + black void (not a stretched dark column).
