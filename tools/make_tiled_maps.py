@@ -1628,8 +1628,12 @@ def woods_creatures_and_secrets(lv, nooks):
     (b1x, b1y), (b2x, b2y) = nooks
     boulder(lv, b1x, b1y, 0, 0)
     # Stash/glyph sit inside the 2-row nook east of the boulder (not south of it).
-    # Pocket is 3 tiles (bx+3..bx+5); centre at bx+4.
-    place(lv, "stash", b1x + 4.0, b1y + 1.0, glimmer=25, was=(26.5, 6.5))
+    # NE chest: Tiled top-left at tile (52, 8.2) on the path end-cap (forest wall
+    # seals x≥53). place() centres the sprite — that would spill onto colliding
+    # band tiles at y=7 — so pin the object rect by top-left instead.
+    _stash = SZ["stash"]
+    lv.obj("stash", round(52 * T), round(8.2 * T), _stash, _stash, glimmer=25,
+           pid=f"{round(26.5 * T - _stash / 2)}_{round(6.5 * T - _stash / 2)}")
     boulder(lv, b2x, b2y, 0, 0)
     place(lv, "glyph", b2x + 4.0, b2y + 1.0, glyph="woods_nook", was=(30.5, 41.5))
     # LIGHT: dark zones with a glyph inside, off the main trails
