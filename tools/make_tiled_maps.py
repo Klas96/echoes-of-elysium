@@ -190,7 +190,7 @@ class Tileset:
     # Walk-on / ground-plane props: always stay on the tile layer under Kaela.
     # (Multi-tile pads would otherwise become dynamicAbove and draw over her.)
     FLOOR_PROPS = frozenset({
-        "helipad", "portal_platform", "portal_hexpad",
+        "helipad", "portal_platform", "portal_hexpad", "crane_pad",
         "dock_planks_h", "dock_planks_v", "ship_debris",
         "solar_panel", "loose_cables", "floor_ring_marker",
     })

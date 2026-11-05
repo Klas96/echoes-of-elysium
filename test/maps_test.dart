@@ -61,4 +61,23 @@ void main() {
       }
     });
   }
+
+  // Walk-on pads must stay on the tile layer (not dynamicAbove) or they
+  // Y-sort over Kaela. junkyard renames portal_hexpad → crane_pad.
+  test('world6 crane_pad tiles are not dynamicAbove', () {
+    final tmj = jsonDecode(File('assets/images/maps/world6.tmj').readAsStringSync()) as Map;
+    final tiles = ((tmj['tilesets'] as List).first as Map)['tiles'] as List;
+    final crane = tiles.where((t) {
+      final props = {
+        for (final p in ((t as Map)['properties'] as List? ?? []))
+          p['name'] as String: p['value'],
+      };
+      return props['prop'] == 'crane_pad';
+    }).toList();
+    expect(crane, isNotEmpty);
+    for (final t in crane) {
+      expect((t as Map)['type'], isNot(equals('dynamicAbove')),
+          reason: 'crane_pad tile ${t['id']} must stay under Kaela');
+    }
+  });
 }
