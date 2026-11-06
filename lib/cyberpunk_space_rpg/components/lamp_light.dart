@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../creatures/day_cycle.dart';
+import '../ui/hud_layout.dart';
 
 /// Kinds of night light a Tiled `light` object can be (#35). The map
 /// generator stamps one under every street lamp, lantern, campfire, brazier
@@ -117,6 +118,18 @@ class NightLights {
   /// Kept for docs / older notes; hole-punch path removed.
   static const cutStrength = 0.48;
 
+  /// Max lamp cookies drawn per overlay paint. City has 44 lights; a phone
+  /// viewport usually sees ≤7, but dense clusters + large radii still stack
+  /// BlendMode.plus cost. Prefer nearest-to-camera when over the cap.
+  static int get maxDrawnLights => HudLayout.isTouch ? 6 : 12;
+
+  /// Overlay notify rate while lit. Touch GPUs pay for a full-screen
+  /// CustomPaint composite; ~15 Hz is enough for walk + soft flicker.
+  static double get notifyHz => HudLayout.isTouch ? 15 : 30;
+
+  /// Flicker art / sine refresh while standing still.
+  static double get flickerHz => HudLayout.isTouch ? 8 : 12;
+
   static List<LampLight> get lights => List.unmodifiable(_lights);
 
   static void register(LampLight l, BonfireGameInterface game) {
@@ -140,6 +153,11 @@ class NightLights {
   }
 
   static void _notify() => frame.tick();
+
+  /// Nudge the night overlay when wash darkness steps (DayClock / dusk).
+  /// Lets lamp-less maps ramp tint without NightTint listening to every
+  /// DayCycle.time HUD tick.
+  static void nudgeWash() => _notify();
 
   /// Night intensity of one light at [clock] seconds (0 in daylight).
   static double strength(double darkness, LightKind kind, double phase, double clock) {
@@ -175,13 +193,19 @@ class NightLights {
   /// Scratch buffer reused by [visible] to avoid a List alloc every paint.
   static final _visibleScratch = <ScreenLight>[];
 
+  /// Scratch for distance-sort when capping drawn lamps.
+  static final _rankScratch = <(double, ScreenLight)>[];
+
   /// Lights to draw this frame (on screen and lit), empty by day.
   /// The returned list is owned by NightLights — copy if retaining.
+  /// When more than [maxDrawnLights] overlap the view, keep the nearest.
   static List<ScreenLight> visible(Size screen, double darkness) {
     final cam = camera;
     final out = _visibleScratch..clear();
     if (cam == null || darkness <= 0.01 || _lights.isEmpty) return out;
     final view = Offset.zero & screen;
+    final cap = maxDrawnLights;
+    final ranked = _rankScratch..clear();
     for (final l in _lights) {
       final style = styleFor(l.kind, l.style);
       final art = cookies[style];
@@ -193,8 +217,20 @@ class NightLights {
       if (!rect.overlaps(view)) continue;
       final s = strength(darkness, l.kind, l.phase, clock);
       if (s <= 0.01) continue;
-      out.add(ScreenLight(rect, l.kind.color, s, l.kind, l.phase,
-          cookie: cookie, tinted: art == null || !artMatches(l.kind, style)));
+      final dx = l.centre.x - cam.x;
+      final dy = l.centre.y - cam.y;
+      ranked.add((
+        dx * dx + dy * dy,
+        ScreenLight(rect, l.kind.color, s, l.kind, l.phase,
+            cookie: cookie, tinted: art == null || !artMatches(l.kind, style)),
+      ));
+    }
+    if (ranked.length > cap) {
+      ranked.sort((a, b) => a.$1.compareTo(b.$1));
+      ranked.removeRange(cap, ranked.length);
+    }
+    for (final e in ranked) {
+      out.add(e.$2);
     }
     return out;
   }
@@ -320,12 +356,14 @@ class _CameraProbe extends GameComponent {
     final darkness = DayCycle.darkness(DayCycle.time.value);
     final lit = darkness > 0.01 && NightLights._lights.isNotEmpty;
 
-    // Day / no lamps: one final paint then stop driving CustomPaint.
+    // Day / no lamps: idle CustomPaint, but still nudge on dusk/dawn so
+    // lamp-less maps (flat wash only) ramp without listening to DayCycle.time.
     if (!lit) {
       NightLights.camera ??= _camScratch.clone();
       NightLights.camera!.setFrom(_camScratch);
       NightLights.zoom = zoom;
-      if (_wasLit || _lastDarkness < 0) NightLights._notify();
+      final duskShift = (darkness - _lastDarkness).abs() >= 0.01;
+      if (_wasLit || _lastDarkness < 0 || duskShift) NightLights._notify();
       _wasLit = false;
       _lastDarkness = darkness;
       _lastCamX = _camScratch.x;
@@ -335,21 +373,24 @@ class _CameraProbe extends GameComponent {
     }
 
     // Always keep the latest camera for the next paint; only schedule Flutter
-    // CustomPaint (saveLayer) up to ~30 Hz — walking used to force 60 Hz.
+    // CustomPaint up to notifyHz — walking used to force 60 Hz, then 30;
+    // phones still lagged at night so touch drops to ~15 Hz (EOE-84).
     NightLights.camera ??= _camScratch.clone();
     NightLights.camera!.setFrom(_camScratch);
     NightLights.zoom = zoom;
 
     _flickerAcc += dt;
     _notifyAcc += dt;
+    // Slightly coarser move threshold on touch: sub-pixel camera creep
+    // was still scheduling paints every notifyHz while "standing".
+    final moveEps = HudLayout.isTouch ? 2.0 : 1.0;
     final moved = _lastCamX.isNaN ||
-        (_camScratch.x - _lastCamX).abs() >= 1.0 ||
-        (_camScratch.y - _lastCamY).abs() >= 1.0 ||
+        (_camScratch.x - _lastCamX).abs() >= moveEps ||
+        (_camScratch.y - _lastCamY).abs() >= moveEps ||
         (zoom - _lastZoom).abs() > 0.001;
-    // Flicker art is 2-frame / soft sine — ~12 Hz is enough while standing.
-    final flickerTick = _flickerAcc >= 1 / 12;
+    final flickerTick = _flickerAcc >= 1 / NightLights.flickerHz;
     final duskShift = (darkness - _lastDarkness).abs() >= 0.01;
-    final rateOk = _notifyAcc >= 1 / 30;
+    final rateOk = _notifyAcc >= 1 / NightLights.notifyHz;
     if ((!moved && !flickerTick && !duskShift && _wasLit) ||
         (!rateOk && !duskShift && _wasLit)) {
       return;
@@ -376,13 +417,21 @@ class _CameraProbe extends GameComponent {
 
 /// Day/night wash + additive lamp glows (#35). No saveLayer / dstOut holes —
 /// that path dominated night walk cost; lamps now glow through the blue wash.
+///
+/// Repaints on [NightLights.frame] only (camera / flicker / dusk / DayClock
+/// wash steps). Avoids ~3 Hz full-screen paints from raw DayCycle.time ticks
+/// while darkness is flat at day or deep night (EOE-84).
 class NightTintPainter extends CustomPainter {
-  NightTintPainter() : super(repaint: Listenable.merge([DayCycle.time, NightLights.frame]));
+  NightTintPainter() : super(repaint: NightLights.frame);
 
   final _tintPaint = Paint();
   final _glow = Paint()
     ..blendMode = BlendMode.plus
     ..filterQuality = FilterQuality.none;
+
+  /// Cached ColorFilter per (kind, quantized alpha) — avoids allocating a
+  /// filter object for every tinted cookie every paint.
+  final _filterCache = <int, ColorFilter>{};
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -402,9 +451,15 @@ class NightTintPainter extends CustomPainter {
     for (final l in lights) {
       final a = NightLights.glowStrength * l.strength;
       if (l.tinted) {
+        final aq = (a * 40).round().clamp(0, 40);
+        final key = Object.hash(l.kind.index, aq);
+        final filter = _filterCache[key] ??= ColorFilter.mode(
+          l.color.withValues(alpha: aq / 40),
+          BlendMode.srcIn,
+        );
         _glow
           ..color = const Color(0xFFFFFFFF)
-          ..colorFilter = ColorFilter.mode(l.color.withValues(alpha: a), BlendMode.srcIn);
+          ..colorFilter = filter;
       } else {
         _glow
           ..colorFilter = null

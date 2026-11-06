@@ -42,6 +42,7 @@ class NpcCharacter extends SimpleNpc {
   final String npcKey;
   double _pulse = 0;
   static const double _interactRadius = 72;
+  final _auraPaint = Paint();
 
   // The Tiled objects are 30x30; keep the same centre at 32x32.
   NpcCharacter(
@@ -120,6 +121,7 @@ class NpcCharacter extends SimpleNpc {
       r + 10 + p * 2,
       col,
       coreAlpha: 0.16 + p * 0.05,
+      paint: _auraPaint,
     );
 
     // Animated sprite (DirectionAnimation)

@@ -72,6 +72,7 @@ class SentinelDrone extends GameDecoration {
   double _slowT = 0;
   double _slowFactor = 0.45;
   double get _speedMult => _slowT > 0 ? _slowFactor : 1.0;
+  final _auraPaint = Paint();
 
   void applyHush(double seconds) {
     if (isDead) return;
@@ -554,6 +555,7 @@ class SentinelDrone extends GameDecoration {
       r + 18 + p * 6,
       col,
       coreAlpha: 0.20 + p * 0.08,
+      paint: _auraPaint,
     );
 
     // Slam telegraph is a cracked plaza ground disc — paint under the boss.

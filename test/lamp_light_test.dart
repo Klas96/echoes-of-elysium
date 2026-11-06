@@ -104,5 +104,16 @@ void main() {
       final levels = <double>{for (var x = 0; x < n; x++) NightLights.cookieAlpha(x, n ~/ 2)};
       expect(levels.length, lessThanOrEqualTo(9)); // hard pixel bands, no smooth ramp
     });
+
+    test('EOE-84: night overlay caps and throttle knobs stay sane', () {
+      // Touch vs desktop rates are platform-dependent; both ends of the
+      // range must stay below the old 60 Hz walk tax and keep lamps visible.
+      expect(NightLights.notifyHz, anyOf(15, 30));
+      expect(NightLights.flickerHz, anyOf(8, 12));
+      expect(NightLights.maxDrawnLights, anyOf(6, 12));
+      expect(NightLights.maxDrawnLights, lessThanOrEqualTo(12));
+      expect(NightLights.notifyHz, lessThanOrEqualTo(30));
+      expect(NightLights.glowStrength, greaterThan(0.1));
+    });
   });
 }
