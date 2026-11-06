@@ -556,6 +556,11 @@ class SentinelDrone extends GameDecoration {
       coreAlpha: 0.20 + p * 0.08,
     );
 
+    // Slam telegraph is a cracked plaza ground disc — paint under the boss.
+    if (_atk == _Atk.slamTele) {
+      _paintSlamTelegraph(canvas, cx, cy);
+    }
+
     if (_sprite != null) {
       const s = spriteSize;
       _sprite!.render(
@@ -620,58 +625,62 @@ class SentinelDrone extends GameDecoration {
     }
   }
 
+  /// Ground slam tell — drawn before the boss sprite so the disc sits under it.
+  void _paintSlamTelegraph(Canvas canvas, double cx, double cy) {
+    final t = (1 - _atkT / _slamTele).clamp(0.0, 1.0);
+    final slam = _slamTeleArt;
+    if (slam != null) {
+      final diam = _slamR * 2;
+      final paint = Paint()
+        ..filterQuality = FilterQuality.none
+        ..color = Color.fromRGBO(255, 255, 255, 0.45 + t * 0.5);
+      slam.render(
+        canvas,
+        position: Vector2(cx - _slamR, cy - _slamR),
+        size: Vector2.all(diam),
+        overridePaint: paint,
+      );
+      // Expanding charge ring (same sheet, scaled by t).
+      final pulse = Paint()
+        ..filterQuality = FilterQuality.none
+        ..color = Color.fromRGBO(255, 230, 120, 0.35 + t * 0.4);
+      final pr = _slamR * (0.25 + t * 0.75);
+      slam.render(
+        canvas,
+        position: Vector2(cx - pr, cy - pr),
+        size: Vector2.all(pr * 2),
+        overridePaint: pulse,
+      );
+    } else {
+      canvas.drawCircle(
+        Offset(cx, cy),
+        _slamR,
+        Paint()
+          ..color = Color.fromRGBO(255, 200, 40, 0.15 + t * 0.25)
+          ..style = PaintingStyle.fill,
+      );
+      canvas.drawCircle(
+        Offset(cx, cy),
+        _slamR,
+        Paint()
+          ..color = Color.fromRGBO(255, 180, 20, 0.55 + t * 0.35)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.5,
+      );
+      canvas.drawCircle(
+        Offset(cx, cy),
+        _slamR * t,
+        Paint()
+          ..color = const Color(0x88FFEE66)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.5,
+      );
+    }
+  }
+
   void _paintTelegraphs(Canvas canvas, double cx, double cy, Color col) {
-    if (_atk == _Atk.slamTele) {
-      final t = (1 - _atkT / _slamTele).clamp(0.0, 1.0);
-      final slam = _slamTeleArt;
-      if (slam != null) {
-        final diam = _slamR * 2;
-        final paint = Paint()
-          ..filterQuality = FilterQuality.none
-          ..color = Color.fromRGBO(255, 255, 255, 0.45 + t * 0.5);
-        slam.render(
-          canvas,
-          position: Vector2(cx - _slamR, cy - _slamR),
-          size: Vector2.all(diam),
-          overridePaint: paint,
-        );
-        // Expanding charge ring (same sheet, scaled by t).
-        final pulse = Paint()
-          ..filterQuality = FilterQuality.none
-          ..color = Color.fromRGBO(255, 230, 120, 0.35 + t * 0.4);
-        final pr = _slamR * (0.25 + t * 0.75);
-        slam.render(
-          canvas,
-          position: Vector2(cx - pr, cy - pr),
-          size: Vector2.all(pr * 2),
-          overridePaint: pulse,
-        );
-      } else {
-        canvas.drawCircle(
-          Offset(cx, cy),
-          _slamR,
-          Paint()
-            ..color = Color.fromRGBO(255, 200, 40, 0.15 + t * 0.25)
-            ..style = PaintingStyle.fill,
-        );
-        canvas.drawCircle(
-          Offset(cx, cy),
-          _slamR,
-          Paint()
-            ..color = Color.fromRGBO(255, 180, 20, 0.55 + t * 0.35)
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 2.5,
-        );
-        canvas.drawCircle(
-          Offset(cx, cy),
-          _slamR * t,
-          Paint()
-            ..color = const Color(0x88FFEE66)
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 1.5,
-        );
-      }
-    } else if (_atk == _Atk.sweepTele) {
+    // Slam is painted under the boss in [render]; only overlay tells here.
+    if (_atk == _Atk.sweepTele) {
       final t = (1 - _atkT / _sweepTele).clamp(0.0, 1.0);
       final sweep = _sweepTeleArt;
       if (sweep != null) {
