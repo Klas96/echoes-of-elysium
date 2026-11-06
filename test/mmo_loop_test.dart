@@ -203,5 +203,13 @@ void main() {
         expect(inset.left + inset.right, greaterThan(0.25), reason: region);
       }
     });
+
+    test('East Market sub-zone has its own themed banner plate', () {
+      expect(ZoneBanner.assetFor('market'), 'assets/images/ui/zone_banners/market.png');
+      expect(ZoneBanner.plateInsetsFor('market'), isNotNull);
+      MmoFeedback.enterZone('East Market', regionId: 'market');
+      expect(MmoFeedback.zoneTitle.value, 'East Market');
+      expect(MmoFeedback.zoneRegion.value, 'market');
+    });
   });
 }

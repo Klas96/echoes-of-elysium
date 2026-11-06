@@ -562,8 +562,9 @@ class Level:
         def overlap(a, b):
             return a[0] < b[0] + b[2] and b[0] < a[0] + a[2] and a[1] < b[1] + b[3] and b[1] < a[1] + a[3]
         def floorless(o):
-            # mapexit / entry sit on border openings punched after clean_walls
-            return o["name"] in ("darkzone", "ambient", "light", "mapexit") or (
+            # mapexit / entry sit on border openings punched after clean_walls;
+            # zone banners cover whole districts (may include walls / buildings).
+            return o["name"] in ("darkzone", "ambient", "light", "mapexit", "zone") or (
                 o["name"] == "creature" and o["props"].get("species") in FLYING)
         for o in self.objects:
             if floorless(o): continue
@@ -590,7 +591,7 @@ class Level:
                 if not ok[y, x] or self.props[y, x] >= 0:
                     raise SystemExit(f"building {b['name']} sprite covers wall/prop at tile {x},{y}")
             for o in self.objects:
-                if o["name"] in ("ambient", "light"): continue    # overlays (chimney smoke, lamp glow)
+                if o["name"] in ("ambient", "light", "zone"): continue    # overlays / district triggers
                 if overlap(spr, (o["x"], o["y"], o["w"], o["h"])):
                     raise SystemExit(f"building {b['name']} overlaps {o['name']} {o['props']}")
             for (n2, s2) in sprites:
@@ -699,7 +700,7 @@ class Level:
                 raise SystemExit(f"{g['name']} at {g['x']},{g['y']} guards no secret")
         for o in objs:
             if o["name"] in ("drone", "sentinel", "darkzone", "boulder", "hiddenpath", "ambient", "light",
-                             "abilitygate"):
+                             "abilitygate", "zone"):
                 continue
             if o["name"] == "creature" and o["props"]["species"] in FLYING: continue
             if secret(o): continue
@@ -1735,13 +1736,13 @@ def darkzone(lv, x0, y0, x1, y1, was=None):
 
 # =============================================================== MAP 2: city
 def map2():
-    """City: Pokémon-style streets + houses; soft woods fringe on the north.
+    """City: Pokémon-style streets + houses; soft woods fringe; East Market spur.
 
                          [N edge → Woods]  ← forest tiles (not fortress wall)
                                │
-       NOODLE ─ MARKET ROW ─ ARRIVAL PLAZA ══ boulevard ══ LANTERN GATE ─► Town (E edge)
-                  │              │                 (tea house)   │
-       ECHO DISTRICT ───── ARCHIVE SQUARE ──────────────── EAST LOT ── DOCKS
+       NOODLE ─ MARKET ROW ─ ARRIVAL PLAZA ══ boulevard ══ LANTERN GATE ══ EAST MARKET ─► Town
+                  │              │                 (tea house)   │              │
+       ECHO DISTRICT ───── ARCHIVE SQUARE ──────────────── EAST LOT ── DOCKS ◄─┘
           │                  │ (archive_library)               │         │
        WEST YARD          HOUSE STREETS / GARDEN           PATROL ── CANAL QUAY
           │  (frag)          │                                 │
@@ -1751,27 +1752,30 @@ def map2():
 
     Story NPCs / exits / hub buildings keep their tiles. Fortress-style city
     wall masses become walkable sidewalks, lawn yards, and readable house lots.
-    North border uses the woods tileset so the City→Woods edge feels connected."""
+    North border uses the woods tileset so the City→Woods edge feels connected.
+    Canvas grows +8 east for the East Market spur (EOE-63); inland street remake stays."""
     ts = Tileset("city")
     woods = Tileset("woods")
-    # Was 52×44; +14 east for docks / canal. Story P coords unchanged.
-    lv = Level(ts, 66, 44, seed=22)
+    # Was 66×44 after docks/Pokémon streets; +8 east for East Market spur.
+    lv = Level(ts, 74, 44, seed=22)
     lv.extra_ts = woods
     lv.extra_ts_image = "tilesets/woods.png"
     lv.rings_min = 3
     P = dict(spawn=(26.5, 4.5), echo7=(6, 16.5), h1=(14, 7.5), d1=(5.5, 31), arch=(26.5, 18.5),
              h2=(20.5, 20.5), d2=(39.5, 18), sentinel=(26.5, 32), h3=(45.5, 31.5), voss=(19.5, 38.5),
-             gate=(26.5, 41.5), town=(63.5, 7.5), yard=(4.5, 25), lot=(46, 19), se=(45.5, 26.5),
+             gate=(26.5, 41.5), town=(71.5, 7.5), yard=(4.5, 25), lot=(46, 19), se=(45.5, 26.5),
              cache=(5.5, 11), garden=(25, 28),
              # east expansion
-             docks=(58, 16), canal=(58, 28), quay=(54, 34))
+             docks=(58, 16), canal=(58, 28), quay=(54, 34),
+             # East Market spur (EOE-63)
+             market=(67, 14), stalls=(68, 18), court=(68, 24))
     # --- Roads: readable street grid (Pokémon-town asphalt) -------------------
     road = np.zeros((lv.H, lv.W), bool)
     rect_carve(road, 24, 0, 29, 10)            # north avenue: Woods → Arrival Plaza
     rect_carve(road, 24, 18, 29, 36)           # archive → sentinel spine
     rect_carve(road, 24, 36, 29, 44)           # gate road → Ruins
     rect_carve(road, 8, 6, 34, 9)              # market / plaza cross street
-    rect_carve(road, 34, 6, 66, 9)             # boulevard → Lantern Gate → Town
+    rect_carve(road, 34, 6, 74, 9)             # boulevard → Lantern Gate → Market → Town
     rect_carve(road, 45, 9, 48, 19)            # Lantern Gate street → east lot
     rect_carve(road, 10, 15, 46, 18)           # residential cross: Echo → Archive → east lot
     rect_carve(road, 4, 21, 11, 24)            # Echo → west yard lane
@@ -1790,6 +1794,10 @@ def map2():
     rect_carve(road, 50, 10, 58, 13)           # town-approach residential lane
     rect_carve(road, 8, 34, 16, 37)            # SW residential lane
     rect_carve(road, 32, 34, 40, 37)           # SE residential lane
+    # East Market spur loop: boulevard → market street → court → docks reconnect
+    rect_carve(road, 65, 9, 69, 22)            # market street south off boulevard
+    rect_carve(road, 60, 20, 70, 23)           # market alley west into docks
+    rect_carve(road, 66, 22, 69, 28)           # market court down toward canal fringe
     # --- Floor: street walks + plazas; leave solid blocks for house pads/rings
     floor = np.zeros_like(road)
     rect_carve(floor, 19, 2, 34, 10)           # ARRIVAL PLAZA
@@ -1802,7 +1810,7 @@ def map2():
     rect_carve(floor, 10, 15, 19, 19)          # Echo → square
     rect_carve(floor, 23, 9, 30, 13)           # plaza → square avenue
     rect_carve(floor, 18, 12, 36, 22)          # ARCHIVE SQUARE
-    rect_carve(floor, 34, 4, 66, 11)           # boulevard sidewalks
+    rect_carve(floor, 34, 4, 74, 11)           # boulevard sidewalks (through market)
     rect_carve(floor, 36, 10, 44, 15)          # Lantern Gate residential walks
     rect_carve(floor, 43, 10, 50, 15)          # Lantern Gate street
     rect_carve(floor, 50, 10, 58, 15)          # town-approach residential walks
@@ -1825,7 +1833,12 @@ def map2():
     rect_carve(floor, 50, 12, 64, 20)          # DOCKS
     rect_carve(floor, 54, 20, 64, 32)          # CANAL QUAY
     rect_carve(floor, 48, 28, 56, 36)          # quay fringe
-    rect_carve(floor, 58, 6, 66, 12)           # town approach
+    rect_carve(floor, 58, 6, 66, 12)           # town approach (pre-spur)
+    # East Market spur floor
+    rect_carve(floor, 64, 6, 74, 12)           # market gate / Town approach
+    rect_carve(floor, 63, 10, 73, 22)          # MARKET ROW + stall courts
+    rect_carve(floor, 64, 20, 73, 30)          # MARKET COURT
+    rect_carve(floor, 60, 18, 66, 24)          # alley reconnect → docks
     # Soft grass fringe under the northern forest (not a hard parapet edge).
     rect_carve(floor, 2, 4, 23, 6)
     rect_carve(floor, 30, 4, 48, 6)
@@ -1841,7 +1854,10 @@ def map2():
             ("greenhouse", 36, 10, (35, 10, 40, 14)),          # boulevard south cottage
             ("apartment_block", 50, 10, (49, 10, 55, 15)),     # town-approach flats
             ("greenhouse", 9, 34, (8, 34, 14, 38)),            # south-west cottage
-            ("greenhouse", 58, 20, (57, 20, 62, 24))]          # docks-east cottage
+            ("greenhouse", 58, 20, (57, 20, 62, 24)),          # docks-east cottage
+            # East Market houses (EOE-63) — keep clear of clean_walls border x≥72
+            ("noodle_shop", 66, 11, (65, 11, 70, 14)),
+            ("apartment_block", 65, 22, (64, 22, 70, 27))]
     for _, _, _, (x0, y0, x1, y1) in LOTS:
         rect_carve(floor, x0, y0, x1, y1 + 1)  # lot + door apron
     lv.floor = floor | road
@@ -1851,7 +1867,8 @@ def map2():
     road = clean_walls(road, border=0) & road
     sidewalk = ~road
     plaza = np.zeros_like(wall)
-    for r in ((19, 2, 34, 10), (18, 12, 36, 22), (14, 29, 38, 36), (21, 40, 32, 44)):
+    for r in ((19, 2, 34, 10), (18, 12, 36, 22), (14, 29, 38, 36), (21, 40, 32, 44),
+              (64, 14, 72, 20)):                # East Market plaza tiles
         rect_carve(plaza, *r)
     plaza &= lv.floor & ~road
     lawn = np.zeros_like(wall)
@@ -1887,7 +1904,7 @@ def map2():
                 lv.ground[y, x] = blob(ts, "road-sidewalk", sidewalk, x, y, lv.rng, exclude={4, 5, 6, 7, 8})
                 if plaza[y, x] and not near_lawn[y, x] and not near_rw[y, x]:
                     lv.ground[y, x] = 12 if (x * 7 + y * 3) % 13 else 13
-    for x in range(36, 64):                    # lane arrows east to the Lantern Gate / Town
+    for x in range(36, 72):                    # lane arrows east to Market / Town
         if road[7, x]: lv.ground[7, x] = 7
     lv.keepout = road.copy()
     lv.keepout_hard = np.zeros_like(wall)
@@ -1897,7 +1914,8 @@ def map2():
               (3, 6, 19, 9), (10, 16, 46, 18), (36, 31, 48, 33), (5, 29, 6, 33), (5, 32, 15, 33),
               (50, 14, 62, 18), (54, 22, 62, 30), (48, 30, 56, 34),
               (0, 27, 9, 34), (24, 0, 29, 10), (12, 9, 20, 12), (2, 9, 12, 12),
-              (36, 10, 44, 13), (50, 10, 58, 13), (8, 34, 16, 37), (32, 34, 40, 37)):
+              (36, 10, 44, 13), (50, 10, 58, 13), (8, 34, 16, 37), (32, 34, 40, 37),
+              (64, 10, 72, 20), (65, 20, 72, 28), (60, 20, 66, 23)):  # East Market walks
         rect_carve(lv.keepout, *r)
     for name, tx, ty, (x0, y0, x1, y1) in LOTS:
         d = BUILDINGS.defs[name]
@@ -1912,18 +1930,25 @@ def map2():
                        ("car_blue_v", 47, 16), ("car_purple_v", 38, 19), ("hover_taxi_v", 48, 28),
                        ("traffic_light", 34, 5), ("traffic_light", 37, 16), ("bus_stop", 42, 9),
                        ("holo_billboard", 60, 12), ("neon_sign", 58, 14), ("car_blue_v", 61, 18),
-                       ("bus_stop", 56, 26), ("traffic_light", 48, 31), ("helipad", 60, 24)):
+                       ("bus_stop", 56, 26), ("traffic_light", 48, 31), ("helipad", 60, 24),
+                       # East Market stalls / signs (keep clear of house footprints)
+                       ("kiosk", 64, 15), ("kiosk", 70, 15), ("neon_sign", 70, 10),
+                       ("vending_machine", 64, 17), ("kiosk", 70, 17), ("neon_sign", 63, 19),
+                       ("kiosk", 63, 21), ("holo_billboard", 70, 19), ("traffic_light", 64, 9),
+                       ("bus_stop", 63, 26), ("bollard", 63, 15)):
         landmark(lv, name, x, y)
     for (x, y) in ((20, 5), (32, 5), (19, 9), (33, 9), (18, 12), (18, 21), (35, 21), (14, 29), (37, 29),
                    (14, 35), (37, 35), (3, 5), (18, 5), (2, 19), (10, 19), (2, 21), (10, 28),
                    (41, 14), (16, 36), (23, 40), (35, 16),
                    (50, 16), (62, 14), (62, 28), (50, 32),
-                   (12, 15), (20, 15), (8, 32)):
+                   (12, 15), (20, 15), (8, 32),
+                   # East Market lamps (authored on known open curb tiles)
+                   (63, 13), (71, 13), (63, 18), (71, 18), (63, 23), (71, 23)):
         landmark(lv, "street_lamp", x, y)
     sidewalk = lv.floor & ~road
     near_wall = sidewalk & lv.fringe(wall)
     forest_fringe = sidewalk & lv.dilate(forest, 1)
-    lv.line_props("street_lamp", [(35, 4), (63, 4)], step=4)
+    lv.line_props("street_lamp", [(35, 4), (71, 4)], step=4)
     lv.line_props("street_lamp", [(35, 10), (42, 10)], step=3)
     lv.line_props("street_lamp", [(19, 5), (19, 9)], step=3)
     lv.line_props("street_lamp", [(33, 5), (33, 9)], step=3)
@@ -1938,6 +1963,9 @@ def map2():
     lv.line_mix(["bench", "planter_small"], [(32, 13), (32, 20)], step=3)
     lv.line_mix(["bollard", "planter_small"], [(24, 37), (24, 42)], step=3)
     lv.line_mix(["bollard", "planter_small"], [(28, 37), (28, 42)], step=3)
+    # East Market curb furniture along the spur
+    lv.line_mix(["bollard", "planter_small"], [(65, 10), (65, 20)], step=3)
+    lv.line_mix(["bench", "planter_small"], [(70, 15), (70, 24)], step=3)
     lv.scatter_on(["trash_bin", "hydrant"], 6, near_wall, min_dist=5.0)
     lv.scatter_on(["vending_machine", "kiosk"], 3, near_wall, min_dist=7.0)
     lv.scatter_on(["planter_tree"], 6, lawn | forest_fringe, min_dist=4.0)
@@ -1955,6 +1983,12 @@ def map2():
     ])
     lv.vignette(*P["town"], [
         ("planter_small", -2, 0), ("bench", -1, 1), ("bollard", -3, 1),
+    ])
+    lv.vignette(*P["market"], [
+        ("kiosk", 1, 1), ("neon_sign", -1, 0), ("planter_small", 2, 0), ("bollard", 0, 2),
+    ])
+    lv.vignette(*P["court"], [
+        ("bench", -1, 0), ("kiosk", 1, 1), ("trash_bin", 2, 0), ("planter_small", -2, 1),
     ])
     interior = np.zeros_like(wall)
     interior[1:-1, 1:-1] = (city_wall[1:-1, 1:-1] & city_wall[:-2, 1:-1] & city_wall[2:, 1:-1]
@@ -2053,6 +2087,16 @@ def map2():
           text="West off the map: dry docks, salvage cranes, and the old freight canal. Quiet if the City isn't.")
     place(lv, "stash", P["docks"][0] + 1.5, P["docks"][1] + 0.5, glimmer=12, was=(48.0, 16.0))
     place(lv, "health", P["quay"][0] + 1.0, P["quay"][1] - 0.5, was=(40.0, 36.0))
+    # East Market examine + stash + enter-zone trigger
+    place(lv, "examine", P["stalls"][0] - 0.5, P["stalls"][1] + 0.5,
+          id="city_east_market_board", title="STALL BOARD",
+          text="Night market chalk: noodles upstairs, flats south, freight west through the docks. "
+               "The spur loops — you will not get stuck.")
+    # West of the market flats so the apartment sprite never covers pickups.
+    place(lv, "stash", 63.5, 20.5, glimmer=10)
+    place(lv, "health", 63.5, 16.5)
+    # Zone banner rect covers the market floor (tile → px).
+    lv.obj("zone", 63 * T, 10 * T, 10 * T, 18 * T, title="East Market", region="market")
     lv.vignette(*P["docks"], [
         ("bench", 1, 1), ("bollard", -1, 0), ("planter_small", 2, 0),
     ])
@@ -2069,8 +2113,10 @@ CITY_RESERVED = ((4.5, 25), (3.5, 27), (7.5, 25), (5.5, 27.5), (3, 23.5), (5.5, 
                  (46, 5), (46, 10), (35, 19), (24, 15.5), (21.7, 39.5), (28.5, 5.7), (21.5, 14),
                  # dronespawn pads (east lot + SE patrol)
                  (44.5, 17.5), (47.5, 19.5), (46.0, 27.0),
-                 # east expansion
+                 # docks / canal
                  (58, 16), (58, 28), (54, 34), (56, 15), (57, 28), (55, 33.5),
+                 # East Market spur
+                 (67, 14), (68, 18), (68, 24), (65, 12), (70, 16), (66, 21),
                  # SW west spur / Canal Works mouth
                  (3.5, 30), (4.5, 30), (2.5, 30))
 

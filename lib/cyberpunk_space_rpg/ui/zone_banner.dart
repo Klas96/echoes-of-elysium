@@ -17,6 +17,7 @@ class ZoneBanner extends StatefulWidget {
     'ruins': 'assets/images/ui/zone_banners/ruins.png',
     'core': 'assets/images/ui/zone_banners/core.png',
     'town': 'assets/images/ui/zone_banners/town.png',
+    'market': 'assets/images/ui/zone_banners/market.png',
   };
 
   /// Fractional insets into the dark text plate of each 240×80 sheet
@@ -28,6 +29,7 @@ class ZoneBanner extends StatefulWidget {
     'ruins': EdgeInsets.fromLTRB(0.14, 0.40, 0.20, 0.26),
     'core': EdgeInsets.fromLTRB(0.26, 0.30, 0.27, 0.26),
     'town': EdgeInsets.fromLTRB(0.28, 0.34, 0.28, 0.32),
+    'market': EdgeInsets.fromLTRB(0.28, 0.36, 0.28, 0.26),
   };
 
   static const fadeDuration = Duration(milliseconds: 400);
@@ -47,6 +49,7 @@ class ZoneBanner extends StatefulWidget {
         'ruins' => const Color(0xFFFFAADD),
         'core' => const Color(0xFFAAFFEE),
         'town' => const Color(0xFFFFE08A),
+        'market' => const Color(0xFFFFB86C),
         _ => DialogChrome.cyan,
       };
 

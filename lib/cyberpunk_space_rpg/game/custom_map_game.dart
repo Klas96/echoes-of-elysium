@@ -18,6 +18,7 @@ import '../components/fragment_pickup.dart';
 import '../components/health_pickup.dart';
 import '../components/sentinel_drone.dart';
 import '../components/checkpoint.dart';
+import '../components/zone_enter.dart';
 import '../components/building.dart';
 import '../components/building_masks.dart';
 import '../components/story_gate.dart';
@@ -861,6 +862,12 @@ Map<String, ObjectBuilder> _mapObjects(String mapId) => {
           ? _Gone()
           : SentinelDrone(p.position, onDefeated: StoryBeats.onSentinelDefeated),
       'checkpoint': (p) => Checkpoint(p.position, label: (p.others['label'] ?? '').toString()),
+      'zone': (p) => ZoneEnter(
+            p.position,
+            p.size,
+            title: (p.others['title'] ?? 'ZONE').toString(),
+            regionId: (p.others['region'] ?? 'city').toString(),
+          ),
       // --- M2: creatures and ability-gated secrets (woods) ---
       'creature': (p) {
         final id = (p.others['species'] ?? '').toString();
