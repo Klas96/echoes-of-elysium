@@ -64,7 +64,8 @@ class LampLight extends GameComponent {
   Vector2 get centre => position + size / 2;
 
   /// World rect of the prop sprite (matches `make_tiled_maps.LIGHTS` anchors).
-  /// Used to redraw the fixture above the night wash so it stays day-bright.
+  /// Wash leaves a hole here (day-bright prop); glow is clipped away so the
+  /// hole does not show a yellow disc behind the art.
   Rect get fixtureWorldRect {
     final c = centre;
     // Travel portals stamp a large-radius light on a 48×48 pad — no tiled prop.
@@ -82,7 +83,7 @@ class LampLight extends GameComponent {
   }
 
   /// Under Y-sorted props / Kaela (MAP+2, same idea as indoor room glows):
-  /// sprites sit above their glow pass. [NightTint] redraws fixtures day-bright.
+  /// sprites sit above their glow pass.
   @override
   int get priority => LayerPriority.MAP + 2;
 
@@ -127,14 +128,20 @@ class LampLight extends GameComponent {
       width: radius * 2,
       height: radius * 2 * squash,
     );
-    // Full cookie under the prop — the sprite paints above (MAP+2). Do not
-    // clip a fixture hole: that left a dark square of "no light" around props.
+    // Keep glow off the prop body so the wash hole shows the sprite, not a
+    // yellow cookie disc. (Overlay sprite redraw glided vs the camera.)
+    final f = fixtureWorldRect;
+    final localFixture =
+        Rect.fromLTWH(f.left - position.x, f.top - position.y, f.width, f.height);
+    canvas.save();
+    canvas.clipRect(localFixture, clipOp: ui.ClipOp.difference);
     canvas.drawImageRect(
       cookie.image,
       cookie.src(NightLights.clock, phase),
       dest,
       _glow,
     );
+    canvas.restore();
   }
 }
 
@@ -216,23 +223,10 @@ class NightLights {
   /// Whether [l] is in this frame's nearest-light draw set.
   static bool draws(LampLight l) => _drawSet.contains(l);
 
-  /// Lights whose cookies / day-bright fixture redraws are active this frame.
+  /// Lights whose cookies / wash holes are active this frame.
   static Iterable<LampLight> get drawn => _drawSet;
 
-  /// Prop tile art for day-bright overlay redraw (sheet + src in tileset px).
-  static final fixtures = <LightKind, FixtureSprite>{};
-
-  /// Tileset crop for each light kind (32×32 props from map tilesheets).
-  /// `(asset under assets/images/, tileId, columns)`.
-  static const fixtureTileAtlas = <LightKind, (String, int, int)>{
-    LightKind.lantern: ('maps/tilesets/woods.png', 204, 16),
-    LightKind.fire: ('maps/tilesets/woods.png', 197, 16),
-    LightKind.lamp: ('maps/tilesets/city.png', 224, 16),
-    LightKind.neon: ('maps/tilesets/cyberpunk.png', 200, 16),
-    LightKind.energy: ('maps/tilesets/core.png', 207, 16),
-  };
-
-  /// Prop sprite footprint in screen px for [l].
+  /// Prop sprite footprint in screen px for [l] (wash hole).
   static Rect fixtureScreenRect(LampLight l, Size screen) {
     final cam = camera;
     if (cam == null) return Rect.zero;
@@ -450,40 +444,8 @@ class NightLights {
         width: n, height: n, pixelFormat: ui.PixelFormat.rgba8888);
     final codec = await desc.instantiateCodec();
     procedural = LightCookie((await codec.getNextFrame()).image, 1, art: false);
-    await _loadFixtures();
     _notify();
   }
-
-  static Future<void> _loadFixtures() async {
-    final sheets = <String, ui.Image>{};
-    for (final e in fixtureTileAtlas.entries) {
-      final (path, tileId, columns) = e.value;
-      try {
-        final sheet = sheets[path] ??= await _loadSheet(path);
-        final col = tileId % columns;
-        final row = tileId ~/ columns;
-        fixtures[e.key] = FixtureSprite(
-          sheet,
-          Rect.fromLTWH(col * 32.0, row * 32.0, 32, 32),
-        );
-      } catch (_) {
-        // Missing sheet — that kind stays night-washed until art is present.
-      }
-    }
-  }
-
-  static Future<ui.Image> _loadSheet(String path) async {
-    final data = await rootBundle.load('assets/images/$path');
-    final codec = await ui.instantiateImageCodec(data.buffer.asUint8List());
-    return (await codec.getNextFrame()).image;
-  }
-}
-
-/// One 32×32 light-prop tile cropped from a map tilesheet.
-class FixtureSprite {
-  final ui.Image sheet;
-  final Rect src;
-  const FixtureSprite(this.sheet, this.src);
 }
 
 /// A cached light cookie image (one or two flicker frames side by side).
@@ -553,19 +515,19 @@ class _CameraProbe extends GameComponent {
       return;
     }
 
-    // Keep camera + draw-set fresh. Overlay must repaint on move so day-bright
-    // fixture sprites stay glued to world props (wash alone is flat).
+    // Keep camera + draw-set fresh. Wash holes must track the camera while
+    // walking (no overlay sprites — those glided a frame behind Bonfire).
     NightLights.camera ??= _camScratch.clone();
     NightLights.camera!.setFrom(_camScratch);
     NightLights.zoom = zoom;
 
     _flickerAcc += dt;
     _notifyAcc += dt;
-    final moveEps = HudLayout.isTouch ? 0.5 : 0.25;
+    // Any camera delta while lit — holes are cheap (path fill, no sprite blit).
     final moved = _lastCamX.isNaN ||
-        (_camScratch.x - _lastCamX).abs() >= moveEps ||
-        (_camScratch.y - _lastCamY).abs() >= moveEps ||
-        (zoom - _lastZoom).abs() > 0.001;
+        _camScratch.x != _lastCamX ||
+        _camScratch.y != _lastCamY ||
+        zoom != _lastZoom;
     final flickerTick = _flickerAcc >= 1 / NightLights.flickerHz;
     final duskShift = (darkness - _lastDarkness).abs() >= 0.01;
     final rateOk = _notifyAcc >= 1 / NightLights.notifyHz;
@@ -574,7 +536,6 @@ class _CameraProbe extends GameComponent {
       NightLights.refreshDrawSet(darkness);
     }
 
-    // Walking: every move (fixture overlay tracks camera). Standing: notifyHz.
     if (!moved && !flickerTick && !duskShift && _wasLit) return;
     if (!moved && !duskShift && !rateOk && _wasLit) return;
     if (flickerTick) _flickerAcc = 0;
@@ -597,17 +558,17 @@ class _CameraProbe extends GameComponent {
   }
 }
 
-/// Day/night wash (#35) plus day-bright light-prop redraw. Lamp cookies paint
-/// in-world on [LampLight] at MAP+2 under the sprites; this overlay then washes
-/// the scene and redraws lantern / fire / lamp tiles on top so fixtures stay
-/// day-lit without punching holes (which caused white/yellow artifacts).
+/// Day/night wash (#35) with even-odd holes over light fixtures so lantern /
+/// fire / lamp sprites stay day-bright. Glow is clipped off those bodies
+/// in-world, so holes do not reveal a yellow cookie. No overlay sprite redraw
+/// (that glided behind the camera while walking).
 ///
 /// Repaints on [NightLights.frame] (camera / dusk / DayClock wash steps).
 class NightTintPainter extends CustomPainter {
   NightTintPainter() : super(repaint: NightLights.frame);
 
-  final _tintPaint = Paint();
-  final _fixturePaint = Paint()..filterQuality = FilterQuality.none;
+  final _tintPaint = Paint()..style = PaintingStyle.fill;
+  final _washPath = Path();
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -616,21 +577,25 @@ class NightTintPainter extends CustomPainter {
     // no warm pools — keep night readable instead of near-black.
     final strength = NightLights.lights.isEmpty ? 0.48 : 1.0;
     final tint = DayCycle.tint(t, strength: strength);
-    if (tint.a > 0) {
-      _tintPaint.color = tint;
-      canvas.drawRect(Offset.zero & size, _tintPaint);
+    if (tint.a <= 0) return;
+    _tintPaint.color = tint;
+    final full = Offset.zero & size;
+    if (NightLights.camera == null || NightLights.drawn.isEmpty) {
+      canvas.drawRect(full, _tintPaint);
+      return;
     }
-    if (NightLights.camera == null) return;
-    final view = Offset.zero & size;
+    final path = _washPath
+      ..reset()
+      ..fillType = PathFillType.evenOdd
+      ..addRect(full);
     for (final l in NightLights.drawn) {
-      // Portals are not tiled props — skip the day-bright redraw.
-      if (l.radius >= 120) continue;
-      final spr = NightLights.fixtures[l.kind];
-      if (spr == null) continue;
-      final dest = NightLights.fixtureScreenRect(l, size);
-      if (dest.width <= 0 || !dest.overlaps(view)) continue;
-      canvas.drawImageRect(spr.sheet, spr.src, dest, _fixturePaint);
+      if (l.radius >= 120) continue; // portals — not tiled light props
+      final r = NightLights.fixtureScreenRect(l, size);
+      if (r.width <= 0 || !r.overlaps(full)) continue;
+      // Slight inset oval — less boxy than a hard tile rect.
+      path.addOval(r.deflate(r.shortestSide * 0.06));
     }
+    canvas.drawPath(path, _tintPaint);
   }
 
   @override

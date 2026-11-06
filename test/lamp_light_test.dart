@@ -128,15 +128,7 @@ void main() {
       expect(NightLights.glowStrength, greaterThanOrEqualTo(0.3));
     });
 
-    test('fixture tile atlas covers every light kind for day-bright redraw', () {
-      expect(NightLights.fixtureTileAtlas.keys.toSet(), LightKind.values.toSet());
-      for (final e in NightLights.fixtureTileAtlas.entries) {
-        expect(e.value.$1, contains('tilesets/'));
-        expect(e.value.$2, greaterThanOrEqualTo(0));
-        expect(e.value.$3, 16);
-        expect(File('assets/images/${e.value.$1}').existsSync(), isTrue,
-            reason: e.value.$1);
-      }
+    test('fixture wash-hole footprint covers the prop sprite', () {
       final lantern = LampLight(
         Vector2(100, 100),
         Vector2.all(16),
