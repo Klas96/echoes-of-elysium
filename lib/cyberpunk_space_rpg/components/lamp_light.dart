@@ -137,7 +137,7 @@ class LampLight extends GameComponent {
     final localFixture =
         Rect.fromLTWH(f.left - position.x, f.top - position.y, f.width, f.height);
     canvas.save();
-    canvas.clipRect(localFixture, clipOp: ClipOp.difference);
+    canvas.clipRect(localFixture, clipOp: ui.ClipOp.difference);
     canvas.drawImageRect(
       cookie.image,
       cookie.src(NightLights.clock, phase),
