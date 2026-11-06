@@ -25,6 +25,10 @@ class MusicManager {
   /// App left the foreground — keep BGM paused until [resumeForAppLifecycle].
   bool _pausedByLifecycle = false;
 
+  /// Test seam: true while [pauseForAppLifecycle] is in effect.
+  @visibleForTesting
+  bool get debugPausedByLifecycle => _pausedByLifecycle;
+
   double get _effective =>
       (_enabled ? _userVolume : 0.0) * _mix.clamp(0.0, 1.0);
 

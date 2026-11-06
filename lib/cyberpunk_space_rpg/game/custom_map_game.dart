@@ -993,7 +993,8 @@ class _CustomMapGameState extends State<CustomMapGame> with WidgetsBindingObserv
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // Backgrounded (phone home button, app switcher, web tab hidden, window
     // closing): save where Kaela stands right now, and silence audio.
-    // mediaPlayer + Android music focus otherwise keeps BGM playing off-screen.
+    // mediaPlayer + Android music focus otherwise keeps BGM playing off-screen
+    // (EOE-86 — MusicManager also mutes + drops focus; see pauseForAppLifecycle).
     // Also clear WASD — browsers drop KeyUp on tab switch, which left Kaela
     // walking forever (and off the map).
     switch (state) {
@@ -1001,6 +1002,8 @@ class _CustomMapGameState extends State<CustomMapGame> with WidgetsBindingObserv
       case AppLifecycleState.paused:
       case AppLifecycleState.hidden:
       case AppLifecycleState.detached:
+        // Fire-and-forget: flag flips synchronously inside MusicManager before
+        // the first await, so in-flight play() cannot restart audible BGM.
         MusicManager().pauseForAppLifecycle();
         SfxManager().pauseForAppLifecycle();
         GameInput.onFocusLost();

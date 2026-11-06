@@ -26,9 +26,13 @@ class GameAudioContexts {
     audioFocus: AndroidAudioFocus.none,
   );
 
+  /// Game BGM — request focus while foregrounded, but do **not** hold a wake
+  /// lock. `stayAwake: true` lets MediaPlayer keep playing after Home /
+  /// app-switcher when Flutter's lifecycle pause races the platform channel
+  /// (EOE-86). Pause/resume is owned by [MusicManager.pauseForAppLifecycle].
   static const AudioContextAndroid musicAndroid = AudioContextAndroid(
     isSpeakerphoneOn: false,
-    stayAwake: true,
+    stayAwake: false,
     contentType: AndroidContentType.music,
     usageType: AndroidUsageType.game,
     audioFocus: AndroidAudioFocus.gain,
