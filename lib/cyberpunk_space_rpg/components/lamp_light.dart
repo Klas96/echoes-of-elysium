@@ -35,9 +35,8 @@ extension LightKindStyle on LightKind {
       };
 }
 
-/// One light source in world pixels. Registers with [NightLights] for the
-/// night wash, and paints its own glow cookie at map-floor priority so
-/// lantern / lamp / fire sprites (dynamicAbove) draw **over** the glow.
+/// One light source in world pixels. Invisible on its own; [NightTint]
+/// draws wash holes + glow cookies through [NightLights].
 class LampLight extends GameComponent {
   final LightKind kind;
   final double radius;
@@ -47,10 +46,6 @@ class LampLight extends GameComponent {
 
   /// Per-lamp flicker phase so a street of lamps doesn't pulse in sync.
   final double phase;
-
-  final _glow = Paint()
-    ..blendMode = BlendMode.plus
-    ..filterQuality = FilterQuality.none;
 
   LampLight(Vector2 position, Vector2 size,
       {required this.kind, required this.radius, this.style = ''})
@@ -64,8 +59,7 @@ class LampLight extends GameComponent {
   Vector2 get centre => position + size / 2;
 
   /// World rect of the prop sprite (matches `make_tiled_maps.LIGHTS` anchors).
-  /// Wash leaves a hole here (day-bright prop); glow is clipped away so the
-  /// hole does not show a yellow disc behind the art.
+  /// [NightTintPainter] leaves a wash/glow hole here so the prop stays day-bright.
   Rect get fixtureWorldRect {
     final c = centre;
     // Travel portals stamp a large-radius light on a 48×48 pad — no tiled prop.
@@ -82,11 +76,6 @@ class LampLight extends GameComponent {
     return Rect.fromLTWH(c.x - tile / 2, c.y - tile * fy, tile, tile);
   }
 
-  /// Under Y-sorted props / Kaela (MAP+2, same idea as indoor room glows):
-  /// sprites sit above their glow pass.
-  @override
-  int get priority => LayerPriority.MAP + 2;
-
   @override
   void onMount() {
     super.onMount();
@@ -97,51 +86,6 @@ class LampLight extends GameComponent {
   void onRemove() {
     NightLights.unregister(this);
     super.onRemove();
-  }
-
-  @override
-  void render(Canvas canvas) {
-    if (!NightLights.draws(this)) return;
-    final darkness = DayCycle.darkness(DayCycle.time.value);
-    if (darkness <= 0.01) return;
-    final styleKey = NightLights.styleFor(kind, style);
-    final art = NightLights.cookies[styleKey];
-    final cookie = art ?? NightLights.procedural;
-    if (cookie == null) return;
-    final s = NightLights.strength(darkness, kind, phase, NightLights.clock);
-    if (s <= 0.01) return;
-    final a = NightLights.glowStrength * s;
-    if (art == null || !NightLights.artMatches(kind, styleKey)) {
-      final aq = (a * 40).round().clamp(0, 40);
-      final filter = NightLights.filterFor(kind, aq);
-      _glow
-        ..color = const Color(0xFFFFFFFF)
-        ..colorFilter = filter;
-    } else {
-      _glow
-        ..colorFilter = null
-        ..color = Color.fromRGBO(255, 255, 255, a);
-    }
-    final squash = cookie.art ? 1.0 : NightLights.squash;
-    final dest = Rect.fromCenter(
-      center: Offset(size.x / 2, size.y / 2),
-      width: radius * 2,
-      height: radius * 2 * squash,
-    );
-    // Keep glow off the prop body so the wash hole shows the sprite, not a
-    // yellow cookie disc. (Overlay sprite redraw glided vs the camera.)
-    final f = fixtureWorldRect;
-    final localFixture =
-        Rect.fromLTWH(f.left - position.x, f.top - position.y, f.width, f.height);
-    canvas.save();
-    canvas.clipRect(localFixture, clipOp: ui.ClipOp.difference);
-    canvas.drawImageRect(
-      cookie.image,
-      cookie.src(NightLights.clock, phase),
-      dest,
-      _glow,
-    );
-    canvas.restore();
   }
 }
 
@@ -187,10 +131,9 @@ class NightLights {
   /// Pools are slightly wider than tall: light on the ground.
   static const squash = 0.78;
 
-  /// Additive lamp glow strength. Cookies paint in-world under the night wash
-  /// (and under lantern/fire sprites). A bit stronger than the old overlay
-  /// 0.18 so pools still read through the blue wash without day-holes.
-  static const glowStrength = 0.32;
+  /// Additive lamp glow strength. Cookies paint in the NightTint overlay on
+  /// top of the wash (outside fixture holes), same band as the pre-EOE-84 look.
+  static const glowStrength = 0.18;
 
   /// Kept for docs / older notes; hole-punch path removed.
   static const cutStrength = 0.48;
@@ -558,44 +501,94 @@ class _CameraProbe extends GameComponent {
   }
 }
 
-/// Day/night wash (#35) with even-odd holes over light fixtures so lantern /
-/// fire / lamp sprites stay day-bright. Glow is clipped off those bodies
-/// in-world, so holes do not reveal a yellow cookie. No overlay sprite redraw
-/// (that glided behind the camera while walking).
+/// Day/night wash + lamp glows (#35). Even-odd holes over light fixtures keep
+/// lantern / fire / lamp sprites day-bright. Glow cookies paint in this same
+/// overlay **outside** those holes (clipPath), so light wraps the prop without
+/// a dark clipped square or a yellow disc in the hole — and without an overlay
+/// sprite redraw that glided while walking.
 ///
 /// Repaints on [NightLights.frame] (camera / dusk / DayClock wash steps).
 class NightTintPainter extends CustomPainter {
   NightTintPainter() : super(repaint: NightLights.frame);
 
   final _tintPaint = Paint()..style = PaintingStyle.fill;
+  final _glow = Paint()
+    ..blendMode = BlendMode.plus
+    ..filterQuality = FilterQuality.none;
   final _washPath = Path();
+  final _filterCache = <int, ColorFilter>{};
 
   @override
   void paint(Canvas canvas, Size size) {
     final t = DayCycle.time.value;
+    final darkness = DayCycle.darkness(t);
     // Ruins (world3) and other maps with no lamp objects get a flat wash with
     // no warm pools — keep night readable instead of near-black.
-    final strength = NightLights.lights.isEmpty ? 0.48 : 1.0;
-    final tint = DayCycle.tint(t, strength: strength);
-    if (tint.a <= 0) return;
-    _tintPaint.color = tint;
+    final washStrength = NightLights.lights.isEmpty ? 0.48 : 1.0;
+    final tint = DayCycle.tint(t, strength: washStrength);
     final full = Offset.zero & size;
-    if (NightLights.camera == null || NightLights.drawn.isEmpty) {
-      canvas.drawRect(full, _tintPaint);
-      return;
+    final cam = NightLights.camera;
+    final lit = cam != null && NightLights.drawn.isNotEmpty && darkness > 0.01;
+
+    Path? mask;
+    if (lit) {
+      mask = _washPath
+        ..reset()
+        ..fillType = PathFillType.evenOdd
+        ..addRect(full);
+      for (final l in NightLights.drawn) {
+        if (l.radius >= 120) continue; // portals — not tiled light props
+        final r = NightLights.fixtureScreenRect(l, size);
+        if (r.width <= 0 || !r.overlaps(full)) continue;
+        mask.addOval(r.deflate(r.shortestSide * 0.06));
+      }
     }
-    final path = _washPath
-      ..reset()
-      ..fillType = PathFillType.evenOdd
-      ..addRect(full);
+
+    if (tint.a > 0) {
+      _tintPaint.color = tint;
+      if (mask != null) {
+        canvas.drawPath(mask, _tintPaint);
+      } else {
+        canvas.drawRect(full, _tintPaint);
+      }
+    }
+    if (!lit || mask == null) return;
+
+    // Glow only where the wash is — fixture holes stay clear (day-bright prop,
+    // no cookie disc). No in-world glow clip square that blocked the pool.
+    canvas.save();
+    canvas.clipPath(mask);
+    final clock = NightLights.clock;
+    final zoom = NightLights.zoom;
     for (final l in NightLights.drawn) {
-      if (l.radius >= 120) continue; // portals — not tiled light props
-      final r = NightLights.fixtureScreenRect(l, size);
-      if (r.width <= 0 || !r.overlaps(full)) continue;
-      // Slight inset oval — less boxy than a hard tile rect.
-      path.addOval(r.deflate(r.shortestSide * 0.06));
+      final style = NightLights.styleFor(l.kind, l.style);
+      final art = NightLights.cookies[style];
+      final cookie = art ?? NightLights.procedural;
+      if (cookie == null) continue;
+      final s = NightLights.strength(darkness, l.kind, l.phase, clock);
+      if (s <= 0.01) continue;
+      final a = NightLights.glowStrength * s;
+      if (art == null || !NightLights.artMatches(l.kind, style)) {
+        final aq = (a * 40).round().clamp(0, 40);
+        final key = Object.hash(l.kind.index, aq);
+        final filter = _filterCache[key] ??= ColorFilter.mode(
+          l.kind.color.withValues(alpha: aq / 40),
+          BlendMode.srcIn,
+        );
+        _glow
+          ..color = const Color(0xFFFFFFFF)
+          ..colorFilter = filter;
+      } else {
+        _glow
+          ..colorFilter = null
+          ..color = Color.fromRGBO(255, 255, 255, a);
+      }
+      final rect = NightLights.screenRect(l.centre, l.radius, cam, zoom, size,
+          squash: cookie.art ? 1 : NightLights.squash);
+      if (!rect.overlaps(full)) continue;
+      canvas.drawImageRect(cookie.image, cookie.src(clock, l.phase), rect, _glow);
     }
-    canvas.drawPath(path, _tintPaint);
+    canvas.restore();
   }
 
   @override
