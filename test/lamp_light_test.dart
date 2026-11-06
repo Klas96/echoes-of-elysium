@@ -127,5 +127,30 @@ void main() {
       // Wash sits above the world; glow must stay strong enough through it.
       expect(NightLights.glowStrength, greaterThanOrEqualTo(0.3));
     });
+
+    test('fixture wash cutout covers the prop sprite (day-bright at night)', () {
+      // Light object is 16×16; lantern pool centre is 0.7 down a 32×32 prop.
+      final lamp = LampLight(
+        Vector2(100, 100),
+        Vector2.all(16),
+        kind: LightKind.lantern,
+        radius: 56,
+      );
+      final c = lamp.centre;
+      final r = lamp.fixtureWorldRect;
+      expect(r.width, 32);
+      expect(r.height, 32);
+      expect(r.center.dx, closeTo(c.x, 1e-6));
+      expect(c.y, closeTo(r.top + r.height * 0.7, 1e-6));
+      expect(r.contains(Offset(c.x, c.y)), isTrue);
+
+      final fire = LampLight(
+        Vector2(200, 200),
+        Vector2.all(16),
+        kind: LightKind.fire,
+        radius: 80,
+      );
+      expect(fire.fixtureWorldRect.height, greaterThan(32));
+    });
   });
 }

@@ -63,6 +63,27 @@ class LampLight extends GameComponent {
   /// the light reads as coming from the lantern/lamp, not south of it.
   Vector2 get centre => position + size / 2;
 
+  /// World rect of the prop sprite (matches `make_tiled_maps.LIGHTS` anchors).
+  /// [NightTintPainter] clears the night wash here so fixtures stay day-bright.
+  Rect get fixtureWorldRect {
+    final c = centre;
+    // Travel portals stamp a large-radius light on a 48×48 pad.
+    if (radius >= 120) {
+      return Rect.fromCenter(center: Offset(c.x, c.y), width: 48, height: 48);
+    }
+    const tile = 32.0;
+    final fy = switch (kind) {
+      LightKind.fire => 0.5,
+      LightKind.lantern => 0.7,
+      LightKind.energy => 0.5,
+      LightKind.lamp || LightKind.neon => 0.75,
+    };
+    // Campfire flame FX sits a little above the bowl tile.
+    final h = kind == LightKind.fire ? 40.0 : tile;
+    final top = kind == LightKind.fire ? c.y - tile * fy - 8 : c.y - h * fy;
+    return Rect.fromLTWH(c.x - tile / 2, top, tile, h);
+  }
+
   /// Under Y-sorted props / Kaela (MAP+2, same idea as indoor room glows):
   /// sprites sit above their glow pass. [NightTint] is wash-only.
   @override
@@ -195,6 +216,23 @@ class NightLights {
 
   /// Whether [l] is in this frame's nearest-light draw set.
   static bool draws(LampLight l) => _drawSet.contains(l);
+
+  /// Lights whose cookies (and wash cutouts) are active this frame.
+  static Iterable<LampLight> get drawn => _drawSet;
+
+  /// Prop sprite footprint in screen px for [l] (wash punch / tests).
+  static Rect fixtureScreenRect(LampLight l, Size screen) {
+    final cam = camera;
+    if (cam == null) return Rect.zero;
+    final r = l.fixtureWorldRect;
+    final z = zoom;
+    return Rect.fromLTWH(
+      (r.left - cam.x) * z + screen.width / 2,
+      (r.top - cam.y) * z + screen.height / 2,
+      r.width * z,
+      r.height * z,
+    );
+  }
 
   static void register(LampLight l, BonfireGameInterface game) {
     _lights.add(l);
@@ -472,16 +510,15 @@ class _CameraProbe extends GameComponent {
     }
 
     // Always keep the latest camera; refresh which lamps may paint cookies.
-    // Wash CustomPaint still throttles to notifyHz (EOE-84).
     NightLights.camera ??= _camScratch.clone();
     NightLights.camera!.setFrom(_camScratch);
     NightLights.zoom = zoom;
 
     _flickerAcc += dt;
     _notifyAcc += dt;
-    // Slightly coarser move threshold on touch: sub-pixel camera creep
-    // was still scheduling paints every notifyHz while "standing".
-    final moveEps = HudLayout.isTouch ? 2.0 : 1.0;
+    // Tight move epsilon so fixture wash cutouts stay glued to sprites.
+    // (Wash+dstOut is cheap now that cookies left the overlay.)
+    final moveEps = HudLayout.isTouch ? 0.5 : 0.25;
     final moved = _lastCamX.isNaN ||
         (_camScratch.x - _lastCamX).abs() >= moveEps ||
         (_camScratch.y - _lastCamY).abs() >= moveEps ||
@@ -496,10 +533,11 @@ class _CameraProbe extends GameComponent {
       NightLights.refreshDrawSet(darkness);
     }
 
-    if ((!moved && !flickerTick && !duskShift && _wasLit) ||
-        (!rateOk && !duskShift && _wasLit)) {
-      return;
-    }
+    // Wash is a cheap rect + a few fixture dstOuts (cookies left the overlay).
+    // While walking, repaint every move so day-bright cutouts stay on sprites;
+    // standing still still throttles to notifyHz (EOE-84).
+    if (!moved && !flickerTick && !duskShift && _wasLit) return;
+    if (!moved && !duskShift && !rateOk && _wasLit) return;
     if (flickerTick) _flickerAcc = 0;
     _notifyAcc = 0;
     _lastCamX = _camScratch.x;
@@ -520,9 +558,10 @@ class _CameraProbe extends GameComponent {
   }
 }
 
-/// Day/night wash only (#35). Lamp cookies paint in-world on [LampLight] at
-/// MAP+2 so lantern / fire / lamp sprites sit above their glow; no saveLayer /
-/// dstOut holes (walk lag). Pools read through this blue wash.
+/// Day/night wash (#35). Lamp cookies paint in-world on [LampLight] at MAP+2
+/// so lantern / fire / lamp sprites sit above their glow. After the wash, small
+/// dstOut cutouts over each fixture let those sprites read day-bright (no
+/// full-screen saveLayer — only the capped nearest lights).
 ///
 /// Repaints on [NightLights.frame] only (camera / dusk / DayClock wash steps).
 /// Avoids ~3 Hz full-screen paints from raw DayCycle.time ticks while darkness
@@ -531,6 +570,10 @@ class NightTintPainter extends CustomPainter {
   NightTintPainter() : super(repaint: NightLights.frame);
 
   final _tintPaint = Paint();
+  final _cut = Paint()
+    ..blendMode = BlendMode.dstOut
+    ..color = const Color(0xFFFFFFFF)
+    ..filterQuality = FilterQuality.none;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -542,6 +585,13 @@ class NightTintPainter extends CustomPainter {
     if (tint.a <= 0) return;
     _tintPaint.color = tint;
     canvas.drawRect(Offset.zero & size, _tintPaint);
+    // Punch wash off light-source sprites so they stay as bright as by day.
+    if (NightLights.camera == null) return;
+    for (final l in NightLights.drawn) {
+      final r = NightLights.fixtureScreenRect(l, size);
+      if (r.width <= 0 || !r.overlaps(Offset.zero & size)) continue;
+      canvas.drawRect(r, _cut);
+    }
   }
 
   @override
