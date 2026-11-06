@@ -15,6 +15,17 @@ class GameAudioContexts {
     audioFocus: AndroidAudioFocus.none,
   );
 
+  /// Dialogue / cutscene VO — speech content, still mixes with BGM (`none`).
+  /// Sonification was fine for short SFX but is the wrong Android attribute
+  /// for multi-second spoken lines (EOE-85).
+  static const AudioContextAndroid voiceAndroid = AudioContextAndroid(
+    isSpeakerphoneOn: false,
+    stayAwake: false,
+    contentType: AndroidContentType.speech,
+    usageType: AndroidUsageType.game,
+    audioFocus: AndroidAudioFocus.none,
+  );
+
   static const AudioContextAndroid musicAndroid = AudioContextAndroid(
     isSpeakerphoneOn: false,
     stayAwake: true,
@@ -38,6 +49,11 @@ class GameAudioContexts {
 
   static AudioContext get mix => AudioContext(
         android: mixAndroid,
+        iOS: mixIos,
+      );
+
+  static AudioContext get voice => AudioContext(
+        android: voiceAndroid,
         iOS: mixIos,
       );
 

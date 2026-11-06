@@ -74,8 +74,12 @@ class MusicManager {
       await p.setVolume(v);
       if (_currentTrack == null) return;
       if (_shouldPlay) {
-        // resume() is a no-op while already playing.
-        await p.resume();
+        // Dialogue/cutscene duck only changes volume. Calling resume() while
+        // already playing re-requests Android AUDIOFOCUS_GAIN and can pause
+        // or mute in-flight VO that mixes with focus none (EOE-85).
+        if (p.state != PlayerState.playing) {
+          await p.resume();
+        }
       } else {
         await p.pause();
       }
