@@ -41,6 +41,7 @@ TABLE, CUSHION = 44, 45
 BED_H, BED_F = 46, 47
 SCREEN = 49
 NIGHT = 61
+RUG = 63
 W_TEA_S, W_TEA_C = 70, 75
 # Tall cutaway companions + continuous N-wall strip (16 cols).
 W_TEA_S_MID, W_TEA_S_BASE = 176, 177
@@ -238,15 +239,34 @@ def slice_walls_from_strips(face_src: Path, side_src: Path) -> dict[int, Image.I
 
 
 def slice_floor(src: Path) -> dict[int, Image.Image]:
+    """Warm plank variants that fully fill each 32×32 (no black gutter strips)."""
     raw = Image.open(src).convert("RGBA")
-    side = min(raw.size)
-    left = (raw.width - side) // 2
-    top = (raw.height - side) // 2
-    crop = raw.crop((left, top, left + side, top + side))
+    crop = raw.crop(find_content_box(raw, dark=18))
+    # Force a filled plank grid — content-box may be wide; square-crop center.
+    side = min(crop.size)
+    left = (crop.width - side) // 2
+    top = (crop.height - side) // 2
+    crop = crop.crop((left, top, left + side, top + side))
     grid = crop.resize((T * 4, T * 2), Image.Resampling.NEAREST)
-    a = grid.crop((0, 0, T, T))
-    b = grid.crop((T, 0, T * 2, T))
-    return {WOOD: opaque_tile(a), WOOD2: opaque_tile(b)}
+    a = opaque_tile(grid.crop((0, 0, T, T)))
+    b = opaque_tile(grid.crop((T, 0, T * 2, T)))
+    # Guarantee every pixel opaque (AI sheets sometimes leave black gutters).
+    for tile in (a, b):
+        px = tile.load()
+        for y in range(T):
+            for x in range(T):
+                r, g, b_, al = px[x, y]
+                if al < 255 or (r < 20 and g < 20 and b_ < 20):
+                    # Sample nearest non-void neighbor.
+                    fill = (120, 80, 45, 255)
+                    for yy in range(max(0, y - 2), min(T, y + 3)):
+                        for xx in range(max(0, x - 2), min(T, x + 3)):
+                            rr, gg, bb, aa = px[xx, yy]
+                            if aa >= 255 and not (rr < 20 and gg < 20 and bb < 20):
+                                fill = (rr, gg, bb, 255)
+                                break
+                    px[x, y] = fill
+    return {WOOD: a, WOOD2: b}
 
 
 def clear_dark_bg(im: Image.Image) -> Image.Image:
@@ -287,8 +307,9 @@ def mat_tile(src: Path) -> Image.Image:
 
 
 def assemble_props() -> dict[int, Image.Image]:
-    # Plant (48) / rug (63): cabin hard-pixel AI overrides win in build_rooms
-    # load order — do not reintroduce soft tea stamps for those shared ids.
+    # Keep bed sources unchanged when only redesigning floor/props.
+    # Plant (48) stays cabin's (tea does not emit 48). Rug (63) is tea's —
+    # build_rooms loads tea after cabin so the hub rug wins without touching plants.
     mapping = {
         COUNTER: "tea_counter.jpg",
         URN: "tea_urn.jpg",
@@ -296,6 +317,7 @@ def assemble_props() -> dict[int, Image.Image]:
         CUSHION: "tea_cushion.jpg",
         SCREEN: "tea_screen.jpg",
         NIGHT: "tea_nightstand.jpg",
+        RUG: "tea_rug.jpg",
     }
     out = {tid: prop_tile(GEN / name, tid) for tid, name in mapping.items()}
     bed_src = GEN / "tea_bed_full.jpg"

@@ -21,6 +21,15 @@ intermediates are **not** written. Playbook:
 - Strip ids: top `128–143`, mid `144–159`, base `160–175`; sides `70/176/177`
   (+ east flips `178–181`)
 
+## Floor / props
+
+- `tea_floor_sheet.jpg` — warm honey oak planks (full-bleed; assemble fills
+  gutters so tiles have no black seams)
+- Props (hard NN): counter, urn, table, cushion, screen, nightstand, rug, mat
+- **Keep** continuous bed (`tea_bed_full.jpg`) and cabin plant (48) — tea does
+  not emit plant tiles
+- Rug (63): tea loads after cabin in `build_rooms` so the hub rug wins
+
 ## Exterior boundary
 
 Do **not** remake `assets/images/maps/buildings/tea_house.png` while iterating
