@@ -63,8 +63,26 @@ class LampLight extends GameComponent {
   /// the light reads as coming from the lantern/lamp, not south of it.
   Vector2 get centre => position + size / 2;
 
+  /// World rect of the prop sprite (matches `make_tiled_maps.LIGHTS` anchors).
+  /// Used to redraw the fixture above the night wash so it stays day-bright.
+  Rect get fixtureWorldRect {
+    final c = centre;
+    // Travel portals stamp a large-radius light on a 48×48 pad — no tiled prop.
+    if (radius >= 120) {
+      return Rect.fromCenter(center: Offset(c.x, c.y), width: 48, height: 48);
+    }
+    const tile = 32.0;
+    final fy = switch (kind) {
+      LightKind.fire => 0.5,
+      LightKind.lantern => 0.7,
+      LightKind.energy => 0.5,
+      LightKind.lamp || LightKind.neon => 0.75,
+    };
+    return Rect.fromLTWH(c.x - tile / 2, c.y - tile * fy, tile, tile);
+  }
+
   /// Under Y-sorted props / Kaela (MAP+2, same idea as indoor room glows):
-  /// sprites sit above their glow pass. [NightTint] is wash-only.
+  /// sprites sit above their glow pass. [NightTint] redraws fixtures day-bright.
   @override
   int get priority => LayerPriority.MAP + 2;
 
@@ -197,6 +215,36 @@ class NightLights {
 
   /// Whether [l] is in this frame's nearest-light draw set.
   static bool draws(LampLight l) => _drawSet.contains(l);
+
+  /// Lights whose cookies / day-bright fixture redraws are active this frame.
+  static Iterable<LampLight> get drawn => _drawSet;
+
+  /// Prop tile art for day-bright overlay redraw (sheet + src in tileset px).
+  static final fixtures = <LightKind, FixtureSprite>{};
+
+  /// Tileset crop for each light kind (32×32 props from map tilesheets).
+  /// `(asset under assets/images/, tileId, columns)`.
+  static const fixtureTileAtlas = <LightKind, (String, int, int)>{
+    LightKind.lantern: ('maps/tilesets/woods.png', 204, 16),
+    LightKind.fire: ('maps/tilesets/woods.png', 197, 16),
+    LightKind.lamp: ('maps/tilesets/city.png', 224, 16),
+    LightKind.neon: ('maps/tilesets/cyberpunk.png', 200, 16),
+    LightKind.energy: ('maps/tilesets/core.png', 207, 16),
+  };
+
+  /// Prop sprite footprint in screen px for [l].
+  static Rect fixtureScreenRect(LampLight l, Size screen) {
+    final cam = camera;
+    if (cam == null) return Rect.zero;
+    final r = l.fixtureWorldRect;
+    final z = zoom;
+    return Rect.fromLTWH(
+      (r.left - cam.x) * z + screen.width / 2,
+      (r.top - cam.y) * z + screen.height / 2,
+      r.width * z,
+      r.height * z,
+    );
+  }
 
   static void register(LampLight l, BonfireGameInterface game) {
     _lights.add(l);
@@ -402,8 +450,40 @@ class NightLights {
         width: n, height: n, pixelFormat: ui.PixelFormat.rgba8888);
     final codec = await desc.instantiateCodec();
     procedural = LightCookie((await codec.getNextFrame()).image, 1, art: false);
+    await _loadFixtures();
     _notify();
   }
+
+  static Future<void> _loadFixtures() async {
+    final sheets = <String, ui.Image>{};
+    for (final e in fixtureTileAtlas.entries) {
+      final (path, tileId, columns) = e.value;
+      try {
+        final sheet = sheets[path] ??= await _loadSheet(path);
+        final col = tileId % columns;
+        final row = tileId ~/ columns;
+        fixtures[e.key] = FixtureSprite(
+          sheet,
+          Rect.fromLTWH(col * 32.0, row * 32.0, 32, 32),
+        );
+      } catch (_) {
+        // Missing sheet — that kind stays night-washed until art is present.
+      }
+    }
+  }
+
+  static Future<ui.Image> _loadSheet(String path) async {
+    final data = await rootBundle.load('assets/images/$path');
+    final codec = await ui.instantiateImageCodec(data.buffer.asUint8List());
+    return (await codec.getNextFrame()).image;
+  }
+}
+
+/// One 32×32 light-prop tile cropped from a map tilesheet.
+class FixtureSprite {
+  final ui.Image sheet;
+  final Rect src;
+  const FixtureSprite(this.sheet, this.src);
 }
 
 /// A cached light cookie image (one or two flicker frames side by side).
@@ -437,6 +517,7 @@ class _CameraProbe extends GameComponent {
   double _lastZoom = double.nan;
   double _lastDarkness = -1;
   double _flickerAcc = 0;
+  double _notifyAcc = 0;
   bool _wasLit = false;
 
   @override
@@ -472,41 +553,38 @@ class _CameraProbe extends GameComponent {
       return;
     }
 
-    // Always keep the latest camera; refresh which lamps may paint cookies.
-    // Flat wash is camera-independent — only notify on dusk / lit edges.
+    // Keep camera + draw-set fresh. Overlay must repaint on move so day-bright
+    // fixture sprites stay glued to world props (wash alone is flat).
     NightLights.camera ??= _camScratch.clone();
     NightLights.camera!.setFrom(_camScratch);
     NightLights.zoom = zoom;
 
     _flickerAcc += dt;
-    // Slightly coarser move threshold on touch: sub-pixel camera creep
-    // does not need a draw-set rebuild every tick.
-    final moveEps = HudLayout.isTouch ? 2.0 : 1.0;
+    _notifyAcc += dt;
+    final moveEps = HudLayout.isTouch ? 0.5 : 0.25;
     final moved = _lastCamX.isNaN ||
         (_camScratch.x - _lastCamX).abs() >= moveEps ||
         (_camScratch.y - _lastCamY).abs() >= moveEps ||
         (zoom - _lastZoom).abs() > 0.001;
     final flickerTick = _flickerAcc >= 1 / NightLights.flickerHz;
     final duskShift = (darkness - _lastDarkness).abs() >= 0.01;
+    final rateOk = _notifyAcc >= 1 / NightLights.notifyHz;
 
-    // Draw-set tracks the camera so in-world cookies follow walk;
-    // flickerHz is enough when standing still (cookie frame / strength wobble).
     if (moved || flickerTick || duskShift || !_wasLit) {
       NightLights.refreshDrawSet(darkness);
-      if (flickerTick) _flickerAcc = 0;
-      _lastCamX = _camScratch.x;
-      _lastCamY = _camScratch.y;
-      _lastZoom = zoom;
     }
 
-    if (duskShift || !_wasLit) {
-      _lastDarkness = darkness;
-      _wasLit = true;
-      NightLights._notify();
-      return;
-    }
+    // Walking: every move (fixture overlay tracks camera). Standing: notifyHz.
+    if (!moved && !flickerTick && !duskShift && _wasLit) return;
+    if (!moved && !duskShift && !rateOk && _wasLit) return;
+    if (flickerTick) _flickerAcc = 0;
+    _notifyAcc = 0;
+    _lastCamX = _camScratch.x;
+    _lastCamY = _camScratch.y;
+    _lastZoom = zoom;
     _lastDarkness = darkness;
     _wasLit = true;
+    NightLights._notify();
   }
 
   @override
@@ -519,16 +597,17 @@ class _CameraProbe extends GameComponent {
   }
 }
 
-/// Day/night wash only (#35). Lamp cookies paint in-world on [LampLight] at
-/// MAP+2 so lantern / fire / lamp sprites sit above their glow.
+/// Day/night wash (#35) plus day-bright light-prop redraw. Lamp cookies paint
+/// in-world on [LampLight] at MAP+2 under the sprites; this overlay then washes
+/// the scene and redraws lantern / fire / lamp tiles on top so fixtures stay
+/// day-lit without punching holes (which caused white/yellow artifacts).
 ///
-/// Repaints on [NightLights.frame] only (dusk / DayClock wash steps). Flat
-/// wash is camera-independent, so walk no longer schedules overlay paints
-/// (EOE-84).
+/// Repaints on [NightLights.frame] (camera / dusk / DayClock wash steps).
 class NightTintPainter extends CustomPainter {
   NightTintPainter() : super(repaint: NightLights.frame);
 
   final _tintPaint = Paint();
+  final _fixturePaint = Paint()..filterQuality = FilterQuality.none;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -537,9 +616,21 @@ class NightTintPainter extends CustomPainter {
     // no warm pools — keep night readable instead of near-black.
     final strength = NightLights.lights.isEmpty ? 0.48 : 1.0;
     final tint = DayCycle.tint(t, strength: strength);
-    if (tint.a <= 0) return;
-    _tintPaint.color = tint;
-    canvas.drawRect(Offset.zero & size, _tintPaint);
+    if (tint.a > 0) {
+      _tintPaint.color = tint;
+      canvas.drawRect(Offset.zero & size, _tintPaint);
+    }
+    if (NightLights.camera == null) return;
+    final view = Offset.zero & size;
+    for (final l in NightLights.drawn) {
+      // Portals are not tiled props — skip the day-bright redraw.
+      if (l.radius >= 120) continue;
+      final spr = NightLights.fixtures[l.kind];
+      if (spr == null) continue;
+      final dest = NightLights.fixtureScreenRect(l, size);
+      if (dest.width <= 0 || !dest.overlaps(view)) continue;
+      canvas.drawImageRect(spr.sheet, spr.src, dest, _fixturePaint);
+    }
   }
 
   @override
