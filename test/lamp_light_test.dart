@@ -128,7 +128,7 @@ void main() {
       expect(NightLights.glowStrength, greaterThanOrEqualTo(0.3));
     });
 
-    test('fixture wash cutout covers the prop sprite (day-bright at night)', () {
+    test('glow clip footprint covers the prop sprite (no disc behind art)', () {
       // Light object is 16×16; lantern pool centre is 0.7 down a 32×32 prop.
       final lamp = LampLight(
         Vector2(100, 100),

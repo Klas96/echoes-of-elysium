@@ -64,7 +64,8 @@ class LampLight extends GameComponent {
   Vector2 get centre => position + size / 2;
 
   /// World rect of the prop sprite (matches `make_tiled_maps.LIGHTS` anchors).
-  /// [NightTintPainter] clears the night wash here so fixtures stay day-bright.
+  /// Glow cookies skip this so the pool sits on the ground, not as a disc
+  /// behind the lantern / fire art.
   Rect get fixtureWorldRect {
     final c = centre;
     // Travel portals stamp a large-radius light on a 48×48 pad.
@@ -130,12 +131,20 @@ class LampLight extends GameComponent {
       width: radius * 2,
       height: radius * 2 * squash,
     );
+    // Keep the cookie off the prop body — otherwise it reads as a yellow
+    // eclipse behind the lantern / fire sprite.
+    final f = fixtureWorldRect;
+    final localFixture =
+        Rect.fromLTWH(f.left - position.x, f.top - position.y, f.width, f.height);
+    canvas.save();
+    canvas.clipRect(localFixture, clipOp: ClipOp.difference);
     canvas.drawImageRect(
       cookie.image,
       cookie.src(NightLights.clock, phase),
       dest,
       _glow,
     );
+    canvas.restore();
   }
 }
 
@@ -216,23 +225,6 @@ class NightLights {
 
   /// Whether [l] is in this frame's nearest-light draw set.
   static bool draws(LampLight l) => _drawSet.contains(l);
-
-  /// Lights whose cookies (and wash cutouts) are active this frame.
-  static Iterable<LampLight> get drawn => _drawSet;
-
-  /// Prop sprite footprint in screen px for [l] (wash punch / tests).
-  static Rect fixtureScreenRect(LampLight l, Size screen) {
-    final cam = camera;
-    if (cam == null) return Rect.zero;
-    final r = l.fixtureWorldRect;
-    final z = zoom;
-    return Rect.fromLTWH(
-      (r.left - cam.x) * z + screen.width / 2,
-      (r.top - cam.y) * z + screen.height / 2,
-      r.width * z,
-      r.height * z,
-    );
-  }
 
   static void register(LampLight l, BonfireGameInterface game) {
     _lights.add(l);
@@ -473,7 +465,6 @@ class _CameraProbe extends GameComponent {
   double _lastZoom = double.nan;
   double _lastDarkness = -1;
   double _flickerAcc = 0;
-  double _notifyAcc = 0;
   bool _wasLit = false;
 
   @override
@@ -510,42 +501,40 @@ class _CameraProbe extends GameComponent {
     }
 
     // Always keep the latest camera; refresh which lamps may paint cookies.
+    // Flat wash is camera-independent — only notify on dusk / lit edges.
     NightLights.camera ??= _camScratch.clone();
     NightLights.camera!.setFrom(_camScratch);
     NightLights.zoom = zoom;
 
     _flickerAcc += dt;
-    _notifyAcc += dt;
-    // Tight move epsilon so fixture wash cutouts stay glued to sprites.
-    // (Wash+dstOut is cheap now that cookies left the overlay.)
-    final moveEps = HudLayout.isTouch ? 0.5 : 0.25;
+    // Slightly coarser move threshold on touch: sub-pixel camera creep
+    // does not need a draw-set rebuild every tick.
+    final moveEps = HudLayout.isTouch ? 2.0 : 1.0;
     final moved = _lastCamX.isNaN ||
         (_camScratch.x - _lastCamX).abs() >= moveEps ||
         (_camScratch.y - _lastCamY).abs() >= moveEps ||
         (zoom - _lastZoom).abs() > 0.001;
     final flickerTick = _flickerAcc >= 1 / NightLights.flickerHz;
     final duskShift = (darkness - _lastDarkness).abs() >= 0.01;
-    final rateOk = _notifyAcc >= 1 / NightLights.notifyHz;
 
-    // Draw-set tracks the camera every tick so in-world cookies follow walk;
+    // Draw-set tracks the camera so in-world cookies follow walk;
     // flickerHz is enough when standing still (cookie frame / strength wobble).
     if (moved || flickerTick || duskShift || !_wasLit) {
       NightLights.refreshDrawSet(darkness);
+      if (flickerTick) _flickerAcc = 0;
+      _lastCamX = _camScratch.x;
+      _lastCamY = _camScratch.y;
+      _lastZoom = zoom;
     }
 
-    // Wash is a cheap rect + a few fixture dstOuts (cookies left the overlay).
-    // While walking, repaint every move so day-bright cutouts stay on sprites;
-    // standing still still throttles to notifyHz (EOE-84).
-    if (!moved && !flickerTick && !duskShift && _wasLit) return;
-    if (!moved && !duskShift && !rateOk && _wasLit) return;
-    if (flickerTick) _flickerAcc = 0;
-    _notifyAcc = 0;
-    _lastCamX = _camScratch.x;
-    _lastCamY = _camScratch.y;
-    _lastZoom = zoom;
+    if (duskShift || !_wasLit) {
+      _lastDarkness = darkness;
+      _wasLit = true;
+      NightLights._notify();
+      return;
+    }
     _lastDarkness = darkness;
     _wasLit = true;
-    NightLights._notify();
   }
 
   @override
@@ -558,19 +547,17 @@ class _CameraProbe extends GameComponent {
   }
 }
 
-/// Day/night wash (#35). Lamp cookies paint in-world on [LampLight] at MAP+2
-/// so lantern / fire / lamp sprites sit above their glow. The wash path uses
-/// even-odd ovals over each drawn fixture so those sprites stay day-bright
-/// (no white dstOut rects, no full-screen saveLayer).
+/// Day/night wash only (#35). Lamp cookies paint in-world on [LampLight] at
+/// MAP+2 (clipped off the prop body) so lantern / fire / lamp sprites sit
+/// above their glow with no yellow disc behind them.
 ///
-/// Repaints on [NightLights.frame] only (camera / dusk / DayClock wash steps).
-/// Avoids ~3 Hz full-screen paints from raw DayCycle.time ticks while darkness
-/// is flat at day or deep night (EOE-84).
+/// Repaints on [NightLights.frame] only (dusk / DayClock wash steps). Flat
+/// wash is camera-independent, so walk no longer schedules overlay paints
+/// (EOE-84).
 class NightTintPainter extends CustomPainter {
   NightTintPainter() : super(repaint: NightLights.frame);
 
-  final _tintPaint = Paint()..style = PaintingStyle.fill;
-  final _washPath = Path();
+  final _tintPaint = Paint();
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -581,23 +568,7 @@ class NightTintPainter extends CustomPainter {
     final tint = DayCycle.tint(t, strength: strength);
     if (tint.a <= 0) return;
     _tintPaint.color = tint;
-    final full = Offset.zero & size;
-    if (NightLights.camera == null || NightLights.drawn.isEmpty) {
-      canvas.drawRect(full, _tintPaint);
-      return;
-    }
-    // Full-screen wash with oval holes over light props — day-bright fixtures,
-    // no opaque cutout fill (dstOut white read as a square on the overlay).
-    final path = _washPath
-      ..reset()
-      ..fillType = PathFillType.evenOdd
-      ..addRect(full);
-    for (final l in NightLights.drawn) {
-      final r = NightLights.fixtureScreenRect(l, size);
-      if (r.width <= 0 || !r.overlaps(full)) continue;
-      path.addOval(r.deflate(r.shortestSide * 0.08));
-    }
-    canvas.drawPath(path, _tintPaint);
+    canvas.drawRect(Offset.zero & size, _tintPaint);
   }
 
   @override
