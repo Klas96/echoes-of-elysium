@@ -777,8 +777,18 @@ W_LOG_S_MID, W_LOG_S_BASE = 116, 117
 W_LOG_S_E, W_LOG_S_MID_E, W_LOG_S_BASE_E, W_LOG_C_E = 118, 119, 120, 121
 STRIP_TOP0, STRIP_MID0, STRIP_BASE0 = 80, 92, 104
 STRIP_COLS = 12
+# Tea house continuous strip + tall cutaway (assemble_tea_gen) — 16 cols.
+W_TEA_S_MID, W_TEA_S_BASE = 176, 177
+W_TEA_S_E, W_TEA_S_MID_E, W_TEA_S_BASE_E, W_TEA_C_E = 178, 179, 180, 181
+TEA_STRIP_TOP0, TEA_STRIP_MID0, TEA_STRIP_BASE0 = 128, 144, 160
+TEA_STRIP_COLS = 16
 
-WALLS = set(range(16, 40)) | set(range(70, 80)) | set(range(80, 118))
+WALLS = (
+    set(range(16, 40))
+    | set(range(70, 80))
+    | set(range(80, 122))
+    | set(range(128, 182))
+)
 SOLID_FLOOR = WALLS | {POOL}
 SOLID_PROPS = {
     COUNTER, URN, POTS, TIN, TABLE, CUSHION, BED_H, BED_F, PLANT, SCREEN,
@@ -790,13 +800,14 @@ SOLID_PROPS = {
 def load_gen_overrides() -> dict[int, Image.Image]:
     """Cursor-gen tiles from assemble_*_gen.py under gen_src/<room>/tiles/.
 
-    Room folders load in a fixed order; later rooms win on shared tile ids so
-    cabin hard-pixel plant/rug (48/63) override older soft tea stamps.
+    Room folders load in a fixed order; later rooms win on shared tile ids.
+    Cabin wins plant (48). Tea loads after cabin and emits rug (63) so the hub
+    gets the tea rug without tea rewriting plants or beds.
     """
     out: dict[int, Image.Image] = {}
     if not GEN_SRC.is_dir():
         return out
-    room_order = {"archive": 0, "grotto": 1, "noodle": 2, "tea": 3, "cabin": 4}
+    room_order = {"archive": 0, "grotto": 1, "noodle": 2, "cabin": 3, "tea": 4}
 
     def _key(path: Path) -> tuple[int, str]:
         room = path.parent.parent.name
@@ -1149,66 +1160,103 @@ def room(rid: str, title: str, F, P, spots, npcs, lights) -> dict:
 
 
 def tea() -> dict:
-    """First hub pilot: wider inn with lounge / tea shop / rest alcove.
+    """Lantern Gate hub: tall wood/paper room-box N face + void cutaway sides.
 
-    Still one enterable building (Lantern Gate), not a district remake. 16×10
-    keeps the 32px tile language; three zones so talk / shop / rest read as
-    separate places inside one room.
+    16×10 keeps the hub zones (shop / lounge / rest). Face tiles come from a
+    sliced AI strip (aligned wood + cream panels); sides are thin-rim void.
     """
     with room_size(16, 10):
         F, P = shell(W_TEA, W_TEA_S, W_TEA_C, WOOD, MAT, J_TEA_L, J_TEA_R)
-        # North windows over the lounge (centred on the door).
-        for x in (6, 7, 8, 9):
-            F[0][x] = W_TEA_WIN
+        # Continuous strip across the north face (rows 0–2).
+        for x in range(TEA_STRIP_COLS):
+            F[0][x] = TEA_STRIP_TOP0 + x
+            F[1][x] = TEA_STRIP_MID0 + x
+            F[2][x] = TEA_STRIP_BASE0 + x
+        # Cutaway sides / corners meet the tall face (west rim; east = flipped).
+        for y, west, east in (
+            (0, W_TEA_C, W_TEA_C_E),
+            (1, W_TEA_S_MID, W_TEA_S_MID_E),
+            (2, W_TEA_S_BASE, W_TEA_S_BASE_E),
+        ):
+            F[y][0] = west
+            F[y][W - 1] = east
+        for y in range(3, H):
+            if F[y][0] == W_TEA_S:
+                F[y][0] = W_TEA_S_MID
+            if F[y][W - 1] == W_TEA_S:
+                F[y][W - 1] = W_TEA_S_MID_E
+        for y, x, tid in (
+            (H - 2, 0, W_TEA_C),
+            (H - 1, 0, W_TEA_C),
+            (H - 2, W - 1, W_TEA_C_E),
+            (H - 1, W - 1, W_TEA_C_E),
+        ):
+            F[y][x] = tid
+        # South short face uses plain AI face (not the cyber atlas).
+        for x in range(1, W - 1):
+            if F[H - 2][x] not in (WOOD, WOOD2):
+                F[H - 2][x] = W_TEA
+            if F[H - 1][x] not in (MAT, J_TEA_L, J_TEA_R):
+                F[H - 1][x] = W_TEA
+        meta_path = GEN_SRC / "tea" / "wall_strip_meta.json"
+        win_cols = [4, 11, 12]
+        if meta_path.is_file():
+            meta = json.loads(meta_path.read_text())
+            win_cols = [int(c) for c in meta.get("window_cols", win_cols)]
+        # Strip mid cells already carry the glowing windows — do not stamp a
+        # separate W_TEA_WIN over them (that reintroduced half-cut panes).
         vary(F, WOOD, WOOD2)
+        # Props sit south of the tall wall (row 3+).
         # West: tea counter + host (talk + shop).
-        P[1][1], P[1][2], P[1][3] = URN, COUNTER, COUNTER
-        P[3][1] = PLANT
+        P[3][1], P[3][2], P[3][3] = URN, COUNTER, COUNTER
+        P[5][1] = PLANT
         # Lounge: seating, rug, Ferro by the window.
-        P[1][10] = TABLE
-        P[2][6] = CUSHION
-        P[4][3] = TABLE
-        P[5][3] = STOOL
-        P[4][6], P[4][7] = RUG, RUG
+        P[3][10] = TABLE
+        P[4][6] = CUSHION
+        P[5][3] = TABLE
+        P[6][3] = STOOL
+        P[5][6], P[5][7] = RUG, RUG
         P[6][10] = PLANT
         # East alcove: screen + bed (rest).
-        P[1][12] = SCREEN
-        P[1][14] = BED_H
-        P[2][14] = BED_F
-        P[3][12] = PLANT
-        P[3][14] = NIGHT
-        P[5][14] = PLANT
+        P[3][12] = SCREEN
+        P[3][14] = BED_H
+        P[4][14] = BED_F
+        P[5][12] = PLANT
+        P[5][14] = NIGHT
+        P[6][14] = PLANT
+        ferro_x = win_cols[0] if win_cols else 8
         return room(
             "tea_house",
             "Tea house: Lantern Gate inn (hub)",
             F, P,
             [
-                {"id": "rest_bed", "rect": [14, 1, 1, 2], "kind": "rest",
+                {"id": "rest_bed", "rect": [14, 3, 1, 2], "kind": "rest",
                  "note": "Wen: sleep here -> save + well_rested"},
-                {"id": "ferro", "rect": [8, 1, 1, 1], "kind": "npc",
+                {"id": "ferro", "rect": [ferro_x, 3, 1, 1], "kind": "npc",
                  "note": "Old Ferro: riddle / rumour"},
-                {"id": "wen", "rect": [2, 2, 1, 1], "kind": "npc", "note": "Wen, host"},
-                {"id": "tea_menu", "rect": [1, 1, 3, 1], "kind": "shop",
+                {"id": "wen", "rect": [2, 4, 1, 1], "kind": "npc", "note": "Wen, host"},
+                {"id": "tea_menu", "rect": [1, 3, 3, 1], "kind": "shop",
                  "note": "Wen's tea counter: lantern tea / quiet cup for glimmer"},
-                {"id": "window_seat", "rect": [6, 0, 4, 1], "kind": "flavour",
+                {"id": "window_seat", "rect": [min(win_cols), 2, max(1, max(win_cols) - min(win_cols) + 1), 1],
+                 "kind": "flavour",
                  "note": "'Lantern Road runs east from here. The lamps were lit by hand, every one.'"},
-                {"id": "lounge_table", "rect": [3, 4, 1, 1], "kind": "flavour",
+                {"id": "lounge_table", "rect": [3, 5, 1, 1], "kind": "flavour",
                  "note": "'A low table between travellers. Cups cool; stories linger.'"},
-                {"id": "rest_screen", "rect": [12, 1, 1, 1], "kind": "flavour",
+                {"id": "rest_screen", "rect": [12, 3, 1, 1], "kind": "flavour",
                  "note": "'A paper screen softens the alcove. Beyond it, a bed waits.'"},
             ],
             [
-                {"name": "wen", "sprite": "wen", "tile": [2, 2], "role": "host",
+                {"name": "wen", "sprite": "wen", "tile": [2, 4], "role": "host",
                  "note": "Serves tea from the brass urn; talk + ORDER at the counter"},
-                {"name": "ferro", "sprite": "ferro", "tile": [8, 1], "role": "regular",
+                {"name": "ferro", "sprite": "ferro", "tile": [ferro_x, 3], "role": "regular",
                  "note": "By the round window: one riddle or rumour per in-game day"},
             ],
             [
-                {"tile": [7, 0], "kind": "warm"},
-                {"tile": [2, 1], "kind": "warm"},
-                {"tile": [10, 1], "kind": "warm"},
-                {"tile": [14, 1], "kind": "warm"},
-                {"tile": [6, 4], "kind": "warm"},
+                {"tile": [win_cols[0] if win_cols else 7, 1], "kind": "warm"},
+                {"tile": [2, 3], "kind": "warm"},
+                {"tile": [10, 3], "kind": "warm"},
+                {"tile": [14, 3], "kind": "warm"},
+                {"tile": [6, 5], "kind": "warm"},
             ],
         )
 
