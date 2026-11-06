@@ -88,8 +88,8 @@ class Journal {
   }
 }
 
-/// Subtle day/night tint over the game view (under the HUD). At night lamps,
-/// lanterns and fires add warm glow pools (see [NightTintPainter]).
+/// Subtle day/night wash over the game view (under the HUD). Warm lamp /
+/// lantern / fire pools paint in-world on [LampLight] under those sprites.
 class NightTint extends StatelessWidget {
   const NightTint({super.key});
 
