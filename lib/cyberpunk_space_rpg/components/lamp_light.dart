@@ -559,9 +559,9 @@ class _CameraProbe extends GameComponent {
 }
 
 /// Day/night wash (#35). Lamp cookies paint in-world on [LampLight] at MAP+2
-/// so lantern / fire / lamp sprites sit above their glow. After the wash, small
-/// dstOut cutouts over each fixture let those sprites read day-bright (no
-/// full-screen saveLayer — only the capped nearest lights).
+/// so lantern / fire / lamp sprites sit above their glow. The wash path uses
+/// even-odd ovals over each drawn fixture so those sprites stay day-bright
+/// (no white dstOut rects, no full-screen saveLayer).
 ///
 /// Repaints on [NightLights.frame] only (camera / dusk / DayClock wash steps).
 /// Avoids ~3 Hz full-screen paints from raw DayCycle.time ticks while darkness
@@ -569,11 +569,8 @@ class _CameraProbe extends GameComponent {
 class NightTintPainter extends CustomPainter {
   NightTintPainter() : super(repaint: NightLights.frame);
 
-  final _tintPaint = Paint();
-  final _cut = Paint()
-    ..blendMode = BlendMode.dstOut
-    ..color = const Color(0xFFFFFFFF)
-    ..filterQuality = FilterQuality.none;
+  final _tintPaint = Paint()..style = PaintingStyle.fill;
+  final _washPath = Path();
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -584,14 +581,23 @@ class NightTintPainter extends CustomPainter {
     final tint = DayCycle.tint(t, strength: strength);
     if (tint.a <= 0) return;
     _tintPaint.color = tint;
-    canvas.drawRect(Offset.zero & size, _tintPaint);
-    // Punch wash off light-source sprites so they stay as bright as by day.
-    if (NightLights.camera == null) return;
+    final full = Offset.zero & size;
+    if (NightLights.camera == null || NightLights.drawn.isEmpty) {
+      canvas.drawRect(full, _tintPaint);
+      return;
+    }
+    // Full-screen wash with oval holes over light props — day-bright fixtures,
+    // no opaque cutout fill (dstOut white read as a square on the overlay).
+    final path = _washPath
+      ..reset()
+      ..fillType = PathFillType.evenOdd
+      ..addRect(full);
     for (final l in NightLights.drawn) {
       final r = NightLights.fixtureScreenRect(l, size);
-      if (r.width <= 0 || !r.overlaps(Offset.zero & size)) continue;
-      canvas.drawRect(r, _cut);
+      if (r.width <= 0 || !r.overlaps(full)) continue;
+      path.addOval(r.deflate(r.shortestSide * 0.08));
     }
+    canvas.drawPath(path, _tintPaint);
   }
 
   @override
