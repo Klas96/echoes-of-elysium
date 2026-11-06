@@ -63,28 +63,6 @@ class LampLight extends GameComponent {
   /// the light reads as coming from the lantern/lamp, not south of it.
   Vector2 get centre => position + size / 2;
 
-  /// World rect of the prop sprite (matches `make_tiled_maps.LIGHTS` anchors).
-  /// Glow cookies skip this so the pool sits on the ground, not as a disc
-  /// behind the lantern / fire art.
-  Rect get fixtureWorldRect {
-    final c = centre;
-    // Travel portals stamp a large-radius light on a 48×48 pad.
-    if (radius >= 120) {
-      return Rect.fromCenter(center: Offset(c.x, c.y), width: 48, height: 48);
-    }
-    const tile = 32.0;
-    final fy = switch (kind) {
-      LightKind.fire => 0.5,
-      LightKind.lantern => 0.7,
-      LightKind.energy => 0.5,
-      LightKind.lamp || LightKind.neon => 0.75,
-    };
-    // Campfire flame FX sits a little above the bowl tile.
-    final h = kind == LightKind.fire ? 40.0 : tile;
-    final top = kind == LightKind.fire ? c.y - tile * fy - 8 : c.y - h * fy;
-    return Rect.fromLTWH(c.x - tile / 2, top, tile, h);
-  }
-
   /// Under Y-sorted props / Kaela (MAP+2, same idea as indoor room glows):
   /// sprites sit above their glow pass. [NightTint] is wash-only.
   @override
@@ -131,20 +109,14 @@ class LampLight extends GameComponent {
       width: radius * 2,
       height: radius * 2 * squash,
     );
-    // Keep the cookie off the prop body — otherwise it reads as a yellow
-    // eclipse behind the lantern / fire sprite.
-    final f = fixtureWorldRect;
-    final localFixture =
-        Rect.fromLTWH(f.left - position.x, f.top - position.y, f.width, f.height);
-    canvas.save();
-    canvas.clipRect(localFixture, clipOp: ui.ClipOp.difference);
+    // Full cookie under the prop — the sprite paints above (MAP+2). Do not
+    // clip a fixture hole: that left a dark square of "no light" around props.
     canvas.drawImageRect(
       cookie.image,
       cookie.src(NightLights.clock, phase),
       dest,
       _glow,
     );
-    canvas.restore();
   }
 }
 
@@ -548,8 +520,7 @@ class _CameraProbe extends GameComponent {
 }
 
 /// Day/night wash only (#35). Lamp cookies paint in-world on [LampLight] at
-/// MAP+2 (clipped off the prop body) so lantern / fire / lamp sprites sit
-/// above their glow with no yellow disc behind them.
+/// MAP+2 so lantern / fire / lamp sprites sit above their glow.
 ///
 /// Repaints on [NightLights.frame] only (dusk / DayClock wash steps). Flat
 /// wash is camera-independent, so walk no longer schedules overlay paints
