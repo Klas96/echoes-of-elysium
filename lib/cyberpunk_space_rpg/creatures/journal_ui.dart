@@ -89,7 +89,7 @@ class Journal {
 }
 
 /// Subtle day/night wash over the game view (under the HUD). Warm lamp /
-/// lantern / fire pools paint here outside fixture holes so props stay day-bright.
+/// lantern / fire pools paint in-world on [LampLight] under those sprites.
 class NightTint extends StatelessWidget {
   const NightTint({super.key});
 

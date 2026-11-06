@@ -116,17 +116,15 @@ void main() {
       expect(NightLights.glowStrength, greaterThan(0.1));
     });
 
-    test('fixture wash-hole footprint covers the prop sprite', () {
-      final lantern = LampLight(
-        Vector2(100, 100),
+    test('lamp cookies paint under prop sprites (MAP+2 glow pass)', () {
+      final lamp = LampLight(
+        Vector2.zero(),
         Vector2.all(16),
         kind: LightKind.lantern,
         radius: 56,
       );
-      final r = lantern.fixtureWorldRect;
-      expect(r.width, 32);
-      expect(r.height, 32);
-      expect(r.contains(Offset(lantern.centre.x, lantern.centre.y)), isTrue);
+      expect(lamp.priority, LayerPriority.MAP + 2);
+      expect(NightLights.glowStrength, greaterThanOrEqualTo(0.3));
     });
   });
 }
