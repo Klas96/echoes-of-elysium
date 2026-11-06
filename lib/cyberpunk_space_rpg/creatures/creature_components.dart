@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../audio/sfx_manager.dart';
 import '../components/custom_player.dart';
+import '../components/lamp_light.dart';
 import '../components/sentinel_drone.dart';
 import '../components/soft_aura.dart';
 import '../components/uec_drone.dart';
@@ -79,6 +80,7 @@ abstract class CreatureBody extends GameComponent {
   SpriteAnimationTicker? _ticker;
   int _tickRow = -1;
   CreatureMode? _tickMode;
+  final _glowPaint = Paint();
 
   /// Replaces the sheet frame (puffcap hiding in its cap).
   Sprite? still;
@@ -124,6 +126,7 @@ abstract class CreatureBody extends GameComponent {
       radius,
       color,
       coreAlpha: a,
+      paint: _glowPaint,
     );
   }
 
@@ -618,6 +621,7 @@ class Companion extends CreatureBody {
 class DayClock extends GameComponent {
   double? _t;
   double _pushed = -1;
+  double _lastDarkness = -1;
 
   @override
   void update(double dt) {
@@ -627,12 +631,24 @@ class DayClock extends GameComponent {
       // adopt outside changes (resting, loading a save)
       _t = shown;
       _pushed = shown;
+      final d = DayCycle.darkness(shown);
+      if (_lastDarkness < 0 || (d - _lastDarkness).abs() >= 0.01) {
+        _lastDarkness = d;
+        NightLights.nudgeWash();
+      }
     }
     final t = DayCycle.advance(_t!, dt);
     _t = t;
     if ((t - shown).abs() > 0.0005) {
       _pushed = t;
       DayCycle.time.value = t;
+      // NightTint no longer listens to DayCycle.time directly — nudge only
+      // when the wash alpha actually steps (covers lamp-less maps).
+      final d = DayCycle.darkness(t);
+      if (_lastDarkness < 0 || (d - _lastDarkness).abs() >= 0.01) {
+        _lastDarkness = d;
+        NightLights.nudgeWash();
+      }
     }
   }
 }

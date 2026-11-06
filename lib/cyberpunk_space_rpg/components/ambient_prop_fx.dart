@@ -7,6 +7,8 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
+import '../ui/hud_layout.dart';
+
 /// Looping FX over static Tiled props that "want" to move — steam from
 /// vents, fire from braziers/campfires, mist from fountains.
 ///
@@ -54,14 +56,19 @@ class AmbientPropFx extends GameComponent {
       );
 
   /// Skip tick/draw when well off camera (city has 12 ambient emitters).
+  /// Touch viewports see less world (zoom 2) — tighter cull (EOE-84).
   bool get _nearCamera {
     if (!hasGameRef) return true;
     final cam = gameRef.camera.viewfinder.position;
     final dx = absoluteCenter.x - cam.x;
     final dy = absoluteCenter.y - cam.y;
-    // ~half a desktop viewport at worldZoom plus margin.
-    return dx * dx + dy * dy < 480 * 480;
+    final r = HudLayout.isTouch ? 300.0 : 480.0;
+    return dx * dx + dy * dy < r * r;
   }
+
+  /// Procedural wisps + MaskFilter.blur are costly on Impeller/Skia mobile
+  /// the same way they are on web — treat touch like web for that path.
+  static bool get _cheapFx => kIsWeb || HudLayout.isTouch;
 
   @override
   Future<void> onLoad() async {
@@ -83,11 +90,11 @@ class AmbientPropFx extends GameComponent {
       _loop!.update(_rng.nextDouble() * 2);
     } catch (_) {
       _loop = null;
-      // Fewer wisps on web — MaskFilter.blur per particle is costly there.
+      // Fewer wisps on web/touch — MaskFilter.blur per particle is costly.
       final n = switch (_wispKind) {
-        'ember' => kIsWeb ? 3 : 5,
-        'mist' => kIsWeb ? 2 : 4,
-        _ => kIsWeb ? 3 : 6, // steam
+        'ember' => _cheapFx ? 3 : 5,
+        'mist' => _cheapFx ? 2 : 4,
+        _ => _cheapFx ? 3 : 6, // steam
       };
       for (var i = 0; i < n; i++) {
         _parts.add(_Wisp.spawn(_rng, _wispKind, stagger: i / n));
@@ -153,7 +160,7 @@ class AmbientPropFx extends GameComponent {
       final r = p.radius * (0.55 + u * 0.9);
       _wispPaint
         ..color = p.color.withValues(alpha: alpha)
-        ..maskFilter = kIsWeb
+        ..maskFilter = _cheapFx
             ? null
             : MaskFilter.blur(BlurStyle.normal, r * 0.55);
       canvas.drawOval(
