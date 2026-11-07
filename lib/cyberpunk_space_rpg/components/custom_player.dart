@@ -97,9 +97,11 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
 
   // --- Calm gameplay: no game over, gentle regen -------------------------
   /// Seconds without taking damage before health starts coming back.
-  static const double regenDelay = 4.0;
-  /// HP per second while regenerating (0 -> 100 in 20 s).
-  static const double regenPerSecond = 5.0;
+  /// Kept long enough that health pickups and checkpoint rests stay worth
+  /// grabbing instead of just waiting out the trickle.
+  static const double regenDelay = 8.0;
+  /// HP per second while regenerating (0 -> 100 in 80 s).
+  static const double regenPerSecond = 1.25;
   /// Respawn fade: fade to black, hold (teleport happens here), fade back.
   static const double fadeOutSeconds = 0.8;
   static const double fadeHoldSeconds = 0.9;
