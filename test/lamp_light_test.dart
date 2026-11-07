@@ -152,6 +152,8 @@ void main() {
       final sr = NightLights.fixtureScreenRect(lantern, screen);
       expect(sr.width, 32);
       expect(sr.height, 32);
+      // HUD wash sits above world MAP+2 glow / props.
+      expect(NightWashHud().priority, greaterThan(LayerPriority.MAP + 2));
     });
   });
 }
