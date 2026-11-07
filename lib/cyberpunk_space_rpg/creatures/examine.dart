@@ -75,7 +75,9 @@ class ExamineHotspot extends GameComponent with Interactable {
     if (requiresItem != null && _hasKey) {
       return PromptInfo('USE ITEM', item: requiresItem);
     }
-    if (_dropVisible) return PromptInfo('EXAMINE', item: giveItem);
+    if (_spriteVisible && giveItem != null) {
+      return PromptInfo('EXAMINE', item: giveItem);
+    }
     return const PromptInfo('EXAMINE');
   }
 
@@ -129,15 +131,22 @@ class ExamineHotspot extends GameComponent with Interactable {
     );
   }
 
-  /// A [giveItem] not yet picked up shows its world-drop art.
-  bool get _dropVisible =>
-      giveItem != null && !_done && !Bonds.hasItem(giveItem!) && !Bonds.usedItem(giveItem!);
+  /// Inventory drop not yet taken, or a quest/gated world prop with art.
+  bool get _spriteVisible {
+    if (_done && !_linger) return false;
+    if (giveItem != null) {
+      return !_done &&
+          !Bonds.hasItem(giveItem!) &&
+          !Bonds.usedItem(giveItem!);
+    }
+    return examineWorldArt.containsKey(id);
+  }
 
   SpriteAnimationTicker? _drop;
 
   @override
   Future<void> onLoad() async {
-    final path = itemDropSparkle(giveItem);
+    final path = examineDropSparkle(id, giveItem);
     if (path != null) {
       try {
         // <id>_drop_sparkle.png: 2 frames of 32x32 at 0.4 s (Designer json);
@@ -173,12 +182,15 @@ class ExamineHotspot extends GameComponent with Interactable {
     final cx = size.x / 2;
     final cy = size.y / 2;
     final p = sin(_pulse);
-    if (_drop != null && _dropVisible) {
+    if (_drop != null && _spriteVisible) {
       // 32x32 drop, centred on the hotspot with a soft glow under it.
+      final glow = (_hasKey || requiresItem == null)
+          ? const Color(0xFF88DDFF)
+          : const Color(0xFFAA8866);
       canvas.drawOval(
         Rect.fromCenter(center: Offset(cx, cy + 9), width: 18, height: 6),
         Paint()
-          ..color = const Color(0xFF88DDFF).withValues(alpha: 0.25 + p * 0.08)
+          ..color = glow.withValues(alpha: 0.25 + p * 0.08)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
       );
       _drop!.getSprite().render(

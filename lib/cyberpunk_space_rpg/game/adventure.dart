@@ -64,6 +64,28 @@ String? itemIconAsset(String? id, {bool small = false}) {
 String? itemDropSparkle(String? id) =>
     id != null && itemsWithArt.contains(id) ? 'sprites/items/${id}_drop_sparkle.png' : null;
 
+/// Examine hotspots that show a world prop sprite instead of a cyan dot.
+/// Values are art ids under `sprites/items/<id>_drop_sparkle.png` (not
+/// inventory items — quest / gated props that used to be bare examine dots).
+const examineWorldArt = <String, String>{
+  'woods_courier_pack': 'courier_pack',
+  'woods_nest_slate': 'nest_field_slate',
+  'city_west_cache': 'marked_crate',
+  'city_se_slate': 'patrol_slate',
+  'city_uec_terminal': 'uec_terminal',
+  'ruins_se_gate': 'sealed_gate_lock',
+};
+
+/// World-drop sparkle for an examine: inventory [giveItem] art first, else
+/// [examineWorldArt] for the hotspot id.
+String? examineDropSparkle(String examineId, String? giveItem) {
+  final fromGive = itemDropSparkle(giveItem);
+  if (fromGive != null) return fromGive;
+  final art = examineWorldArt[examineId];
+  if (art == null) return null;
+  return 'sprites/items/${art}_drop_sparkle.png';
+}
+
 /// Branching talk options shown on the last line of an [NpcDialogue].
 @immutable
 class DialogueChoice {
