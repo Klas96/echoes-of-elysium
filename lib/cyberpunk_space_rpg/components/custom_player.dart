@@ -150,12 +150,14 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
     _respawnT = 0;
     _teleported = false;
     pendingShot.value = null;
+    _attackTarget = null;
     _angleSteer = false;
     setupMovementByJoystick(enabled: false);
     stopMove(forceIdle: true);
     respawnFade.value = true;
-    // Sentinel plaza: dying mid-lockdown used to leave the fence up with
-    // Kaela teleported to a checkpoint outside — soft-lock. Restart clean.
+    // Sentinel plaza: dying mid-lockdown used to leave the fence up, or
+    // (EOE-74) leave the fight running when late PlayerBullets re-engaged
+    // the boss during this fade. Fully stop / reset the encounter now.
     SentinelDrone.instance?.resetEncounter();
   }
 
@@ -169,6 +171,9 @@ class CustomPlayer extends SimplePlayer with BlockMovementCollision, InstantFaci
       healthNotifier.value = maxHealth;
       _sinceDamage = regenDelay;
       gameRef.camera.moveToPlayer();
+      // After leaving the plaza, scrub again so any mid-fade race cannot
+      // leave the Sentinel engaged / sealed once Kaela is outside.
+      SentinelDrone.instance?.resetEncounter();
     }
     if (_respawnT >= fadeOutSeconds + fadeHoldSeconds && respawnFade.value) {
       respawnFade.value = false;
