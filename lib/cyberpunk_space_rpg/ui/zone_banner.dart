@@ -4,9 +4,10 @@ import 'dialog_chrome.dart';
 import 'hud_layout.dart';
 import 'mmo_feedback.dart';
 
-/// WoW-style enter-zone toast: themed pixel banner + zone name only.
+/// WoW-style enter-zone toast: themed pixel banner with baked-in title.
 ///
 /// Fades in/out. Desktop gets a larger plate, nudged a bit further down.
+/// Title glyphs live in the PNG so they always sit inside the plate art.
 class ZoneBanner extends StatefulWidget {
   const ZoneBanner({super.key});
 
@@ -19,22 +20,7 @@ class ZoneBanner extends StatefulWidget {
     'town': 'assets/images/ui/zone_banners/town.png',
   };
 
-  /// Fractional insets into the dark text plate of each 240×80 sheet
-  /// (measured from art + a few px of inner margin so glyphs stay inside).
-  static const plateInsets = {
-    'woods': EdgeInsets.fromLTRB(0.28, 0.36, 0.28, 0.30),
-    'city': EdgeInsets.fromLTRB(0.30, 0.34, 0.30, 0.28),
-    'works': EdgeInsets.fromLTRB(0.28, 0.38, 0.28, 0.28),
-    'ruins': EdgeInsets.fromLTRB(0.26, 0.34, 0.26, 0.30),
-    'core': EdgeInsets.fromLTRB(0.26, 0.32, 0.26, 0.30),
-    'town': EdgeInsets.fromLTRB(0.28, 0.34, 0.28, 0.32),
-  };
-
   static const fadeDuration = Duration(milliseconds: 400);
-
-  /// Plate insets for [regionId], or null when unknown.
-  static EdgeInsets? plateInsetsFor(String? regionId) =>
-      regionId == null ? null : plateInsets[regionId];
 
   /// Asset path for [regionId], or null when unknown.
   static String? assetFor(String? regionId) =>
@@ -57,7 +43,6 @@ class ZoneBanner extends StatefulWidget {
 class _ZoneBannerState extends State<ZoneBanner>
     with SingleTickerProviderStateMixin {
   late final AnimationController _fade;
-  String? _title;
   String? _region;
 
   @override
@@ -87,10 +72,7 @@ class _ZoneBannerState extends State<ZoneBanner>
     final region = MmoFeedback.zoneRegion.value;
     final asset = ZoneBanner.assetFor(region);
     if (title != null && asset != null) {
-      setState(() {
-        _title = title;
-        _region = region;
-      });
+      setState(() => _region = region);
       if (animate) {
         _fade.forward();
       } else {
@@ -99,50 +81,30 @@ class _ZoneBannerState extends State<ZoneBanner>
       return;
     }
     // Cleared — fade out, then drop the held plate.
-    if (_title == null) return;
+    if (_region == null) return;
     if (!animate) {
       _fade.value = 0;
-      setState(() {
-        _title = null;
-        _region = null;
-      });
+      setState(() => _region = null);
       return;
     }
     _fade.reverse().then((_) {
       if (!mounted) return;
       if (MmoFeedback.zoneTitle.value != null) return;
-      setState(() {
-        _title = null;
-        _region = null;
-      });
+      setState(() => _region = null);
     });
-  }
-
-  static EdgeInsets _textPadding(String? regionId, double bannerW, double artH) {
-    final f = ZoneBanner.plateInsets[regionId] ??
-        const EdgeInsets.fromLTRB(0.28, 0.36, 0.28, 0.28);
-    return EdgeInsets.fromLTRB(
-      bannerW * f.left,
-      artH * f.top,
-      bannerW * f.right,
-      artH * f.bottom,
-    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final title = _title;
     final region = _region;
-    if (title == null) return const SizedBox.shrink();
+    if (region == null) return const SizedBox.shrink();
     final asset = ZoneBanner.assetFor(region);
     if (asset == null) return const SizedBox.shrink();
 
-    final accent = ZoneBanner.accentFor(region);
     final screen = MediaQuery.sizeOf(context);
     final short = screen.height < 500;
     final narrow = HudLayout.narrow(screen);
     final desktop = !HudLayout.isTouch && !narrow;
-    final compact = short || narrow;
     final maxW = screen.width * 0.9;
     // Desktop: larger plate. Short landscape stays capped for HUD room.
     final double bannerW;
@@ -169,36 +131,12 @@ class _ZoneBannerState extends State<ZoneBanner>
                 key: const ValueKey('hud-banner-card'),
                 width: bannerW,
                 height: artH,
-                child: Stack(
-                  children: [
-                    Positioned.fill(
-                      child: Image.asset(
-                        asset,
-                        fit: BoxFit.fill,
-                        filterQuality: FilterQuality.none,
-                        isAntiAlias: false,
-                        gaplessPlayback: true,
-                      ),
-                    ),
-                    Padding(
-                      padding: _textPadding(region, bannerW, artH),
-                      child: Center(
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text(
-                            title.toUpperCase(),
-                            textAlign: TextAlign.center,
-                            maxLines: 1,
-                            softWrap: false,
-                            style: DialogChrome.zoneTitleStyle(
-                              accent: accent,
-                              compact: compact,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                child: Image.asset(
+                  asset,
+                  fit: BoxFit.fill,
+                  filterQuality: FilterQuality.none,
+                  isAntiAlias: false,
+                  gaplessPlayback: true,
                 ),
               ),
             ),
