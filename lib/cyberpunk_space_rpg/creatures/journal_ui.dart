@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatf
 import 'package:flutter/material.dart';
 
 import '../audio/audio_settings.dart';
+import '../components/lamp_light.dart';
 import '../game/adventure.dart';
 import '../ui/app_version_label.dart';
 import '../ui/dialog_chrome.dart';
@@ -87,15 +88,18 @@ class Journal {
   }
 }
 
-/// Placeholder under the Flutter HUD. Soft wash + day-bright fixtures paint
-/// on [NightWashHud] inside Bonfire (EOE-91) — no overlay holes (those made
-/// gliding light squares). Soft [LampLight] pools stay in-world.
+/// Subtle day/night wash over the game view (under the HUD). Warm lamp /
+/// lantern / fire pools paint in-world on [LampLight] under those sprites.
 class NightTint extends StatelessWidget {
   const NightTint({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const IgnorePointer(child: SizedBox.shrink());
+    return IgnorePointer(
+      child: RepaintBoundary(
+        child: CustomPaint(painter: NightTintPainter(), size: Size.infinite),
+      ),
+    );
   }
 }
 
