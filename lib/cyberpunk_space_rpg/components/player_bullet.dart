@@ -107,7 +107,9 @@ class PlayerBullet extends GameComponent {
         other.takeDamage(_damage, knockbackDir: _velocity);
         if (_slowSeconds > 0) other.applySlow(_slowSeconds);
       });
-    } else if (other is SentinelDrone && !other.isDead) {
+    } else if (other is SentinelDrone &&
+        !other.isDead &&
+        !other.combatSuppressed) {
       _hitHostile(other, () {
         other.takeDamage(_damage, knockbackDir: _velocity);
         if (_slowSeconds > 0) other.applySlow(_slowSeconds);

@@ -40,6 +40,7 @@ void main() {
     tearDown(() {
       SentinelArena.instance = null;
       SentinelDrone.instance = null;
+      SentinelDrone.debugCombatSuppressedOverride = null;
     });
 
     test('no-ops when the fight was never started', () {
@@ -66,10 +67,55 @@ void main() {
       s.resetEncounter();
 
       expect(s.isEngaged, isFalse);
+      expect(s.awaitingReentry, isTrue);
       expect(s.health, s.maxHealth);
       expect(s.phase, 1);
       expect(s.position, origin);
       expect(arena.sealed, isFalse);
+    });
+
+    test('late takeDamage during respawn cannot re-engage after reset', () {
+      // Die-while-shooting: reset clears the fight, then a PlayerBullet
+      // still in flight hits the Sentinel. That must not restart combat.
+      final arena = SentinelArena(Vector2(100, 200));
+      SentinelArena.instance = arena;
+      arena.sealed = true;
+
+      final s = SentinelDrone(Vector2(80, 180), onDefeated: () {});
+      s.debugMarkEngaged(health: (s.maxHealth * 0.5).round());
+      expect(s.isEngaged, isTrue);
+      expect(s.phase, 2);
+
+      s.resetEncounter();
+      expect(s.isEngaged, isFalse);
+      expect(s.awaitingReentry, isTrue);
+      expect(arena.sealed, isFalse);
+
+      SentinelDrone.debugCombatSuppressedOverride = true;
+      s.takeDamage(40);
+      expect(s.isEngaged, isFalse, reason: 'respawn suppresses re-engage');
+      expect(s.health, s.maxHealth, reason: 'no HP change mid-respawn');
+      expect(s.phase, 1);
+      expect(arena.sealed, isFalse);
+    });
+
+    test('takeDamage after death can start a clean retry; proximity cannot', () {
+      final arena = SentinelArena(Vector2(100, 200));
+      SentinelArena.instance = arena;
+      final s = SentinelDrone(Vector2(80, 180), onDefeated: () {});
+      s.debugMarkEngaged(health: (s.maxHealth * 0.5).round());
+      s.resetEncounter();
+      expect(s.awaitingReentry, isTrue);
+      expect(s.isEngaged, isFalse);
+
+      // Shooting is an intentional re-entry even while still in the plaza.
+      SentinelDrone.debugCombatSuppressedOverride = false;
+      try {
+        s.takeDamage(10);
+      } catch (_) {}
+      expect(s.isEngaged, isTrue);
+      expect(s.awaitingReentry, isFalse);
+      expect(s.health, lessThan(s.maxHealth));
     });
   });
 
