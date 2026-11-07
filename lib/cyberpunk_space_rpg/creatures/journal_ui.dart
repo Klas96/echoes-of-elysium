@@ -88,9 +88,9 @@ class Journal {
   }
 }
 
-/// Placeholder under the Flutter HUD. Soft wash + day-bright fixtures paint
-/// on [NightWashHud] inside Bonfire (EOE-91) so they share the camera frame —
-/// no overlay glide when walking. Soft [LampLight] pools stay in-world.
+/// Placeholder under the Flutter HUD. Soft wash, glow pools, and day-bright
+/// fixtures all paint on [NightWashHud] (EOE-91) in one live-camera frame so
+/// nothing glides when walking.
 class NightTint extends StatelessWidget {
   const NightTint({super.key});
 

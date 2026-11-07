@@ -35,10 +35,9 @@ extension LightKindStyle on LightKind {
       };
 }
 
-/// One light source in world pixels. Registers with [NightLights] and paints
-/// its glow cookie at map-floor priority so lantern / lamp / fire sprites
-/// (dynamicAbove) draw **over** the glow. Soft wash then day-bright fixtures
-/// paint on [NightWashHud] (viewport HUD — camera-synced, no holes).
+/// One light source in world pixels. Registers with [NightLights]. Soft wash,
+/// glow cookies, and day-bright fixture tiles all paint on [NightWashHud] in
+/// one camera-synced HUD pass (no Flutter overlay glide while walking).
 class LampLight extends GameComponent {
   final LightKind kind;
   final double radius;
@@ -48,10 +47,6 @@ class LampLight extends GameComponent {
 
   /// Per-lamp flicker phase so a street of lamps doesn't pulse in sync.
   final double phase;
-
-  final _glow = Paint()
-    ..blendMode = BlendMode.plus
-    ..filterQuality = FilterQuality.none;
 
   LampLight(Vector2 position, Vector2 size,
       {required this.kind, required this.radius, this.style = ''})
@@ -82,7 +77,7 @@ class LampLight extends GameComponent {
     return Rect.fromLTWH(c.x - tile / 2, c.y - tile * fy, tile, tile);
   }
 
-  /// Under Y-sorted props / Kaela (MAP+2): sprites sit above their glow pass.
+  /// Registration only — glow paint moved to [NightWashHud] above the wash.
   @override
   int get priority => LayerPriority.MAP + 2;
 
@@ -100,39 +95,7 @@ class LampLight extends GameComponent {
 
   @override
   void render(Canvas canvas) {
-    if (!NightLights.draws(this)) return;
-    final darkness = DayCycle.darkness(DayCycle.time.value);
-    if (darkness <= 0.01) return;
-    final styleKey = NightLights.styleFor(kind, style);
-    final art = NightLights.cookies[styleKey];
-    final cookie = art ?? NightLights.procedural;
-    if (cookie == null) return;
-    final s = NightLights.strength(darkness, kind, phase, NightLights.clock);
-    if (s <= 0.01) return;
-    final a = NightLights.glowStrength * s;
-    if (art == null || !NightLights.artMatches(kind, styleKey)) {
-      final aq = (a * 40).round().clamp(0, 40);
-      final filter = NightLights.filterFor(kind, aq);
-      _glow
-        ..color = const Color(0xFFFFFFFF)
-        ..colorFilter = filter;
-    } else {
-      _glow
-        ..colorFilter = null
-        ..color = Color.fromRGBO(255, 255, 255, a);
-    }
-    final squash = cookie.art ? 1.0 : NightLights.squash;
-    final dest = Rect.fromCenter(
-      center: Offset(size.x / 2, size.y / 2),
-      width: radius * 2,
-      height: radius * 2 * squash,
-    );
-    canvas.drawImageRect(
-      cookie.image,
-      cookie.src(NightLights.clock, phase),
-      dest,
-      _glow,
-    );
+    // Glow cookies paint on NightWashHud above the soft wash (EOE-91).
   }
 }
 
@@ -156,8 +119,7 @@ class ScreenLight {
 }
 
 /// Registry + camera snapshot for night lights.
-/// Lamp cookies are painted by each [LampLight] under prop sprites.
-/// Soft wash + day-bright fixture tiles: [NightWashHud] (viewport HUD).
+/// Soft wash, glow cookies, and day-bright fixtures: [NightWashHud].
 class NightLights {
   static final _lights = <LampLight>[];
   static _CameraProbe? _probe;
@@ -180,19 +142,18 @@ class NightLights {
   /// Pools are slightly wider than tall: light on the ground.
   static const squash = 0.78;
 
-  /// Additive lamp glow strength. Cookies paint in-world under the night wash
-  /// (and under lantern/fire sprites). Stronger than the old overlay 0.18 so
-  /// pools still read through the blue wash.
-  static const glowStrength = 0.32;
+  /// Additive lamp glow strength. Cookies paint on [NightWashHud] **above**
+  /// the soft wash so pools stay warm (not blue-tinted).
+  static const glowStrength = 0.24;
 
   /// Kept for docs / older notes; hole-punch path removed (EOE-91 uses
   /// wash-then-redraw instead of cutting fixture holes).
   static const cutStrength = 0.48;
 
   /// Game-canvas wash reads much stronger than the old Flutter Stack overlay
-  /// with the same alpha — keep this low so night matches the #150 soft tint.
-  /// Fixture redraw above the wash is unchanged.
-  static const washAlphaScale = 0.28;
+  /// with the same [DayCycle.tint] alpha. Keep this low so night matches the
+  /// soft #150 overlay; fixtures + glows paint above the wash (no glide).
+  static const washAlphaScale = 0.10;
 
   /// Max lamp cookies / day-bright fixture redraws per frame. City has 44
   /// lights; a phone viewport usually sees ≤7. Prefer nearest-to-camera.
@@ -601,15 +562,17 @@ class _CameraProbe extends GameComponent {
   }
 }
 
-/// Soft night tint then day-bright fixture redraw (EOE-91) as a Bonfire
-/// viewport HUD — same game frame as the camera (no glide, no wash holes).
+/// Soft night tint, then glow cookies, then day-bright fixtures (EOE-91) as a
+/// Bonfire viewport HUD — one live-camera frame so nothing glides while walking.
 ///
-/// Wash uses the same drawRect + Paint path as the old Flutter [NightTint],
-/// with [NightLights.washAlphaScale] so game-canvas alpha matches that soft
-/// overlay look. Fixture tiles blit after the wash (unchanged). Soft
-/// [LampLight] auras stay in-world under this layer.
+/// Draw order: wash → additive pools → fixture tiles. Glows and props sit
+/// above the tint so they stay warm/day-bright. [washAlphaScale] matches the
+/// soft #150 Flutter overlay (game canvas reads darker at the same alpha).
 class NightWashHud extends GameComponent {
   final _tintPaint = Paint();
+  final _glowPaint = Paint()
+    ..blendMode = BlendMode.plus
+    ..filterQuality = FilterQuality.none;
   final _fixturePaint = Paint()..filterQuality = FilterQuality.none;
 
   /// After color-filter HUD (20), before interface (30).
@@ -638,14 +601,20 @@ class NightWashHud extends GameComponent {
     final view = Offset.zero & screen;
     final tint = DayCycle.tint(t, strength: strength);
     if (tint.a > 0) {
-      // Same Soft NightTint drawRect path; scaled alpha for game-canvas.
       _tintPaint.color =
           tint.withValues(alpha: tint.a * NightLights.washAlphaScale);
       canvas.drawRect(view, _tintPaint);
     }
-    // Live camera — same Bonfire frame as world walk (no Flutter overlay lag).
+
+    // Live camera every Bonfire frame — no Flutter overlay lag / glide.
     final cam = gameRef.camera.viewfinder.position;
     final zoom = gameRef.camera.viewfinder.zoom;
+    final darkness = DayCycle.darkness(t);
+    final clock = NightLights.clock;
+
+    for (final l in NightLights.drawn) {
+      _paintGlow(canvas, l, cam, zoom, screen, view, darkness, clock);
+    }
     for (final l in NightLights.drawn) {
       if (l.radius >= 120) continue; // portals — not tiled light props
       final spr = NightLights.fixtures[l.kind];
@@ -660,6 +629,52 @@ class NightWashHud extends GameComponent {
       if (dest.width <= 0 || !dest.overlaps(view)) continue;
       canvas.drawImageRect(spr.sheet, spr.src, dest, _fixturePaint);
     }
+  }
+
+  void _paintGlow(
+    Canvas canvas,
+    LampLight l,
+    Vector2 cam,
+    double zoom,
+    Size screen,
+    Rect view,
+    double darkness,
+    double clock,
+  ) {
+    if (darkness <= 0.01) return;
+    final styleKey = NightLights.styleFor(l.kind, l.style);
+    final art = NightLights.cookies[styleKey];
+    final cookie = art ?? NightLights.procedural;
+    if (cookie == null) return;
+    final s = NightLights.strength(darkness, l.kind, l.phase, clock);
+    if (s <= 0.01) return;
+    final a = NightLights.glowStrength * s;
+    if (art == null || !NightLights.artMatches(l.kind, styleKey)) {
+      final aq = (a * 40).round().clamp(0, 40);
+      _glowPaint
+        ..color = const Color(0xFFFFFFFF)
+        ..colorFilter = NightLights.filterFor(l.kind, aq);
+    } else {
+      _glowPaint
+        ..colorFilter = null
+        ..color = Color.fromRGBO(255, 255, 255, a);
+    }
+    final squash = cookie.art ? 1.0 : NightLights.squash;
+    final dest = NightLights.screenRect(
+      l.centre,
+      l.radius,
+      cam,
+      zoom,
+      screen,
+      squash: squash,
+    );
+    if (!dest.overlaps(view)) return;
+    canvas.drawImageRect(
+      cookie.image,
+      cookie.src(clock, l.phase),
+      dest,
+      _glowPaint,
+    );
   }
 }
 
