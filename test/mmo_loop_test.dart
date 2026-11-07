@@ -194,14 +194,12 @@ void main() {
       }
     });
 
-    test('each banner region has plate insets that keep text inside the art', () {
-      for (final region in ZoneBanner.assets.keys) {
-        expect(ZoneBanner.plateInsetsFor(region), isNotNull, reason: region);
-        final inset = ZoneBanner.plateInsetsFor(region)!;
-        expect(inset.left + inset.right, lessThan(0.75), reason: region);
-        expect(inset.top + inset.bottom, lessThan(0.85), reason: region);
-        expect(inset.left + inset.right, greaterThan(0.25), reason: region);
+    test('each travel region title maps to a banner asset (title baked in PNG)', () {
+      for (final dest in Travel.all) {
+        expect(ZoneBanner.assetFor(dest.regionId), isNotNull, reason: dest.title);
+        expect(ZoneBanner.assets.containsKey(dest.regionId), isTrue);
       }
+      expect(ZoneBanner.assets.length, Travel.all.length);
     });
   });
 }
