@@ -126,5 +126,28 @@ void main() {
       expect(lamp.priority, LayerPriority.MAP + 2);
       expect(NightLights.glowStrength, greaterThanOrEqualTo(0.3));
     });
+
+    test('fixture tile atlas covers every light kind for day-bright redraw', () {
+      expect(NightLights.fixtureTileAtlas.keys.toSet(), LightKind.values.toSet());
+      for (final e in NightLights.fixtureTileAtlas.entries) {
+        expect(e.value.$1, contains('tilesets/'));
+        expect(e.value.$2, greaterThanOrEqualTo(0));
+        expect(e.value.$3, 16);
+        expect(File('assets/images/${e.value.$1}').existsSync(), isTrue,
+            reason: e.value.$1);
+      }
+      final lantern = LampLight(
+        Vector2(100, 100),
+        Vector2.all(16),
+        kind: LightKind.lantern,
+        radius: 56,
+      );
+      final r = lantern.fixtureWorldRect;
+      expect(r.width, 32);
+      expect(r.height, 32);
+      expect(r.contains(Offset(lantern.centre.x, lantern.centre.y)), isTrue);
+      // Wash layer sits above world content so draw-order is wash then fixtures.
+      expect(NightWashLayer().priority, greaterThan(LayerPriority.MAP + 2));
+    });
   });
 }

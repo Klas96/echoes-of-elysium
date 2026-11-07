@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatf
 import 'package:flutter/material.dart';
 
 import '../audio/audio_settings.dart';
-import '../components/lamp_light.dart';
 import '../game/adventure.dart';
 import '../ui/app_version_label.dart';
 import '../ui/dialog_chrome.dart';
@@ -88,18 +87,17 @@ class Journal {
   }
 }
 
-/// Subtle day/night wash over the game view (under the HUD). Warm lamp /
-/// lantern / fire pools paint in-world on [LampLight] under those sprites.
+/// Placeholder in the Flutter stack under the HUD. Night wash + day-bright
+/// light-prop redraw paint in-world on [NightWashLayer] (EOE-91) so fixtures
+/// stay camera-synced; soft [LampLight] pools stay under those sprites.
 class NightTint extends StatelessWidget {
   const NightTint({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: RepaintBoundary(
-        child: CustomPaint(painter: NightTintPainter(), size: Size.infinite),
-      ),
-    );
+    // Wash moved into Bonfire ([NightWashLayer]); keep a zero-cost slot so
+    // map Stack ordering (under HUD / vignette) stays stable.
+    return const IgnorePointer(child: SizedBox.shrink());
   }
 }
 
