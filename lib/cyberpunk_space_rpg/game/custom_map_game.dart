@@ -744,34 +744,52 @@ Map<String, ObjectBuilder> _mapObjects(String mapId) => {
       },
       'examine': (p) {
         final id = (p.others['id'] ?? _pickupId(mapId, 'examine', p)).toString();
+        final clueId = () {
+          final c = (p.others['clue'] ?? '').toString();
+          return c.isEmpty ? null : c;
+        }();
+        final requiresItem = () {
+          final i = (p.others['item'] ?? '').toString();
+          return i.isEmpty ? null : i;
+        }();
+        final setFlag = () {
+          final f = (p.others['flag'] ?? '').toString();
+          return f.isEmpty ? null : f;
+        }();
+        final giveItem = () {
+          final g = (p.others['give'] ?? '').toString();
+          return g.isEmpty ? null : g;
+        }();
+        final completeQuest = () {
+          final q = (p.others['quest'] ?? '').toString();
+          return q.isEmpty ? null : q;
+        }();
+        final openQuestBoard =
+            p.others['board'] == true || p.others['board'] == 'true';
+        final openShop = p.others['shop'] == true || p.others['shop'] == 'true';
+        // EOE-90: skip flavour-only examine dots (text toast, no story props).
+        if (clueId == null &&
+            requiresItem == null &&
+            setFlag == null &&
+            giveItem == null &&
+            completeQuest == null &&
+            !openQuestBoard &&
+            !openShop) {
+          return _Gone();
+        }
         return ExamineHotspot(
           p.position,
           id: id,
           title: (p.others['title'] ?? 'EXAMINE').toString(),
           text: (p.others['text'] ?? '...').toString(),
-          clueId: () {
-            final c = (p.others['clue'] ?? '').toString();
-            return c.isEmpty ? null : c;
-          }(),
-          requiresItem: () {
-            final i = (p.others['item'] ?? '').toString();
-            return i.isEmpty ? null : i;
-          }(),
+          clueId: clueId,
+          requiresItem: requiresItem,
           consumeItem: p.others['consume'] == true || p.others['consume'] == 'true',
-          setFlag: () {
-            final f = (p.others['flag'] ?? '').toString();
-            return f.isEmpty ? null : f;
-          }(),
-          giveItem: () {
-            final g = (p.others['give'] ?? '').toString();
-            return g.isEmpty ? null : g;
-          }(),
-          completeQuest: () {
-            final q = (p.others['quest'] ?? '').toString();
-            return q.isEmpty ? null : q;
-          }(),
-          openQuestBoard: p.others['board'] == true || p.others['board'] == 'true',
-          openShop: p.others['shop'] == true || p.others['shop'] == 'true',
+          setFlag: setFlag,
+          giveItem: giveItem,
+          completeQuest: completeQuest,
+          openQuestBoard: openQuestBoard,
+          openShop: openShop,
         );
       },
       'fragment': (p) {

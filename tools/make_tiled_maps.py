@@ -1543,11 +1543,8 @@ def map1():
           id="woods_plaque", title="WEATHERED PLAQUE",
           text="\"We asked to stay.\" A second line: \"Bodies to soil. Minds to Gaia.\"",
           clue="gaia_plaque")
-    place(lv, "examine", P["spawn"][0] - 1.2, P["spawn"][1] + 1.4,
-          id="woods_mission_slate", title="FIELD BRIEF",
-          text="Kaela — talk to Gaia (green) by the crash, then Asha at her camp: the woods need friends. Both glowing "
-               "fragments open the road; trails ring round, and east of the grove the older wilds keep going. The road "
-               "to the City leaves the south-east meadow. Do not let the UEC wipe her.")
+    # EOE-90: removed flavour-only examine dots (text toast, no clue/item/quest/board/shop).
+    # Story/loot/hub examines remain.
     place(lv, "examine", P["asha"][0] - 3.4, P["asha"][1] + 1.2,
           id="woods_boot", title="UEC BOOT PRINT",
           text="Fresh composite sole marks in the moss after rain.", clue="boot_print")
@@ -1564,42 +1561,6 @@ def map1():
           id="woods_moonflower_pick", title="MOONFLOWER CLUSTER",
           text="A bloom cold as glass. Mira asked for one of these.",
           give="moonflower_bloom", quest="moonflower_draft")
-    place(lv, "examine", P["cross"][0] + 1.2, P["cross"][1] + 2.4,
-          id="woods_fork_sign", title="STANDING STONES",
-          text="Every trail meets here. NE: the pond (and willow creek beyond). E: the grove, then the old watchtower. "
-               "S: Asha's camp. W: the mossy hollow and round to the crash. Fragments: dark grotto by the pond, thorns "
-               "past the grove. A fallen boulder still blocks the City road beyond the south-east meadow.")
-    place(lv, "examine", P["ridge"][0] + 1.5, P["ridge"][1] - 0.5,
-          id="woods_ridge_lookout", title="CITY LIGHTS TO THE SOUTH",
-          text="From the ridge, past the radio dish, the City's glow hangs over the treeline to the south-east. "
-               "The trails below all ring round to the meadow road.")
-    place(lv, "examine", P["h2"][0] + 1.4, P["h2"][1] + 0.4,
-          id="woods_job_sign", title="TRAIL NOTICE",
-          text="Chalk: once you reach the City, look EAST down the boulevard for Lantern Town — jobs and glimmer.")
-    place(lv, "examine", 36.1, 13.1,
-          id="woods_glade_sign", title="SIDE PATH MARK",
-          text="Trails leave the pond three ways: west along the ridge, south-west to the stones, south to the grove. "
-               "A fourth path now runs east into willow creek. You will not get stuck.")
-    place(lv, "examine", P["meadow"][0] + 2.0, P["meadow"][1] - 1.6,
-          id="woods_portal_notice", title="SOUTH ROAD",
-          text="City beyond this tree line. Walk south off the map. Its plaza looks three ways: Lantern Town east, "
-               "the Archive south-east, the Ruins road south.")
-    place(lv, "examine", P["willow"][0] + 0.5, P["willow"][1] + 1.8,
-          id="woods_willow_mark", title="WILLOW CREEK",
-          text="Water from the pond thins into a willow ditch. East: a crooked watchtower on the old rim. South: ferns "
-               "down toward the cart road that rejoins the meadow.")
-    place(lv, "examine", P["watch"][0] - 0.8, P["watch"][1] + 1.5,
-          id="woods_watch_slate", title="FALLEN WATCH",
-          text="UEC glass cracked in the moss. Someone watched the grove from here — then walked south into the ferns.")
-    place(lv, "examine", P["fern"][0] + 0.6, P["fern"][1],
-          id="woods_fern_cache", title="FERN SHELTER",
-          text="A lean-to of cut fronds. Still dry inside. Trail chalk: OLD ROAD → MEADOW.")
-    place(lv, "examine", P["oldroad"][0] + 1.0, P["oldroad"][1] - 0.8,
-          id="woods_oldroad_post", title="CART-ROAD POST",
-          text="Weathered mile-mark: LANTERN 6 / GROVE 1. The ruts turn west into the meadow you already know.")
-    place(lv, "examine", P["nestloop"][0] + 0.8, P["nestloop"][1],
-          id="woods_nest_return", title="RETURN CUT",
-          text="A newer path cuts back toward the brook — the nest spur is no longer a one-way crawl.")
     place(lv, "hidden", 13.5, 12.5, glimmer=18, was=(13.0, 43.6))
     place(lv, "hidden", P["fern"][0] - 1.2, P["fern"][1] + 0.8, glimmer=16, was=(16.0, 40.0))
     place(lv, "health", P["watch"][0] + 1.5, P["watch"][1] - 0.8, was=(22.0, 30.0))
@@ -1999,10 +1960,6 @@ def map2():
     place_entry(lv, "east", *P["town"])
     place_entry(lv, "west", 3.5, float(wx))
     place(lv, "checkpoint", *P["spawn"], label="Arrival Plaza")
-    place(lv, "examine", P["spawn"][0] + 2.0, P["spawn"][1] + 1.2,
-          id="city_arrival_post", title="PLAZA POST",
-          text="WEST: market and Echo-7 — south-west yard walks out to the Canal Works. SOUTH: the Archive Square. "
-               "EAST: Lantern Gate and the road to Town. North walks back to the Woods.")
     place(lv, "examine", 35.0, 19.0,
           id="city_archive_plaque", title="ARCHIVE PLAQUE",
           text="Sealed by the Archivist. First memory drafts keep here — not the Core itself.",
@@ -2017,13 +1974,6 @@ def map2():
           text="A scout's note: \"Archive walls hum. Stay clear.\"",
           clue="city_yard_memo")
     place(lv, "stash", P["yard"][0] - 1.5, P["yard"][1] - 1.5, glimmer=18, was=(4.0, 19.5))
-    place(lv, "examine", P["town"][0] - 4.0, P["town"][1] + 1.2,
-          id="city_lantern_sign", title="LANTERN ROAD",
-          text="Walk east off the map to Lantern Town. South of the boulevard the docks and canal quay "
-               "loop back to the east lot and Sentinel plaza.")
-    place(lv, "examine", 24.0, 15.5,
-          id="city_branch_sign", title="CROSS STREET",
-          text="Archive Square. Every street in the old city ends up here.")
     place_dronespawn(lv, 44.5, 17.5, kind="scout",
                      nest="city_east_nest", max=1, interval=7)
     place_dronespawn(lv, 47.5, 19.5, kind="swarm",
@@ -2042,15 +1992,6 @@ def map2():
           text="Trader chalk: 'For Mira's board.' Heavy with colony salvage.",
           quest="city_west_cache")
     place(lv, "stash", P["cache"][0] + 1.5, P["cache"][1] + 0.5, glimmer=14, was=(5.5, 10.5))
-    place(lv, "examine", P["docks"][0] + 0.5, P["docks"][1] + 1.5,
-          id="city_docks_board", title="FREIGHT BOARD",
-          text="Manifests for the canal quay. South along the water returns to the patrol alley; west is the east lot.")
-    place(lv, "examine", P["canal"][0] - 1.0, P["canal"][1],
-          id="city_canal_rail", title="CANAL RAIL",
-          text="Black water under grate. The quay road west rejoins Sentinel plaza.")
-    place(lv, "examine", 4.5, 30.0,
-          id="city_works_gate", title="CANAL WORKS ROAD",
-          text="West off the map: dry docks, salvage cranes, and the old freight canal. Quiet if the City isn't.")
     place(lv, "stash", P["docks"][0] + 1.5, P["docks"][1] + 0.5, glimmer=12, was=(48.0, 16.0))
     place(lv, "health", P["quay"][0] + 1.0, P["quay"][1] - 0.5, was=(40.0, 36.0))
     lv.vignette(*P["docks"], [
@@ -2189,19 +2130,6 @@ def map5():
           id="town_quest_board", title="JOB BOARD",
           text="Chalk and string. Woods and city errands for travellers.",
           board=True)
-    place(lv, "examine", 5.0, P["mira"][1],
-          id="town_west_road", title="CITY ROAD",
-          text="West off the map returns to the City's Lantern Gate.")
-    place(lv, "examine", 25.0, 9.0,
-          id="town_pond_sign", title="LANTERN POND",
-          text="Colonists float paper lanterns here on the first night of each season. The promenade rings the pond; "
-               "east past the reeds a quay loop returns to the south market court.")
-    place(lv, "examine", P["quay"][0] - 0.5, P["quay"][1] + 1.0,
-          id="town_quay_mark", title="QUAY BENCH",
-          text="Ferry chalk: 'No boats tonight.' Walk north through the reeds to the pond, west to Mira's lanes.")
-    place(lv, "examine", P["reeds"][0] - 0.8, P["reeds"][1],
-          id="town_reed_walk", title="REED WALK",
-          text="Soft ground. Lanterns hang from willow poles along the water.")
     lv.vignette(*P["quay"], [
         ("bench", 1, 0), ("planter_small", -1, 1), ("bollard", 0, 1),
     ])
@@ -2357,12 +2285,6 @@ def map3():
           id="ruins_dead_end", title="WAYMARKER",
           text="Offline UEC pad: \"Shrine sector SW — anomaly deep past the ruin. Optional.\"",
           clue="ruins_dead_end")
-    place(lv, "examine", P["vent"][0] + 0.5, P["vent"][1] + 1.2,
-          id="ruins_vent_mark", title="VENT STACK",
-          text="Heat and ozone. The crane yard south loops back to the mid ruins — this does not bypass the SE gate.")
-    place(lv, "examine", P["crane"][0] - 1.0, P["crane"][1],
-          id="ruins_crane_cab", title="CRANE CAB",
-          text="Boom frozen over a slag pit. Service catwalk west rejoins the hub roads.")
     place(lv, "stash", P["vent"][0] - 1.2, P["vent"][1] - 0.5, glimmer=18)
     place(lv, "health", P["service"][0] + 1.0, P["service"][1] + 0.5)
     lv.vignette(*P["vent"], [
@@ -2475,12 +2397,6 @@ def map4():
           id="core_console", title="CORE CONSOLE",
           text="Activation waits on a living neural match. A remote wipe is already queued.",
           clue="core_console")
-    place(lv, "examine", *P["memorial"],
-          id="core_memorial", title="NAMELESS STELE",
-          text="Names the forest took. The ambulatory east of the hall loops back to Gaia without leaving the Core.")
-    place(lv, "examine", *P["ambulatory"],
-          id="core_ambulatory", title="LATTICE WALK",
-          text="Side aisle. South to the annex, west back to the living dais.")
     place(lv, "health", *P["annex"])
     lv.vignette(*P["memorial"], [
         ("gold_glyph_stone", 1, 0), ("memory_pedestal", 0, 1), ("data_crystals", -1, 0),
@@ -2639,21 +2555,6 @@ def map6():
     place_mapexit(lv, "east", ey, dest="city", entry="west", half=2)
     place_entry(lv, "east", *P["spawn"])
     place(lv, "checkpoint", *P["spawn"], label="Works Gate")
-    place(lv, "examine", P["spawn"][0] - 2.0, P["spawn"][1] + 2.0,
-          id="works_gate_post", title="YARD GATE",
-          text="Canal Works scrapyard. East walks back to the City. Heaps west hide the crane pad.")
-    place(lv, "examine", 22.0, 10.5,
-          id="works_basin_mark", title="DRY BASIN",
-          text="Oil and rust where barge water used to sit. The heap ring still loops the pit.")
-    place(lv, "examine", P["crane"][0] + 1.5, P["crane"][1],
-          id="works_crane_slate", title="CRANE SLATE",
-          text="UEC inventory: scrap alloy, dead drones, one sealed crate marked for Mira.")
-    place(lv, "examine", P["salvage"][0], P["salvage"][1] - 1.2,
-          id="works_salvage_bin", title="SALVAGE BIN",
-          text="Colony scrap sorted by glimmer weight. Someone still works this lot after dark.")
-    place(lv, "examine", P["north"][0] + 0.5, P["north"][1],
-          id="works_north_rail", title="NORTH RAIL",
-          text="Service track ends in a wall of scrap. Loop south through the basin.")
     lv.write("world6.tmj", "tilesets/junkyard.png")
     return ts
 
