@@ -744,34 +744,52 @@ Map<String, ObjectBuilder> _mapObjects(String mapId) => {
       },
       'examine': (p) {
         final id = (p.others['id'] ?? _pickupId(mapId, 'examine', p)).toString();
+        final clueId = () {
+          final c = (p.others['clue'] ?? '').toString();
+          return c.isEmpty ? null : c;
+        }();
+        final requiresItem = () {
+          final i = (p.others['item'] ?? '').toString();
+          return i.isEmpty ? null : i;
+        }();
+        final setFlag = () {
+          final f = (p.others['flag'] ?? '').toString();
+          return f.isEmpty ? null : f;
+        }();
+        final giveItem = () {
+          final g = (p.others['give'] ?? '').toString();
+          return g.isEmpty ? null : g;
+        }();
+        final completeQuest = () {
+          final q = (p.others['quest'] ?? '').toString();
+          return q.isEmpty ? null : q;
+        }();
+        final openQuestBoard =
+            p.others['board'] == true || p.others['board'] == 'true';
+        final openShop = p.others['shop'] == true || p.others['shop'] == 'true';
+        // EOE-90: skip flavour-only examine dots (text toast, no story props).
+        if (clueId == null &&
+            requiresItem == null &&
+            setFlag == null &&
+            giveItem == null &&
+            completeQuest == null &&
+            !openQuestBoard &&
+            !openShop) {
+          return _Gone();
+        }
         return ExamineHotspot(
           p.position,
           id: id,
           title: (p.others['title'] ?? 'EXAMINE').toString(),
           text: (p.others['text'] ?? '...').toString(),
-          clueId: () {
-            final c = (p.others['clue'] ?? '').toString();
-            return c.isEmpty ? null : c;
-          }(),
-          requiresItem: () {
-            final i = (p.others['item'] ?? '').toString();
-            return i.isEmpty ? null : i;
-          }(),
+          clueId: clueId,
+          requiresItem: requiresItem,
           consumeItem: p.others['consume'] == true || p.others['consume'] == 'true',
-          setFlag: () {
-            final f = (p.others['flag'] ?? '').toString();
-            return f.isEmpty ? null : f;
-          }(),
-          giveItem: () {
-            final g = (p.others['give'] ?? '').toString();
-            return g.isEmpty ? null : g;
-          }(),
-          completeQuest: () {
-            final q = (p.others['quest'] ?? '').toString();
-            return q.isEmpty ? null : q;
-          }(),
-          openQuestBoard: p.others['board'] == true || p.others['board'] == 'true',
-          openShop: p.others['shop'] == true || p.others['shop'] == 'true',
+          setFlag: setFlag,
+          giveItem: giveItem,
+          completeQuest: completeQuest,
+          openQuestBoard: openQuestBoard,
+          openShop: openShop,
         );
       },
       'fragment': (p) {
@@ -2504,6 +2522,144 @@ class _NpcDialogueLayerState extends State<_NpcDialogueLayer> {
 // Shared UI widgets
 // ---------------------------------------------------------------------------
 
+/// Top-right objective / active-jobs panel. Tap the header to fold it down
+/// to a compact chip (helps on phone) or expand it again.
+class _MissionTracker extends StatelessWidget {
+  final double maxWidth;
+  final int maxJobs;
+
+  const _MissionTracker({required this.maxWidth, required this.maxJobs});
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: Listenable.merge([
+        GameState.objective,
+        Quests.revision,
+        HudLayout.trackerCollapsed,
+      ]),
+      builder: (_, __) {
+        final obj = GameState.objective.value;
+        final jobs = Quests.activeJobs;
+        if (obj.isEmpty && jobs.isEmpty) return const SizedBox.shrink();
+        final collapsed = HudLayout.trackerCollapsed.value;
+        final label = jobs.isEmpty ? 'OBJECTIVE' : 'TRACKER';
+        final count = jobs.length + (obj.isNotEmpty ? 1 : 0);
+        return ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: maxWidth),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              key: const ValueKey('hud-tracker-toggle'),
+              onTap: () =>
+                  HudLayout.trackerCollapsed.value = !HudLayout.trackerCollapsed.value,
+              borderRadius: BorderRadius.circular(6),
+              child: Ink(
+                padding: EdgeInsets.fromLTRB(
+                  10,
+                  collapsed ? 6 : 8,
+                  10,
+                  collapsed ? 6 : 8,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.52),
+                  border: Border.all(
+                    color: const Color(0xFFFFE08A).withValues(alpha: 0.28),
+                  ),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          collapsed ? '$label · $count' : label,
+                          style: const TextStyle(
+                            color: Color(0xFFFFE08A),
+                            fontSize: 8,
+                            letterSpacing: 1.6,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(
+                          collapsed
+                              ? Icons.keyboard_arrow_down
+                              : Icons.keyboard_arrow_up,
+                          size: 12,
+                          color: const Color(0xFFFFE08A).withValues(alpha: 0.85),
+                        ),
+                      ],
+                    ),
+                    if (!collapsed) ...[
+                      if (obj.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          obj,
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.right,
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 10,
+                            height: 1.3,
+                          ),
+                        ),
+                      ],
+                      for (final q in jobs.take(maxJobs)) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          Quests.status(q.id) == QuestStatus.done
+                              ? '✓ ${q.title}'
+                              : '· ${q.title}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.right,
+                          style: TextStyle(
+                            color: Quests.status(q.id) == QuestStatus.done
+                                ? const Color(0xFF88FFAA)
+                                : Colors.white60,
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          q.hint,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.right,
+                          style: const TextStyle(
+                            color: Colors.white38,
+                            fontSize: 8.5,
+                            height: 1.25,
+                          ),
+                        ),
+                      ],
+                      if (jobs.length > maxJobs) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          '+${jobs.length - maxJobs} more in the journal',
+                          style: const TextStyle(
+                            color: Colors.white38,
+                            fontSize: 8.5,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
 class GameHud extends StatefulWidget {
   const GameHud({super.key});
 
@@ -2726,75 +2882,13 @@ class GameHudState extends State<GameHud> {
                       flex: wide ? 0 : 1,
                       child: Align(
                         alignment: Alignment.topRight,
-                        child: KeyedSubtree(key: const ValueKey('hud-tracker'), child: AnimatedBuilder(
-          animation: Listenable.merge([GameState.objective, Quests.revision]),
-          builder: (_, __) {
-            final obj = GameState.objective.value;
-            final jobs = Quests.activeJobs;
-            if (obj.isEmpty && jobs.isEmpty) return const SizedBox.shrink();
-            return ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: trackerWidth),
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.52),
-                  border: Border.all(color: const Color(0xFFFFE08A).withValues(alpha: 0.28)),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(jobs.isEmpty ? 'OBJECTIVE' : 'TRACKER',
-                        style: const TextStyle(
-                            color: Color(0xFFFFE08A),
-                            fontSize: 8,
-                            letterSpacing: 1.6,
-                            fontWeight: FontWeight.bold)),
-                    if (obj.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(obj,
-                          maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.right,
-                          style: const TextStyle(
-                              color: Colors.white70, fontSize: 10, height: 1.3)),
-                    ],
-                    for (final q in jobs.take(maxJobs)) ...[
-                      const SizedBox(height: 6),
-                      Text(
-                        Quests.status(q.id) == QuestStatus.done
-                            ? '✓ ${q.title}'
-                            : '· ${q.title}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.right,
-                        style: TextStyle(
-                          color: Quests.status(q.id) == QuestStatus.done
-                              ? const Color(0xFF88FFAA)
-                              : Colors.white60,
-                          fontSize: 9.5,
-                          fontWeight: FontWeight.w600,
+                        child: KeyedSubtree(
+                          key: const ValueKey('hud-tracker'),
+                          child: _MissionTracker(
+                            maxWidth: trackerWidth,
+                            maxJobs: maxJobs,
+                          ),
                         ),
-                      ),
-                      Text(q.hint,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.right,
-                          style: const TextStyle(
-                              color: Colors.white38, fontSize: 8.5, height: 1.25)),
-                    ],
-                    if (jobs.length > maxJobs) ...[
-                      const SizedBox(height: 4),
-                      Text('+${jobs.length - maxJobs} more in the journal',
-                          style: const TextStyle(color: Colors.white38, fontSize: 8.5)),
-                    ],
-                  ],
-                ),
-              ),
-            );
-          },
-        )),
                       ),
                     ),
                   ]),

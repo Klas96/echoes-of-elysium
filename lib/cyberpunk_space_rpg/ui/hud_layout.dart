@@ -1,7 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, TargetPlatform;
+    show ValueNotifier, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/widgets.dart';
 
 /// Shared HUD geometry so the top bar, prompts, toasts and pops never
@@ -9,6 +9,10 @@ import 'package:flutter/widgets.dart';
 /// Movement is click/tap pathfinding + WASD (no on-screen joystick).
 class HudLayout {
   HudLayout._();
+
+  /// Top-right objective / jobs tracker folded to a compact chip.
+  /// Session-only; tap the TRACKER header to toggle.
+  static final trackerCollapsed = ValueNotifier<bool>(false);
 
   /// Phones/tablets — keep existing zoom and HUD density.
   static bool get isTouch =>
