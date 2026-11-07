@@ -124,8 +124,8 @@ void main() {
         radius: 56,
       );
       expect(lamp.priority, LayerPriority.MAP + 2);
-      // Glows paint on NightWashHud above the wash (not under it).
-      expect(NightLights.glowStrength, inInclusiveRange(0.15, 0.35));
+      // Glows stay in-world under the wash (softer through the tint).
+      expect(NightLights.glowStrength, greaterThanOrEqualTo(0.3));
     });
 
     test('fixture tile atlas covers every light kind for day-bright redraw', () {
@@ -153,7 +153,7 @@ void main() {
       final sr = NightLights.fixtureScreenRect(lantern, screen);
       expect(sr.width, 32);
       expect(sr.height, 32);
-      // Soft HUD wash; glows + fixtures blit above it (live camera, no glide).
+      // Soft HUD wash; fixtures above it (live camera). Glows stay under wash.
       expect(NightLights.washAlphaScale, inInclusiveRange(0.05, 0.2));
       expect(NightWashHud().priority, greaterThan(LayerPriority.MAP + 2));
     });
