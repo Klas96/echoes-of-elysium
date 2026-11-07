@@ -189,9 +189,10 @@ class NightLights {
   /// wash-then-redraw instead of cutting fixture holes).
   static const cutStrength = 0.48;
 
-  /// Game-canvas wash reads stronger than the Flutter Stack overlay with the
-  /// same alpha — scale so night stays a light tint, not a navy plate.
-  static const washAlphaScale = 0.55;
+  /// Game-canvas wash reads much stronger than the old Flutter Stack overlay
+  /// with the same alpha — keep this low so night matches the #150 soft tint.
+  /// Fixture redraw above the wash is unchanged.
+  static const washAlphaScale = 0.28;
 
   /// Max lamp cookies / day-bright fixture redraws per frame. City has 44
   /// lights; a phone viewport usually sees ≤7. Prefer nearest-to-camera.
@@ -603,11 +604,12 @@ class _CameraProbe extends GameComponent {
 /// Soft night tint then day-bright fixture redraw (EOE-91) as a Bonfire
 /// viewport HUD — same game frame as the camera (no glide, no wash holes).
 ///
-/// Wash uses [canvas.drawColor] with explicit srcOver so alpha tints like the
-/// old Flutter overlay (world-space / hole paths looked full-dark or squared).
-/// Fixture tiles blit after the wash; transparent atlas pixels leave the tint.
-/// Soft [LampLight] auras stay in-world under this layer.
+/// Wash uses the same drawRect + Paint path as the old Flutter [NightTint],
+/// with [NightLights.washAlphaScale] so game-canvas alpha matches that soft
+/// overlay look. Fixture tiles blit after the wash (unchanged). Soft
+/// [LampLight] auras stay in-world under this layer.
 class NightWashHud extends GameComponent {
+  final _tintPaint = Paint();
   final _fixturePaint = Paint()..filterQuality = FilterQuality.none;
 
   /// After color-filter HUD (20), before interface (30).
@@ -632,16 +634,15 @@ class NightWashHud extends GameComponent {
     final t = DayCycle.time.value;
     // Ruins (world3) and other maps with no lamp objects get a flatter wash.
     final strength = NightLights.lights.isEmpty ? 0.48 : 1.0;
-    final tint = DayCycle.tint(t, strength: strength);
-    if (tint.a > 0) {
-      // drawColor + srcOver + scaled alpha: game canvas reads stronger than
-      // the old Flutter Stack overlay with the same DayCycle.tint alpha.
-      final soft = tint.withValues(alpha: tint.a * NightLights.washAlphaScale);
-      canvas.drawColor(soft, BlendMode.srcOver);
-    }
-
     final screen = Size(gameRef.size.x, gameRef.size.y);
     final view = Offset.zero & screen;
+    final tint = DayCycle.tint(t, strength: strength);
+    if (tint.a > 0) {
+      // Same Soft NightTint drawRect path; scaled alpha for game-canvas.
+      _tintPaint.color =
+          tint.withValues(alpha: tint.a * NightLights.washAlphaScale);
+      canvas.drawRect(view, _tintPaint);
+    }
     // Live camera — same Bonfire frame as world walk (no Flutter overlay lag).
     final cam = gameRef.camera.viewfinder.position;
     final zoom = gameRef.camera.viewfinder.zoom;

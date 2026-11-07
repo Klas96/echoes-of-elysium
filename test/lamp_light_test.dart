@@ -153,7 +153,7 @@ void main() {
       expect(sr.width, 32);
       expect(sr.height, 32);
       // Soft HUD wash (scaled alpha) + fixtures above world MAP+2 glow.
-      expect(NightLights.washAlphaScale, inInclusiveRange(0.3, 0.8));
+      expect(NightLights.washAlphaScale, inInclusiveRange(0.15, 0.45));
       expect(NightWashHud().priority, greaterThan(LayerPriority.MAP + 2));
     });
   });
