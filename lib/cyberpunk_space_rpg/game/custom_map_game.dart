@@ -1673,9 +1673,6 @@ Future<void> _startLevel(BonfireGameInterface game, int level) async {
     Shop.open.value = false;
   };
   game.add(DayClock());
-  // Overworld night wash + day-bright fixture redraw (EOE-91). Not on room
-  // interiors (those use DayClock without NightTint).
-  NightLights.ensureWash(game);
   game.add(InteractionManager());
   game.add(Companion());
   _playClock

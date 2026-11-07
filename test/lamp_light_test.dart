@@ -146,8 +146,12 @@ void main() {
       expect(r.width, 32);
       expect(r.height, 32);
       expect(r.contains(Offset(lantern.centre.x, lantern.centre.y)), isTrue);
-      // Wash layer sits above world content so draw-order is wash then fixtures.
-      expect(NightWashLayer().priority, greaterThan(LayerPriority.MAP + 2));
+      const screen = Size(400, 800);
+      NightLights.camera = Vector2(lantern.centre.x, lantern.centre.y);
+      NightLights.zoom = 1;
+      final sr = NightLights.fixtureScreenRect(lantern, screen);
+      expect(sr.width, 32);
+      expect(sr.height, 32);
     });
   });
 }
