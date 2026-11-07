@@ -124,7 +124,38 @@ void main() {
         radius: 56,
       );
       expect(lamp.priority, LayerPriority.MAP + 2);
+      // Glows stay in-world under the wash (softer through the tint).
       expect(NightLights.glowStrength, greaterThanOrEqualTo(0.3));
+    });
+
+    test('fixture tile atlas covers every light kind for day-bright redraw', () {
+      expect(NightLights.fixtureTileAtlas.keys.toSet(), LightKind.values.toSet());
+      for (final e in NightLights.fixtureTileAtlas.entries) {
+        expect(e.value.$1, contains('tilesets/'));
+        expect(e.value.$2, greaterThanOrEqualTo(0));
+        expect(e.value.$3, 16);
+        expect(File('assets/images/${e.value.$1}').existsSync(), isTrue,
+            reason: e.value.$1);
+      }
+      final lantern = LampLight(
+        Vector2(100, 100),
+        Vector2.all(16),
+        kind: LightKind.lantern,
+        radius: 56,
+      );
+      final r = lantern.fixtureWorldRect;
+      expect(r.width, 32);
+      expect(r.height, 32);
+      expect(r.contains(Offset(lantern.centre.x, lantern.centre.y)), isTrue);
+      const screen = Size(400, 800);
+      NightLights.camera = Vector2(lantern.centre.x, lantern.centre.y);
+      NightLights.zoom = 1;
+      final sr = NightLights.fixtureScreenRect(lantern, screen);
+      expect(sr.width, 32);
+      expect(sr.height, 32);
+      // Soft HUD wash; fixtures above it (live camera). Glows stay under wash.
+      expect(NightLights.washAlphaScale, inInclusiveRange(0.05, 0.2));
+      expect(NightWashHud().priority, greaterThan(LayerPriority.MAP + 2));
     });
   });
 }

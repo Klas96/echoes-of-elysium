@@ -88,18 +88,15 @@ class Journal {
   }
 }
 
-/// Subtle day/night wash over the game view (under the HUD). Warm lamp /
-/// lantern / fire pools paint in-world on [LampLight] under those sprites.
+/// Placeholder under the Flutter HUD. Soft wash + day-bright fixtures paint
+/// on [NightWashHud] (EOE-91, live camera — no glide). Glow pools stay
+/// in-world under the wash.
 class NightTint extends StatelessWidget {
   const NightTint({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: RepaintBoundary(
-        child: CustomPaint(painter: NightTintPainter(), size: Size.infinite),
-      ),
-    );
+    return const IgnorePointer(child: SizedBox.shrink());
   }
 }
 
