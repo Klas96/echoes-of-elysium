@@ -65,6 +65,7 @@ void clearState() {
   WellRested.remaining.value = 0;
   Meals.active.value = null;
   Meals.remaining.value = 0;
+  HudLayout.trackerCollapsed.value = false;
 }
 
 Future<void> pumpHud(WidgetTester tester, Size size, {bool talk = false}) async {
@@ -166,5 +167,26 @@ void main() {
     expect(HudLayout.dialogueMaxHeight(phone), lessThan(phone.height * 0.55));
     expect(HudLayout.dialogueBodyFont(phone), lessThan(HudLayout.dialogueBodyFont(desktop)));
     expect(HudLayout.dialogueOuter(phone).bottom, lessThan(HudLayout.dialogueOuter(desktop).bottom));
+  });
+
+  testWidgets('mission tracker folds and expands on tap', (tester) async {
+    const size = Size(412, 915);
+    await pumpHud(tester, size);
+    final toggle = find.byKey(const ValueKey('hud-tracker-toggle'));
+    expect(toggle, findsOneWidget);
+    expect(HudLayout.trackerCollapsed.value, isFalse);
+    final expanded = tester.getRect(find.byKey(const ValueKey('hud-tracker')));
+    await tester.tap(toggle);
+    await tester.pump();
+    expect(HudLayout.trackerCollapsed.value, isTrue);
+    final collapsed = tester.getRect(find.byKey(const ValueKey('hud-tracker')));
+    expect(collapsed.height, lessThan(expanded.height));
+    await tester.tap(toggle);
+    await tester.pump();
+    expect(HudLayout.trackerCollapsed.value, isFalse);
+    expect(
+      tester.getRect(find.byKey(const ValueKey('hud-tracker'))).height,
+      closeTo(expanded.height, 1),
+    );
   });
 }
