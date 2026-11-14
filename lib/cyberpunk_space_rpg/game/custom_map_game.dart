@@ -1673,8 +1673,8 @@ Future<void> _startLevel(BonfireGameInterface game, int level) async {
     Shop.open.value = false;
   };
   game.add(DayClock());
-  // Soft night tint + day-bright light props as viewport HUD (EOE-91). Not on
-  // room interiors (those use DayClock without NightTint).
+  // Night tileset swap + lamp glows (EOE-99). Not on room interiors
+  // (those use DayClock without overworld sheets).
   NightLights.ensureWash(game);
   game.add(InteractionManager());
   game.add(Companion());

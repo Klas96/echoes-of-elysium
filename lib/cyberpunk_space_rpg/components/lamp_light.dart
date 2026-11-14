@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../creatures/day_cycle.dart';
+import '../game/night_tilesets.dart';
 import '../ui/hud_layout.dart';
 
 /// Kinds of night light a Tiled `light` object can be (#35). The map
@@ -36,8 +37,8 @@ extension LightKindStyle on LightKind {
 }
 
 /// One light source in world pixels. Registers with [NightLights] and paints
-/// its glow cookie at map-floor priority (under the soft night wash). Soft
-/// wash + day-bright fixture redraw live on [NightWashHud] (camera-synced).
+/// its glow cookie at map-floor priority. Night look comes from
+/// [NightTilesets] (baked wash on the sheet); no HUD wash / fixture redraw.
 class LampLight extends GameComponent {
   final LightKind kind;
   final double radius;
@@ -64,7 +65,6 @@ class LampLight extends GameComponent {
   Vector2 get centre => position + size / 2;
 
   /// World rect of the prop sprite (matches `make_tiled_maps.LIGHTS` anchors).
-  /// [NightWashHud] redraws this tile above the wash so it stays day-bright.
   Rect get fixtureWorldRect {
     final c = centre;
     // Travel portals stamp a large-radius light on a 48×48 pad — no tiled prop.
@@ -81,7 +81,7 @@ class LampLight extends GameComponent {
     return Rect.fromLTWH(c.x - tile / 2, c.y - tile * fy, tile, tile);
   }
 
-  /// Under Y-sorted props / Kaela (MAP+2): glow under wash; sprites above glow.
+  /// Under Y-sorted props / Kaela (MAP+2): glow under sprites.
   @override
   int get priority => LayerPriority.MAP + 2;
 
@@ -155,12 +155,10 @@ class ScreenLight {
 }
 
 /// Registry + camera snapshot for night lights.
-/// Glow cookies: in-world [LampLight] under the wash.
-/// Soft wash + day-bright fixtures: [NightWashHud].
+/// Glow cookies: in-world [LampLight]. Night wash: [NightTilesets] sheet swap.
 class NightLights {
   static final _lights = <LampLight>[];
   static _CameraProbe? _probe;
-  static NightWashHud? _wash;
 
   /// Nearest on-screen lamps allowed to paint this frame (EOE-84 cap).
   static final _drawSet = <LampLight>{};
@@ -173,30 +171,26 @@ class NightLights {
   /// Seconds of unpaused play, drives the flicker.
   static double clock = 0;
 
-  /// Ticks on dusk / lit edges (tests / legacy). Wash HUD paints every frame.
+  /// Ticks on dusk / lit edges (tests / legacy listeners).
   static final frame = _Tick();
 
   /// Pools are slightly wider than tall: light on the ground.
   static const squash = 0.78;
 
-  /// Additive lamp glow strength. Cookies paint in-world under the night wash
-  /// so pools read softly through the tint (above-wash was too bright).
+  /// Additive lamp glow strength over the baked night tiles.
   static const glowStrength = 0.32;
 
-  /// Kept for docs / older notes; hole-punch path removed (EOE-91 uses
-  /// wash-then-redraw instead of cutting fixture holes).
+  /// Kept for docs / older notes; hole-punch path removed.
   static const cutStrength = 0.48;
 
-  /// Game-canvas wash reads much stronger than the old Flutter Stack overlay
-  /// with the same [DayCycle.tint] alpha. Keep this low so night matches the
-  /// soft #150 overlay; fixtures paint above the wash (no glide).
-  static const washAlphaScale = 0.10;
+  /// Former HUD wash scale (EOE-91). Wash removed — night is tileset swap.
+  static const washAlphaScale = 0.0;
 
-  /// Max lamp cookies / day-bright fixture redraws per frame. City has 44
-  /// lights; a phone viewport usually sees ≤7. Prefer nearest-to-camera.
+  /// Max lamp cookies per frame. City has 44 lights; a phone viewport usually
+  /// sees ≤7. Prefer nearest-to-camera.
   static int get maxDrawnLights => HudLayout.isTouch ? 6 : 12;
 
-  /// Legacy overlay notify rate (HUD wash no longer drives Flutter paints).
+  /// Legacy overlay notify rate.
   static double get notifyHz => HudLayout.isTouch ? 15 : 30;
 
   /// Flicker art / sine refresh while standing still (draw-set refresh).
@@ -204,10 +198,11 @@ class NightLights {
 
   static List<LampLight> get lights => List.unmodifiable(_lights);
 
-  /// Lights whose cookies / day-bright fixture redraws are active this frame.
+  /// Lights whose cookies are active this frame.
   static Iterable<LampLight> get drawn => _drawSet;
 
-  /// Prop tile art for day-bright HUD redraw (sheet + src in tileset px).
+  /// Legacy fixture atlas (EOE-91 HUD redraw). Kept for tests / tooling; night
+  /// sheets leave these tiles day-bright instead of redrawing over Kaela.
   static final fixtures = <LightKind, FixtureSprite>{};
 
   /// Tileset crop for each light kind (32×32 props from map tilesheets).
@@ -250,7 +245,7 @@ class NightLights {
 
   static void register(LampLight l, BonfireGameInterface game) {
     _lights.add(l);
-    ensureWash(game);
+    ensureNight(game);
     final p = _probe;
     if (p == null || !p.isMounted || p.gameRef != game) {
       final probe = _CameraProbe();
@@ -271,22 +266,22 @@ class NightLights {
     }
   }
 
-  /// Mount soft wash + fixture redraw as a Bonfire viewport HUD (once per map).
-  static void ensureWash(BonfireGameInterface game) {
-    final existing = game.queryHud<NightWashHud>();
-    if (existing.isNotEmpty) {
-      _wash = existing.first;
-      return;
-    }
-    final layer = NightWashHud();
-    _wash = layer;
-    game.addHud(layer);
+  /// Preload night sheets + sync swap (maps with or without lamps).
+  static void ensureNight(BonfireGameInterface game) {
+    // Fire-and-forget; DayClock / probe also sync once loaded.
+    NightTilesets.ensureLoaded().then((_) => NightTilesets.syncToCycle());
   }
+
+  /// Alias kept for older call sites ([custom_map_game]).
+  static void ensureWash(BonfireGameInterface game) => ensureNight(game);
 
   static void _notify() => frame.tick();
 
-  /// Nudge when wash darkness steps (DayClock / dusk).
-  static void nudgeWash() => _notify();
+  /// Nudge when darkness steps (DayClock / dusk) — also syncs tileset swap.
+  static void nudgeWash() {
+    NightTilesets.syncToCycle();
+    _notify();
+  }
 
   /// Night intensity of one light at [clock] seconds (0 in daylight).
   static double strength(double darkness, LightKind kind, double phase, double clock) {
@@ -358,8 +353,8 @@ class NightLights {
   }
 
   /// Lights as screen cookies (tests / tooling). Cookies paint in-world via
-  /// [LampLight.render]; wash + fixture redraw via [NightWashHud].
-  /// The returned list is owned by NightLights — copy if retaining.
+  /// [LampLight.render]. The returned list is owned by NightLights — copy if
+  /// retaining.
   static List<ScreenLight> visible(Size screen, double darkness) {
     final cam = camera;
     final out = _visibleScratch..clear();
@@ -519,8 +514,7 @@ class _Tick extends ChangeNotifier {
 }
 
 /// Copies the camera into [NightLights] and refreshes the nearest-lamp draw
-/// set. [NightWashHud] paints wash + fixtures every Bonfire frame (no glide,
-/// no Flutter hole squares).
+/// set. Also keeps [NightTilesets] synced to the day cycle.
 class _CameraProbe extends GameComponent {
   final Vector2 _camScratch = Vector2.zero();
   double _lastCamX = double.nan;
@@ -533,6 +527,8 @@ class _CameraProbe extends GameComponent {
   @override
   Future<void> onLoad() async {
     await NightLights.ensureCookie();
+    await NightTilesets.ensureLoaded();
+    NightTilesets.syncToCycle();
     return super.onLoad();
   }
 
@@ -545,6 +541,7 @@ class _CameraProbe extends GameComponent {
     final zoom = gameRef.camera.viewfinder.zoom;
     final darkness = DayCycle.darkness(DayCycle.time.value);
     final lit = darkness > 0.01 && NightLights._lights.isNotEmpty;
+    NightTilesets.syncToCycle();
 
     NightLights.camera ??= _camScratch.clone();
     NightLights.camera!.setFrom(_camScratch);
@@ -599,68 +596,25 @@ class _CameraProbe extends GameComponent {
   }
 }
 
-/// Soft night tint then day-bright fixture redraw (EOE-91) as a Bonfire
-/// viewport HUD — live camera so fixtures do not glide while walking.
-///
-/// Glow cookies stay in-world on [LampLight] **under** this wash (softer).
-/// Fixture tiles blit after the wash so props stay day-bright.
+/// Former HUD wash + fixture redraw (EOE-91). Night is now a tileset swap
+/// ([NightTilesets]); this HUD is a no-op kept so older mounts/tests compile.
 class NightWashHud extends GameComponent {
-  final _tintPaint = Paint();
-  final _fixturePaint = Paint()..filterQuality = FilterQuality.none;
-
   /// After color-filter HUD (20), before interface (30).
   @override
   int get priority => LayerPriority.getHudColorFilterPriority() + 5;
 
   @override
   Future<void> onLoad() async {
-    await NightLights.ensureCookie();
+    await NightTilesets.ensureLoaded();
+    NightTilesets.syncToCycle();
     return super.onLoad();
   }
 
   @override
-  void onRemove() {
-    if (NightLights._wash == this) NightLights._wash = null;
-    super.onRemove();
-  }
-
-  @override
-  void render(Canvas canvas) {
-    if (!hasGameRef) return;
-    final t = DayCycle.time.value;
-    // Ruins (world3) and other maps with no lamp objects get a flatter wash.
-    final strength = NightLights.lights.isEmpty ? 0.48 : 1.0;
-    final screen = Size(gameRef.size.x, gameRef.size.y);
-    final view = Offset.zero & screen;
-    final tint = DayCycle.tint(t, strength: strength);
-    if (tint.a > 0) {
-      _tintPaint.color =
-          tint.withValues(alpha: tint.a * NightLights.washAlphaScale);
-      canvas.drawRect(view, _tintPaint);
-    }
-
-    // Live camera every Bonfire frame — no Flutter overlay lag / glide.
-    final cam = gameRef.camera.viewfinder.position;
-    final zoom = gameRef.camera.viewfinder.zoom;
-    for (final l in NightLights.drawn) {
-      if (l.radius >= 120) continue; // portals — not tiled light props
-      final spr = NightLights.fixtures[l.kind];
-      if (spr == null) continue;
-      final world = l.fixtureWorldRect;
-      final dest = Rect.fromLTWH(
-        (world.left - cam.x) * zoom + screen.width / 2,
-        (world.top - cam.y) * zoom + screen.height / 2,
-        world.width * zoom,
-        world.height * zoom,
-      );
-      if (dest.width <= 0 || !dest.overlaps(view)) continue;
-      canvas.drawImageRect(spr.sheet, spr.src, dest, _fixturePaint);
-    }
-  }
+  void render(Canvas canvas) {}
 }
 
-/// Former Flutter wash painter — wash lives on [NightWashHud]. Kept so older
-/// call sites compile; paints nothing (avoid double-tint / hole squares).
+/// Former Flutter wash painter — paints nothing.
 class NightTintPainter extends CustomPainter {
   NightTintPainter() : super(repaint: NightLights.frame);
 

@@ -642,13 +642,13 @@ class DayClock extends GameComponent {
     if ((t - shown).abs() > 0.0005) {
       _pushed = t;
       DayCycle.time.value = t;
-      // NightTint no longer listens to DayCycle.time directly — nudge only
-      // when the wash alpha actually steps (covers lamp-less maps).
+      // Nudge night lights + tileset swap when darkness steps.
       final d = DayCycle.darkness(t);
       if (_lastDarkness < 0 || (d - _lastDarkness).abs() >= 0.01) {
         _lastDarkness = d;
         NightLights.nudgeWash();
       }
+
     }
   }
 }

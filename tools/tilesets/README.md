@@ -103,3 +103,6 @@ Wangsets: `floor-void` (mixed, 53 tiles), `floor-dais` (mixed, 52 tiles), `floor
 
 ## Regenerating
 The scripts are in `/workspace/klas-game/tools/`: `tilelib.py` (shared blob/wang/tsx code), `ts_woods.py`, `ts_city.py`, `ts_cyber.py`, `ts_core.py`, and `check_tilesets.py` (validates the tsx format and does a seam check). Run them with `/workspace/klas-game/.venv/bin/python`.
+
+## Night sheets (EOE-99)
+`bake_night_tilesets.py` writes `assets/images/maps/tilesets/*_night.png` and `buildings/*_night.png` — day art with `DayCycle.tint` (0x0A1236 @ 0.46) baked in. Light-fixture tiles stay day-bright. The game swaps sheets at nightfall via `NightTilesets`.
