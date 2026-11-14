@@ -25,6 +25,14 @@ class MusicManager {
   /// App left the foreground — keep BGM paused until [resumeForAppLifecycle].
   bool _pausedByLifecycle = false;
 
+  /// Bumped on every lifecycle pause so an in-flight [play] cannot restart
+  /// audible BGM after Home / app-switcher freezes the UI isolate.
+  int _lifecycleEpoch = 0;
+
+  /// Test seam: true while [pauseForAppLifecycle] is in effect.
+  @visibleForTesting
+  bool get debugPausedByLifecycle => _pausedByLifecycle;
+
   static String _asset(String path) =>
       path.startsWith('assets/') ? path.substring(7) : path;
 
@@ -74,8 +82,13 @@ class MusicManager {
       await p.setVolume(v);
       if (_currentTrack == null) return;
       if (_shouldPlay) {
-        // resume() is a no-op while already playing.
-        await p.resume();
+        // Dialogue/cutscene duck only changes volume. Calling resume() while
+        // already playing re-requests Android AUDIOFOCUS_GAIN and can pause
+        // or mute in-flight VO that mixes with focus none (EOE-85). Also
+        // avoids undoing a just-issued lifecycle pause mid-await.
+        if (p.state != PlayerState.playing) {
+          await p.resume();
+        }
       } else {
         await p.pause();
       }
@@ -89,6 +102,7 @@ class MusicManager {
       await _apply();
       return;
     }
+    final epoch = _lifecycleEpoch;
     _currentTrack = assetPath;
     await _ensureReady();
     final p = _player;
@@ -98,13 +112,25 @@ class MusicManager {
       await p.setReleaseMode(ReleaseMode.loop);
       await p.setVolume(_effective.clamp(0.0, 1.0));
       await p.play(AssetSource(_asset(assetPath)));
-      if (!_shouldPlay) {
+      // Lifecycle pause may have landed while play() awaited the platform.
+      if (!_shouldPlay || epoch != _lifecycleEpoch) {
+        try {
+          await p.setVolume(0);
+        } catch (_) {}
         await p.pause();
         _awaitingGesture = false;
         return;
       }
       // Web autoplay often "succeeds" but leaves the player paused/silent.
       await Future<void>.delayed(const Duration(milliseconds: 40));
+      if (!_shouldPlay || epoch != _lifecycleEpoch) {
+        try {
+          await p.setVolume(0);
+        } catch (_) {}
+        await p.pause();
+        _awaitingGesture = false;
+        return;
+      }
       final st = p.state;
       _awaitingGesture = st != PlayerState.playing;
       if (_awaitingGesture) {
@@ -152,10 +178,26 @@ class MusicManager {
   }
 
   /// Pause BGM while the app is backgrounded / inactive (Android home, etc.).
+  ///
+  /// #93 already hooked [AppLifecycleState], but Android `mediaPlayer` +
+  /// `AUDIOFOCUS_GAIN` (+ wake lock) can keep the track audible when the
+  /// isolate freezes before a lone `pause()` lands, or when an in-flight
+  /// [play] restarts afterwards. Mute, pause, and drop music focus.
   Future<void> pauseForAppLifecycle() async {
     _pausedByLifecycle = true;
+    _lifecycleEpoch++;
+    final p = _player;
+    if (p == null) return;
     try {
-      await _player?.pause();
+      await p.setVolume(0);
+    } catch (_) {}
+    try {
+      await p.pause();
+    } catch (_) {}
+    try {
+      // Abandon Android music focus so the OS does not keep a background
+      // media session after Activity pause (EOE-86).
+      await p.setAudioContext(GameAudioContexts.mix);
     } catch (_) {}
   }
 
@@ -163,6 +205,12 @@ class MusicManager {
   Future<void> resumeForAppLifecycle() async {
     if (!_pausedByLifecycle) return;
     _pausedByLifecycle = false;
+    final p = _player;
+    if (p != null) {
+      try {
+        await p.setAudioContext(GameAudioContexts.music);
+      } catch (_) {}
+    }
     if (_currentTrack == null) return;
     await _apply();
   }

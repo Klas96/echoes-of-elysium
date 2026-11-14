@@ -100,31 +100,49 @@ void main() {
     expect(SfxWebEngine.url('assets/audio/x.mp3'), 'assets/audio/x.mp3');
   });
 
-  test('init preloads six one-shot elements with web asset URLs', () {
+  test('init preloads one-shots plus a four-slot shoot pool', () {
     engine.init();
-    expect(created, hasLength(6));
+    // foot + damage + portal + 4 shoot + chime + heal
+    expect(created, hasLength(9));
+    expect(engine.shootPool, hasLength(SfxWebEngine.shootSlots));
     expect(engine.shoot!.src, contains('shoot.wav'));
     expect(engine.shoot!.src, startsWith('assets/assets/'));
+    expect(
+      engine.shootPool.every((el) => el.src.contains('shoot.wav')),
+      isTrue,
+    );
     expect(created.every((a) => a.calls.contains('load')), isTrue);
   });
 
-  test('playShoot rewinds then plays (web one-shot quirk)', () {
+  test('playShoot round-robins pool slots with rewind+play', () {
     engine.init();
-    final shoot = engine.shoot! as FakeDomAudio;
-    shoot.calls.clear();
-    shoot.currentTime = 0.4;
-    shoot.calls.clear();
-    engine.playOneShot(engine.shoot);
-    expect(shoot.calls, ['currentTime=0.0', 'play']);
+    final pool = engine.shootPool.cast<FakeDomAudio>().toList();
+    for (final el in pool) {
+      el.calls.clear();
+      el.currentTime = 0.4;
+      el.calls.clear();
+    }
+    engine.playShoot();
+    engine.playShoot();
+    engine.playShoot();
+    engine.playShoot();
+    engine.playShoot(); // wraps to slot 0
+    expect(pool[0].calls, ['currentTime=0.0', 'play', 'currentTime=0.0', 'play']);
+    expect(pool[1].calls, ['currentTime=0.0', 'play']);
+    expect(pool[2].calls, ['currentTime=0.0', 'play']);
+    expect(pool[3].calls, ['currentTime=0.0', 'play']);
   });
 
-  test('muted skips playOneShot', () {
+  test('muted skips playShoot', () {
     engine.init();
     engine.applyUserVolume(1, enabled: false);
-    final shoot = engine.shoot! as FakeDomAudio;
-    shoot.calls.clear();
-    engine.playOneShot(engine.shoot);
-    expect(shoot.calls, isEmpty);
+    for (final el in engine.shootPool.cast<FakeDomAudio>()) {
+      el.calls.clear();
+    }
+    engine.playShoot();
+    for (final el in engine.shootPool.cast<FakeDomAudio>()) {
+      expect(el.calls, isEmpty);
+    }
   });
 
   test('unlockAfterGesture skips already-playing elements', () async {
@@ -150,19 +168,24 @@ void main() {
     );
   });
 
-  test('pauseForAppLifecycle pauses and rewinds one-shots; resume is no-op',
+  test('pauseForAppLifecycle pauses and rewinds shoot pool; resume is no-op',
       () async {
     engine.init();
-    final shoot = engine.shoot! as FakeDomAudio;
-    shoot._currentTime = 0.5;
-    shoot.paused = false;
-    shoot.calls.clear();
+    final pool = engine.shootPool.cast<FakeDomAudio>().toList();
+    for (final shoot in pool) {
+      shoot._currentTime = 0.5;
+      shoot.paused = false;
+      shoot.calls.clear();
+    }
     await engine.pauseForAppLifecycle();
-    expect(shoot.calls, containsAll(['pause', 'currentTime=0.0']));
-
-    shoot.calls.clear();
+    for (final shoot in pool) {
+      expect(shoot.calls, containsAll(['pause', 'currentTime=0.0']));
+      shoot.calls.clear();
+    }
     await engine.resumeForAppLifecycle();
-    expect(shoot.calls, isEmpty);
+    for (final shoot in pool) {
+      expect(shoot.calls, isEmpty);
+    }
   });
 
   test('playVoice creates fresh element; stopVoice clears it', () async {
@@ -176,12 +199,11 @@ void main() {
     expect(engine.currentVoice, isNull);
   });
 
-  test('applyUserVolume scales shoot base volume', () {
+  test('applyUserVolume scales every shoot-pool slot', () {
     engine.init();
     engine.applyUserVolume(0.5, enabled: true);
-    expect(
-      (engine.shoot! as FakeDomAudio).volume,
-      closeTo(SfxWebEngine.baseShoot * 0.5, 1e-9),
-    );
+    for (final el in engine.shootPool) {
+      expect(el.volume, closeTo(SfxWebEngine.baseShoot * 0.5, 1e-9));
+    }
   });
 }

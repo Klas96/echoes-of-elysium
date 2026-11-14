@@ -15,9 +15,24 @@ class GameAudioContexts {
     audioFocus: AndroidAudioFocus.none,
   );
 
+  /// Dialogue / cutscene VO — speech content, still mixes with BGM (`none`).
+  /// Sonification was fine for short SFX but is the wrong Android attribute
+  /// for multi-second spoken lines (EOE-85).
+  static const AudioContextAndroid voiceAndroid = AudioContextAndroid(
+    isSpeakerphoneOn: false,
+    stayAwake: false,
+    contentType: AndroidContentType.speech,
+    usageType: AndroidUsageType.game,
+    audioFocus: AndroidAudioFocus.none,
+  );
+
+  /// Game BGM — request focus while foregrounded, but do **not** hold a wake
+  /// lock. `stayAwake: true` lets MediaPlayer keep playing after Home /
+  /// app-switcher when Flutter's lifecycle pause races the platform channel
+  /// (EOE-86). Pause/resume is owned by [MusicManager.pauseForAppLifecycle].
   static const AudioContextAndroid musicAndroid = AudioContextAndroid(
     isSpeakerphoneOn: false,
-    stayAwake: true,
+    stayAwake: false,
     contentType: AndroidContentType.music,
     usageType: AndroidUsageType.game,
     audioFocus: AndroidAudioFocus.gain,
@@ -38,6 +53,11 @@ class GameAudioContexts {
 
   static AudioContext get mix => AudioContext(
         android: mixAndroid,
+        iOS: mixIos,
+      );
+
+  static AudioContext get voice => AudioContext(
+        android: voiceAndroid,
         iOS: mixIos,
       );
 

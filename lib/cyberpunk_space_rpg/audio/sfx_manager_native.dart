@@ -10,8 +10,15 @@ import 'sfx_audio_port.dart';
 /// Desktop / mobile SFX via audioplayers (Linux, Windows, Android, iOS, macOS).
 /// just_audio has no Linux plugin — MissingPluginException on desktop.
 ///
-/// Linux/GStreamer often no-ops `seek(0)+resume` once a short clip has finished.
-/// Re-`play(AssetSource)` each shot (same path as VO) is reliable.
+/// Shoot uses MediaPlayer + round-robin (never Android SoundPool / lowLatency):
+/// SoundPool `seek` after `stop` hung ~30s (EOE-55 / #123), and `stop`+`resume`
+/// still missed or lagged shots on phones because SoundPool never completes /
+/// clears stream state the way MediaPlayer does. Re-`play(AssetSource)` on a
+/// 4-slot pool keeps auto-fire snappy without overlapping one player.
+///
+/// VO reuses a warmed MediaPlayer on Android/iOS (same stop→play chain as
+/// shoot). Dispose+recreate every line was a Linux/GStreamer workaround that
+/// left dialogue/cutscene VO silent on phones (EOE-85).
 class SfxManager {
   static final SfxManager _instance = SfxManager._();
   factory SfxManager() => _instance;
@@ -25,6 +32,15 @@ class SfxManager {
   @visibleForTesting
   static SfxGlobalContextSetter globalContextSetter =
       defaultSfxGlobalContextSetter;
+
+  /// Production default: fresh only on Linux/GStreamer.
+  @visibleForTesting
+  static bool get defaultFreshVoicePlayerPerLine => Platform.isLinux;
+
+  /// When true, dispose + create a new VO player each line (Linux/GStreamer).
+  /// Android must keep this false — fresh players were silent (EOE-85).
+  @visibleForTesting
+  static bool freshVoicePlayerPerLine = defaultFreshVoicePlayerPerLine;
 
   SfxAudioPort? _footstep;
   SfxAudioPort? _damage;
@@ -49,7 +65,7 @@ class SfxManager {
   static const _footAsset = 'audio/sfx/footstep_grass.mp3';
   static const _damageAsset = 'audio/sfx/damage_hit.mp3';
   static const _portalAsset = 'audio/sfx/portal.mp3';
-  /// PCM WAV — Android SoundPool (lowLatency) is unreliable with MP3.
+  /// PCM WAV — short combat one-shot; kept as WAV for snappy MediaPlayer decode.
   static const _shootAsset = 'audio/sfx/shoot.wav';
   static const _chimeAsset = 'audio/sfx/computer_beep.wav';
   static const _healAsset = 'audio/sfx/health_pickup.mp3';
@@ -70,9 +86,8 @@ class SfxManager {
   double get _scale => _enabled ? _userVolume.clamp(0.0, 1.0) : 0.0;
   bool get _audible => _scale > 0.001;
 
-  /// SoundPool on Android; MediaPlayer elsewhere (GStreamer hates lowLatency).
-  static PlayerMode get _shootMode =>
-      !kIsWeb && Platform.isAndroid ? PlayerMode.lowLatency : PlayerMode.mediaPlayer;
+  /// Always MediaPlayer — Android SoundPool (lowLatency) is the EOE-55 footgun.
+  static PlayerMode get _shootMode => PlayerMode.mediaPlayer;
 
   /// Test-only: wipe singleton state between cases.
   @visibleForTesting
@@ -133,7 +148,7 @@ class SfxManager {
         _safeContext(_portal!, mix),
         _safeContext(_chime!, mix),
         _safeContext(_heal!, mix),
-        _safeContext(_voice!, mix),
+        _safeContext(_voice!, GameAudioContexts.voice),
         _footstep!.setPlayerMode(PlayerMode.mediaPlayer),
         _damage!.setPlayerMode(PlayerMode.mediaPlayer),
         _portal!.setPlayerMode(PlayerMode.mediaPlayer),
@@ -268,23 +283,17 @@ class SfxManager {
   Future<void> _fireShoot(SfxAudioPort p, double vol) async {
     final gen = (_oneShotGen[p] = (_oneShotGen[p] ?? 0) + 1);
     try {
-      // stop()+resume() only. Never seek after stop on Android SoundPool:
-      // seekTo(0) is a no-op when streamId is null (post-stop / never played)
-      // and never emits seekComplete, so await seek(0) hits the 30s
-      // seekingTimeout — shots sounded missing or extremely late on phones.
+      // Same path as other one-shots: stop → volume → play(AssetSource).
+      // Never seek (SoundPool/MediaPlayer seekComplete hangs). Never resume
+      // alone (SoundPool keeps a stale streamId after the clip ends and
+      // resume() becomes a silent no-op on phones — EOE-55 still on 0.4.5).
       await p.stop();
       if (_oneShotGen[p] != gen || !_audible) return;
       await p.setVolume(vol);
       if (_oneShotGen[p] != gen || !_audible) return;
-      await p.resume();
-    } catch (_) {
-      if (_oneShotGen[p] != gen || !_audible) return;
-      // Source lost / SoundPool quirk — full play reloads the clip.
-      try {
-        await p.play(AssetSource(_shootAsset), volume: vol);
-      } catch (e) {
-        debugPrint('SfxManager playShoot: $e');
-      }
+      await p.play(AssetSource(_shootAsset), volume: vol);
+    } catch (e) {
+      debugPrint('SfxManager playShoot: $e');
     }
   }
 
@@ -304,59 +313,95 @@ class SfxManager {
     final token = ++_voiceToken;
     final src = _asset(assetPath);
     try {
-      // Fresh player each line — Linux/GStreamer often stays silent after
-      // stop()+replay on the same short-clip player.
-      final old = _voice;
-      _voice = portFactory();
-      final p = _voice!;
-      try {
-        await old?.stop();
-      } catch (_) {}
-      try {
-        await old?.dispose();
-      } catch (_) {}
-      if (token != _voiceToken) {
-        try {
-          await p.dispose();
-        } catch (_) {}
-        return;
-      }
-      await _safeContext(p, GameAudioContexts.mix);
-      if (token != _voiceToken) {
-        try {
-          await p.dispose();
-        } catch (_) {}
-        return;
-      }
-      await p.setReleaseMode(ReleaseMode.stop);
-      await p.setVolume(_baseVoice * _scale);
-      await p.setPlayerMode(PlayerMode.mediaPlayer);
-      if (!_audible || token != _voiceToken) {
-        try {
-          await p.dispose();
-        } catch (_) {}
-        return;
-      }
-      await p.play(AssetSource(src));
-      if (token != _voiceToken) {
-        try {
-          await p.stop();
-        } catch (_) {}
+      if (freshVoicePlayerPerLine) {
+        await _playVoiceFresh(src, token);
+      } else {
+        await _playVoiceReuse(src, token);
       }
     } catch (e) {
       debugPrint('SfxManager playVoice($src): $e');
     }
   }
 
+  /// Android/iOS/macOS/Windows: reuse the warmed MediaPlayer (EOE-85).
+  Future<void> _playVoiceReuse(String src, int token) async {
+    _voice ??= portFactory();
+    final p = _voice!;
+    final vol = _baseVoice * _scale;
+    await _safeContext(p, GameAudioContexts.voice);
+    if (token != _voiceToken) return;
+    await p.setReleaseMode(ReleaseMode.stop);
+    await p.setPlayerMode(PlayerMode.mediaPlayer);
+    // Same path as shoot/one-shots: stop → volume → play(AssetSource).
+    // Never seek; never resume-only; never dispose between lines on phones.
+    await p.stop();
+    if (token != _voiceToken || !_audible) return;
+    await p.setVolume(vol);
+    if (token != _voiceToken || !_audible) return;
+    await p.play(AssetSource(src), volume: vol);
+    if (token != _voiceToken) {
+      try {
+        await p.stop();
+      } catch (_) {}
+    }
+  }
+
+  /// Linux/GStreamer: stop()+replay on one player often stays silent.
+  Future<void> _playVoiceFresh(String src, int token) async {
+    final old = _voice;
+    _voice = portFactory();
+    final p = _voice!;
+    try {
+      await old?.stop();
+    } catch (_) {}
+    try {
+      await old?.dispose();
+    } catch (_) {}
+    if (token != _voiceToken) {
+      try {
+        await p.dispose();
+      } catch (_) {}
+      return;
+    }
+    await _safeContext(p, GameAudioContexts.voice);
+    if (token != _voiceToken) {
+      try {
+        await p.dispose();
+      } catch (_) {}
+      return;
+    }
+    await p.setReleaseMode(ReleaseMode.stop);
+    await p.setVolume(_baseVoice * _scale);
+    await p.setPlayerMode(PlayerMode.mediaPlayer);
+    if (!_audible || token != _voiceToken) {
+      try {
+        await p.dispose();
+      } catch (_) {}
+      return;
+    }
+    await p.play(AssetSource(src), volume: _baseVoice * _scale);
+    if (token != _voiceToken) {
+      try {
+        await p.stop();
+      } catch (_) {}
+    }
+  }
+
   Future<void> stopVoice() async {
     _voiceToken++;
     final p = _voice;
-    _voice = null;
+    if (freshVoicePlayerPerLine) {
+      _voice = null;
+      try {
+        await p?.stop();
+      } catch (_) {}
+      try {
+        await p?.dispose();
+      } catch (_) {}
+      return;
+    }
     try {
       await p?.stop();
-    } catch (_) {}
-    try {
-      await p?.dispose();
     } catch (_) {}
   }
 

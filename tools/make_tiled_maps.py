@@ -13,7 +13,7 @@ Reads the Designer tilesets (<name>.tsx + .png), embeds them in the
 only .json/.tsj), and writes:
 
   <out>/world.tmj   woods / starter   (tileset woods)
-  <out>/world2.tmj  city              (tileset city)
+  <out>/world2.tmj  city (+ woods fringe on the north edge)
   <out>/world3.tmj  cyberpunk ruins   (tileset cyberpunk)
   <out>/world4.tmj  Gaia Core         (tileset core)
   <out>/world5.tmj  Lantern Town hub  (tileset city)
@@ -311,6 +311,26 @@ class Level:
         self.mist = []              # (tx, ty) tile centres for ambient mist over water
         self.rings = []
         self.goal = None            # main-route gates: dict(fragments=N), see validate_main_gates
+        # Optional second terrain tileset (City north fringe uses woods). Ground
+        # ids >= primary.tilecount encode extra-local ids; see encode_ground / collides_tid.
+        self.extra_ts = None
+        self.extra_ts_image = None
+
+    def encode_ground(self, tid, ts=None):
+        """Store a local tile id; when ts is extra_ts, offset past the primary."""
+        if ts is None or ts is self.ts:
+            return int(tid)
+        assert self.extra_ts is ts, "only primary or extra_ts ground ids are supported"
+        return int(self.ts.tilecount + tid)
+
+    def collides_tid(self, tid):
+        if tid is None or tid < 0:
+            return False
+        if tid < self.ts.tilecount:
+            return self.ts.collides(tid)
+        if self.extra_ts is not None:
+            return self.extra_ts.collides(tid - self.ts.tilecount)
+        return False
 
     def obj(self, obj, x, y, w, h, **props):
         self.objects.append(dict(name=obj, x=float(x), y=float(y), w=float(w), h=float(h), props=props))
@@ -331,7 +351,7 @@ class Level:
             for i in range(w):
                 if grid[j][i] < 0: continue
                 if self.props[y + j, x + i] >= 0: return False
-                if need_floor and (not self.floor[y + j, x + i] or self.ts.collides(self.ground[y + j, x + i])): return False
+                if need_floor and (not self.floor[y + j, x + i] or self.collides_tid(self.ground[y + j, x + i])): return False
                 if col and self.keepout[y + j, x + i]: return False
                 if not col and self.keepout_hard[y + j, x + i]: return False
         return True
@@ -524,7 +544,7 @@ class Level:
         ok = np.ones((self.H, self.W), bool)
         for y in range(self.H):
             for x in range(self.W):
-                if self.ts.collides(self.ground[y, x]) or self.ts.collides(self.props[y, x]):
+                if self.collides_tid(self.ground[y, x]) or self.ts.collides(self.props[y, x]):
                     ok[y, x] = False
         return ok
 
@@ -874,9 +894,20 @@ class Level:
             ok = seen = self.walkable()
         print(f"{fname}: {len(self.rings)} ring(s) (min {self.rings_min})")
         ts = self.ts
+        extra = self.extra_ts
+        extra_first = ts.tilecount + 1
+        bfirst = (extra_first + extra.tilecount) if extra is not None else extra_first
+
+        def to_gid(v):
+            if v < 0:
+                return 0
+            if extra is not None and v >= ts.tilecount:
+                return extra_first + (int(v) - ts.tilecount)
+            return int(v) + 1  # primary firstgid = 1
+
         def lay(i, name, arr):
             return {"id": i, "name": name, "type": "tilelayer", "x": 0, "y": 0, "width": self.W, "height": self.H,
-                    "opacity": 1, "visible": True, "data": [int(v) + 1 if v >= 0 else 0 for v in arr.flatten()]}
+                    "opacity": 1, "visible": True, "data": [to_gid(int(v)) for v in arr.flatten()]}
         objs = []
         for i, o in enumerate(self.objects):
             d = {"id": i + 1, "name": o["name"], "type": "", "rotation": 0, "visible": True,
@@ -887,7 +918,6 @@ class Level:
                                                          "int" if isinstance(v, int) else "string"), "value": v}
                                    for k, v in o["props"].items()]
             objs.append(d)
-        bfirst = ts.tilecount + 1
         for b in self.buildings:
             bd = BUILDINGS.defs[b["name"]]
             # tile object: x/y is the bottom-left of the sprite
@@ -895,12 +925,16 @@ class Level:
                          "rotation": 0, "visible": True, "x": float(b["tx"] * T), "y": float((b["ty"] * T) + bd["h"]),
                          "width": float(bd["w"]), "height": float(bd["h"]),
                          "properties": [{"name": "building", "type": "string", "value": b["name"]}]})
+        tilesets = [ts.to_json(1, image_rel)]
+        if extra is not None:
+            tilesets.append(extra.to_json(extra_first, self.extra_ts_image or f"tilesets/{extra.name}.png"))
+        tilesets.append(BUILDINGS.to_json(bfirst))
         tmj = {"compressionlevel": -1, "type": "map", "version": "1.10", "tiledversion": "1.10.2",
                "orientation": "orthogonal", "renderorder": "right-down", "infinite": False,
                "width": self.W, "height": self.H, "tilewidth": T, "tileheight": T,
                "nextlayerid": 4, "nextobjectid": len(objs) + 1,
                "properties": [{"name": "generator", "type": "string", "value": "tools/make_tiled_maps.py"}],
-               "tilesets": [ts.to_json(1, image_rel), BUILDINGS.to_json(ts.tilecount + 1)],
+               "tilesets": tilesets,
                "layers": [lay(1, "ground", self.ground), lay(2, "props", self.props),
                           {"id": 3, "name": "gameplay", "type": "objectgroup", "draworder": "topdown",
                            "x": 0, "y": 0, "opacity": 1, "visible": True, "objects": objs}]}
@@ -1509,11 +1543,8 @@ def map1():
           id="woods_plaque", title="WEATHERED PLAQUE",
           text="\"We asked to stay.\" A second line: \"Bodies to soil. Minds to Gaia.\"",
           clue="gaia_plaque")
-    place(lv, "examine", P["spawn"][0] - 1.2, P["spawn"][1] + 1.4,
-          id="woods_mission_slate", title="FIELD BRIEF",
-          text="Kaela — talk to Gaia (green) by the crash, then Asha at her camp: the woods need friends. Both glowing "
-               "fragments open the road; trails ring round, and east of the grove the older wilds keep going. The road "
-               "to the City leaves the south-east meadow. Do not let the UEC wipe her.")
+    # EOE-90: removed flavour-only examine dots (text toast, no clue/item/quest/board/shop).
+    # Story/loot/hub examines remain.
     place(lv, "examine", P["asha"][0] - 3.4, P["asha"][1] + 1.2,
           id="woods_boot", title="UEC BOOT PRINT",
           text="Fresh composite sole marks in the moss after rain.", clue="boot_print")
@@ -1530,42 +1561,6 @@ def map1():
           id="woods_moonflower_pick", title="MOONFLOWER CLUSTER",
           text="A bloom cold as glass. Mira asked for one of these.",
           give="moonflower_bloom", quest="moonflower_draft")
-    place(lv, "examine", P["cross"][0] + 1.2, P["cross"][1] + 2.4,
-          id="woods_fork_sign", title="STANDING STONES",
-          text="Every trail meets here. NE: the pond (and willow creek beyond). E: the grove, then the old watchtower. "
-               "S: Asha's camp. W: the mossy hollow and round to the crash. Fragments: dark grotto by the pond, thorns "
-               "past the grove. A fallen boulder still blocks the City road beyond the south-east meadow.")
-    place(lv, "examine", P["ridge"][0] + 1.5, P["ridge"][1] - 0.5,
-          id="woods_ridge_lookout", title="CITY LIGHTS TO THE SOUTH",
-          text="From the ridge, past the radio dish, the City's glow hangs over the treeline to the south-east. "
-               "The trails below all ring round to the meadow road.")
-    place(lv, "examine", P["h2"][0] + 1.4, P["h2"][1] + 0.4,
-          id="woods_job_sign", title="TRAIL NOTICE",
-          text="Chalk: once you reach the City, look EAST down the boulevard for Lantern Town — jobs and glimmer.")
-    place(lv, "examine", 36.1, 13.1,
-          id="woods_glade_sign", title="SIDE PATH MARK",
-          text="Trails leave the pond three ways: west along the ridge, south-west to the stones, south to the grove. "
-               "A fourth path now runs east into willow creek. You will not get stuck.")
-    place(lv, "examine", P["meadow"][0] + 2.0, P["meadow"][1] - 1.6,
-          id="woods_portal_notice", title="SOUTH ROAD",
-          text="City beyond this tree line. Walk south off the map. Its plaza looks three ways: Lantern Town east, "
-               "the Archive south-east, the Ruins road south.")
-    place(lv, "examine", P["willow"][0] + 0.5, P["willow"][1] + 1.8,
-          id="woods_willow_mark", title="WILLOW CREEK",
-          text="Water from the pond thins into a willow ditch. East: a crooked watchtower on the old rim. South: ferns "
-               "down toward the cart road that rejoins the meadow.")
-    place(lv, "examine", P["watch"][0] - 0.8, P["watch"][1] + 1.5,
-          id="woods_watch_slate", title="FALLEN WATCH",
-          text="UEC glass cracked in the moss. Someone watched the grove from here — then walked south into the ferns.")
-    place(lv, "examine", P["fern"][0] + 0.6, P["fern"][1],
-          id="woods_fern_cache", title="FERN SHELTER",
-          text="A lean-to of cut fronds. Still dry inside. Trail chalk: OLD ROAD → MEADOW.")
-    place(lv, "examine", P["oldroad"][0] + 1.0, P["oldroad"][1] - 0.8,
-          id="woods_oldroad_post", title="CART-ROAD POST",
-          text="Weathered mile-mark: LANTERN 6 / GROVE 1. The ruts turn west into the meadow you already know.")
-    place(lv, "examine", P["nestloop"][0] + 0.8, P["nestloop"][1],
-          id="woods_nest_return", title="RETURN CUT",
-          text="A newer path cuts back toward the brook — the nest spur is no longer a one-way crawl.")
     place(lv, "hidden", 13.5, 12.5, glimmer=18, was=(13.0, 43.6))
     place(lv, "hidden", P["fern"][0] - 1.2, P["fern"][1] + 0.8, glimmer=16, was=(16.0, 40.0))
     place(lv, "health", P["watch"][0] + 1.5, P["watch"][1] - 0.8, was=(22.0, 30.0))
@@ -1678,7 +1673,7 @@ def landmark(lv, name, x, y):
         for i in range(w):
             if grid[j][i] < 0: continue
             cx, cy = x + i, y + j
-            if not lv.floor[cy, cx] or lv.props[cy, cx] >= 0 or lv.ts.collides(lv.ground[cy, cx]):
+            if not lv.floor[cy, cx] or lv.props[cy, cx] >= 0 or lv.collides_tid(lv.ground[cy, cx]):
                 msg = f"landmark {name} at {x},{y} does not fit (tile {cx},{cy})"
                 if not os.environ.get("MAPS_DRAFT"): raise SystemExit(msg)
                 print("DRAFT:", msg); return
@@ -1701,80 +1696,115 @@ def darkzone(lv, x0, y0, x1, y1, was=None):
 
 # =============================================================== MAP 2: city
 def map2():
-    """City: expand the #26 district graph — same spine, new east canal loop.
+    """City: Pokémon-style streets + houses; soft woods fringe on the north.
 
-                         [N edge → Woods]
+                         [N edge → Woods]  ← forest tiles (not fortress wall)
                                │
        NOODLE ─ MARKET ROW ─ ARRIVAL PLAZA ══ boulevard ══ LANTERN GATE ─► Town (E edge)
                   │              │                 (tea house)   │
-       ECHO DISTRICT ───── ARCHIVE SQUARE ──────────────── EAST LOT ── DOCKS (NEW)
+       ECHO DISTRICT ───── ARCHIVE SQUARE ──────────────── EAST LOT ── DOCKS
           │                  │ (archive_library)               │         │
-       WEST YARD          GREENHOUSE GARDEN                PATROL ── CANAL QUAY (NEW)
+       WEST YARD          HOUSE STREETS / GARDEN           PATROL ── CANAL QUAY
           │  (frag)          │                                 │
           └── yard alley ── SENTINEL PLAZA ───────────────────┘
                                │
                         VOSS ALCOVE · SOUTH GATE ─► Ruins (S edge)
 
-    Original districts / NPCs / exits keep their tiles; the map grows east so
-    docks + canal quay hang off the east lot without relocating the Archive."""
+    Story NPCs / exits / hub buildings keep their tiles. Fortress-style city
+    wall masses become walkable sidewalks, lawn yards, and readable house lots.
+    North border uses the woods tileset so the City→Woods edge feels connected."""
     ts = Tileset("city")
+    woods = Tileset("woods")
     # Was 52×44; +14 east for docks / canal. Story P coords unchanged.
     lv = Level(ts, 66, 44, seed=22)
+    lv.extra_ts = woods
+    lv.extra_ts_image = "tilesets/woods.png"
     lv.rings_min = 3
     P = dict(spawn=(26.5, 4.5), echo7=(6, 16.5), h1=(14, 7.5), d1=(5.5, 31), arch=(26.5, 18.5),
              h2=(20.5, 20.5), d2=(39.5, 18), sentinel=(26.5, 32), h3=(45.5, 31.5), voss=(19.5, 38.5),
              gate=(26.5, 41.5), town=(63.5, 7.5), yard=(4.5, 25), lot=(46, 19), se=(45.5, 26.5),
              cache=(5.5, 11), garden=(25, 28),
-             # NEW east expansion
+             # east expansion
              docks=(58, 16), canal=(58, 28), quay=(54, 34))
+    # --- Roads: readable street grid (Pokémon-town asphalt) -------------------
     road = np.zeros((lv.H, lv.W), bool)
-    rect_carve(road, 34, 6, 66, 9)             # boulevard: plaza → Lantern Gate → Town (extended)
-    rect_carve(road, 45, 9, 48, 15)            # Lantern Gate street down to the east lot
-    rect_carve(road, 35, 17, 45, 19)           # east street: east lot → Archive Square
-    rect_carve(road, 24, 36, 29, 44)           # gate road → Ruins (matches exit half=2)
-    rect_carve(road, 48, 15, 60, 17)           # NEW: lot → docks road
-    rect_carve(road, 56, 17, 59, 30)           # NEW: docks → canal
-    rect_carve(road, 48, 30, 59, 33)           # NEW: canal → patrol / quay
+    rect_carve(road, 24, 0, 29, 10)            # north avenue: Woods → Arrival Plaza
+    rect_carve(road, 24, 18, 29, 36)           # archive → sentinel spine
+    rect_carve(road, 24, 36, 29, 44)           # gate road → Ruins
+    rect_carve(road, 8, 6, 34, 9)              # market / plaza cross street
+    rect_carve(road, 34, 6, 66, 9)             # boulevard → Lantern Gate → Town
+    rect_carve(road, 45, 9, 48, 19)            # Lantern Gate street → east lot
+    rect_carve(road, 10, 15, 46, 18)           # residential cross: Echo → Archive → east lot
+    rect_carve(road, 4, 21, 11, 24)            # Echo → west yard lane
+    rect_carve(road, 4, 28, 15, 31)            # west yard → sentinel alley
+    rect_carve(road, 14, 30, 38, 33)           # sentinel ring road
+    rect_carve(road, 36, 18, 46, 21)           # archive → east lot connector
+    rect_carve(road, 44, 21, 48, 34)           # patrol alley
+    rect_carve(road, 48, 15, 60, 18)           # lot → docks
+    rect_carve(road, 56, 17, 59, 30)           # docks → canal
+    rect_carve(road, 48, 30, 59, 33)           # canal → patrol / quay
+    rect_carve(road, 0, 29, 8, 32)             # SW west spur → Canal Works
+    # Extra residential lanes that slice fortress masses into house-blocks.
+    rect_carve(road, 12, 9, 20, 12)            # market → Echo residential lane
+    rect_carve(road, 2, 9, 12, 12)             # west market lane
+    rect_carve(road, 36, 10, 44, 13)           # Lantern Gate residential lane
+    rect_carve(road, 50, 10, 58, 13)           # town-approach residential lane
+    rect_carve(road, 8, 34, 16, 37)            # SW residential lane
+    rect_carve(road, 32, 34, 40, 37)           # SE residential lane
+    # --- Floor: street walks + plazas; leave solid blocks for house pads/rings
     floor = np.zeros_like(road)
     rect_carve(floor, 19, 2, 34, 10)           # ARRIVAL PLAZA
-    rect_carve(floor, 24, 0, 29, 3)            # north road → Woods edge
-    rect_carve(floor, 3, 5, 19, 10)            # MARKET ROW (stalls both sides)
-    rect_carve(floor, 4, 9, 9, 14)             # market → Echo street
+    rect_carve(floor, 24, 0, 29, 5)            # north road through forest → Woods
+    rect_carve(floor, 3, 5, 19, 10)            # MARKET ROW
+    rect_carve(floor, 2, 9, 12, 14)            # west market / Echo north walks
+    rect_carve(floor, 12, 9, 20, 14)           # Echo north residential walks
+    rect_carve(floor, 4, 9, 9, 14)             # market → Echo
     rect_carve(floor, 2, 13, 11, 20)           # ECHO DISTRICT
-    rect_carve(floor, 10, 15, 19, 19)          # Echo → square street
-    rect_carve(floor, 23, 9, 30, 13)           # plaza → square avenue (the dome is in view)
+    rect_carve(floor, 10, 15, 19, 19)          # Echo → square
+    rect_carve(floor, 23, 9, 30, 13)           # plaza → square avenue
     rect_carve(floor, 18, 12, 36, 22)          # ARCHIVE SQUARE
-    rect_carve(floor, 34, 4, 66, 11)           # boulevard sidewalks (extended)
+    rect_carve(floor, 34, 4, 66, 11)           # boulevard sidewalks
+    rect_carve(floor, 36, 10, 44, 15)          # Lantern Gate residential walks
     rect_carve(floor, 43, 10, 50, 15)          # Lantern Gate street
+    rect_carve(floor, 50, 10, 58, 15)          # town-approach residential walks
     rect_carve(floor, 41, 14, 50, 23)          # EAST LOT
     rect_carve(floor, 35, 16, 42, 20)          # east street
     rect_carve(floor, 44, 22, 48, 34)          # PATROL ALLEY
-    rect_carve(floor, 36, 30, 48, 34)          # patrol alley → Sentinel plaza
+    rect_carve(floor, 36, 30, 48, 34)          # patrol → Sentinel
     rect_carve(floor, 18, 22, 33, 29)          # GREENHOUSE GARDEN
     rect_carve(floor, 14, 29, 38, 36)          # SENTINEL PLAZA
     rect_carve(floor, 4, 19, 9, 22)            # Echo → west yard
     rect_carve(floor, 2, 21, 11, 29)           # WEST YARD
-    rect_carve(floor, 4, 28, 7, 34)            # yard alley, down ...
-    rect_carve(floor, 4, 31, 15, 34)           # ... and east into the Sentinel plaza
+    rect_carve(floor, 4, 28, 7, 34)            # yard alley
+    rect_carve(floor, 4, 31, 15, 34)           # yard → Sentinel
+    rect_carve(floor, 8, 34, 16, 40)           # SW residential walks
+    rect_carve(floor, 32, 34, 40, 40)          # SE residential walks
     rect_carve(floor, 23, 35, 30, 44)          # gate road
     rect_carve(floor, 16, 36, 24, 41)          # VOSS ALCOVE
     rect_carve(floor, 21, 40, 32, 44)          # south gate square
-    # SW west spur → Canal Works (world6)
-    rect_carve(road, 0, 29, 8, 32)
-    rect_carve(floor, 0, 27, 9, 34)
-    # NEW east districts
-    rect_carve(floor, 50, 12, 64, 20)          # DOCKS / freight apron
+    rect_carve(floor, 0, 27, 9, 34)            # works spur apron
+    rect_carve(floor, 50, 12, 64, 20)          # DOCKS
     rect_carve(floor, 54, 20, 64, 32)          # CANAL QUAY
-    rect_carve(floor, 48, 28, 56, 36)          # quay → sentinel fringe
-    rect_carve(floor, 58, 6, 66, 12)           # town approach walks
-    # building lots (sprite top-left; door side faces the open floor below)
-    LOTS = [("noodle_shop", 5, 2, (4, 2, 10, 5)),          # market row (enterable, #31)
-            ("archive_library", 30, 12, (29, 12, 36, 17)),  # Archive Square (#31)
-            ("tea_house", 39, 2, (38, 2, 44, 4)),           # Lantern Gate inn (#31)
-            ("greenhouse", 19, 22, (18, 22, 24, 26)),       # garden
-            ("apartment_block", 26, 22, (25, 22, 32, 27))]  # garden
+    rect_carve(floor, 48, 28, 56, 36)          # quay fringe
+    rect_carve(floor, 58, 6, 66, 12)           # town approach
+    # Soft grass fringe under the northern forest (not a hard parapet edge).
+    rect_carve(floor, 2, 4, 23, 6)
+    rect_carve(floor, 30, 4, 48, 6)
+    # Story + residential house lots (sprite top-left; door faces open floor S).
+    # Hub / story buildings stay put. Extra apartment/greenhouse lots are
+    # facade-only (not in Interiors.rooms) so duplicates are safe.
+    LOTS = [("noodle_shop", 5, 2, (4, 2, 10, 5)),             # market row hub
+            ("archive_library", 30, 12, (29, 12, 36, 17)),     # Archive Square
+            ("tea_house", 39, 2, (38, 2, 44, 4)),              # Lantern Gate inn
+            ("greenhouse", 19, 22, (18, 22, 24, 26)),          # garden
+            ("apartment_block", 26, 22, (25, 22, 32, 27)),     # garden flats
+            ("greenhouse", 12, 9, (11, 9, 16, 13)),            # Echo north cottage
+            ("greenhouse", 36, 10, (35, 10, 40, 14)),          # boulevard south cottage
+            ("apartment_block", 50, 10, (49, 10, 55, 15)),     # town-approach flats
+            ("greenhouse", 9, 34, (8, 34, 14, 38)),            # south-west cottage
+            ("greenhouse", 58, 20, (57, 20, 62, 24))]          # docks-east cottage
     for _, _, _, (x0, y0, x1, y1) in LOTS:
-        rect_carve(floor, x0, y0, x1, y1)
+        rect_carve(floor, x0, y0, x1, y1 + 1)  # lot + door apron
     lv.floor = floor | road
     wall = clean_walls(~lv.floor)
     lv.floor = ~wall
@@ -1787,17 +1817,31 @@ def map2():
     plaza &= lv.floor & ~road
     lawn = np.zeros_like(wall)
     rect_carve(lawn, 18, 26, 33, 29)           # garden lawn
-    rect_carve(lawn, 20, 3, 23, 6); rect_carve(lawn, 30, 3, 33, 6)            # plaza beds
-    rect_carve(lawn, 19, 13, 23, 16)                                         # square bed
+    rect_carve(lawn, 20, 3, 23, 6); rect_carve(lawn, 30, 3, 33, 6)  # plaza beds
+    rect_carve(lawn, 19, 13, 23, 16)           # square bed
+    rect_carve(lawn, 2, 4, 10, 6)              # north grass under forest
+    rect_carve(lawn, 14, 4, 20, 6)
+    rect_carve(lawn, 34, 4, 48, 6)
+    rect_carve(lawn, 8, 37, 14, 39)            # SW yard grass
+    rect_carve(lawn, 50, 26, 56, 29)           # docks yards
     safe = lv.floor & ~road & ~lv.dilate(road | wall, 1)
     lawn &= safe
     lawn = clean_walls(lawn, border=0) & lawn
     near_lawn = lv.dilate(lawn, 1)
     near_rw = lv.dilate(road | wall, 1)
+    # Northern leftover walls read as woods forest — soft City↔Woods edge.
+    forest = wall.copy()
+    forest[6:, :] = False
+    forest[:, :2] = False
+    forest[:, -2:] = False
+    city_wall = wall & ~forest
     for y in range(lv.H):
         for x in range(lv.W):
-            if wall[y, x]:
-                lv.ground[y, x] = blob(ts, "sidewalk-building", wall, x, y, lv.rng)
+            if forest[y, x]:
+                lv.ground[y, x] = lv.encode_ground(
+                    blob(woods, "grass-forest", forest, x, y, lv.rng), woods)
+            elif city_wall[y, x]:
+                lv.ground[y, x] = blob(ts, "sidewalk-building", city_wall, x, y, lv.rng)
             elif lawn[y, x]:
                 lv.ground[y, x] = blob(ts, "sidewalk-grass", lawn, x, y, lv.rng)
             else:
@@ -1811,42 +1855,39 @@ def map2():
     for k, (x, y) in P.items():
         disk_carve(lv.keepout, x, y, 2.8); disk_carve(lv.keepout_hard, x, y, 1.6)
     for r in ((19, 2, 34, 10), (18, 12, 36, 22), (14, 29, 38, 36), (21, 40, 32, 44), (23, 9, 30, 13),
-              (3, 6, 19, 9), (10, 16, 19, 18), (36, 31, 48, 33), (5, 29, 6, 33), (5, 32, 15, 33),
+              (3, 6, 19, 9), (10, 16, 46, 18), (36, 31, 48, 33), (5, 29, 6, 33), (5, 32, 15, 33),
               (50, 14, 62, 18), (54, 22, 62, 30), (48, 30, 56, 34),
-              (0, 27, 9, 34)):                 # SW west spur → Canal Works
-        rect_carve(lv.keepout, *r)             # walk lines stay free of colliding props
+              (0, 27, 9, 34), (24, 0, 29, 10), (12, 9, 20, 12), (2, 9, 12, 12),
+              (36, 10, 44, 13), (50, 10, 58, 13), (8, 34, 16, 37), (32, 34, 40, 37)):
+        rect_carve(lv.keepout, *r)
     for name, tx, ty, (x0, y0, x1, y1) in LOTS:
-        d = BUILDINGS.defs[name]       # lot + sprite + the row in front of the door
+        d = BUILDINGS.defs[name]
         for m in (lv.keepout, lv.keepout_hard):
             rect_carve(m, x0, y0, x1, y1 + 1)
             rect_carve(m, tx - 1, ty, tx + d["w"] // T + 1, ty + d["h"] // T + 1)
     for (fx, fy) in CITY_RESERVED:
         disk_carve(lv.keepout, fx, fy, 1.6); disk_carve(lv.keepout_hard, fx, fy, 1.0)
-    # landmarks: the plaza fountain on the axis to the Archive dome, market
-    # stalls, the Lantern Gate billboard, Sentinel plaza helipad, parked cars
     for name, x, y in (("fountain", 25, 5), ("kiosk", 11, 5), ("kiosk", 13, 5), ("neon_sign", 15, 5),
-                       ("vending_machine", 17, 5), ("kiosk", 6, 9), ("kiosk", 11, 9), ("neon_sign", 15, 9),
-                       ("holo_billboard", 48, 4), ("neon_sign", 48, 10), ("helipad", 30, 30),
-                       ("car_blue_v", 48, 15), ("car_purple_v", 42, 21), ("hover_taxi_v", 48, 21),
-                       ("traffic_light", 34, 5), ("traffic_light", 37, 16), ("bus_stop", 36, 10),
-                       # east docks / canal (new)
-                       ("holo_billboard", 60, 12), ("neon_sign", 55, 14), ("car_blue_v", 61, 18),
-                       ("bus_stop", 56, 26), ("traffic_light", 52, 30), ("helipad", 60, 24)):
+                       ("vending_machine", 17, 5), ("kiosk", 8, 16), ("kiosk", 17, 16), ("neon_sign", 17, 9),
+                       ("holo_billboard", 56, 4), ("neon_sign", 46, 11), ("helipad", 30, 30),
+                       ("car_blue_v", 47, 16), ("car_purple_v", 38, 19), ("hover_taxi_v", 48, 28),
+                       ("traffic_light", 34, 5), ("traffic_light", 37, 16), ("bus_stop", 42, 9),
+                       ("holo_billboard", 60, 12), ("neon_sign", 58, 14), ("car_blue_v", 61, 18),
+                       ("bus_stop", 56, 26), ("traffic_light", 48, 31), ("helipad", 60, 24)):
         landmark(lv, name, x, y)
-    # corner lamps: every district is lit at night (#35 light pools)
-    for (x, y) in ((20, 2), (32, 2), (19, 9), (33, 9), (18, 12), (18, 21), (35, 21), (14, 29), (37, 29),
-                   (14, 35), (37, 35), (3, 5), (18, 5), (18, 9), (2, 13), (10, 19), (2, 21), (10, 28),
-                   (41, 14), (49, 22), (44, 25), (47, 29), (16, 36), (23, 40), (35, 10), (43, 10),
-                   (52, 14), (62, 14), (54, 22), (62, 28), (50, 32), (56, 32)):
+    for (x, y) in ((20, 5), (32, 5), (19, 9), (33, 9), (18, 12), (18, 21), (35, 21), (14, 29), (37, 29),
+                   (14, 35), (37, 35), (3, 5), (18, 5), (2, 19), (10, 19), (2, 21), (10, 28),
+                   (41, 14), (16, 36), (23, 40), (35, 16),
+                   (50, 16), (62, 14), (62, 28), (50, 32),
+                   (12, 15), (20, 15), (8, 32)):
         landmark(lv, "street_lamp", x, y)
-    # Street furniture follows the roads; plazas get small authored sets.
     sidewalk = lv.floor & ~road
-    curb = sidewalk & lv.dilate(road, 1)
     near_wall = sidewalk & lv.fringe(wall)
+    forest_fringe = sidewalk & lv.dilate(forest, 1)
     lv.line_props("street_lamp", [(35, 4), (63, 4)], step=4)
     lv.line_props("street_lamp", [(35, 10), (42, 10)], step=3)
-    lv.line_props("street_lamp", [(19, 2), (19, 9)], step=3)
-    lv.line_props("street_lamp", [(33, 2), (33, 9)], step=3)
+    lv.line_props("street_lamp", [(19, 5), (19, 9)], step=3)
+    lv.line_props("street_lamp", [(33, 5), (33, 9)], step=3)
     lv.line_props("street_lamp", [(18, 12), (18, 21)], step=3)
     lv.line_props("street_lamp", [(14, 29), (14, 30)], step=1)
     lv.line_props("street_lamp", [(37, 29), (37, 30)], step=1)
@@ -1860,7 +1901,7 @@ def map2():
     lv.line_mix(["bollard", "planter_small"], [(28, 37), (28, 42)], step=3)
     lv.scatter_on(["trash_bin", "hydrant"], 6, near_wall, min_dist=5.0)
     lv.scatter_on(["vending_machine", "kiosk"], 3, near_wall, min_dist=7.0)
-    lv.scatter_on(["planter_tree"], 4, lawn, min_dist=4.0)
+    lv.scatter_on(["planter_tree"], 6, lawn | forest_fringe, min_dist=4.0)
     lv.vignette(*P["arch"], [
         ("bench", -1, 1), ("planter_small", 1, 1), ("bench", 0, 2), ("planter_tree", 2, 0),
     ])
@@ -1877,9 +1918,10 @@ def map2():
         ("planter_small", -2, 0), ("bench", -1, 1), ("bollard", -3, 1),
     ])
     interior = np.zeros_like(wall)
-    interior[1:-1, 1:-1] = (wall[1:-1, 1:-1] & wall[:-2, 1:-1] & wall[2:, 1:-1] & wall[1:-1, :-2] & wall[1:-1, 2:])
-    lv.scatter_on(["rooftop_ac", "solar_panel"], 14, interior, need_floor=False, min_dist=3.5)
-    lv.scatter_on(["rooftop_vent"], 8, interior, need_floor=False, min_dist=4.0)
+    interior[1:-1, 1:-1] = (city_wall[1:-1, 1:-1] & city_wall[:-2, 1:-1] & city_wall[2:, 1:-1]
+                            & city_wall[1:-1, :-2] & city_wall[1:-1, 2:])
+    lv.scatter_on(["rooftop_ac", "solar_panel"], 8, interior, need_floor=False, min_dist=3.5)
+    lv.scatter_on(["rooftop_vent"], 5, interior, need_floor=False, min_dist=4.0)
     for name, tx, ty, _ in LOTS:
         lv.building(name, tx, ty)
     place(lv, "spawn", *P["spawn"])
@@ -1918,10 +1960,6 @@ def map2():
     place_entry(lv, "east", *P["town"])
     place_entry(lv, "west", 3.5, float(wx))
     place(lv, "checkpoint", *P["spawn"], label="Arrival Plaza")
-    place(lv, "examine", P["spawn"][0] + 2.0, P["spawn"][1] + 1.2,
-          id="city_arrival_post", title="PLAZA POST",
-          text="WEST: market and Echo-7 — south-west yard walks out to the Canal Works. SOUTH: the Archive Square. "
-               "EAST: Lantern Gate and the road to Town. North walks back to the Woods.")
     place(lv, "examine", 35.0, 19.0,
           id="city_archive_plaque", title="ARCHIVE PLAQUE",
           text="Sealed by the Archivist. First memory drafts keep here — not the Core itself.",
@@ -1936,13 +1974,6 @@ def map2():
           text="A scout's note: \"Archive walls hum. Stay clear.\"",
           clue="city_yard_memo")
     place(lv, "stash", P["yard"][0] - 1.5, P["yard"][1] - 1.5, glimmer=18, was=(4.0, 19.5))
-    place(lv, "examine", P["town"][0] - 4.0, P["town"][1] + 1.2,
-          id="city_lantern_sign", title="LANTERN ROAD",
-          text="Walk east off the map to Lantern Town. South of the boulevard the docks and canal quay "
-               "loop back to the east lot and Sentinel plaza.")
-    place(lv, "examine", 24.0, 15.5,
-          id="city_branch_sign", title="CROSS STREET",
-          text="Archive Square. Every street in the old city ends up here.")
     place_dronespawn(lv, 44.5, 17.5, kind="scout",
                      nest="city_east_nest", max=1, interval=7)
     place_dronespawn(lv, 47.5, 19.5, kind="swarm",
@@ -1961,15 +1992,6 @@ def map2():
           text="Trader chalk: 'For Mira's board.' Heavy with colony salvage.",
           quest="city_west_cache")
     place(lv, "stash", P["cache"][0] + 1.5, P["cache"][1] + 0.5, glimmer=14, was=(5.5, 10.5))
-    place(lv, "examine", P["docks"][0] + 0.5, P["docks"][1] + 1.5,
-          id="city_docks_board", title="FREIGHT BOARD",
-          text="Manifests for the canal quay. South along the water returns to the patrol alley; west is the east lot.")
-    place(lv, "examine", P["canal"][0] - 1.0, P["canal"][1],
-          id="city_canal_rail", title="CANAL RAIL",
-          text="Black water under grate. The quay road west rejoins Sentinel plaza.")
-    place(lv, "examine", 4.5, 30.0,
-          id="city_works_gate", title="CANAL WORKS ROAD",
-          text="West off the map: dry docks, salvage cranes, and the old freight canal. Quiet if the City isn't.")
     place(lv, "stash", P["docks"][0] + 1.5, P["docks"][1] + 0.5, glimmer=12, was=(48.0, 16.0))
     place(lv, "health", P["quay"][0] + 1.0, P["quay"][1] - 0.5, was=(40.0, 36.0))
     lv.vignette(*P["docks"], [
@@ -2108,19 +2130,6 @@ def map5():
           id="town_quest_board", title="JOB BOARD",
           text="Chalk and string. Woods and city errands for travellers.",
           board=True)
-    place(lv, "examine", 5.0, P["mira"][1],
-          id="town_west_road", title="CITY ROAD",
-          text="West off the map returns to the City's Lantern Gate.")
-    place(lv, "examine", 25.0, 9.0,
-          id="town_pond_sign", title="LANTERN POND",
-          text="Colonists float paper lanterns here on the first night of each season. The promenade rings the pond; "
-               "east past the reeds a quay loop returns to the south market court.")
-    place(lv, "examine", P["quay"][0] - 0.5, P["quay"][1] + 1.0,
-          id="town_quay_mark", title="QUAY BENCH",
-          text="Ferry chalk: 'No boats tonight.' Walk north through the reeds to the pond, west to Mira's lanes.")
-    place(lv, "examine", P["reeds"][0] - 0.8, P["reeds"][1],
-          id="town_reed_walk", title="REED WALK",
-          text="Soft ground. Lanterns hang from willow poles along the water.")
     lv.vignette(*P["quay"], [
         ("bench", 1, 0), ("planter_small", -1, 1), ("bollard", 0, 1),
     ])
@@ -2276,12 +2285,6 @@ def map3():
           id="ruins_dead_end", title="WAYMARKER",
           text="Offline UEC pad: \"Shrine sector SW — anomaly deep past the ruin. Optional.\"",
           clue="ruins_dead_end")
-    place(lv, "examine", P["vent"][0] + 0.5, P["vent"][1] + 1.2,
-          id="ruins_vent_mark", title="VENT STACK",
-          text="Heat and ozone. The crane yard south loops back to the mid ruins — this does not bypass the SE gate.")
-    place(lv, "examine", P["crane"][0] - 1.0, P["crane"][1],
-          id="ruins_crane_cab", title="CRANE CAB",
-          text="Boom frozen over a slag pit. Service catwalk west rejoins the hub roads.")
     place(lv, "stash", P["vent"][0] - 1.2, P["vent"][1] - 0.5, glimmer=18)
     place(lv, "health", P["service"][0] + 1.0, P["service"][1] + 0.5)
     lv.vignette(*P["vent"], [
@@ -2394,12 +2397,6 @@ def map4():
           id="core_console", title="CORE CONSOLE",
           text="Activation waits on a living neural match. A remote wipe is already queued.",
           clue="core_console")
-    place(lv, "examine", *P["memorial"],
-          id="core_memorial", title="NAMELESS STELE",
-          text="Names the forest took. The ambulatory east of the hall loops back to Gaia without leaving the Core.")
-    place(lv, "examine", *P["ambulatory"],
-          id="core_ambulatory", title="LATTICE WALK",
-          text="Side aisle. South to the annex, west back to the living dais.")
     place(lv, "health", *P["annex"])
     lv.vignette(*P["memorial"], [
         ("gold_glyph_stone", 1, 0), ("memory_pedestal", 0, 1), ("data_crystals", -1, 0),
@@ -2558,21 +2555,6 @@ def map6():
     place_mapexit(lv, "east", ey, dest="city", entry="west", half=2)
     place_entry(lv, "east", *P["spawn"])
     place(lv, "checkpoint", *P["spawn"], label="Works Gate")
-    place(lv, "examine", P["spawn"][0] - 2.0, P["spawn"][1] + 2.0,
-          id="works_gate_post", title="YARD GATE",
-          text="Canal Works scrapyard. East walks back to the City. Heaps west hide the crane pad.")
-    place(lv, "examine", 22.0, 10.5,
-          id="works_basin_mark", title="DRY BASIN",
-          text="Oil and rust where barge water used to sit. The heap ring still loops the pit.")
-    place(lv, "examine", P["crane"][0] + 1.5, P["crane"][1],
-          id="works_crane_slate", title="CRANE SLATE",
-          text="UEC inventory: scrap alloy, dead drones, one sealed crate marked for Mira.")
-    place(lv, "examine", P["salvage"][0], P["salvage"][1] - 1.2,
-          id="works_salvage_bin", title="SALVAGE BIN",
-          text="Colony scrap sorted by glimmer weight. Someone still works this lot after dark.")
-    place(lv, "examine", P["north"][0] + 0.5, P["north"][1],
-          id="works_north_rail", title="NORTH RAIL",
-          text="Service track ends in a wall of scrap. Loop south through the basin.")
     lv.write("world6.tmj", "tilesets/junkyard.png")
     return ts
 

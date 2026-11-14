@@ -18,6 +18,8 @@ void main() {
       return p;
     };
     SfxManager.globalContextSetter = (_) async {};
+    // Exercise the Android/mobile reuse path even when CI runs on Linux.
+    SfxManager.freshVoicePlayerPerLine = false;
     sfx = SfxManager();
     sfx.debugReset();
   });
@@ -26,18 +28,26 @@ void main() {
     sfx.debugReset();
     SfxManager.portFactory = AudioplayersSfxPort.new;
     SfxManager.globalContextSetter = defaultSfxGlobalContextSetter;
+    SfxManager.freshVoicePlayerPerLine =
+        SfxManager.defaultFreshVoicePlayerPerLine;
   });
 
-  test('init warms four shoot slots without seeking', () async {
+  test('init warms four MediaPlayer shoot slots without seeking', () async {
     await sfx.init();
     expect(sfx.debugReady, isTrue);
     expect(sfx.debugShootPlayers, hasLength(4));
-    for (final p in created) {
+    final shootPool = sfx.debugShootPlayers!.cast<RecordingSfxPort>();
+    for (final p in shootPool) {
+      expect(
+        p.calls.contains('setPlayerMode:mediaPlayer'),
+        isTrue,
+        reason: 'SoundPool/lowLatency regresses EOE-55 on phones',
+      );
       expect(p.calls.any((c) => c.startsWith('seek:')), isFalse);
     }
   });
 
-  test('playShoot uses stop → setVolume → resume and never seek (EOE-55)',
+  test('playShoot uses stop → setVolume → play and never seek/resume (EOE-55)',
       () async {
     await sfx.init();
     final shootPool = sfx.debugShootPlayers!.cast<RecordingSfxPort>();
@@ -60,8 +70,9 @@ void main() {
     expect(seq.length, 3);
     expect(seq[0], 'stop');
     expect(seq[1], startsWith('setVolume:'));
-    expect(seq[2], 'resume');
+    expect(seq[2], startsWith('play:AssetSource'));
     expect(fired.calls.any((c) => c.startsWith('seek:')), isFalse);
+    expect(fired.calls.contains('resume'), isFalse);
   });
 
   test('concurrent playShoot round-robins across slots without awaiting',
@@ -155,28 +166,101 @@ void main() {
     }
   });
 
-  test('shoot falls back to play when resume throws', () async {
+  test('playShoot never calls resume or seek (EOE-80 / post-#123)', () async {
     await sfx.init();
     final pool = sfx.debugShootPlayers!.cast<RecordingSfxPort>();
-    pool.first.resumeThrows = true;
-    await sfx.playShoot();
-    await Future<void>.delayed(const Duration(milliseconds: 5));
-    expect(
-      pool.first.calls.any((c) => c.startsWith('play:AssetSource')),
-      isTrue,
-    );
-    expect(pool.first.calls.any((c) => c.startsWith('seek:')), isFalse);
+    for (final p in pool) {
+      p.calls.clear();
+    }
+    for (var i = 0; i < 8; i++) {
+      await sfx.playShoot();
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    for (final p in pool) {
+      expect(p.calls.contains('resume'), isFalse);
+      expect(p.calls.any((c) => c.startsWith('seek:')), isFalse);
+      expect(
+        p.calls.where((c) => c.startsWith('play:AssetSource')).length,
+        greaterThan(0),
+      );
+    }
   });
 
-  test('stopVoice disposes current voice port', () async {
+  test('playVoice reuses warmed MediaPlayer: stop → volume → play (EOE-85)',
+      () async {
     await sfx.init();
-    final beforeDispose =
-        created.where((p) => p.calls.contains('dispose')).length;
+    final voice = created[5]; // init order: foot, dmg, portal, chime, heal, voice
+    voice.calls.clear();
+    final beforeCount = created.length;
+
     await sfx.playVoice('audio/voices/test.mp3');
-    await Future<void>.delayed(const Duration(milliseconds: 5));
+
+    expect(created.length, beforeCount, reason: 'must not create a fresh VO player');
+    expect(voice.calls.any((c) => c.startsWith('seek:')), isFalse);
+    expect(voice.calls.contains('resume'), isFalse);
+    expect(voice.calls.contains('dispose'), isFalse);
+    final seq = voice.calls
+        .where((c) =>
+            c == 'stop' ||
+            c.startsWith('setVolume:') ||
+            c.startsWith('play:'))
+        .toList();
+    expect(seq.length, greaterThanOrEqualTo(3));
+    expect(seq[0], 'stop');
+    expect(seq[1], startsWith('setVolume:'));
+    expect(seq.last, startsWith('play:AssetSource'));
+  });
+
+  test('second playVoice reuses same port without dispose', () async {
+    await sfx.init();
+    final voice = created[5];
+    await sfx.playVoice('audio/voices/a.mp3');
+    voice.calls.clear();
+    final beforeCount = created.length;
+
+    await sfx.playVoice('audio/voices/b.mp3');
+
+    expect(created.length, beforeCount);
+    expect(voice.calls.contains('dispose'), isFalse);
+    expect(
+      voice.calls.where((c) => c.startsWith('play:AssetSource')).length,
+      1,
+    );
+  });
+
+  test('stopVoice stops reused port without disposing (EOE-85)', () async {
+    await sfx.init();
+    final voice = created[5];
+    await sfx.playVoice('audio/voices/test.mp3');
+    voice.calls.clear();
     await sfx.stopVoice();
-    final afterDispose =
-        created.where((p) => p.calls.contains('dispose')).length;
-    expect(afterDispose, greaterThan(beforeDispose));
+    expect(voice.calls, contains('stop'));
+    expect(voice.calls.contains('dispose'), isFalse);
+  });
+
+  test('freshVoicePlayerPerLine disposes between lines (Linux path)', () async {
+    SfxManager.freshVoicePlayerPerLine = true;
+    await sfx.init();
+    final before = created.length;
+    await sfx.playVoice('audio/voices/a.mp3');
+    expect(created.length, greaterThan(before));
+    final mid = created.length;
+    await sfx.playVoice('audio/voices/b.mp3');
+    expect(created.length, greaterThan(mid));
+    expect(
+      created.where((p) => p.calls.contains('dispose')).length,
+      greaterThan(0),
+    );
+  });
+
+  test('muted playVoice skips play and stops current line', () async {
+    await sfx.init();
+    final voice = created[5];
+    await sfx.playVoice('audio/voices/a.mp3');
+    voice.calls.clear();
+    await sfx.applyUserVolume(1, enabled: false);
+    await sfx.playVoice('audio/voices/b.mp3');
+    expect(voice.calls.where((c) => c.startsWith('play:')), isEmpty);
+    expect(voice.calls, contains('stop'));
   });
 }

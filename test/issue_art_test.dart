@@ -40,6 +40,24 @@ void main() {
     }
   });
 
+  testWidgets('quest examine world props have drop sparkles', (tester) async {
+    expect(examineWorldArt.isNotEmpty, isTrue);
+    for (final e in examineWorldArt.entries) {
+      final art = e.value;
+      await expectSize(tester, '$sprites/items/${art}_drop.png', 32, 32);
+      await expectSize(tester, '$sprites/items/${art}_drop_sparkle.png', 64, 32);
+      expect(
+        examineDropSparkle(e.key, null),
+        'sprites/items/${art}_drop_sparkle.png',
+        reason: e.key,
+      );
+    }
+    expect(
+      examineDropSparkle('woods_moonflower_pick', 'moonflower_bloom'),
+      'sprites/items/moonflower_bloom_drop_sparkle.png',
+    );
+  });
+
   test('every item the game hands out has a journal label (#25)', () {
     for (final id in ['uec_override', 'archive_seal', 'ruins_gate_key', 'moonflower_bloom', 'sweetroot', 'pebble']) {
       expect(itemLabels[id], isNotNull, reason: id);

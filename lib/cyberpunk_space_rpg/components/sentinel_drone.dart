@@ -13,6 +13,7 @@ import 'damage_number.dart';
 import 'drone_bounds.dart';
 import 'enemy_bullet.dart';
 import 'explosion_effect.dart';
+import 'player_bullet.dart';
 import 'sentinel_arena.dart';
 import 'uec_drone.dart';
 
@@ -66,22 +67,28 @@ class SentinelDrone extends GameDecoration {
   bool _spawnedP2 = false;
   bool _spawnedP3 = false;
   bool _arenaReady = false;
+  /// After a death reset, stay idle until Kaela leaves detect range (then
+  /// walking back in / landing the boss starts a fresh fight). Stops the
+  /// fight from instantly re-sealing when her checkpoint is still inside
+  /// [_detectR] — the common City-south / Place-Jump landing.
+  bool _awaitingReentry = false;
   final List<UECDrone> _adds = [];
 
   bool get isHushed => _hushed > 0;
   double _slowT = 0;
   double _slowFactor = 0.45;
   double get _speedMult => _slowT > 0 ? _slowFactor : 1.0;
+  final _auraPaint = Paint();
 
   void applyHush(double seconds) {
-    if (isDead) return;
+    if (isDead || combatSuppressed) return;
     _hushed = max(_hushed, seconds);
     _atk = _Atk.none;
     _atkT = 0;
   }
 
   void applySlow(double seconds, {double factor = 0.45}) {
-    if (isDead || seconds <= 0) return;
+    if (isDead || combatSuppressed || seconds <= 0) return;
     _slowT = max(_slowT, seconds);
     _slowFactor = min(_slowFactor, factor.clamp(0.1, 1.0));
   }
@@ -167,8 +174,16 @@ class SentinelDrone extends GameDecoration {
     return SentinelArena.halfExtent - 24;
   }
 
-  void _engage() {
+  void _engage({bool fromDamage = false}) {
     if (_arenaReady) return;
+    // Pending PlayerBullets used to call takeDamage → _engage during the
+    // death fade (Kaela still in the plaza), re-sealing a fight that
+    // resetEncounter had just cleared. Refuse while she is respawning.
+    if (combatSuppressed) return;
+    // Proximity must not restart the fight until she has left the plaza
+    // after a death reset. Shooting still counts as choosing to re-enter.
+    if (_awaitingReentry && !fromDamage) return;
+    _awaitingReentry = false;
     _arenaReady = true;
     _state = _SState.fight;
     GameState.onSentinelEngaged();
@@ -178,24 +193,51 @@ class SentinelDrone extends GameDecoration {
   /// True once the lockdown fight has started (seal may still be pending).
   bool get isEngaged => _arenaReady;
 
+  /// True after [resetEncounter] until Kaela leaves detect range.
+  bool get awaitingReentry => _awaitingReentry;
+
   /// HP left — exposed for tests / debug.
   int get health => _health;
 
   /// Current phase band (1–3).
   int get phase => _phase;
 
-  /// Kaela died mid-fight: drop the fence, despawn adds, and restore the
-  /// Sentinel to its pre-engage idle so she can walk back in and try again.
+  /// True while Kaela's death/respawn fade runs — combat must not restart.
+  /// Tests may force this with [debugCombatSuppressedOverride].
+  bool get combatSuppressed {
+    final override = debugCombatSuppressedOverride;
+    if (override != null) return override;
+    final p = CustomPlayer.current;
+    return p != null && p.isRespawning;
+  }
+
+  /// Test-only override for [combatSuppressed] (null = use live Kaela).
+  @visibleForTesting
+  static bool? debugCombatSuppressedOverride;
+
+  /// Kaela died mid-fight: drop the fence, despawn adds/shots, and restore
+  /// the Sentinel to its pre-engage idle so she can walk back in cleanly.
   void resetEncounter() {
     final arena = SentinelArena.instance;
-    final engaged = _arenaReady || (arena?.sealed ?? false);
-    if (!engaged || isDead) return;
-
+    final engaged = _arenaReady ||
+        _state == _SState.fight ||
+        (arena?.sealed ?? false);
+    // Always scrub projectiles / adds even if engagement flags raced; a
+    // late bullet must not leave live combat props after Kaela dies.
     _clearAdds();
     _clearVolleyBullets();
+    _clearPlayerBullets();
+    if ((!engaged && _atk == _Atk.none) || isDead) {
+      // Still cancel any leftover telegraph so the plaza reads idle.
+      _atk = _Atk.none;
+      _atkT = 0;
+      return;
+    }
+
     _health = maxHealth;
     _state = _SState.idle;
     _arenaReady = false;
+    _awaitingReentry = true;
     _phase = 1;
     _spawnedP2 = false;
     _spawnedP3 = false;
@@ -218,6 +260,7 @@ class SentinelDrone extends GameDecoration {
   void debugMarkEngaged({int? health}) {
     _arenaReady = true;
     _state = _SState.fight;
+    _awaitingReentry = false;
     if (health != null) {
       _health = health.clamp(1, maxHealth);
       _phase = phaseForHpRatio(_health / maxHealth);
@@ -226,9 +269,20 @@ class SentinelDrone extends GameDecoration {
     }
   }
 
+  /// Test helper: clear the post-death reentry gate.
+  @visibleForTesting
+  void debugClearReentryGate() => _awaitingReentry = false;
+
   void _clearVolleyBullets() {
     if (!hasGameRef) return;
     for (final b in gameRef.query<EnemyBullet>(onlyVisible: false).toList()) {
+      if (b.isMounted) b.removeFromParent();
+    }
+  }
+
+  void _clearPlayerBullets() {
+    if (!hasGameRef) return;
+    for (final b in gameRef.query<PlayerBullet>(onlyVisible: false).toList()) {
       if (b.isMounted) b.removeFromParent();
     }
   }
@@ -328,7 +382,9 @@ class SentinelDrone extends GameDecoration {
   void takeDamage(int amount,
       {Vector2? knockbackDir, double knockbackScale = 1.0}) {
     if (isDead) return;
-    _engage();
+    // In-flight Kaela shots after her death must not restart the encounter.
+    if (combatSuppressed) return;
+    _engage(fromDamage: true);
     if (knockbackDir != null && knockbackDir.length2 > 1e-8) {
       _knockback = knockbackDir.normalized() * (70 * knockbackScale);
     }
@@ -482,6 +538,12 @@ class SentinelDrone extends GameDecoration {
     final toPlayer = (player.position + player.size / 2) - _centre;
     final dist = toPlayer.length;
 
+    // Post-death: stay idle until she leaves the detect bubble, then a
+    // fresh walk-in (or a shot) can start the fight again.
+    if (_awaitingReentry && dist >= _detectR) {
+      _awaitingReentry = false;
+    }
+
     if (dist < _detectR || _arenaReady) {
       _engage();
     }
@@ -554,7 +616,13 @@ class SentinelDrone extends GameDecoration {
       r + 18 + p * 6,
       col,
       coreAlpha: 0.20 + p * 0.08,
+      paint: _auraPaint,
     );
+
+    // Slam telegraph is a cracked plaza ground disc — paint under the boss.
+    if (_atk == _Atk.slamTele) {
+      _paintSlamTelegraph(canvas, cx, cy);
+    }
 
     if (_sprite != null) {
       const s = spriteSize;
@@ -620,58 +688,62 @@ class SentinelDrone extends GameDecoration {
     }
   }
 
+  /// Ground slam tell — drawn before the boss sprite so the disc sits under it.
+  void _paintSlamTelegraph(Canvas canvas, double cx, double cy) {
+    final t = (1 - _atkT / _slamTele).clamp(0.0, 1.0);
+    final slam = _slamTeleArt;
+    if (slam != null) {
+      final diam = _slamR * 2;
+      final paint = Paint()
+        ..filterQuality = FilterQuality.none
+        ..color = Color.fromRGBO(255, 255, 255, 0.45 + t * 0.5);
+      slam.render(
+        canvas,
+        position: Vector2(cx - _slamR, cy - _slamR),
+        size: Vector2.all(diam),
+        overridePaint: paint,
+      );
+      // Expanding charge ring (same sheet, scaled by t).
+      final pulse = Paint()
+        ..filterQuality = FilterQuality.none
+        ..color = Color.fromRGBO(255, 230, 120, 0.35 + t * 0.4);
+      final pr = _slamR * (0.25 + t * 0.75);
+      slam.render(
+        canvas,
+        position: Vector2(cx - pr, cy - pr),
+        size: Vector2.all(pr * 2),
+        overridePaint: pulse,
+      );
+    } else {
+      canvas.drawCircle(
+        Offset(cx, cy),
+        _slamR,
+        Paint()
+          ..color = Color.fromRGBO(255, 200, 40, 0.15 + t * 0.25)
+          ..style = PaintingStyle.fill,
+      );
+      canvas.drawCircle(
+        Offset(cx, cy),
+        _slamR,
+        Paint()
+          ..color = Color.fromRGBO(255, 180, 20, 0.55 + t * 0.35)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.5,
+      );
+      canvas.drawCircle(
+        Offset(cx, cy),
+        _slamR * t,
+        Paint()
+          ..color = const Color(0x88FFEE66)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.5,
+      );
+    }
+  }
+
   void _paintTelegraphs(Canvas canvas, double cx, double cy, Color col) {
-    if (_atk == _Atk.slamTele) {
-      final t = (1 - _atkT / _slamTele).clamp(0.0, 1.0);
-      final slam = _slamTeleArt;
-      if (slam != null) {
-        final diam = _slamR * 2;
-        final paint = Paint()
-          ..filterQuality = FilterQuality.none
-          ..color = Color.fromRGBO(255, 255, 255, 0.45 + t * 0.5);
-        slam.render(
-          canvas,
-          position: Vector2(cx - _slamR, cy - _slamR),
-          size: Vector2.all(diam),
-          overridePaint: paint,
-        );
-        // Expanding charge ring (same sheet, scaled by t).
-        final pulse = Paint()
-          ..filterQuality = FilterQuality.none
-          ..color = Color.fromRGBO(255, 230, 120, 0.35 + t * 0.4);
-        final pr = _slamR * (0.25 + t * 0.75);
-        slam.render(
-          canvas,
-          position: Vector2(cx - pr, cy - pr),
-          size: Vector2.all(pr * 2),
-          overridePaint: pulse,
-        );
-      } else {
-        canvas.drawCircle(
-          Offset(cx, cy),
-          _slamR,
-          Paint()
-            ..color = Color.fromRGBO(255, 200, 40, 0.15 + t * 0.25)
-            ..style = PaintingStyle.fill,
-        );
-        canvas.drawCircle(
-          Offset(cx, cy),
-          _slamR,
-          Paint()
-            ..color = Color.fromRGBO(255, 180, 20, 0.55 + t * 0.35)
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 2.5,
-        );
-        canvas.drawCircle(
-          Offset(cx, cy),
-          _slamR * t,
-          Paint()
-            ..color = const Color(0x88FFEE66)
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 1.5,
-        );
-      }
-    } else if (_atk == _Atk.sweepTele) {
+    // Slam is painted under the boss in [render]; only overlay tells here.
+    if (_atk == _Atk.sweepTele) {
       final t = (1 - _atkT / _sweepTele).clamp(0.0, 1.0);
       final sweep = _sweepTeleArt;
       if (sweep != null) {

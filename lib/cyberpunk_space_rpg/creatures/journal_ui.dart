@@ -88,18 +88,14 @@ class Journal {
   }
 }
 
-/// Subtle day/night tint over the game view (under the HUD). At night lamps,
-/// lanterns and fires add warm glow pools (see [NightTintPainter]).
+/// Placeholder under the Flutter HUD. Night look is a tileset swap
+/// (`NightTilesets`); glow pools stay in-world on lamp components.
 class NightTint extends StatelessWidget {
   const NightTint({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: RepaintBoundary(
-        child: CustomPaint(painter: NightTintPainter(), size: Size.infinite),
-      ),
-    );
+    return const IgnorePointer(child: SizedBox.shrink());
   }
 }
 

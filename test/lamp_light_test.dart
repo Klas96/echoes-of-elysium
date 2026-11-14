@@ -104,5 +104,61 @@ void main() {
       final levels = <double>{for (var x = 0; x < n; x++) NightLights.cookieAlpha(x, n ~/ 2)};
       expect(levels.length, lessThanOrEqualTo(9)); // hard pixel bands, no smooth ramp
     });
+
+    test('EOE-84: night overlay caps and throttle knobs stay sane', () {
+      // Touch vs desktop rates are platform-dependent; both ends of the
+      // range must stay below the old 60 Hz walk tax and keep lamps visible.
+      expect(NightLights.notifyHz, anyOf(15, 30));
+      expect(NightLights.flickerHz, anyOf(8, 12));
+      expect(NightLights.maxDrawnLights, anyOf(6, 12));
+      expect(NightLights.maxDrawnLights, lessThanOrEqualTo(12));
+      expect(NightLights.notifyHz, lessThanOrEqualTo(30));
+      expect(NightLights.glowStrength, greaterThan(0.1));
+    });
+
+    test('lamp cookies paint under prop sprites (MAP+2 glow pass)', () {
+      final lamp = LampLight(
+        Vector2.zero(),
+        Vector2.all(16),
+        kind: LightKind.lantern,
+        radius: 56,
+      );
+      expect(lamp.priority, LayerPriority.MAP + 2);
+      // Glows stay in-world under the wash (softer through the tint).
+      expect(NightLights.glowStrength, greaterThanOrEqualTo(0.3));
+    });
+
+    test('fixture tile atlas still documents light-prop crops (EOE-99 bake)', () {
+      expect(NightLights.fixtureTileAtlas.keys.toSet(), LightKind.values.toSet());
+      for (final e in NightLights.fixtureTileAtlas.entries) {
+        expect(e.value.$1, contains('tilesets/'));
+        expect(e.value.$2, greaterThanOrEqualTo(0));
+        expect(e.value.$3, 16);
+        expect(File('assets/images/${e.value.$1}').existsSync(), isTrue,
+            reason: e.value.$1);
+        // Night twin exists; light tiles stay day-bright inside it.
+        final night = e.value.$1.replaceFirst('.png', '_night.png');
+        expect(File('assets/images/$night').existsSync(), isTrue, reason: night);
+      }
+      final lantern = LampLight(
+        Vector2(100, 100),
+        Vector2.all(16),
+        kind: LightKind.lantern,
+        radius: 56,
+      );
+      final r = lantern.fixtureWorldRect;
+      expect(r.width, 32);
+      expect(r.height, 32);
+      expect(r.contains(Offset(lantern.centre.x, lantern.centre.y)), isTrue);
+      const screen = Size(400, 800);
+      NightLights.camera = Vector2(lantern.centre.x, lantern.centre.y);
+      NightLights.zoom = 1;
+      final sr = NightLights.fixtureScreenRect(lantern, screen);
+      expect(sr.width, 32);
+      expect(sr.height, 32);
+      // HUD wash removed — night is a tileset swap (EOE-99).
+      expect(NightLights.washAlphaScale, 0);
+      expect(NightWashHud().priority, greaterThan(LayerPriority.MAP + 2));
+    });
   });
 }
