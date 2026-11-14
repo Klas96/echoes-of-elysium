@@ -2578,13 +2578,17 @@ class _MissionTracker extends StatelessWidget {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          collapsed ? '$label · $count' : label,
-                          style: const TextStyle(
-                            color: Color(0xFFFFE08A),
-                            fontSize: 8,
-                            letterSpacing: 1.6,
-                            fontWeight: FontWeight.bold,
+                        Flexible(
+                          child: Text(
+                            collapsed ? '$label · $count' : label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Color(0xFFFFE08A),
+                              fontSize: 8,
+                              letterSpacing: 1.6,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 4),
@@ -2848,8 +2852,11 @@ class GameHudState extends State<GameHud> {
                 child: CreatureHud(compact: HudLayout.compactChips(box.maxWidth)),
               );
 
-              // Portrait: pops under HP. Landscape: pops beside HP so the
-              // tracker row stays short; chips stay under the bars either way.
+              // Landscape: pops beside HP; chips under bars in the left
+              // column (shares height with a tall tracker). Portrait: chips
+              // go *below* health+tracker — nesting Wrap in the left column
+              // gave it infinite width, one long chip row, and squeezed the
+              // tracker until TRACKER overflowed at 360px.
               final statusBlock = wide
                   ? Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2866,7 +2873,7 @@ class GameHudState extends State<GameHud> {
                   : Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
-                      children: [healthBlock, popsBlock, chips],
+                      children: [healthBlock, popsBlock],
                     );
 
               return Column(
@@ -2895,6 +2902,7 @@ class GameHudState extends State<GameHud> {
                       ),
                     ),
                   ]),
+                  if (!wide) Align(alignment: Alignment.centerLeft, child: chips),
                   const Align(alignment: Alignment.centerLeft, child: WellRestedChip()),
                   const Align(alignment: Alignment.centerLeft, child: MealChip()),
                   const SizedBox(height: 8),

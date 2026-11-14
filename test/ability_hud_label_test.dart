@@ -11,21 +11,26 @@ Future<void> pumpAbilityHud(WidgetTester tester, {required int level}) async {
   tester.view.physicalSize = const Size(412, 915);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
-  debugDefaultTargetPlatformOverride = TargetPlatform.android;
-  addTearDown(() => debugDefaultTargetPlatformOverride = null);
 
   SaveService.data = SaveData(level: level);
   Progression.revision.value++;
 
-  await tester.pumpWidget(const MaterialApp(
-    home: Scaffold(
-      body: Stack(children: [
-        SizedBox.expand(),
-        AbilityHud(),
-      ]),
-    ),
-  ));
-  await tester.pump();
+  // Clear the override before returning: testWidgets asserts foundation
+  // debug vars unset *before* tearDown runs, so addTearDown alone fails CI.
+  debugDefaultTargetPlatformOverride = TargetPlatform.android;
+  try {
+    await tester.pumpWidget(const MaterialApp(
+      home: Scaffold(
+        body: Stack(children: [
+          SizedBox.expand(),
+          AbilityHud(),
+        ]),
+      ),
+    ));
+    await tester.pump();
+  } finally {
+    debugDefaultTargetPlatformOverride = null;
+  }
 }
 
 double labelCenterY(WidgetTester tester, String id) {
