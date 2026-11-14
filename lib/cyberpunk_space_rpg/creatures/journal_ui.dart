@@ -88,9 +88,8 @@ class Journal {
   }
 }
 
-/// Placeholder under the Flutter HUD. Soft wash + day-bright fixtures paint
-/// on [NightWashHud] (EOE-91, live camera — no glide). Glow pools stay
-/// in-world under the wash.
+/// Placeholder under the Flutter HUD. Night look is a tileset swap
+/// (`NightTilesets`); glow pools stay in-world on lamp components.
 class NightTint extends StatelessWidget {
   const NightTint({super.key});
 

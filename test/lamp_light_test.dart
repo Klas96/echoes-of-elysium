@@ -128,7 +128,7 @@ void main() {
       expect(NightLights.glowStrength, greaterThanOrEqualTo(0.3));
     });
 
-    test('fixture tile atlas covers every light kind for day-bright redraw', () {
+    test('fixture tile atlas still documents light-prop crops (EOE-99 bake)', () {
       expect(NightLights.fixtureTileAtlas.keys.toSet(), LightKind.values.toSet());
       for (final e in NightLights.fixtureTileAtlas.entries) {
         expect(e.value.$1, contains('tilesets/'));
@@ -136,6 +136,9 @@ void main() {
         expect(e.value.$3, 16);
         expect(File('assets/images/${e.value.$1}').existsSync(), isTrue,
             reason: e.value.$1);
+        // Night twin exists; light tiles stay day-bright inside it.
+        final night = e.value.$1.replaceFirst('.png', '_night.png');
+        expect(File('assets/images/$night').existsSync(), isTrue, reason: night);
       }
       final lantern = LampLight(
         Vector2(100, 100),
@@ -153,8 +156,8 @@ void main() {
       final sr = NightLights.fixtureScreenRect(lantern, screen);
       expect(sr.width, 32);
       expect(sr.height, 32);
-      // Soft HUD wash; fixtures above it (live camera). Glows stay under wash.
-      expect(NightLights.washAlphaScale, inInclusiveRange(0.05, 0.2));
+      // HUD wash removed — night is a tileset swap (EOE-99).
+      expect(NightLights.washAlphaScale, 0);
       expect(NightWashHud().priority, greaterThan(LayerPriority.MAP + 2));
     });
   });
