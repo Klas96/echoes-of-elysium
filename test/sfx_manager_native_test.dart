@@ -43,11 +43,17 @@ void main() {
         isTrue,
         reason: 'SoundPool/lowLatency regresses EOE-55 on phones',
       );
+      expect(
+        p.calls.contains('setSource:AssetSource'),
+        isTrue,
+        reason: 'warm decode once; fire must resume, not re-play AssetSource',
+      );
+      expect(p.calls.contains('setReleaseMode:stop'), isTrue);
       expect(p.calls.any((c) => c.startsWith('seek:')), isFalse);
     }
   });
 
-  test('playShoot uses stop → setVolume → play and never seek/resume (EOE-55)',
+  test('playShoot uses stop → setVolume → resume on warmed source (EOE-103)',
       () async {
     await sfx.init();
     final shootPool = sfx.debugShootPlayers!.cast<RecordingSfxPort>();
@@ -65,14 +71,16 @@ void main() {
             c.startsWith('setVolume:') ||
             c == 'resume' ||
             c.startsWith('seek:') ||
-            c.startsWith('play:'))
+            c.startsWith('play:') ||
+            c.startsWith('setSource:'))
         .toList();
     expect(seq.length, 3);
     expect(seq[0], 'stop');
     expect(seq[1], startsWith('setVolume:'));
-    expect(seq[2], startsWith('play:AssetSource'));
+    expect(seq[2], 'resume');
     expect(fired.calls.any((c) => c.startsWith('seek:')), isFalse);
-    expect(fired.calls.contains('resume'), isFalse);
+    expect(fired.calls.any((c) => c.startsWith('play:')), isFalse);
+    expect(fired.calls.any((c) => c.startsWith('setSource:')), isFalse);
   });
 
   test('concurrent playShoot round-robins across slots without awaiting',
@@ -166,7 +174,7 @@ void main() {
     }
   });
 
-  test('playShoot never calls resume or seek (EOE-80 / post-#123)', () async {
+  test('playShoot never re-setSources or seeks (EOE-103 / post-#143)', () async {
     await sfx.init();
     final pool = sfx.debugShootPlayers!.cast<RecordingSfxPort>();
     for (final p in pool) {
@@ -177,12 +185,10 @@ void main() {
     }
     await Future<void>.delayed(const Duration(milliseconds: 20));
     for (final p in pool) {
-      expect(p.calls.contains('resume'), isFalse);
+      expect(p.calls.contains('resume'), isTrue);
       expect(p.calls.any((c) => c.startsWith('seek:')), isFalse);
-      expect(
-        p.calls.where((c) => c.startsWith('play:AssetSource')).length,
-        greaterThan(0),
-      );
+      expect(p.calls.any((c) => c.startsWith('play:')), isFalse);
+      expect(p.calls.any((c) => c.startsWith('setSource:')), isFalse);
     }
   });
 
