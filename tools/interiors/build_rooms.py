@@ -1200,6 +1200,7 @@ def tea() -> dict:
                 F[H - 1][x] = W_TEA
         meta_path = GEN_SRC / "tea" / "wall_strip_meta.json"
         win_cols = [4, 11, 12]
+        meta: dict = {}
         if meta_path.is_file():
             meta = json.loads(meta_path.read_text())
             win_cols = [int(c) for c in meta.get("window_cols", win_cols)]
@@ -1224,7 +1225,22 @@ def tea() -> dict:
         P[5][12] = PLANT
         P[5][14] = NIGHT
         P[6][14] = PLANT
-        ferro_x = win_cols[0] if win_cols else 8
+        primary = int(meta.get("primary_window", win_cols[0] if win_cols else 6))
+        ferro_x = primary
+        # Domestic #62: seat ≤4 wide. Cover the contiguous window run at
+        # primary — do not span sparse panes across the whole N wall.
+        seat_run = [primary]
+        for c in range(primary + 1, primary + 4):
+            if c in win_cols:
+                seat_run.append(c)
+            else:
+                break
+        for c in range(primary - 1, primary - 4, -1):
+            if c in win_cols:
+                seat_run.insert(0, c)
+            else:
+                break
+        seat_x, seat_w = seat_run[0], min(4, len(seat_run))
         return room(
             "tea_house",
             "Tea house: Lantern Gate inn (hub)",
@@ -1237,7 +1253,7 @@ def tea() -> dict:
                 {"id": "wen", "rect": [2, 4, 1, 1], "kind": "npc", "note": "Wen, host"},
                 {"id": "tea_menu", "rect": [1, 3, 3, 1], "kind": "shop",
                  "note": "Wen's tea counter: lantern tea / quiet cup for glimmer"},
-                {"id": "window_seat", "rect": [min(win_cols), 2, max(1, max(win_cols) - min(win_cols) + 1), 1],
+                {"id": "window_seat", "rect": [seat_x, 2, seat_w, 1],
                  "kind": "flavour",
                  "note": "'Lantern Road runs east from here. The lamps were lit by hand, every one.'"},
                 {"id": "lounge_table", "rect": [3, 5, 1, 1], "kind": "flavour",
@@ -1252,7 +1268,7 @@ def tea() -> dict:
                  "note": "By the round window: one riddle or rumour per in-game day"},
             ],
             [
-                {"tile": [win_cols[0] if win_cols else 7, 1], "kind": "warm"},
+                {"tile": [primary, 1], "kind": "warm"},
                 {"tile": [2, 3], "kind": "warm"},
                 {"tile": [10, 3], "kind": "warm"},
                 {"tile": [14, 3], "kind": "warm"},

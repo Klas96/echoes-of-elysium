@@ -91,7 +91,7 @@
   },
 {
   "id": "window_seat",
-  "rect": [4, 2, 9, 1],
+  "rect": [4, 2, 1, 1],
   "kind": "flavour",
   "note": "'Lantern Road runs east from here. The lamps were lit by hand, every one.'"
   },
