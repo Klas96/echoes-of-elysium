@@ -12,13 +12,15 @@ import 'sfx_audio_port.dart';
 ///
 /// Shoot uses MediaPlayer + round-robin (never Android SoundPool / lowLatency):
 /// SoundPool `seek` after `stop` hung ~30s (EOE-55 / #123), and `stop`+`resume`
-/// still missed or lagged shots on phones because SoundPool never completes /
-/// clears stream state the way MediaPlayer does. Re-`play(AssetSource)` on a
-/// 4-slot pool keeps auto-fire snappy without overlapping one player.
+/// on SoundPool still missed shots (#143). MediaPlayer keeps the clip prepared
+/// under [ReleaseMode.stop]; native `stop` is pause+seek(0) without releasing.
+/// Fire must be `stop` → `setVolume` → `resume` on the warmed source — never
+/// `play(AssetSource)`, which re-`setSource`s and `prepareAsync`s every shot
+/// (EOE-103 lag after #143). Never Dart `seek` (30s seekComplete hang).
 ///
-/// VO reuses a warmed MediaPlayer on Android/iOS (same stop→play chain as
-/// shoot). Dispose+recreate every line was a Linux/GStreamer workaround that
-/// left dialogue/cutscene VO silent on phones (EOE-85).
+/// VO reuses a warmed MediaPlayer on Android/iOS (stop→play chain; VO assets
+/// change per line so re-setSource is required). Dispose+recreate every line
+/// was a Linux/GStreamer workaround that left VO silent on phones (EOE-85).
 class SfxManager {
   static final SfxManager _instance = SfxManager._();
   factory SfxManager() => _instance;
@@ -187,7 +189,9 @@ class SfxManager {
           final p = portFactory();
           await p.setPlayerMode(mode);
           await _safeContext(p, mix);
+          // stop (not release) so stop→resume keeps MediaPlayer prepared.
           await p.setReleaseMode(ReleaseMode.stop);
+          // Decode once here; _fireShoot only resume()s this source.
           await p.setSource(AssetSource(_shootAsset));
           await p.setVolume(vol);
           return p;
@@ -283,15 +287,16 @@ class SfxManager {
   Future<void> _fireShoot(SfxAudioPort p, double vol) async {
     final gen = (_oneShotGen[p] = (_oneShotGen[p] ?? 0) + 1);
     try {
-      // Same path as other one-shots: stop → volume → play(AssetSource).
-      // Never seek (SoundPool/MediaPlayer seekComplete hangs). Never resume
-      // alone (SoundPool keeps a stale streamId after the clip ends and
-      // resume() becomes a silent no-op on phones — EOE-55 still on 0.4.5).
+      // MediaPlayer + ReleaseMode.stop: native stop is pause+seek(0) and
+      // keeps the player prepared. resume() starts instantly from the source
+      // warmed in _ensureShootPlayers. Do NOT play(AssetSource) — that resets
+      // MediaPlayer and waits on prepareAsync every shot (EOE-103). Do NOT
+      // Dart seek (EOE-55 seekComplete hang on SoundPool; still slow on MP).
       await p.stop();
       if (_oneShotGen[p] != gen || !_audible) return;
       await p.setVolume(vol);
       if (_oneShotGen[p] != gen || !_audible) return;
-      await p.play(AssetSource(_shootAsset), volume: vol);
+      await p.resume();
     } catch (e) {
       debugPrint('SfxManager playShoot: $e');
     }
