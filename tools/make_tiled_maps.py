@@ -1392,8 +1392,18 @@ def map1():
     wall[50:52, 43] = True
     wall[50:52, 39] = True
     lv.floor = ~wall
-    water = np.zeros_like(wall); rect_carve(water, 41, 7, 46, 10); water &= lv.floor
-    lv.mist = [(42.5, 8.0), (44.5, 8.6)]
+    # Pond water (EOE-109): break the old 5×3 square. Keep the south shore near
+    # y≈9 so bank props (pebble, turtle, darkzone, grotto approach) and the
+    # glowmoth's land approach stay on grass; grow irregular lobes north into
+    # the clearing (off the story spine).
+    water = np.zeros_like(wall)
+    disk_carve(water, 43.5, 7.85, 2.15)  # main body, nudged north of old square
+    disk_carve(water, 41.9, 5.7, 1.85)   # NW bay
+    disk_carve(water, 45.0, 5.2, 1.6)    # NE finger / inlet
+    disk_carve(water, 40.9, 7.3, 1.35)   # west cove
+    disk_carve(water, 45.5, 7.1, 1.25)   # east bite (notch toward willow bank)
+    water &= lv.floor
+    lv.mist = [(42.1, 5.9), (44.8, 5.5), (43.5, 7.8)]
     path = np.zeros_like(wall)
     for r in trails:
         carve_route(lv, route_pts(r), 1.1, path)
@@ -1601,7 +1611,8 @@ def woods_main_gates(lv):
 def woods_creatures_and_secrets(lv, nooks):
     """M2: creatures (journal + companions) and ability-gated optional secrets
     (the main-route gates are in woods_main_gates)."""
-    # Centre of the NE pond (water tiles ~41–45, 7–9). Flying — no floor needed.
+    # Over the pond's main body (organic lobes ~41–46, 5–9). Flying — no floor
+    # needed, but stay within ~2.5 tiles of the south bank for gate reachability.
     creature(lv, "glowmoth", 43.5, 8.5, 1.0, was=(28.5, 21.5))
     creature(lv, "stoneturtle", 44, 12.5, 0.6, netted=True, was=(24.5, 24.5))   # netted on the pond bank
     creature(lv, "vinefox", 47.5, 20.5, 1.2, was=(18.5, 40.5))     # east grove
