@@ -571,6 +571,9 @@ class ClickPathfinder {
   static Rect? _propArtFoot(Rect shape, Rect tile, String? prop) {
     final p = prop ?? '';
     // Solid set pieces — keep the authored collider.
+    // Fountain is a 3×3 plaza basin: foot-shrinking left a walkable A*
+    // corridor through the middle while Bonfire physics still blocked
+    // (city 23,6 → 28,6 jammed on the rim).
     if (p.startsWith('crashed_ship') ||
         p == 'tent' ||
         p == 'boulder' ||
@@ -580,7 +583,8 @@ class ClickPathfinder {
         p == 'fence_v' ||
         p == 'radio_dish' ||
         p == 'crate' ||
-        p == 'campfire') {
+        p == 'campfire' ||
+        p == 'fountain') {
       return shape;
     }
     // Soft props: only the visible base. Canopy / mossy edges stay walkable.
