@@ -166,6 +166,15 @@ class DebugPlaceJump {
       spawnY: 496,
     ),
     DebugPlace(
+      id: 'works_elias',
+      label: 'Canal Works · Elias',
+      group: 'Maps',
+      blurb: 'Junk stall · salvage lot',
+      level: 6,
+      spawnX: 704,
+      spawnY: 800,
+    ),
+    DebugPlace(
       id: 'city_west',
       label: 'City · Works yard',
       group: 'Maps',

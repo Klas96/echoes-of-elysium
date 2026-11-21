@@ -95,6 +95,26 @@ void main() {
     expect(mira['sprite'], 'mira');
   });
 
+  testWidgets('Elias junk vendor walk sheet lives in Canal Works (EOE-110)', (tester) async {
+    await expectSize(tester, '$sprites/elias_walk.png', 192, 128);
+    await expectSize(tester, '$sprites/npc_elias.png', 30, 30);
+    final tmj = jsonDecode(File('assets/images/maps/world6.tmj').readAsStringSync()) as Map;
+    final npcs = [
+      for (final l in (tmj['layers'] as List).cast<Map>())
+        for (final o in (l['objects'] as List? ?? const []).cast<Map>())
+          if (o['name'] == 'npc') {for (final p in (o['properties'] as List).cast<Map>()) p['name']: p['value']}
+    ];
+    final elias = npcs.singleWhere((p) => p['name'] == 'elias');
+    expect(elias['sprite'], 'elias');
+    final stalls = [
+      for (final l in (tmj['layers'] as List).cast<Map>())
+        for (final o in (l['objects'] as List? ?? const []).cast<Map>())
+          if (o['name'] == 'examine') {for (final p in (o['properties'] as List).cast<Map>()) p['name']: p['value']}
+    ];
+    final stall = stalls.singleWhere((p) => p['id'] == 'works_junk_stall');
+    expect(stall['junkShop'], isTrue);
+  });
+
   testWidgets('ambient FX loops match their json (#33)', (tester) async {
     for (final kind in ['steam', 'smoke', 'ember', 'fire', 'mist']) {
       for (final cyan in [false, true]) {

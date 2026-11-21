@@ -48,6 +48,7 @@ import '../interiors/meal_chip.dart';
 import '../interiors/room_scene.dart';
 import '../ui/mmo_feedback.dart';
 import '../ui/quest_board_ui.dart';
+import '../ui/junk_shop_ui.dart';
 import '../ui/shop_ui.dart';
 import '../ui/zone_banner.dart';
 import 'adventure.dart';
@@ -613,6 +614,29 @@ NpcDialogue _miraDialogue() {
   );
 }
 
+NpcDialogue _eliasDialogue() {
+  return NpcDialogue(
+    name: 'ELIAS  ·  JUNK VENDOR',
+    color: const Color(0xFFB8C48A),
+    lines: const [
+      'Canal Works eats what the City throws west. I keep the pile honest.',
+      'Got drone guts or scrap you do not want? Sell it — or trash it onto my heap and I will sell it back later.',
+      'Mira trades polish and kit up in Lantern Town. Out here it is just junk.',
+    ],
+    voicePaths: const [],
+    choices: [
+      const DialogueChoice(
+        label: 'OPEN THE JUNK STALL',
+        setFlag: 'elias_showed_shop',
+        replyLines: [
+          'Heap and haul — buy what you dumped, sell what still rattles.',
+        ],
+        replyVoicePaths: [],
+      ),
+    ],
+  );
+}
+
 NpcDialogue _dialogueFor(String mapId, String name) {
   switch (name) {
     case 'gaia':
@@ -627,6 +651,8 @@ NpcDialogue _dialogueFor(String mapId, String name) {
       return _vossDialogue();
     case 'mira':
       return _miraDialogue();
+    case 'elias':
+      return _eliasDialogue();
     default:
       throw ArgumentError('Unknown npc name "$name" in Tiled map');
   }
@@ -767,6 +793,8 @@ Map<String, ObjectBuilder> _mapObjects(String mapId) => {
         final openQuestBoard =
             p.others['board'] == true || p.others['board'] == 'true';
         final openShop = p.others['shop'] == true || p.others['shop'] == 'true';
+        final openJunkShop =
+            p.others['junkShop'] == true || p.others['junkShop'] == 'true';
         // EOE-90: skip flavour-only examine dots (text toast, no story props).
         if (clueId == null &&
             requiresItem == null &&
@@ -774,7 +802,8 @@ Map<String, ObjectBuilder> _mapObjects(String mapId) => {
             giveItem == null &&
             completeQuest == null &&
             !openQuestBoard &&
-            !openShop) {
+            !openShop &&
+            !openJunkShop) {
           return _Gone();
         }
         return ExamineHotspot(
@@ -790,6 +819,7 @@ Map<String, ObjectBuilder> _mapObjects(String mapId) => {
           completeQuest: completeQuest,
           openQuestBoard: openQuestBoard,
           openShop: openShop,
+          openJunkShop: openJunkShop,
         );
       },
       'fragment': (p) {
@@ -1620,6 +1650,7 @@ Future<void> _startLevel(BonfireGameInterface game, int level) async {
   Journal.open.value = false;
   Equipment.open.value = false;
   Shop.open.value = false;
+  JunkShop.open.value = false;
   QuestBoard.open.value = false;
   void onOverlay(bool open) {
     final g = _activeGame;
@@ -1642,6 +1673,7 @@ Future<void> _startLevel(BonfireGameInterface game, int level) async {
   Journal.onOpenChanged = onOverlay;
   Equipment.onOpenChanged = onOverlay;
   Shop.onOpenChanged = onOverlay;
+  JunkShop.onOpenChanged = onOverlay;
   QuestBoard.onOpenChanged = onOverlay;
   Journal.returnToTitle = (context) async {
     final nav = Navigator.of(context);
@@ -1655,22 +1687,32 @@ Future<void> _startLevel(BonfireGameInterface game, int level) async {
   Journal.dismissOthers = () {
     Equipment.open.value = false;
     Shop.open.value = false;
+    JunkShop.open.value = false;
     QuestBoard.open.value = false;
   };
   Equipment.dismissOthers = () {
     Journal.open.value = false;
     Shop.open.value = false;
+    JunkShop.open.value = false;
     QuestBoard.open.value = false;
   };
   Shop.dismissOthers = () {
     Journal.open.value = false;
     Equipment.open.value = false;
+    JunkShop.open.value = false;
+    QuestBoard.open.value = false;
+  };
+  JunkShop.dismissOthers = () {
+    Journal.open.value = false;
+    Equipment.open.value = false;
+    Shop.open.value = false;
     QuestBoard.open.value = false;
   };
   QuestBoard.dismissOthers = () {
     Journal.open.value = false;
     Equipment.open.value = false;
     Shop.open.value = false;
+    JunkShop.open.value = false;
   };
   game.add(DayClock());
   // Night tileset swap + lamp glows (EOE-99). Not on room interiors
@@ -1807,6 +1849,10 @@ KeyEventResult _handleDebugKey(FocusNode _, KeyEvent event) {
       Shop.hide();
       return KeyEventResult.handled;
     }
+    if (JunkShop.open.value) {
+      JunkShop.hide();
+      return KeyEventResult.handled;
+    }
     if (QuestBoard.open.value) {
       QuestBoard.hide();
       return KeyEventResult.handled;
@@ -1831,6 +1877,7 @@ bool _anyUiHold() =>
     Journal.open.value ||
     Equipment.open.value ||
     Shop.open.value ||
+    JunkShop.open.value ||
     QuestBoard.open.value ||
     NpcCharacter.activeDialogue.value != null ||
     AIFragment.activeDialogue.value != null;
@@ -1852,6 +1899,9 @@ void _setPaused(bool on) {
   }
   if (on && Shop.open.value) {
     Shop.open.value = false;
+  }
+  if (on && JunkShop.open.value) {
+    JunkShop.open.value = false;
   }
   if (on && QuestBoard.open.value) {
     QuestBoard.open.value = false;
@@ -2023,6 +2073,7 @@ class CustomMapGameScreen extends StatelessWidget {
           const JournalOverlay(),
           const EquipmentOverlay(),
           const ShopOverlay(),
+          const JunkShopOverlay(),
           const QuestBoardOverlay(),
         ]),
       ),
@@ -2083,6 +2134,7 @@ class Map2GameScreen extends StatelessWidget {
           const JournalOverlay(),
           const EquipmentOverlay(),
           const ShopOverlay(),
+          const JunkShopOverlay(),
           const QuestBoardOverlay(),
         ]),
       ),
@@ -2136,6 +2188,7 @@ class Map3GameScreen extends StatelessWidget {
           const JournalOverlay(),
           const EquipmentOverlay(),
           const ShopOverlay(),
+          const JunkShopOverlay(),
           const QuestBoardOverlay(),
         ]),
       ),
@@ -2189,6 +2242,7 @@ class Map4GameScreen extends StatelessWidget {
           const JournalOverlay(),
           const EquipmentOverlay(),
           const ShopOverlay(),
+          const JunkShopOverlay(),
           const QuestBoardOverlay(),
         ]),
       ),
@@ -2242,6 +2296,7 @@ class Map5GameScreen extends StatelessWidget {
           const JournalOverlay(),
           const EquipmentOverlay(),
           const ShopOverlay(),
+          const JunkShopOverlay(),
           const QuestBoardOverlay(),
         ]),
       ),
@@ -2293,6 +2348,7 @@ class Map6GameScreen extends StatelessWidget {
           const JournalOverlay(),
           const EquipmentOverlay(),
           const ShopOverlay(),
+          const JunkShopOverlay(),
           const QuestBoardOverlay(),
         ]),
       ),
@@ -2382,6 +2438,13 @@ class _NpcDialogueLayerState extends State<_NpcDialogueLayer> {
       SfxManager().stopVoice();
       _closeDialogue();
       Shop.show();
+      return;
+    }
+    if (choice.setFlag == 'elias_showed_shop') {
+      choice.apply();
+      SfxManager().stopVoice();
+      _closeDialogue();
+      JunkShop.show();
       return;
     }
     choice.apply();
@@ -2497,6 +2560,19 @@ class _NpcDialogueLayerState extends State<_NpcDialogueLayer> {
                           onTap: () {
                             _closeDialogue();
                             Shop.show();
+                          },
+                        ),
+                        SizedBox(width: compact ? 6 : 8),
+                      ],
+                      if (isLast && d.name.startsWith('ELIAS')) ...[
+                        DialogChrome.choiceButton(
+                          label: 'JUNK',
+                          accent: d.color,
+                          filled: true,
+                          compact: compact,
+                          onTap: () {
+                            _closeDialogue();
+                            JunkShop.show();
                           },
                         ),
                         SizedBox(width: compact ? 6 : 8),
