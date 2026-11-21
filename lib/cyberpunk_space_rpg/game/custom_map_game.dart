@@ -665,6 +665,18 @@ double _numProp(TiledObjectProperties p, String key, [double fallback = 0]) {
   return fallback;
 }
 
+/// Short salvage-lot loop for Elias — centers relative to his Tiled spawn
+/// (30×30 top-left). Stays near the junk stall / scrap crates.
+List<Vector2> _eliasPatrol(Vector2 tiledTopLeft) {
+  final home = tiledTopLeft + Vector2(15, 15);
+  return [
+    home,
+    home + Vector2(56, -24), // toward stall examine (north)
+    home + Vector2(72, 40), // east scrap crates
+    home + Vector2(-40, 48), // south-west oil fringe
+  ];
+}
+
 /// Builders keyed by object name in the map's "gameplay" object layer.
 /// Object x/y is the component's top-left corner in map pixels (except for
 /// buildings, which are bottom-left anchored tile objects).
@@ -763,10 +775,13 @@ Map<String, ObjectBuilder> _mapObjects(String mapId) => {
       'npc': (p) {
         final name = (p.others['name'] ?? '').toString().toLowerCase();
         final sprite = (p.others['sprite'] ?? name).toString().toLowerCase();
+        // EOE-110: Elias walks a short loop around the Canal Works salvage stall.
+        final patrol = name == 'elias' ? _eliasPatrol(p.position) : const <Vector2>[];
         return NpcCharacter(p.position,
             dialogueOf: () => _dialogueFor(mapId, name),
             spritePath: 'sprites/npc_$sprite.png',
-            npcKey: name);
+            npcKey: name,
+            patrol: patrol);
       },
       'examine': (p) {
         final id = (p.others['id'] ?? _pickupId(mapId, 'examine', p)).toString();
