@@ -28,7 +28,8 @@ class NpcDialogue {
 /// Animated NPC. Uses the walk sheet 'sprites/<name>_walk.png' (derived from
 /// [spritePath] 'sprites/npc_<name>.png'); falls back to the static sprite
 /// if there is no sheet. Idles facing down and turns to face the player when
-/// they are within talk range.
+/// they are within talk range. Optional [patrol] walks a loop of world-space
+/// centers (Bonfire [moveToPosition]) so the walk-sheet run rows play.
 class NpcCharacter extends SimpleNpc {
   static NpcCharacter? nearbyNpc;
   static final ValueNotifier<NpcDialogue?> activeDialogue = ValueNotifier(null);
@@ -40,9 +41,15 @@ class NpcCharacter extends SimpleNpc {
   final String spritePath;
   /// Tiled npc name key (gaia, asha, ...), reported to the objectives.
   final String npcKey;
+  /// World-space centers to walk in order (loops). Empty = stand still.
+  final List<Vector2> patrol;
+  /// Seconds to idle at each waypoint before walking to the next.
+  final double patrolPause;
   double _pulse = 0;
   static const double _interactRadius = 72;
   final _auraPaint = Paint();
+  int _patrolIndex = 0;
+  double _patrolWait = 0;
 
   // The Tiled objects are 30x30; keep the same centre at 32x32.
   NpcCharacter(
@@ -50,9 +57,13 @@ class NpcCharacter extends SimpleNpc {
     required this.dialogueOf,
     required this.spritePath,
     this.npcKey = '',
+    this.patrol = const [],
+    this.patrolPause = 1.6,
+    double patrolSpeed = 28,
   }) : super(
           position: position - Vector2.all(1),
           size: Vector2.all(npcSize),
+          speed: patrolSpeed,
           initDirection: Direction.down,
         );
 
@@ -85,17 +96,44 @@ class NpcCharacter extends SimpleNpc {
     GameState.onNpcTalk(npcKey);
   }
 
+  void _tickPatrol(double dt) {
+    if (patrol.isEmpty) return;
+    if (_patrolWait > 0) {
+      _patrolWait -= dt;
+      stopMove(forceIdle: true);
+      return;
+    }
+    final dest = patrol[_patrolIndex % patrol.length];
+    if (!moveToPosition(dest)) {
+      _patrolIndex = (_patrolIndex + 1) % patrol.length;
+      _patrolWait = patrolPause;
+      stopMove(forceIdle: true);
+    }
+  }
+
   @override
   void update(double dt) {
-    super.update(dt);
     _pulse += dt * 2.0;
 
     final player = gameRef.player;
-    if (player == null) return;
+    if (player == null) {
+      super.update(dt);
+      return;
+    }
     final playerCenter = player.position + player.size / 2;
     final center = position + size / 2;
     final near = (playerCenter - center).length < _interactRadius;
-    _face(near ? WalkSheet.facing(center, playerCenter) : Direction.down);
+    // Hold still while Kaela is in talk range or any dialogue is open.
+    final hold = near || activeDialogue.value != null;
+
+    if (hold) {
+      stopMove(forceIdle: true);
+      _face(near ? WalkSheet.facing(center, playerCenter) : lastDirection);
+    } else if (patrol.isNotEmpty) {
+      _tickPatrol(dt);
+    } else {
+      _face(Direction.down);
+    }
 
     if (near) {
       nearbyNpc = this;
@@ -104,6 +142,8 @@ class NpcCharacter extends SimpleNpc {
       nearbyNpc = null;
       showPrompt.value = false;
     }
+
+    super.update(dt);
   }
 
   @override

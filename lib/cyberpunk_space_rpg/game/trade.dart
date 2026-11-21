@@ -36,14 +36,17 @@ class BuybackEntry {
 }
 
 /// Selling junk and spare gear to Mira, with a short buyback list (#32).
-/// Stored in the save's `extra`: `junk` ({id: count}) and `buyback` (newest
-/// first, at most [buybackSize]).
+/// Elias at Canal Works also buys/sells junk; dumping junk there fills his
+/// stock (`elias_stock`) which he sells back (EOE-110).
+/// Stored in the save's `extra`: `junk` ({id: count}), `buyback` (newest
+/// first, at most [buybackSize]), and `elias_stock` (newest first).
 class Trade {
   Trade._();
 
   static final revision = ValueNotifier<int>(0);
   static final _rng = Random();
   static const buybackSize = 6;
+  static const eliasStockSize = 12;
 
   /// Chance a downed UEC drone leaves salvage.
   static const junkDropChance = 0.55;
@@ -188,6 +191,63 @@ class Trade {
       m[e.id] = (m[e.id] ?? 0) + 1;
       _setJunk(m);
     }
+    _bump();
+    return true;
+  }
+
+  /// Junk-only buyback indices into [buyback] (for Elias's stall).
+  static List<int> get junkBuybackIndices => [
+        for (var i = 0; i < buyback.length; i++)
+          if (buyback[i].kind == 'junk') i,
+      ];
+
+  static bool buyBackJunk(int junkIndex) {
+    final idxs = junkBuybackIndices;
+    if (junkIndex < 0 || junkIndex >= idxs.length) return false;
+    return buyBack(idxs[junkIndex]);
+  }
+
+  // ---------------------------------------------------------------- Elias trash stock
+  /// Loot the player dumped at Elias (no glimmer). He sells it back.
+  static List<BuybackEntry> get eliasStock {
+    final raw = _d.extra['elias_stock'];
+    if (raw is! List) return [];
+    return raw.map(BuybackEntry.fromJson).whereType<BuybackEntry>().toList();
+  }
+
+  static void _setEliasStock(List<BuybackEntry> l) {
+    if (l.isEmpty) {
+      _d.extra.remove('elias_stock');
+    } else {
+      _d.extra['elias_stock'] = [for (final e in l.take(eliasStockSize)) e.toJson()];
+    }
+  }
+
+  static void _pushEliasStock(BuybackEntry e) => _setEliasStock([e, ...eliasStock]);
+
+  /// Dump one junk piece into Elias's stock without glimmer.
+  static bool trashJunk(String id) {
+    final item = junkCatalog[id];
+    if (item == null || junkCount(id) <= 0) return false;
+    final m = junk;
+    m[id] = m[id]! - 1;
+    _setJunk(m);
+    _pushEliasStock(BuybackEntry('junk', id, item.value));
+    _bump();
+    return true;
+  }
+
+  /// Buy the [index]th entry from Elias's trash stock.
+  static bool buyEliasStock(int index) {
+    final list = eliasStock;
+    if (index < 0 || index >= list.length) return false;
+    final e = list[index];
+    if (!Bonds.spendGlimmer(e.price)) return false;
+    list.removeAt(index);
+    _setEliasStock(list);
+    final m = junk;
+    m[e.id] = (m[e.id] ?? 0) + 1;
+    _setJunk(m);
     _bump();
     return true;
   }

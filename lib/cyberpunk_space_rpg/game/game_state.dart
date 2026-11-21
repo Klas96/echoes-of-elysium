@@ -273,6 +273,8 @@ class GameState {
         _advance(2, _l2Sentinel);
       case 'mira':
         break;
+      case 'elias':
+        break;
     }
   }
 
@@ -392,7 +394,8 @@ class GameState {
       case 5:
         return job ?? 'Mira\'s stall (trade glimmer) · job board · west road → City';
       case 6:
-        return job ?? 'Scrapyard · heap ring west to the crane · east road → City';
+        return job ??
+            'Elias\'s junk stall (sell / trash salvage) · crane west · east road → City';
     }
     return '';
   }

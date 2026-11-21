@@ -7,6 +7,7 @@ import '../audio/sfx_manager.dart';
 import '../game/adventure.dart';
 import '../game/game_state.dart';
 import '../game/quests.dart';
+import '../ui/junk_shop_ui.dart';
 import '../ui/quest_board_ui.dart';
 import '../ui/shop_ui.dart';
 import 'bonds.dart';
@@ -25,6 +26,7 @@ class ExamineHotspot extends GameComponent with Interactable {
   final String? completeQuest;
   final bool openQuestBoard;
   final bool openShop;
+  final bool openJunkShop;
   double _pulse = 0;
 
   ExamineHotspot(
@@ -40,6 +42,7 @@ class ExamineHotspot extends GameComponent with Interactable {
     this.completeQuest,
     this.openQuestBoard = false,
     this.openShop = false,
+    this.openJunkShop = false,
   }) {
     this.position = position;
     size = Vector2.all(20);
@@ -52,7 +55,7 @@ class ExamineHotspot extends GameComponent with Interactable {
   bool get _hasKey => requiresItem == null || Bonds.hasItem(requiresItem!);
 
   /// Permanent hubs (board / shop) stay; loot and one-shot examines vanish.
-  bool get _linger => openQuestBoard || openShop;
+  bool get _linger => openQuestBoard || openShop || openJunkShop;
 
   @override
   double get interactRadius => 36;
@@ -63,7 +66,7 @@ class ExamineHotspot extends GameComponent with Interactable {
   @override
   PromptInfo get prompt {
     if (openQuestBoard) return const PromptInfo('READ BOARD');
-    if (openShop) return const PromptInfo('TRADE');
+    if (openShop || openJunkShop) return const PromptInfo('TRADE');
     if (_done) return PromptInfo.note(title);
     if (requiresItem != null && !_hasKey) {
       if (requiresItem == 'ruins_gate_key') {
@@ -85,6 +88,10 @@ class ExamineHotspot extends GameComponent with Interactable {
   void interact() {
     if (openQuestBoard) {
       QuestBoard.show();
+      return;
+    }
+    if (openJunkShop) {
+      JunkShop.show();
       return;
     }
     if (openShop) {
