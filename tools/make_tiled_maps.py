@@ -2464,7 +2464,8 @@ def map6():
     lv = Level(ts, 44, 34, seed=66)
     lv.rings_min = 2
     P = dict(spawn=(40.5, 16), basin=(22, 16), crane=(8, 22), salvage=(24, 26),
-             north=(22, 6), westpad=(6, 10), h1=(30.5, 12.5), stash=(26.5, 29.5))
+             elias=(22.5, 25.5), north=(22, 6), westpad=(6, 10), h1=(30.5, 12.5),
+             stash=(26.5, 29.5))
     path = np.zeros((lv.H, lv.W), bool)
     rect_carve(path, 36, 14, 44, 18)           # east road → City
     rect_carve(path, 14, 8, 34, 10)
@@ -2551,10 +2552,19 @@ def map6():
     lv.vignette(*P["salvage"], [
         ("scrap_crate", 1, 0), ("cable_tangle", -1, 1), ("concrete_stub", 0, -1),
     ])
+    lv.vignette(*P["elias"], [
+        ("scrap_crate", 1, 0), ("drum_sealed", -1, 1), ("cable_tangle", 0, 1),
+    ])
     interior = np.zeros_like(wall)
     interior[1:-1, 1:-1] = (wall[1:-1, 1:-1] & wall[:-2, 1:-1] & wall[2:, 1:-1] & wall[1:-1, :-2] & wall[1:-1, 2:])
     lv.scatter_on(["scrap_heap", "radar_dish"], 4, interior, need_floor=False, min_dist=4.0)
     place(lv, "spawn", *P["spawn"])
+    place(lv, "npc", *P["elias"], name="elias", sprite="elias")
+    # Stall past talk radius (72px), still walkable — same pattern as Mira.
+    place(lv, "examine", P["elias"][0], P["elias"][1] - 3.3,
+          id="works_junk_stall", title="ELIAS' JUNK STALL",
+          text="Trashed scrap and buybacks. Sell or dump drone junk.",
+          junkShop=True)
     place(lv, "health", *P["h1"])
     place(lv, "stash", *P["stash"], glimmer=16)
     place(lv, "drone", 16.0, 25.0, startAngle=0.8, kind="scout")

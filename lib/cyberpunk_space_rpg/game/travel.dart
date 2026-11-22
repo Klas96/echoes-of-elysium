@@ -67,7 +67,7 @@ class Travel {
     TravelDest(
       level: 6,
       title: 'Canal Works',
-      blurb: 'Oil, scrap heaps, and drones that never woke.',
+      blurb: 'Elias buys and sells trashed scrap · oil pans · east to City.',
       regionId: 'works',
     ),
     TravelDest(

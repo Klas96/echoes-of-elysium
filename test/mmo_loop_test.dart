@@ -140,6 +140,37 @@ void main() {
     });
   });
 
+  group('Elias junk stall trash / buyback (EOE-110)', () {
+    test('trash moves junk to Elias stock without glimmer; buy restores it', () {
+      Bonds.addGlimmer(10);
+      Trade.addJunk('bent_servo', 2);
+      final g = Bonds.glimmer;
+      expect(Trade.trashJunk('bent_servo'), isTrue);
+      expect(Bonds.glimmer, g);
+      expect(Trade.junkCount('bent_servo'), 1);
+      expect(Trade.eliasStock.single.id, 'bent_servo');
+      expect(Trade.buyEliasStock(0), isTrue);
+      expect(Trade.junkCount('bent_servo'), 2);
+      expect(Trade.eliasStock, isEmpty);
+      expect(Bonds.glimmer, g - 3);
+    });
+
+    test('junk buyback indices skip gear entries', () {
+      Bonds.addGlimmer(20);
+      Trade.addJunk('frayed_wiring', 1);
+      Progression.grantGear('scrap_plating');
+      Progression.grantGear('barrier_coil');
+      expect(Trade.sellJunk('frayed_wiring'), isTrue);
+      expect(Trade.sellGear('scrap_plating'), isTrue);
+      expect(Trade.junkBuybackIndices, isNotEmpty);
+      for (final i in Trade.junkBuybackIndices) {
+        expect(Trade.buyback[i].kind, 'junk');
+      }
+      expect(Trade.buyBackJunk(0), isTrue);
+      expect(Trade.junkCount('frayed_wiring'), 1);
+    });
+  });
+
   group('damage numbers', () {
     test('style, colour and rise/fade curve', () {
       expect(DamageNumber.textFor(18, DamageNumberStyle.dealt), '18');
