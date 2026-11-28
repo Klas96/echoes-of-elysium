@@ -48,6 +48,9 @@ W_LOG_S_MID_E, W_LOG_S_BASE_E = 119, 120
 # Continuous N-wall strip slices: top 80–91, mid 92–103, base 104–115.
 STRIP_TOP0, STRIP_MID0, STRIP_BASE0 = 80, 92, 104
 STRIP_COLS = 12
+# Window tile sits in the base row (low on the face, like the hearth).
+WINDOW_MAX_H = 24
+WINDOW_SILL_GAP = 6
 PLANT = 48
 CHEST = 50
 JOURNAL, NOTE = 52, 53
@@ -370,11 +373,13 @@ def _lower_hearth_column(face: Image.Image, fire_c: int, plain_c: int) -> Image.
     return out
 
 
-def _seat_window_tile(face: Image.Image, plain_mid: Image.Image) -> Image.Image:
+def _seat_window_tile(face: Image.Image, plain_base: Image.Image) -> Image.Image:
     """Crop the full glowing window (frame included) from the strip into one 32×32.
 
-    Continuous strips often straddle the window across two mid cells; placing only
-    one cell looks half-cut. Re-home the AI window pixels onto plain AI logs.
+    Continuous strips straddle the window across tile rows/cols, so slicing it
+    in place leaves a lintel in the top row and a half-cut pane below. Re-home
+    the AI window pixels onto a plain AI base-row log tile, low on the face
+    (sill just above the baseboard, same band as the hearth).
     """
     px = face.load()
     xs: list[int] = []
@@ -396,17 +401,17 @@ def _seat_window_tile(face: Image.Image, plain_mid: Image.Image) -> Image.Image:
     y0 = max(0, min(ys) - pad)
     y1 = min(face.height, max(ys) + pad + 1)
     win = face.crop((x0, y0, x1, y1))
-    # Fit inside the tile with a 2px log margin.
-    max_w, max_h = T - 4, T - 4
+    # Fit inside the tile: 1px log margin each side, clear of the baseboard.
+    max_w, max_h = T - 2, WINDOW_MAX_H
     if win.width > max_w or win.height > max_h:
         scale = min(max_w / win.width, max_h / win.height)
         win = win.resize(
             (max(1, int(win.width * scale)), max(1, int(win.height * scale))),
             Image.Resampling.NEAREST,
         )
-    base = plain_mid.copy()
+    base = plain_base.copy()
     ox = (T - win.width) // 2
-    oy = (T - win.height) // 2
+    oy = T - WINDOW_SILL_GAP - win.height
     base.paste(win, (ox, oy))
     # Re-snap palette/alpha like other wall cells (already 32×32).
     return opaque_tile(base)
@@ -463,10 +468,12 @@ def slice_walls_from_strips(face_src: Path, side_src: Path) -> dict[int, Image.I
     out[STRIP_MID0 + fire_c] = cells[1][plain]
     # Seat the full window (may span 2 strip cols) into one mid tile on plain logs,
     # then scrub neighbor mid cells so no half-window remains beside it.
-    out[W_MAP] = _seat_window_tile(face, cells[1][plain])
+    out[W_MAP] = _seat_window_tile(face, cells[2][plain])
     for c in (map_c - 1, map_c, map_c + 1):
         if 0 < c < STRIP_COLS - 1 and c != fire_c:
+            out[STRIP_TOP0 + c] = cells[0][plain]
             out[STRIP_MID0 + c] = cells[1][plain]
+            out[STRIP_BASE0 + c] = cells[2][plain]
     meta = {
         "fire_col": fire_c,
         "map_col": map_c,

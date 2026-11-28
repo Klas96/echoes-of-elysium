@@ -1307,7 +1307,7 @@ def ranger() -> dict:
             fire_x = int(meta.get("fire_col", fire_x))
             map_x = int(meta.get("map_col", map_x))
         F[2][fire_x] = W_FIRE
-        F[1][map_x] = W_MAP
+        F[2][map_x] = W_MAP
         vary(F, CABIN, CABIN2)
         # Props on floor south of the tall wall. Keep (fire_x,3) and (map_x,3)
         # clear so wall interacts stay approachable.
