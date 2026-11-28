@@ -14,7 +14,7 @@ single gameplay tile.
   hard NN to a 12×3 grid and slice so masonry rows align across tiles
 - Large readable masonry/panels, sparse accent bricks, thin top edge,
   dark baseboard + floor-contact shadow band
-- Door/window/hearth/map **inset** in the face (same texel density)
+- Door/window/hearth **inset** in the face (same texel density). Hearth and window both sit **low** in the base row (window = one 32×32 tile, sill above the baseboard; no lintel/pane remnants in the rows above)
 - `cabin_side_strip.jpg` — cutaway thickness (rim + dark inner); corners meet
 - Tall N face (~3 tiles) vs Kaela; room bake is **12×10**
 - Strip slices: top `80–91`, mid `92–103`, base `104–115`; sides `72/116/117`
